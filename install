@@ -1,6 +1,10 @@
 #!/bin/bash
+pip3=/usr/local/bin/pip3
+
 mkdir -p /home/JackrabbitRelay/Base
 mkdir -p /home/JackrabbitRelay/Config
 mkdir -p /home/JackrabbitRelay/Logs
 cp Base   /home/JackrabbitRelay/Base
 cp Config /home/JackrabbitRelay/Config
+
+$pip3 -e -r requirements.txt
