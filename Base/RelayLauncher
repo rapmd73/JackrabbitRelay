@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Crontab entry ( without has mark #
+# @reboot ( /home/JackrabbitRelay/Base/RelayLauncher & ) > /dev/null 2>&1
+
+BaseDir="/home/JackrabbitRelay/Base"
+
+Port=12345
+
+cd $BaseDir
+
+while true ; do
+    $BaseDir/JackrabbitRelay $Port
+    sleep 180
+done
+
+
