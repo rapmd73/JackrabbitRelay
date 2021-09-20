@@ -1,0 +1,384 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import sys
+import os
+import time
+from datetime import datetime
+import json
+import ccxt
+
+Spacer=" "*80
+LogDirectory="/home/JackrabbitRelay/Logs"
+BaseDirectory='/home/JackrabbitRelay/Base'
+ConfigDirectory='/home/JackrabbitRelay/Config'
+StableCoinUSD=['USD','USDT','USDC','BUSD','TUSD','USDS','DAI']
+
+# Write log entry
+
+def WriteLog(msg):
+    pid=os.getpid()
+    time=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+
+    s=f'{time} {pid:7.0f} {msg}\n'
+
+    fh=open(LogDirectory+'/'+os.path.basename(__file__)+'.log','a')
+    fh.write(s)
+    fh.close()
+    print(s.rstrip())
+
+def ElapsedTime(StartTime):
+    EndTime=datetime.now()
+    Elapsed=(EndTime-StartTime)
+    WriteLog("Processing Completed: "+str(Elapsed)[5:]+" seconds")
+
+def ErrorLog(func,e):
+    msg=func+' failed with:'+str(e)
+
+    WriteLog(msg)
+    ElapsedTime(StartTime)
+    sys.exit(3)
+
+# Filter end of line and hard spaces
+
+def pFilter(s):
+    d=s.replace("\\n","").replace("\\t","").replace("\\r","")
+
+    for c in '\t\r\n \u00A0':
+        d=d.replace(c,'')
+
+    return(d)
+
+# Find matching USD asset for currency conversion, ADA/BTC -> ADA/USD
+
+def FindMatchingPair(base,markets):
+    for quote in StableCoinUSD:
+        pair=base+'/'+quote
+        if pair in markets:
+            return pair
+
+    return None
+
+# If fetch_ohlcv fails, revert to fetch_ticker and parse it manually
+# if open is None, use low.
+
+def FetchRetry(exchange,pair,tf,MaxRetry):
+    ohlc=[]
+    try:
+        ohlcv=exchange.fetch_ohlcv(symbol=pair,timeframe=tf,limit=1)
+    except Exception as e:
+        ErrorLog("Fetching OHLCV",e)
+
+    if ohlcv == []:
+        try:
+            ticker=exchange.fetch_ticker(pair)
+        except Exception as e:
+            ErrorLog("Fetching ticker",e)
+
+        ohlc.append(ticker['timestamp'])
+        if ticker['open']==None:
+            ohlc.append(ticker['low'])
+        else:
+            ohlc.append(ticker['open'])
+        ohlc.append(ticker['high'])
+        ohlc.append(ticker['low'])
+        ohlc.append(ticker['close'])
+    else:
+        for i in range(5):
+            ohlc.append(ohlcv[0][i])
+
+    return ohlc
+
+# Fetch the balance of a given BASE of a pair
+
+def GetBalance(exchange,base):
+    try:
+        balance=exchange.fetch_balance()
+        bal=float(balance['total'][base])
+    except:
+        bal=0
+
+    return bal
+
+# Read the exchange config file and load API/SECRET for a given (sub)account.
+# MAIN is reserved for the main account
+
+def ReadConfig(echg,account):
+    keys=[]
+    fn=ConfigDirectory+'/'+echg+'.cfg'
+
+    if os.path.exists(fn):
+        cf=open(fn,'rt+')
+        for line in cf.readlines():
+            key=json.loads(line)
+            if key['Account']==account:
+                keys.append(key)
+        cf.close()
+
+        return keys
+    else:
+        return []
+
+# Read the json entry and verify the required elements as present
+
+def ProcessJSON(payload):
+    try:
+        data=json.loads(payload,strict=False)
+    except json.decoder.JSONDecodeError:
+        return None
+
+    if "Exchange" not in data:
+        WriteLog('Missing exchange identifier')
+        return None
+    if "Market" not in data:
+        WriteLog('Missing market identifier')
+        return None
+    if "Account" not in data:
+        WriteLog('Missing account identifier')
+        return None
+    if "Action" not in data:
+        WriteLog('Missing action (buy/sell/close) identifier')
+        return None
+    if "Asset" not in data:
+        WriteLog('Missing asset identifier')
+        return None
+
+    return data
+#
+# Place order on exchange
+#
+
+def main():
+    StartTime=datetime.now()
+    WriteLog('Processing order')
+    hasUSD=False
+    hasBase=False
+
+# Get payload from STDIN and validate it
+
+    payload=pFilter(sys.stdin.read())
+
+    Order=ProcessJSON(payload)
+    if Order==None:
+        WriteLog("Damaged payload: ")
+        ElapsedTime(StartTime)
+        sys.exit(1)
+
+    WriteLog('Order Parsed')
+    exchangeName=Order['Exchange'].lower()
+    WriteLog('|- Exchange: '+exchangeName)
+
+    market=Order['Market']
+    WriteLog('|- Target Market: '+market)
+
+    account=Order['Account']
+    WriteLog('|- Account reference: '+account)
+
+    action=Order['Action'].lower()
+    WriteLog('|- Trade Action: '+action)
+
+    pair=Order['Asset'].upper()
+    WriteLog('|- Asset: '+pair)
+
+    if "USD" in Order:
+        hasUSD=True
+
+    if "Base" in Order:
+        hasBase=True
+
+    if hasUSD and hasBase:
+        WriteLog("USD or Base can be present, NOT both.")
+        ElapsedTime(StartTime)
+        sys.exit(1)
+    else:
+        if hasUSD and float(Order['USD'])>0.0:
+            WriteLog('|- Using USD')
+        else:
+            if hasBase and float(Order['Base'])>0.0:
+                WriteLog('|- Using BASE')
+
+    isMinimum=False
+    if (not hasUSD and not hasBase):
+        isMinimum=True
+        WriteLog('|- Using minimum position size')
+
+# Load the API/Secret information
+
+    keys=ReadConfig(exchangeName,account)
+    if keys==[]:
+        WriteLog("No API/Secret found for "+exchangeName+", (sub)account: "+account)
+        ElapsedTime(StartTime)
+        sys.exit(1)
+    else:
+        WriteLog("API/Secret loaded for "+exchangeName+", (sub)account: "+account)
+
+    CurrentKey=(os.getpid()%len(keys))
+    Active=keys[CurrentKey]
+
+    if len(keys)>1:
+        WriteLog("|- Using rotating key set "+str(CurrentKey))
+
+# Initial the exchange and setup the connection
+# exchange.headers['FTX-SUBACCOUNT'] = 'YOUR_SUBACCOUNT'
+# exchange,apiKey = 'YOUR_SUBACCOUNT_API_KEY'
+# exchange,secret = 'YOUR_SUBACCOUNT_SECRET'
+
+    if exchangeName in ccxt.exchanges:
+        try:
+            exchange=getattr(ccxt,exchangeName)( \
+                { 'apiKey': Active['API'],'secret': Active['SECRET'] })
+        except Exception as e:
+            ErrorLog("Connecting to exchange",e)
+    else:
+        if exchangeName=="ftxus":
+            try:
+                exchange=ccxt.ftx({ 'hostname': 'ftx.us', \
+                    'apiKey': Active['API'],'secret': Active['SECRET'] })
+            except Exception as e:
+                ErrorLog("Connecting to exchange",e)
+        else:
+            WriteLog("Exchange not supported")
+            ElapsedTime(StartTime)
+            sys.exit(1)
+
+# Special settings
+
+    if "createMarketBuyOrderRequiresPrice" in exchange.options:
+        WriteLog("Exchange not supported")
+        ElapsedTime(StartTime)
+        sys.exit(1)
+
+    exchange.verbose=False
+
+    if "RateLimit" in Active:
+        exchange.enableRateLimit=True
+        exchange.rateLimit=int(Active['RateLimit'])
+        WriteLog("|- Rate limit set to "+str(Active['RateLimit'])+' ms')
+    else:
+        exchange.enableRateLimit=False
+
+    exchange.load_markets()
+    WriteLog("Markets loaded")
+
+    if pair[0]=='.' or pair.find(".d")>-1:
+        WriteLog(pair+" is not tradable on this exchange")
+        ElapsedTime(StartTime)
+        sys.exit(1)
+
+    if pair not in exchange.markets:
+        WriteLog(pair+" is not traded on this exchange")
+        ElapsedTime(StartTime)
+        sys.exit(1)
+
+    if 'active' in exchange.markets[pair]:
+        if exchange.markets[pair]['active']==False:
+            WriteLog(pair+" is not active on this exchange")
+            ElapsedTime(StartTime)
+            sys.exit(1)
+
+# Get asset information
+
+    base=exchange.markets[pair]['base']
+    quote=exchange.markets[pair]['quote']
+    minimum=exchange.markets[pair]['limits']['amount']['min']
+
+    amount=minimum
+
+    WriteLog("Base currency:  "+base)
+    WriteLog("Quote currency: "+quote)
+
+# Make USD conversion if needed
+
+# ADA/BTC
+    if hasUSD and quote not in StableCoinUSD and not isMinimum:
+        bpair=FindMatchingPair(base,exchange.markets)
+        if bpair!=None:
+            WriteLog("USD conversion: "+bpair)
+
+            ohlcv=FetchRetry(exchange,bpair,"1m",5)
+            WriteLog("Conversionm market: "+bpair)
+        else:
+# ADA/USDT
+            if hasUSD and quote in StableCoinUSD:
+                ohlcv=FetchRetry(exchange,pair,"1m",5)
+                WriteLog("Getting market: "+pair)
+            else:
+                WriteLog("NO USD compatable coin for conversion reference")
+                ElapsedTime(StartTime)
+                sys.exit(1)
+    else:
+# Every thing else
+        ohlcv=FetchRetry(exchange,pair,"1m",5)
+        WriteLog("Getting market: "+pair)
+
+    if ohlcv!=[] and ohlcv!=None and type(ohlcv[4]) is float:
+        close=round(ohlcv[4],6)
+
+        if not isMinimum:
+            if hasUSD:
+                amount=round(float(Order['USD'])/close,6)
+            else:
+                amount=round(float(Order['Base']),6)
+
+        WriteLog("|- Minimum: "+str(minimum))
+        WriteLog("|- Amount: "+str(amount))
+
+        bal=GetBalance(exchange,base)
+        sbal=f"{float(bal):.6f}"
+        WriteLog("Previous Balance: "+sbal+" "+base)
+
+# If the amount is less then the minimum and action is to sell/close
+
+        if bal<minimum and bal>0 and (action=='close' or action=='sell'):
+            WriteLog("|- Not enough to sell/close position")
+            ElapsedTime(StartTime)
+            sys.exit(1)
+
+# Test to see if amount is more than balance and correct in needed
+
+        if (amount>bal and bal>0) and (action=='close' or action=='sell'):
+            WriteLog("|- Forcing balance")
+            amount=bal
+
+# Closing the position
+
+        if bal>0 and action=='close':
+            WriteLog("|- Forcing balance")
+            amount=bal
+
+# Time to make a purchase
+
+        if amount<minimum and action=='buy':
+            WriteLog("|- Forcing minimum")
+            amount=minimum
+
+# Determine trade action and carry it out
+
+    WriteLog("Placing Order")
+    WriteLog("|- Pair: "+pair)
+    WriteLog("|- Action: "+action)
+    WriteLog("|- Amount: "+str(amount))
+    WriteLog("|- Close: "+str(close))
+    WriteLog("|- Price: "+str(round(amount*close,6)))
+
+    if action=='close':
+        action='sell'
+
+    if amount>0.0:
+        try:
+            order=exchange.create_order(pair, 'market', action, amount, close)
+        except Exception as e:
+            ErrorLog("Placing Order",e)
+
+        WriteLog("|- ID: "+order['id'])
+
+        bal=GetBalance(exchange,base)
+        sbal=f"{float(bal):.6f}"
+        WriteLog("New Balance: "+sbal+" "+base)
+
+# Finish with elapsed time
+
+    ElapsedTime(StartTime)
+
+if __name__ == '__main__':
+    main()
