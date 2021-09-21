@@ -50,8 +50,6 @@ def ProcessTrade(addr,payload):
                 subp.stdin.write(data.encode())
                 res=subp.communicate()[0]
                 code=subp.poll()
-                if code>0:
-                    WriteLog(addr,"Transactor return code: "+str(code))
             else:
                 WriteLog(addr,"Transactor not found for "+exchange)
         else:
@@ -72,8 +70,6 @@ def ProcessTrade(addr,payload):
                     subp.stdin.write(str(data).encode())
                     res=res+subp.communicate()[0]+"\n\n"
                     code=subp.poll()
-                    if code>0:
-                        WriteLog(addr,"Transactor return code: "+str(code))
                 else:
                     WriteLog(addr,"Transactor not found for "+exchange)
             else:
