@@ -5,6 +5,21 @@ Jackrabbit Relay is an API endpoint for cryptocurrency exchange.
 
 Use this Software at your own risk. The author(s) accept no responsibility for losses incurred through using this software. While we have gone to great lengths to test the software, if you do find any bugs, please report them to us in the [Jackrabbit Support Server](https://discord.gg/g93TpbV) or on Github, and we will sort them out. Remember that risk management is your responsibility. If you lose your account, that's entirely on you.
 
+## Installation
+
+Start with these shewll commands
+
+    mkdir -p /home/GitHub
+    cd /home/GitHub
+    git clone https://github.com/rapmd73/JackrabbitRelay
+
+You now have a copy of the Jackrabbit repository. Now its time to install everything.
+
+    cd /home/GitHub/JackrabbitRelay
+    ./install
+
+At this point the files are inatalled, but more setup is required before Relay is ready to run. Configuring the exchanges and crontab need to be completed next.
+
 ## Configuration
 
 The Jackrabbit Relay file structure and folder layout is very simple:
@@ -24,6 +39,24 @@ The Jackrabbit Relay file structure and folder layout is very simple:
     /home/JackrabbitRelay/Logs
 
         All log files go here
+
+In the base directory (/home/JackrabbitRelay/Base), there are several files:
+
+    CCXT-PlaceOrder
+
+        This is the Order Processor. You actually wont use this file directly, but rather copy it to the actual exchange designated order transactor, for example PlaceOrder.ftxus
+
+    PlaceOrder.tester
+
+        This is just a dummy test module that you can use to test the connection with TradingView. It too, gets copied to the exchange designator, for example, PlaceOrder.kraken
+
+    JackrabbitRelay
+
+        This is the actual server program that waits for a connewction. It should NOT be ran directly, but rather through the RelayLauncher shell script.
+
+    RelayLauncher
+
+        This shell script sets the port and launches the server. It is the harness that keeps everything running and is what you place in your CronTab.
 
 The Jackrabbit Relay files are ver sime JSON based text.  Here is an example:
 
