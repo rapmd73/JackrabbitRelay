@@ -7,7 +7,7 @@ Use this Software at your own risk. The author(s) accept no responsibility for l
 
 ## Installation
 
-Start with these shewll commands
+Start with these shell commands
 
     mkdir -p /home/GitHub
     cd /home/GitHub
