@@ -11,6 +11,13 @@ Server](https://discord.gg/g93TpbV) or on Github, and we will sort them
 out. Remember that risk management is your responsibility. If you lose
 your account, that's entirely on you.
 
+## Requirements
+
+This software requiresa VPS with one core, one gig of RAM, 2 gigs of
+swap, 40 gigs of excess storage. This software was developed for the
+intention of using a VPS to its fullest extent. If you wish to use a
+virtual environment, please consult your VPS documentation.
+
 ## Installation
 
 Start with these shell commands
