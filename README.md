@@ -152,7 +152,7 @@ exchange will allow.
 ## Reboot startup
 
 For Jackrabbit Relay to auto start after a reboot, the following line
-neesa to be added to your crontab. BE SURE TO CHANGE THE !@#$% TO THE
+neesa to be added to your crontab. BE SURE TO CHANGE THE 12345 TO THE
 PORT YOU WANT.
 
     @reboot ( /home/JackrabbitRelay/Base/RelayLauncher 12345 & ) > /dev/null 2>&1
@@ -162,3 +162,72 @@ PORT YOU WANT.
 Use the following command. Be sure to replace the 12345 with the proper port.
 
     ( /home/JackrabbitRelay/Base/RelayLauncher 12345 & ) > /dev/null 2>&1
+
+## The Payload
+
+Here are examples of the payload sent from TradingView of similar webhook
+based application.
+
+This example purchased $30 of AAVE on the FTX US exchange.
+
+    { "Exchange":"ftxus","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"AAVE/USD","USD":"30" }
+
+This example purchases the minimum amount of AAVE in USD
+
+    { "Exchange":"ftxus","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"AAVE/USD" }
+
+This example sells $7 of AAVE
+
+    { "Exchange":"ftxus","Market":"Spot","Account":"MAIN","Action":"Sell","Asset":"AAVE/USD","USD":"7" }
+
+This example sells th exchange minimum of AAVE
+
+    { "Exchange":"ftxus","Market":"Spot","Account":"MAIN","Action":"Sell","Asset":"AAVE/USD" }
+
+This example close out or sells all of AAVE
+
+    { "Exchange":"ftxus","Market":"Spot","Account":"MAIN","Action":"Close","Asset":"AAVE/USD" }
+
+This example purchases AAVE using its base value, in this case, 1 AAVE
+
+    { "Exchange":"kraken","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"AAVE/USD","Base":"1" }
+
+Discriptionn of the payload
+
+    Exchange
+
+        This is one of the supported exchanges.
+
+    Market
+
+        This is the market you are trading. 
+
+        Spot            Working 
+        Prepetuals      Maybe working FTX ONLY
+        Margin          In progress
+        Future          In progress
+
+    Account
+
+        All main accounts must be called MAIN. Subaccounts can be used
+        and must be exactly as listed on the exchange.
+
+    Action
+
+        Buy             Make a purchase
+        Sell            Sell a portion. If amount is more then balance, position will be closed
+        Close           Sell all of the asset
+
+    Asset
+
+        The asset you are trading. Must be exactly as the exchange lists it
+
+    USD/Base
+
+        Choose only one to set the amount to be purchased/sold
+
+        USD will only work if the asset has a coresponsing USD pair to do
+        a proper base conversion on.
+
+        Base is the asset itself value, ie BTC, ADA, AAVE, so one.
+            A base of 1 for BTC is to purchase 1 BTC.
