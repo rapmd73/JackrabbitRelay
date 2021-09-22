@@ -252,6 +252,13 @@ def main():
         ElapsedTime(StartTime)
         sys.exit(1)
 
+    # Set FTX and FTX US subaccount. Not sure if I need to reset API/secret yet.
+
+    if (exchangeName=="ftx" or exchangeName=="ftxus") and Active['Account']!='MAIN':
+        exchange.headers['FTX-SUBACCOUNT']=Active['Account']
+#        exchange.apiKey=Active['API']
+#        exchange.secret=Active['SECRET']
+
     exchange.verbose=False
 
     if "RateLimit" in Active:
