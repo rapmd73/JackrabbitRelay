@@ -12,6 +12,18 @@ Server](https://discord.gg/g93TpbV) or on Github, and we will sort them
 out. Remember that risk management is your responsibility. If you lose
 your account, that's entirely on you.
 
+## Notes
+
+Currently, Jackrabbit Relay support ONLY spot markets. Work is being done
+to supprt futures and margins. Some exchanges may work already, but I
+don't know which ones as many I can't test personally.
+
+## Confirmed working exchanges
+
+    FTX
+    FTX US
+    Kraken
+
 ## Requirements
 
 This software requiresa VPS with one core, one gig of RAM, 2 gigs of
@@ -136,3 +148,17 @@ accomplished by this format:
 The above means the your MAIN account has two API/SECRET combinations the
 Relay will rotate between. Each (sub)account can hace as many as your
 exchange will allow.
+
+## Reboot startup
+
+For Jackrabbit Relay to auto start after a reboot, the following line
+neesa to be added to your crontab. BE SURE TO CHANGE THE !@#$% TO THE
+PORT YOU WANT.
+
+    @reboot ( /home/JackrabbitRelay/Base/RelayLauncher 12345 & ) > /dev/null 2>&1
+
+## Manual startup
+
+Use the following command. Be sure to replace the 12345 with the proper port.
+
+    ( /home/JackrabbitRelay/Base/RelayLauncher 12345 & ) > /dev/null 2>&1

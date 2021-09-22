@@ -5,7 +5,12 @@
 
 BaseDir="/home/JackrabbitRelay/Base"
 
-Port=7732
+Port=$1
+
+if [ -z $Port ] ; then
+    echo A port to use must be given.
+    exit 1
+fi
 
 cd $BaseDir
 
