@@ -18,7 +18,7 @@ swap, 40 gigs of excess storage. This software was developed for the
 intention of using a VPS to its fullest extent. If you wish to use a
 virtual environment, please consult your VPS documentation.
 
-## Securoty and firewall
+## Security and firewall
 
 Whitelisting IP addresses and setting up restrictions is solely to the
 the responsibility of your native firewall. There is absolutely no way I
