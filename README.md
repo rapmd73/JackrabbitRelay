@@ -231,3 +231,41 @@ Discriptionn of the payload
 
         Base is the asset itself value, ie BTC, ADA, AAVE, so one.
             A base of 1 for BTC is to purchase 1 BTC.
+
+## Logging
+
+Below are examples of the log files.
+
+This is the Jackrabbit Relay server log file:
+
+    2021-09-22 22:34:53.059783 62.151.179.169   ('POST / HTTP/1.1', '200', '-')
+
+Here is an example of the Place Order log for the FTX US exchange:
+
+    2021-09-22 22:34:53.277575 1009381 Processing order
+    2021-09-22 22:34:53.277851 1009381 Order Parsed
+    2021-09-22 22:34:53.277908 1009381 |- Exchange: ftxus
+    2021-09-22 22:34:53.277943 1009381 |- Target Market: Spot
+    2021-09-22 22:34:53.277974 1009381 |- Account reference: MAIN
+    2021-09-22 22:34:53.278003 1009381 |- Trade Action: close
+    2021-09-22 22:34:53.278032 1009381 |- Asset: SUSHI/USD
+    2021-09-22 22:34:53.278060 1009381 |- Using minimum position size
+    2021-09-22 22:34:53.278166 1009381 API/Secret loaded for ftxus, (sub)account: MAIN
+    2021-09-22 22:34:53.282798 1009381 |- Rate limit set to 200 ms
+    2021-09-22 22:34:53.519999 1009381 Markets loaded
+    2021-09-22 22:34:53.520204 1009381 Base currency:  SUSHI
+    2021-09-22 22:34:53.520250 1009381 Quote currency: USD
+    2021-09-22 22:34:53.773082 1009381 Getting market: SUSHI/USD
+    2021-09-22 22:34:53.773290 1009381 |- Minimum: 0.5
+    2021-09-22 22:34:53.773339 1009381 |- Amount: 0.5
+    2021-09-22 22:34:54.000871 1009381 Previous Balance: 3.500000 SUSHI
+    2021-09-22 22:34:54.001063 1009381 |- Forcing balance
+    2021-09-22 22:34:54.001123 1009381 Placing Order
+    2021-09-22 22:34:54.001157 1009381 |- Pair: SUSHI/USD
+    2021-09-22 22:34:54.001187 1009381 |- Action: close
+    2021-09-22 22:34:54.001219 1009381 |- Amount: 3.5
+    2021-09-22 22:34:54.001250 1009381 |- Close: 10.4774
+    2021-09-22 22:34:54.001291 1009381 |- Price: 36.6709
+    2021-09-22 22:34:54.280677 1009381 |- ID: 1547473833
+    2021-09-22 22:34:54.398102 1009381 New Balance: 0.000000 SUSHI
+    2021-09-22 22:34:54.398277 1009381 Processing Completed: 01.120702 seconds
