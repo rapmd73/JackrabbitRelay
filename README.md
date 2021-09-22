@@ -1,4 +1,5 @@
 # JackrabbitRelay
+
 Jackrabbit Relay is an API endpoint for cryptocurrency exchange.
 
 ## Disclaimer
@@ -28,6 +29,12 @@ misnomer to you and the security of your VPS. Please consult the
 documentation of your VPS for establishing your firewall rules.
 
 ## Installation
+
+Please be aware that you may need to switch to your root account. Please
+follow the neccessary instructions provided by your VPS provider. This
+document assumes you are already at root level or have your virtual
+environment established, both are beyound the scope of this
+documentatiom.
 
 Start with these shell commands
 

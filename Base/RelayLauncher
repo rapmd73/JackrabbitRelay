@@ -5,7 +5,7 @@
 
 BaseDir="/home/JackrabbitRelay/Base"
 
-Port=12345
+Port=7732
 
 cd $BaseDir
 
