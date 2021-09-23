@@ -1,5 +1,5 @@
 #!/bin/bash
-pip3=/usr/local/bin/pip3
+pip3="/usr/bin/env pip3"
 
 mkdir -p /home/JackrabbitRelay/Base
 mkdir -p /home/JackrabbitRelay/Config
