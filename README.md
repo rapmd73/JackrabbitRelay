@@ -67,6 +67,18 @@ swap, 40 gigs of excess storage. This software was developed for the
 intention of using a VPS to its fullest extent. If you wish to use a
 virtual environment, please consult your VPS documentation.
 
+Jackrabbit Relay requires Python 3 and pip3. If you do not have pip3, the
+below link will show you how to install it.
+
+    https://www.linuxscrew.com/install-pip
+
+The command for installation really is very simple and here is the short
+version. please be sure you are in route or in your virtual environment
+appropriate to the documentation of your VPS. the below command is for
+Ubuntu.you will need to use the package manager appropriate to your VPS.
+
+    apt install python3-pip
+
 ## Security and firewall
 
 Whitelisting IP addresses and setting up restrictions is solely to the
