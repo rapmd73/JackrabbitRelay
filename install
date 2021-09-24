@@ -1,10 +1,9 @@
 #!/bin/bash
-pip3="/usr/bin/env which pip3"
+pip3=`which pip3`
 
 mkdir -p /home/JackrabbitRelay/Base
 mkdir -p /home/JackrabbitRelay/Config
 mkdir -p /home/JackrabbitRelay/Logs
-cp Base   /home/JackrabbitRelay/Base
-cp Config /home/JackrabbitRelay/Config
+cp -r * /home/JackrabbitRelay
 
 $pip3 -e -r requirements.txt
