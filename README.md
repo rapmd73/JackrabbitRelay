@@ -52,7 +52,7 @@ Currently, Jackrabbit Relay supports ONLY spot markets. Work is being done
 to supprt futures and margins. Some exchanges may work already, but I
 don't know which ones as many I can't test personally.
 
-##Video
+## Video
 
 Yes, there's a video. Please watch it, then come back here and read
 everything. Rinse and repeat as many times as needed :)
