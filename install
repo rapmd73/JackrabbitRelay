@@ -6,4 +6,4 @@ mkdir -p /home/JackrabbitRelay/Config
 mkdir -p /home/JackrabbitRelay/Logs
 cp -r * /home/JackrabbitRelay
 
-$pip3 -e -r requirements.txt
+$pip3 install ccxt
