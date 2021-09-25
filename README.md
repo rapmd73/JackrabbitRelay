@@ -57,7 +57,7 @@ don't know which ones as many I can't test personally.
 Yes, there's a video. Please watch it, then come back here and read
 everything. Rinse and repeat as many times as needed :)
 
-    [Installing Jackrabbit Relay](https://youtu.be/cvtSHj1ubJs)
+[Installing Jackrabbit Relay](https://youtu.be/cvtSHj1ubJs)
 
 ## Confirmed working exchanges
 
