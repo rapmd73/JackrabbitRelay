@@ -37,9 +37,9 @@ Use this Software at your own risk. It is provided AS IS. The Company
 accepts no responsibility or liability for losses incurred through using
 this software. While The Company has gone to great lengths to test the
 software, if you do find any bugs, please report them to us in the
-Jackrabbit Support Server or on Github, and we will sort them out.
-Remember that risk management is your responsibility. If you lose your
-account, that's entirely on you.
+[Jackrabbit Support Server](https://discord.gg/g93TpbV) or on Github, and
+we will sort them out. Remember that risk management is your
+responsibility. If you lose your account, that's entirely on you.
 
 Past performance is not indicative of future results. Investments involve
 substantial risk. Any past  results provided are intended as examples
