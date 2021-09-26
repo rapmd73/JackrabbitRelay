@@ -291,7 +291,14 @@ def main():
 
     base=exchange.markets[pair]['base']
     quote=exchange.markets[pair]['quote']
+
     minimum=exchange.markets[pair]['limits']['amount']['min']
+    minimum2=exchange.markets[pair]['limits']['cost']['min']
+    if minimum2==None:
+        minimum2=0
+    minimum3=exchange.markets[pair]['limits']['price']['min']
+    if minimum3==None:
+        minimum3=0
 
     amount=minimum
 
@@ -376,7 +383,7 @@ def main():
 
         if amount<minimum and action=='buy':
             WriteLog("|- Forcing minimum")
-            amount=minimum
+            amount=max(minimum,minimum2,minimum3)
 
 # Determine trade action and carry it out
 
