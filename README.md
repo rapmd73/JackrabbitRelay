@@ -59,6 +59,8 @@ everything. Rinse and repeat as many times as needed :)
 
 [Installing Jackrabbit Relay](https://youtu.be/cvtSHj1ubJs)
 
+[Updaing Jackrabbit Relay](https://youtu.be/Yb05lp9BPL4)
+
 ## Confirmed working exchanges
 
     FTX
