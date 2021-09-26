@@ -160,6 +160,9 @@ Please be sure to update Jackrabbit Relay frequently. The following commands can
     cd /home/GitHub/JackrabbitRelay
     git pull https://github.com/rapmd73/JackrabbitRelay
 
+**IMPORTANT** This only updates the files in the GitHuib directory. **IT
+DOES NOT OVERWWITE ANY FILES IN THE WORKING DIRECTORIES**
+
 ## Configuration
 
 The Jackrabbit Relay file structure and folder layout is very simple:
