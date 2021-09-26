@@ -153,6 +153,13 @@ At this point the files are inatalled, but more setup is required before
 Relay is ready to run. Configuring the exchanges and crontab need to be
 completed next.
 
+## Updating
+
+Please be sure to update Jackrabbit Relay frequently. The following commands can be used:
+
+    cd /home/GitHub/JackrabbitRelay
+    git pull https://github.com/rapmd73/JackrabbitRelay
+
 ## Configuration
 
 The Jackrabbit Relay file structure and folder layout is very simple:

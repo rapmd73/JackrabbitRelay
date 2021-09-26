@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cd /home/GitHub/JackrabbitRelay
+git pull https://github.com/rapmd73/JackrabbitRelay
