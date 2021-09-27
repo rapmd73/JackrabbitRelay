@@ -190,8 +190,11 @@ def main():
     if "Base" in Order:
         hasBase=True
 
-    if hasUSD and hasBase:
-        WriteLog("USD or Base can be present, NOT both.")
+    if "Quote" in Order:
+        hasQuote=True
+
+    if (hasUSD and hasBase) or (hasUSD and hasQuote) or (hasQuote and hasBase):
+        WriteLog("USD, Base, or Quote can be present, NOT a combination of two or more.")
         ElapsedTime(StartTime)
         sys.exit(1)
     else:
@@ -200,6 +203,9 @@ def main():
         else:
             if hasBase and float(Order['Base'])>0.0:
                 WriteLog('|- Using BASE')
+            else:
+                if hasQuote and float(Order['Quote'])>0.0:
+                    WriteLog('|- Using BASE')
 
     isMinimum=False
     if (not hasUSD and not hasBase):
@@ -311,8 +317,6 @@ def main():
     if hasUSD and quote not in StableCoinUSD and not isMinimum:
         bpair=FindMatchingPair(base,exchange.markets)
         if bpair!=None:
-            WriteLog("USD conversion: "+bpair)
-
             ohlcv,ticker=FetchRetry(exchange,bpair,"1m",5)
             WriteLog("Conversionm market: "+bpair)
         else:
@@ -325,8 +329,18 @@ def main():
                 ElapsedTime(StartTime)
                 sys.exit(1)
     else:
+# ADA/BTC Quote
+        if hasQuote:
+            qpair=FindMatchingPair(quote,exchange.markets)
+            if qpair==None:
+                WriteLog("NO compatable coin for conversion reference: "+qpair)
+                ElapsedTime(StartTime)
+                sys.exit(1)
+            WriteLog("Quote Conversionm market: "+qpair)
+            ohlcv,ticker=FetchRetry(exchange,qpair,"1m",5)
+        else:
 # Every thing else
-        ohlcv,ticker=FetchRetry(exchange,pair,"1m",5)
+            ohlcv,ticker=FetchRetry(exchange,pair,"1m",5)
         WriteLog("Getting market: "+pair)
 
     if "type" in ticker['info']:
