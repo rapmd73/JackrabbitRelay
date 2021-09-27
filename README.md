@@ -293,6 +293,10 @@ This example purchases AAVE using its base value, in this case, 1 AAVE
 
     { "Exchange":"kraken","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"AAVE/USD","Base":"1" }
 
+This example purchases BCH by the value of BTC
+
+    { "Exchange":"ftx","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"BCH/BTC","Quote":"1" }
+
 Discriptionn of the payload
 
     Exchange
@@ -323,7 +327,7 @@ Discriptionn of the payload
 
         The asset you are trading. Must be exactly as the exchange lists it
 
-    USD/Base
+    USD/Base/Quote
 
         Choose only one to set the amount to be purchased/sold
 
@@ -332,6 +336,10 @@ Discriptionn of the payload
 
         Base is the asset itself value, ie BTC, ADA, AAVE, so one.
             A base of 1 for BTC is to purchase 1 BTC.
+
+        Quote is the value of the asset in its quote currency. For
+        example, if you want to purchase BCH/BTC using the price value of
+        BTC, then you specify your amout in the quote currency.
 
 ## Logging
 
@@ -370,3 +378,16 @@ Here is an example of the Place Order log for the FTX US exchange:
     2021-09-22 22:34:54.280677 1009381 |- ID: 1547473833
     2021-09-22 22:34:54.398102 1009381 New Balance: 0.000000 SUSHI
     2021-09-22 22:34:54.398277 1009381 Processing Completed: 01.120702 seconds
+
+## Donations
+
+If you would like to help support this project financially, please use
+any of the below addresses. Anything donated goes to the costs of
+sustaining Jackrabbit Relay. Thank you.
+
+    BCH     bitcoincash:qzw5h5ccfz6v7zzh0vf5pl0eqp3zjmp5us07l72nvv
+    BTC     3JUbL3Vsj61VBAmyHtQhyiFJcizEfxAvzV
+    ETH     0x3c6C06150B2f24b3179a50b618aD3c0f58CF74FD
+    LINK    0xd8Fd4fA3b489861ad6Eb95a0617B4DA7c78123F8
+    LTC     MHj8nQcRdJWVVNeHUemSQgzBw3cPrZEtRU
+    USDT    0xd8Fd4fA3b489861ad6Eb95a0617B4DA7c78123F8
