@@ -157,6 +157,7 @@ def main():
     WriteLog('Processing order')
     hasUSD=False
     hasBase=False
+    hasQuote=False
 
 # Get payload from STDIN and validate it
 
