@@ -18,6 +18,10 @@ BaseDirectory='/home/JackrabbitRelay/Base'
 ConfigDirectory='/home/JackrabbitRelay/Config'
 StableCoinUSD=['USD','USDT','USDC','BUSD','TUSD','USDS','DAI']
 
+# Needsa to be global and above all code
+
+StartTime=datetime.now()
+
 # Write log entry
 
 def WriteLog(msg):
@@ -37,10 +41,11 @@ def ElapsedTime(StartTime):
     WriteLog("Processing Completed: "+str(Elapsed)[5:]+" seconds")
 
 def ErrorLog(func,e):
-    msg=func+' failed with:'+str(e)
+    msg=func+' failed with: '+str(e)
 
     WriteLog(msg)
     ElapsedTime(StartTime)
+    sys.stdout.flush()
     sys.exit(3)
 
 # Filter end of line and hard spaces
@@ -70,15 +75,18 @@ def FetchRetry(exchange,pair,tf,MaxRetry):
     ohlc=[]
     try:
         ohlcv=exchange.fetch_ohlcv(symbol=pair,timeframe=tf,limit=1)
-    except Exception as e:
-        ErrorLog("Fetching OHLCV",e)
+        if ohlcv==[]:
+            ohlcv=None
+    except:
+        ohlcv=None
+#        ErrorLog("Fetching OHLCV",e)
 
     try:
         ticker=exchange.fetch_ticker(pair)
     except Exception as e:
         ErrorLog("Fetching ticker",e)
 
-    if ohlcv == []:
+    if ohlcv==None:
         ohlc.append(ticker['timestamp'])
         if ticker['open']==None:
             ohlc.append(ticker['low'])
@@ -153,7 +161,6 @@ def ProcessJSON(payload):
 #
 
 def main():
-    StartTime=datetime.now()
     WriteLog('Processing order')
     hasUSD=False
     hasBase=False
@@ -165,9 +172,7 @@ def main():
 
     Order=ProcessJSON(payload)
     if Order==None:
-        WriteLog("Damaged payload: ")
-        ElapsedTime(StartTime)
-        sys.exit(1)
+        ErrorLog("Process Order","Damaged payload")
 
     WriteLog('Order Parsed')
     exchangeName=Order['Exchange'].lower()
@@ -195,9 +200,7 @@ def main():
         hasQuote=True
 
     if (hasUSD and hasBase) or (hasUSD and hasQuote) or (hasQuote and hasBase):
-        WriteLog("USD, Base, or Quote can be present, NOT a combination of two or more.")
-        ElapsedTime(StartTime)
-        sys.exit(1)
+        ErrorLog("Quote validation","USD, Base, or Quote can be present, NOT a combination of two or more.")
     else:
         if hasUSD and float(Order['USD'])>0.0:
             WriteLog('|- Using USD')
@@ -217,9 +220,7 @@ def main():
 
     keys=ReadConfig(exchangeName,account)
     if keys==[]:
-        WriteLog("No API/Secret found for "+exchangeName+", (sub)account: "+account)
-        ElapsedTime(StartTime)
-        sys.exit(1)
+        ErrorLog("Reading Config","No API/Secret found for "+exchangeName+", (sub)account: "+account)
     else:
         WriteLog("API/Secret loaded for "+exchangeName+", (sub)account: "+account)
 
@@ -248,16 +249,12 @@ def main():
             except Exception as e:
                 ErrorLog("Connecting to exchange",e)
         else:
-            WriteLog("Exchange not supported")
-            ElapsedTime(StartTime)
-            sys.exit(1)
+            ErrorLog(exchangeName,"Exchange not supported")
 
 # Special settings
 
     if "createMarketBuyOrderRequiresPrice" in exchange.options:
-        WriteLog("Exchange not supported")
-        ElapsedTime(StartTime)
-        sys.exit(1)
+        ErrorLog(exchangeName,"Exchange not supported")
 
     # Set FTX and FTX US subaccount. Not sure if I need to reset API/secret yet.
 
@@ -279,20 +276,14 @@ def main():
     WriteLog("Markets loaded")
 
     if pair[0]=='.' or pair.find(".d")>-1:
-        WriteLog(pair+" is not tradable on this exchange")
-        ElapsedTime(StartTime)
-        sys.exit(1)
+        ErrorLog(ExchangeName,pair+" is not tradable on this exchange")
 
     if pair not in exchange.markets:
-        WriteLog(pair+" is not traded on this exchange")
-        ElapsedTime(StartTime)
-        sys.exit(1)
+        ErrorLog(exchangeName,pair+" is not traded on this exchange")
 
     if 'active' in exchange.markets[pair]:
         if exchange.markets[pair]['active']==False:
-            WriteLog(pair+" is not active on this exchange")
-            ElapsedTime(StartTime)
-            sys.exit(1)
+            ErrorLog(exchangeName,pair+" is not active on this exchange")
 
 # Get asset information
 
@@ -326,17 +317,13 @@ def main():
                 ohlcv,ticker=FetchRetry(exchange,pair,"1m",5)
                 WriteLog("Getting market: "+pair)
             else:
-                WriteLog("NO USD compatable coin for conversion reference")
-                ElapsedTime(StartTime)
-                sys.exit(1)
+                ErrorLog(exchangeName,"NO USD compatable coin for conversion reference")
     else:
 # ADA/BTC Quote
         if hasQuote:
             qpair=FindMatchingPair(quote,exchange.markets)
             if qpair==None:
-                WriteLog("NO compatable coin for conversion reference: "+qpair)
-                ElapsedTime(StartTime)
-                sys.exit(1)
+                ErrorLog(exchangeName,"NO compatable coin for conversion reference: "+qpair)
             WriteLog("Quote Conversionm market: "+qpair)
             ohlcv,ticker=FetchRetry(exchange,qpair,"1m",5)
         else:
@@ -355,9 +342,7 @@ def main():
             else:
                 marketType="spot"
     if market not in marketType:
-        WriteLog("|- Wrong market type: "+marketType)
-        ElapsedTime(StartTime)
-        sys.exit(1)
+        ErrorLog(exchangeName, "wrong market type: "+marketType)
 
     if ohlcv!=[] and ohlcv!=None and type(ohlcv[4]) is float:
         close=round(ohlcv[4],6)
@@ -378,9 +363,7 @@ def main():
 # If the amount is less then the minimum and action is to sell/close
 
         if bal<minimum and bal>0 and (action=='close' or action=='sell'):
-            WriteLog("|- Not enough to sell/close position")
-            ElapsedTime(StartTime)
-            sys.exit(1)
+            ErrorLog(exchangeName, "not enough to sell/close position")
 
 # Test to see if amount is more than balance and correct in needed
 
@@ -408,6 +391,20 @@ def main():
     WriteLog("|- Amount: "+str(amount))
     WriteLog("|- Close: "+str(close))
     WriteLog("|- Price: "+str(round(amount*close,6)))
+
+    try: # Isolated or Crossed
+        if "set_margin_mode" in exchange and "Margin" in Order:
+            exchange.set_margin_mode(pair,Order['Margin'].upper())
+            WriteLog("|- Margin: "+Order['Margin'])
+    except:
+        pass
+
+    try:
+        if "set_leverage" in exchange and "Leverage" in Order:
+            exchange.set_legerage(int(Order['Leverage']),pair)
+            WriteLog("|- Leverage: "+str(Order['Leverage']))
+    except:
+        pass
 
     if action=='close':
         action='sell'

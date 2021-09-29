@@ -63,9 +63,7 @@ everything. Rinse and repeat as many times as needed :)
 
 ## Confirmed working exchanges
 
-    FTX
-    FTX US
-    Kraken
+    binance         ftx         ftxus               kraken
 
 ## Theorically supported
 
