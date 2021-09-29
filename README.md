@@ -48,9 +48,15 @@ made or lost in the same situation.
 
 ## Notes
 
-Currently, Jackrabbit Relay supports ONLY spot markets. Work is being done
-to supprt futures and margins. Some exchanges may work already, but I
-don't know which ones as many I can't test personally.
+Futures/Perpetual are under testing.
+
+Binance perpetuals are listed under the exchange,
+
+    binanceusdm
+
+FTX perpetuals should work fine.
+
+***IN BOTH CASES, BE SURE TO VERIFY THE PROPER MARKET***
 
 ## Video
 
@@ -295,6 +301,14 @@ This example purchases BCH by the value of BTC
 
     { "Exchange":"ftx","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"BCH/BTC","Quote":"1" }
 
+This example purchase of a perpetual contract of AAVE with a leverage of 5
+
+    { "Exchange":"ftx","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"AAVE-PREP","Base":"1","Leverage":"5" }
+
+This example purchase of a perpetual contract of AAVE with a leverage of 20, using an isolated margin
+
+    { "Exchange":"ftx","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"AAVEPREP","Base":"1","Leverage":"20","Margin":"Isolated" }
+
 Discriptionn of the payload
 
     Exchange
@@ -305,10 +319,9 @@ Discriptionn of the payload
 
         This is the market you are trading. 
 
-        Spot            Working 
-        Prepetuals      Maybe working FTX ONLY
+        Spot            Working
+        Future          Testing
         Margin          In progress
-        Future          In progress
 
     Account
 
