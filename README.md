@@ -352,6 +352,14 @@ Discriptionn of the payload
         example, if you want to purchase BCH/BTC using the price value of
         BTC, then you specify your amout in the quote currency.
 
+    Leverage
+
+        For binanceusdm and ftx, this sets the leverage amount
+
+    Margin
+
+        For binanceusdm, this sets the margin to Crossed or Isolated.
+
 ## Logging
 
 Below are examples of the log files.
