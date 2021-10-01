@@ -202,14 +202,17 @@ def main():
     if (hasUSD and hasBase) or (hasUSD and hasQuote) or (hasQuote and hasBase):
         ErrorLog("Quote validation","USD, Base, or Quote can be present, NOT a combination of two or more.")
     else:
-        if hasUSD and float(Order['USD'])>0.0:
-            WriteLog('|- Using USD')
+        if hasUSD and '%' in Order['USD']:
+            WriteLog('|- Using USD %')
         else:
-            if hasBase and float(Order['Base'])>0.0:
-                WriteLog('|- Using BASE')
+            if hasUSD and float(Order['USD'])>0.0:
+                WriteLog('|- Using USD')
             else:
-                if hasQuote and float(Order['Quote'])>0.0:
-                    WriteLog('|- Using BASE')
+                if hasBase and float(Order['Base'])>0.0:
+                    WriteLog('|- Using Base')
+                else:
+                    if hasQuote and float(Order['Quote'])>0.0:
+                        WriteLog('|- Using Quote')
 
     isMinimum=False
     if (not hasUSD and not hasBase):
@@ -349,9 +352,16 @@ def main():
 
         if not isMinimum:
             if hasUSD:
-                amount=round(float(Order['USD'])/close,6)
+                if '%' in Order['USD']:
+                    bal=GetBalance(exchange,quote)
+                    amount=round((float(Order['USD'].replace('%',''))/100)*bal,6)
+                else:
+                    amount=round(float(Order['USD'])/close,6)
             else:
-                amount=round(float(Order['Base']),6)
+                if hasQuote:
+                    amount=round(float(Order['Quote']),6)
+                else:
+                    amount=round(float(Order['Base']),6)
 
         WriteLog("|- Minimum: "+str(minimum))
         WriteLog("|- Amount: "+str(amount))
