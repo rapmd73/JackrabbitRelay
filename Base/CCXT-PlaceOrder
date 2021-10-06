@@ -233,11 +233,6 @@ def main():
     if len(keys)>1:
         WriteLog("|- Using rotating key set "+str(CurrentKey))
 
-# Initial the exchange and setup the connection
-# exchange.headers['FTX-SUBACCOUNT'] = 'YOUR_SUBACCOUNT'
-# exchange,apiKey = 'YOUR_SUBACCOUNT_API_KEY'
-# exchange,secret = 'YOUR_SUBACCOUNT_SECRET'
-
     if exchangeName in ccxt.exchanges:
         try:
             exchange=getattr(ccxt,exchangeName)( \
@@ -418,6 +413,16 @@ def main():
         if "set_leverage" in exchange and "Leverage" in Order:
             exchange.set_legerage(int(Order['Leverage']),pair)
             WriteLog("|- Leverage: "+str(Order['Leverage']))
+    except:
+        pass
+
+    try:
+        if "Reduction" in Active:
+            pct=Active['Reduction']
+            if action=='close':
+                r=(amount*pct)
+                WriteLog("|- Reduction: "+str(r))
+                amount=amount-r
     except:
         pass
 
