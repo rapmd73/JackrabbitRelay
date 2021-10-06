@@ -218,7 +218,7 @@ files:
 
 The Jackrabbit Relay files are ver sime JSON based text.  Here is an example:
 
-    { "Account":"MAIN","API":"YourAPI","SECRET":"YourSecret","RateLimit":"200" }
+    { "Account":"MAIN","API":"YourAPI","SECRET":"YourSecret","RateLimit":"200","Reduction":"0.00001" }
 
 This would be placed in a folder called /home/JackrabbitRelay/Config and
 named something like ftxus.cfg
@@ -243,6 +243,13 @@ Now for the details:
         leave this out, chances are you will be banned from your
         exchange, most likely temporarily. You will have to tweak this
         number based upon your exchange.
+
+    Reduction: The amount to reducew your position to all your exchange
+    to close it. 
+
+        This is a percentage. Do NOT put a percent (%) sign. Use this
+        ONLY if you receive errors closing a position. Finding the amount
+        of the reduction is strictly trial and error.
 
 Jackrabbit support multiple API per exchange (sub)account. This is
 accomplished by this format:
