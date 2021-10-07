@@ -417,12 +417,11 @@ def main():
         pass
 
     try:
-        if "Reduction" in Active:
+        if "Reduction" in Active and action!="buy" and amount>=bal:
             pct=Active['Reduction']
-            if action=='close':
-                r=(amount*pct)
-                WriteLog("|- Reduction: "+str(r))
-                amount=amount-r
+            r=(amount*pct)
+            WriteLog("|- Reduction: "+str(r))
+            amount=amount-r
     except:
         pass
 
