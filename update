@@ -1,4 +1,7 @@
 #!/bin/bash
+pip3=`which pip3`
+
+$pip3 install -U ccxt
 
 cd /home/GitHub/JackrabbitRelay
 git pull https://github.com/rapmd73/JackrabbitRelay
