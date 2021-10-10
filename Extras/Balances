@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+
+Calculating price of current value of coin in dollars:
+
+1/close(btc)*psize=amount in btc
+
+"""
+
+import sys
+import os
+import time
+import json
+import ccxt
+from ccxt.base.decimal_to_precision import decimal_to_precision
+from ccxt.base.decimal_to_precision import number_to_string
+from ccxt.base.decimal_to_precision import ROUND
+from ccxt.base.decimal_to_precision import DECIMAL_PLACES
+
+Spacer=" "*80
+StableCoinUSD=['USD','USDT','USDC','BUSD','TUSD','USDS','DAI']
+
+def ReadConfig(echg):
+    keys=[]
+    fn='/home/JackrabbitRelay/Config/'+echg+'.cfg'
+
+    if os.path.exists(fn):
+        cf=open(fn,'rt+')
+        for line in cf.readlines():
+            key=json.loads(line)
+            keys.append(key)
+        cf.close()
+
+        return keys
+    else:
+        return []
+
+# if quote price is true, the exchange represents pairs in quote price vs base price.
+# ADA/BTC -> ADA/USD for base price to USD equivalent
+
+# load exchange
+
+if len(sys.argv)<2:
+    print(f"usage: {sys.argv[0]} <Exchange>")
+    sys.exit(1)
+
+exchangeName=sys.argv[1]
+
+keys=ReadConfig(exchangeName)
+CurrentKey=(os.getpid()%len(keys))
+Active=keys[CurrentKey]
+
+if exchangeName in ccxt.exchanges:
+    exchange=getattr(ccxt,exchangeName)( \
+        { 'apiKey': Active['API'],'secret': Active['SECRET'],'enableRateLimit':False })
+else:
+    if exchangeName=="ftxus":
+        exchange=ccxt.ftx({ 'hostname': 'ftx.us', \
+            'apiKey': Active['API'],'secret': Active['SECRET'],'enableRateLimit':False })
+    else:
+        print("Invalid exchange")
+        sys.exit(1)
+
+if "createMarketBuyOrderRequiresPrice" in exchange.options:
+    print("Exchange not supported")
+    sys.exit(1)
+
+# Set FTX and FTX US subaccount. Not sure if I need to reset API/secret yet.
+
+if exchangeName=="ftx" and Active['Account']!='MAIN':
+    exchange.headers['FTX-SUBACCOUNT']=Active['Account']
+    exchange.apiKey=Active['API']
+    exchange.secret=Active['SECRET']
+else:
+    if exchangeName=="ftxus" and Active['Account']!='MAIN':
+        exchange.headers['FTXUS-SUBACCOUNT']=Active['Account']
+        exchange.apiKey=Active['API']
+        exchange.secret=Active['SECRET']
+
+exchange.verbose=False
+
+if "RateLimit" in Active:
+    exchange.enableRateLimit=True
+    exchange.rateLimit=int(Active['RateLimit'])
+else:
+    exchange.enableRateLimit=False
+
+exchange.load_markets()
+
+try:
+    balance = exchange.fetch_balance()
+except ccxt.AuthenticationError as e:
+    error_message = str(e)
+    print(error_message)
+    if 'Not logged in' in error_message:
+        print("Looks like you're using a subacccount key, need to provide a subaccount name as well:")
+        # ask for a subaccount name
+#        exchange.headers['FTX-SUBACCOUNT'] = 'main'
+        sys.exit(1)
+
+#kraken doesn't give USD values
+
+# ftxus
+coinList=balance['total']
+
+for coin in coinList:
+    bal=float(balance['total'][coin])
+
+    if bal>0.0:
+        print(f"{coin:12} {bal:12.8f}")
