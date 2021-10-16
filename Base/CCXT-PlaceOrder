@@ -70,14 +70,20 @@ def FindMatchingPair(base,markets):
 
 # Place the order
 
-def PlaceOrder(exchange, pair, market, action, amount, close, RetryLimit):
+def PlaceOrder(exchange, pair, market, action, amount, close, RetryLimit, ReduceOnly):
+    params = { 'reduce_only': ReduceOnly, }
+
     retry=0
     while retry<RetryLimit:
         try:
-            order=exchange.create_order(pair, market, action, amount, close)
-        except Exception as e:
+            order=exchange.create_order(pair, market, action, amount, close, params)
+        except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError, ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError) as e:
             if retry>=RetryLimit:
                 ErrorLog("Placing Order",e)
+            else:
+                WriteLog('Retrying... attempt '+str(retry+1))
+        except Exception as e:
+            raise
         else:
             WriteLog("|- ID: "+order['id'])
             break
@@ -94,9 +100,13 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
             ohlcv=exchange.fetch_ohlcv(symbol=pair,timeframe=tf,limit=1)
             if ohlcv==[]:
                 ohlcv=None
-        except:
-            if retry>=RetryLimit:
-                ErrorLog("Fetching OHLCV",e)
+        except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError, ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError) as e:
+                if retry>=RetryLimit:
+                    ErrorLog("Fetching OHLCV",e)
+                else:
+                    WriteLog('Retrying... attempt '+str(retry+1))
+        except Exception as e:
+            raise
         else:
             break
         retry+=1
@@ -105,9 +115,13 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
     while retry<RetryLimit:
         try:
             ticker=exchange.fetch_ticker(pair)
-        except Exception as e:
+        except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError, ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError) as e:
             if retry>=RetryLimit:
-                ErrorLog("Fetching ticker",e)
+                ErrorLog("Fetching Ticker",e)
+            else:
+                WriteLog('Retrying... attempt '+str(retry+1))
+        except Exception as e:
+            raise
         else:
             break
         retry+=1
@@ -134,10 +148,17 @@ def GetBalance(exchange,base,RetryLimit):
     while retry<RetryLimit:
         try:
             balance=exchange.fetch_balance()
-            bal=float(balance['total'][base])
-        except Exception as e:
+            if base in balance['total']:
+                bal=float(balance['total'][base])
+            else:
+                bal=float(balance['total']['USD'])
+        except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError, ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError) as e:
             if retry>=RetryLimit:
-                ErrorLog("Fetching balance",e)
+                ErrorLog("Fetching Balance",e)
+            else:
+                WriteLog('Retrying... attempt '+str(retry+1))
+        except Exception as e:
+            raise
         else:
             break
         retry+=1
@@ -259,6 +280,7 @@ def main():
 
 # Load the API/Secret information
 
+    print(account)
     keys=ReadConfig(exchangeName,account)
     if keys==[]:
         ErrorLog("Reading Config","No API/Secret found for "+exchangeName+", (sub)account: "+account)
@@ -318,6 +340,13 @@ def main():
         WriteLog("|- API Retry limit set to "+str(RetryLimit)+' times')
     else:
         RetryLimit=1
+
+# Check for reduce only in active config
+
+    if "ReduceOnly" in Active:
+        ReduceOnly=True
+    else:
+        ReduceOnly=False
 
     exchange.load_markets()
     WriteLog("Markets loaded")
@@ -478,7 +507,7 @@ def main():
         action='sell'
 
     if amount>0.0:
-        PlaceOrder(exchange,pair, 'market', action, amount, close, RetryLimit)
+        PlaceOrder(exchange,pair, 'market', action, amount, close, RetryLimit, ReduceOnly)
 
         bal=GetBalance(exchange,base,RetryLimit)
         sbal=f"{float(bal):.6f}"

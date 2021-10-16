@@ -10,6 +10,10 @@ import sys
 import time
 from datetime import datetime
 
+LogDirectory="/home/JackrabbitRelay/Logs"
+BaseDirectory='/home/JackrabbitRelay/Base'
+ConfigDirectory='/home/JackrabbitRelay/Config'
+
 # Write log entry
 
 def WriteLog(msg):
@@ -18,7 +22,7 @@ def WriteLog(msg):
 
     s=f'{time} {pid:7.0f} {msg}\n'
 
-    fh=open('/home/Relay/Logs/'+os.path.basename(__file__)+'.log','a')
+    fh=open(LogDirectory+'/'+os.path.basename(__file__)+'.log','a')
     fh.write(s)
     fh.close()
 
