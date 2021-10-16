@@ -165,6 +165,26 @@ def GetBalance(exchange,base,RetryLimit):
 
     return bal
 
+# Fetch the market list
+
+def GetMarkets(exchange,RetryLimit):
+    retry=0
+    while retry<RetryLimit:
+        try:
+            markets=exchange.load_markets()
+        except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError, ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError) as e:
+            if retry>=RetryLimit:
+                ErrorLog("Fetching Markets",e)
+            else:
+                WriteLog('Retrying... attempt '+str(retry+1))
+        except Exception as e:
+            raise
+        else:
+            break
+        retry+=1
+
+    return markets
+
 # Read the exchange config file and load API/SECRET for a given (sub)account.
 # MAIN is reserved for the main account
 
@@ -348,7 +368,7 @@ def main():
     else:
         ReduceOnly=False
 
-    exchange.load_markets()
+    markets=GetMarkets(exchange,RetryLimit)
     WriteLog("Markets loaded")
 
     if pair[0]=='.' or pair.find(".d")>-1:
