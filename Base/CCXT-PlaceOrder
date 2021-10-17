@@ -300,7 +300,6 @@ def main():
 
 # Load the API/Secret information
 
-    print(account)
     keys=ReadConfig(exchangeName,account)
     if keys==[]:
         ErrorLog("Reading Config","No API/Secret found for "+exchangeName+", (sub)account: "+account)
