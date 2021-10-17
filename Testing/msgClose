@@ -1,1 +1,1 @@
-{ "Exchange":"ftx","Market":"Future","Account":"jrrelaytestftx","Action":"Close","Asset":"TRX-PERP" }
+{ "Exchange":"ftx","Market":"Future","Account":"test","Action":"Close","Asset":"TRX-PERP" }

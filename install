@@ -1,9 +1,10 @@
 #!/bin/bash
 pip3=`which pip3`
 
+$pip3 install ccxt
+
 mkdir -p /home/JackrabbitRelay/Base
 mkdir -p /home/JackrabbitRelay/Config
 mkdir -p /home/JackrabbitRelay/Logs
 cp -r * /home/JackrabbitRelay
 
-$pip3 install ccxt
