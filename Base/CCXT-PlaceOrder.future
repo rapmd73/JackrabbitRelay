@@ -12,6 +12,9 @@ from datetime import datetime
 import json
 import ccxt
 
+Version="0.0.0.0.1"
+PlaceOrderHeader='PlaceOrder FUTURE '+Version
+
 Spacer=" "*80
 LogDirectory="/home/JackrabbitRelay/Logs"
 BaseDirectory='/home/JackrabbitRelay/Base'
@@ -165,6 +168,28 @@ def GetBalance(exchange,base,RetryLimit):
 
     return bal
 
+# Fetch the position of a given of a pair
+
+def GetPosition(exchange,pair,RetryLimit):
+    retry=0
+    while retry<RetryLimit:
+        try:
+            positions = exchange.fetch_positions()
+            positions_by_symbol = exchange.index_by(positions, 'symbol')
+            position = exchange.safe_value(positions_by_symbol, pair)
+        except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError, ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError) as e:
+            if retry>=RetryLimit:
+                ErrorLog("Fetching Balance",e)
+            else:
+                WriteLog('Retrying... attempt '+str(retry+1))
+        except Exception as e:
+            raise
+        else:
+            break
+        retry+=1
+
+    return position
+
 # Fetch the market list
 
 def GetMarkets(exchange,RetryLimit):
@@ -235,7 +260,7 @@ def ProcessJSON(payload):
 ###
 
 def main():
-    WriteLog('Processing order')
+    WriteLog(PlaceOrderHeader)
     hasUSD=False
     hasBase=False
     hasQuote=False
@@ -463,25 +488,34 @@ def main():
         WriteLog("|- Minimum: "+str(minimum))
         WriteLog("|- Amount: "+str(amount))
 
-        bal=GetBalance(exchange,base,RetryLimit)
+        position=GetPosition(exchange,pair,RetryLimit)
+        if position is None:
+            bal=0
+        else:
+            bal=position['contracts']
         sbal=f"{float(bal):.6f}"
-        WriteLog("Previous Balance: "+sbal+" "+base)
+        WriteLog("Previous Contracts: "+sbal+" "+pair)
 
 # If the amount is less then the minimum and action is to sell/close
 
         if bal<minimum and bal>0 and (action=='close' or action=='sell'):
             ErrorLog(exchangeName, "not enough to sell/close position")
 
-# Test to see if amount is more than balance and correct in needed
+# Test to see if amount is more than balance and correct if needed
 
         if (amount>bal and bal>0) and (action=='close' or action=='sell'):
-            WriteLog("|- Forcing balance")
+            WriteLog("|- Forcing position size")
             amount=bal
 
-# Closing the position
+# Closing the position, with futures, we need to figure out the current
+# direction and place an order opposite to it.
 
         if bal>0 and action=='close':
-            WriteLog("|- Forcing balance")
+            if position['side']=='long':
+                action='sell' 
+            else:
+                action='buy'
+            WriteLog("|- Forcing direction to "+action)
             amount=bal
 
 # Time to make a purchase
@@ -528,9 +562,13 @@ def main():
     if amount>0.0:
         PlaceOrder(exchange,pair, 'market', action, amount, close, RetryLimit, ReduceOnly)
 
-        bal=GetBalance(exchange,base,RetryLimit)
+        position=GetPosition(exchange,pair,RetryLimit)
+        if position is None:
+            bal=0
+        else:
+            bal=position['contracts']
         sbal=f"{float(bal):.6f}"
-        WriteLog("New Balance: "+sbal+" "+base)
+        WriteLog("New Contracts: "+sbal+" "+pair)
 
 # Finish with elapsed time
 

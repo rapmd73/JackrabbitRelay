@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Crontab entry ( without has mark #
+# @reboot ( /home/JackrabbitRelay/Base/RelayLauncher & ) > /dev/null 2>&1
+
+BaseDir="/home/JackrabbitRelay/Base"
+
+exchange=$1
+market=$2
+
+if [ -z $exchange ] ; then
+    echo An exchange name to use must be given.
+    exit 1
+fi
+
+if [ -z $market ] ; then
+    echo A market to use must be given.
+    exit 1
+fi
+
+cd $BaseDir
+
+cp CCXT-PlaceOrder.$market PlaceOrder.$exchange.$market

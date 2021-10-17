@@ -48,15 +48,54 @@ made or lost in the same situation.
 
 ## Notes
 
-Futures/Perpetual are under testing.
+**IMPORTANT** READ BEFORE UPDATING. **NOT FULLY TESTED YET**
 
-Binance perpetuals are listed under the exchange,
+A special thank you to **Me4tGrinf3r | Jonas** for providing me with a
+small test account where I can analyze perpetual markets. It has be
+invaluable in finding and fixing issues.
 
-    binanceusdm
+This is a major update with many core changes.
 
-FTX perpetuals should work fine.
+1. The Jackrabbit Relay server program now creates a process ID file that
+can identify a specific Relay server by its port number. This allows
+multiple Relays to run on a single server, providing each has its own
+unique port number.
 
-***IN BOTH CASES, BE SURE TO VERIFY THE PROPER MARKET***
+    Added a KillRelay script to the base directory that will kill a Relay
+    server based upon its port.
+
+    If you want to run multuple Relay servers on a single machine, each
+    will need to bew started with the RelayLauncher script.
+
+2. Versioning system has been added (finally).
+
+5. The PlaceOrder program has been seperated between SPOT and FUTURE markets
+
+    Previous PlaceOrder script only needed the exchange name,
+
+        PlaceOrder.ftx
+
+    New PlaceOrder script needs the exchange and the market,
+
+        PlaceOrder.ftx.spot
+
+    The exchange and market MUST be in lower case.
+
+6. In the main JackrabbitRelay folder, an UpdatePlaceOrder script is
+provided for convience for updating the PlaceOrder programs for each
+exchange you might trade on.
+
+    Examples:
+
+        ./UpdatePlaceOrder binance spot
+
+        ./UpdatePlaceOrder binanceusdm future
+
+        ./UpdatePlaceOrder ftx future
+
+        ./UpdatePlaceOrder ftxus spot
+
+        ./UpdatePlaceOrder kraken spot
 
 ## Video
 
@@ -192,11 +231,12 @@ The Jackrabbit Relay file structure and folder layout is very simple:
 In the base directory (/home/JackrabbitRelay/Base), there are several
 files:
 
-    CCXT-PlaceOrder
+    CCXT-PlaceOrder.spot
+    CCXT-PlaceOrder.future
 
-        This is the Order Processor. You actually wont use this file
-        directly, but rather copy it to the actual exchange designated
-        order transactor, for example PlaceOrder.ftxus
+        These are the Order Processors. You actually wont use these files
+        directly, but rather copy them to the actual exchange designated
+        order transactor, for example PlaceOrder.ftxus.spot
 
     PlaceOrder.tester
 
@@ -218,7 +258,7 @@ files:
 
 The Jackrabbit Relay files are ver sime JSON based text.  Here is an example:
 
-    { "Account":"MAIN","API":"YourAPI","SECRET":"YourSecret","RateLimit":"200","Reduction":"0.00001" }
+    { "Account":"MAIN","API":"YourAPI","SECRET":"YourSecret","RateLimit":"200","Reduction":"0.00001","ReduceOnly":"Yes" }
 
 This would be placed in a folder called /home/JackrabbitRelay/Config and
 named something like ftxus.cfg
@@ -250,6 +290,11 @@ Now for the details:
         This is a percentage. Do NOT put a percent (%) sign. Use this
         ONLY if you receive errors closing a position. Finding the amount
         of the reduction is strictly trial and error.
+
+    ReduceOnly: This tells the exchange NOT to flip a position from long
+    to short or vice-versa.
+
+        It can have any value as it presence is only required.
 
 Jackrabbit support multiple API per exchange (sub)account. This is
 accomplished by this format:

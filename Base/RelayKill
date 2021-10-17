@@ -1,0 +1,15 @@
+#!/bin/bash
+
+BaseDir="/home/JackrabbitRelay/Base"
+Port=$1
+
+if [ -z $Port ] ; then
+    echo A port to use must be given.
+    exit 1
+fi
+
+cd $BaseDir
+
+PID=`cat $BaseDir/$Port.pid`
+
+kill -s 9 $PID
