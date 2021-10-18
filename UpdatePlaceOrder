@@ -4,20 +4,32 @@
 # @reboot ( /home/JackrabbitRelay/Base/RelayLauncher & ) > /dev/null 2>&1
 
 BaseDir="/home/JackrabbitRelay/Base"
+GitHubBase="/home/GitHub/JackrabbitRelay/Base"
 
 exchange=$1
-market=$2
 
 if [ -z $exchange ] ; then
     echo An exchange name to use must be given.
     exit 1
 fi
 
-if [ -z $market ] ; then
-    echo A market to use must be given.
-    exit 1
-fi
-
 cd $BaseDir
 
-cp CCXT-PlaceOrder.$market PlaceOrder.$exchange.$market
+fn1=$GitHubBase"/CCXT-PlaceOrder.spot"
+fn2=$BaseDir"/CCXT-PlaceOrder.spot"
+
+if ! cmp -s "$file1" "$file2"; then
+    echo Updating / replacing PlaceOrder spot
+    cp $fn1 $fn2
+fi
+
+fn1=$GitHubBase"/CCXT-PlaceOrder.future"
+fn2=$BaseDir"/CCXT-PlaceOrder.future"
+
+if ! cmp -s "$file1" "$file2"; then
+    echo Updating / replacing PlaceOrder future
+    cp $fn1 $fn2
+fi
+
+cp CCXT-PlaceOrder.spot PlaceOrder.$exchange.spot
+cp CCXT-PlaceOrder.future PlaceOrder.$exchange.future

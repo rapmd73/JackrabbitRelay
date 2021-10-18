@@ -533,6 +533,14 @@ def main():
     WriteLog("|- Close: "+str(close))
     WriteLog("|- Price: "+str(round(amount*close,6)))
 
+    if action.lower()=='long':
+        action='buy'
+        ReduceOnly=False
+    else:
+        if action.lower()=='short':
+            action='sell'
+            ReduceOnly=False
+
     try: # Isolated or Crossed
         if "set_margin_mode" in exchange and "Margin" in Order:
             exchange.set_margin_mode(pair,Order['Margin'].upper())
@@ -555,9 +563,6 @@ def main():
             amount=amount-r
     except:
         pass
-
-    if action=='close':
-        action='sell'
 
     if amount>0.0:
         PlaceOrder(exchange,pair, 'market', action, amount, close, RetryLimit, ReduceOnly)
