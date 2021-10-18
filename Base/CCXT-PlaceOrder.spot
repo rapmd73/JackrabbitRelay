@@ -313,7 +313,7 @@ def main():
     Active=keys[CurrentKey]
 
     if len(keys)>1:
-        WriteLog("|- Using rotating key set "+str(CurrentKey)+1)
+        WriteLog("|- Using rotating key set "+str(CurrentKey+1))
 
     if exchangeName in ccxt.exchanges:
         try:
