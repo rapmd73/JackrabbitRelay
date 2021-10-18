@@ -99,12 +99,14 @@ exchange you might trade on.
 
 ## Video
 
-Yes, there's a video. Please watch it, then come back here and read
+Yes, there's videos. Please watch them, then come back here and read
 everything. Rinse and repeat as many times as needed :)
 
 [Installing Jackrabbit Relay](https://youtu.be/cvtSHj1ubJs)
 
 [Updaing Jackrabbit Relay](https://youtu.be/Yb05lp9BPL4)
+
+[Big update to Jackrabbit Relay](https://youtu.be/27XXZTIWSrw)
 
 ## Confirmed working exchanges
 
