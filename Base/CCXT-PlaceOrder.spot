@@ -84,7 +84,7 @@ def PlaceOrder(exchange, pair, market, action, amount, close, RetryLimit, Reduce
             if retry>=RetryLimit:
                 ErrorLog("Placing Order",e)
             else:
-                WriteLog('Retrying... attempt '+str(retry+1))
+                WriteLog('Retrying ('+str(retry+1)+'), '+str(e))
         except Exception as e:
             raise
         else:
@@ -107,7 +107,7 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
                 if retry>=RetryLimit:
                     ErrorLog("Fetching OHLCV",e)
                 else:
-                    WriteLog('Retrying... attempt '+str(retry+1))
+                    WriteLog('Retrying ('+str(retry+1)+'), '+str(e))
         except Exception as e:
             raise
         else:
@@ -122,7 +122,7 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
             if retry>=RetryLimit:
                 ErrorLog("Fetching Ticker",e)
             else:
-                WriteLog('Retrying... attempt '+str(retry+1))
+                WriteLog('Retrying ('+str(retry+1)+'), '+str(e))
         except Exception as e:
             raise
         else:
@@ -159,7 +159,7 @@ def GetBalance(exchange,base,RetryLimit):
             if retry>=RetryLimit:
                 ErrorLog("Fetching Balance",e)
             else:
-                WriteLog('Retrying... attempt '+str(retry+1))
+                WriteLog('Retrying ('+str(retry+1)+'), '+str(e))
         except Exception as e:
             raise
         else:
@@ -179,7 +179,7 @@ def GetMarkets(exchange,RetryLimit):
             if retry>=RetryLimit:
                 ErrorLog("Fetching Markets",e)
             else:
-                WriteLog('Retrying... attempt '+str(retry+1))
+                WriteLog('Retrying ('+str(retry+1)+'), '+str(e))
         except Exception as e:
             raise
         else:
@@ -198,9 +198,10 @@ def ReadConfig(echg,account):
     if os.path.exists(fn):
         cf=open(fn,'rt+')
         for line in cf.readlines():
-            key=json.loads(line)
-            if key['Account']==account:
-                keys.append(key)
+            if len(line.strip())>0 and line[0]!='#':
+                key=json.loads(line)
+                if key['Account']==account:
+                    keys.append(key)
         cf.close()
 
         return keys
@@ -450,16 +451,16 @@ def main():
             if hasUSD:
                 if '%' in Order['USD']:
                     bal=GetBalance(exchange,quote,RetryLimit)
-                    amount=round((float(Order['USD'].replace('%',''))/100)*bal,6)
+                    amount=round(((float(Order['USD'].replace('%',''))/100)*bal)/close,6)
                 else:
                     amount=round(float(Order['USD'])/close,6)
             else:
                 if hasQuote:
                     if '%' in Order['Quote']:
                         bal=GetBalance(exchange,quote,RetryLimit)
-                        amount=round((float(Order['Quote'].replace('%',''))/100)*bal,6)
+                        amount=round(((float(Order['Quote'].replace('%',''))/100)*bal)/close,6)
                     else:
-                        amount=round(float(Order['Quote']),6)
+                        amount=round(float(Order['Quote'])/close,6)
                 else:
                     amount=round(float(Order['Base']),6)
 
@@ -478,12 +479,6 @@ def main():
 # Test to see if amount is more than balance and correct in needed
 
         if (amount>bal and bal>0) and (action=='close' or action=='sell'):
-            WriteLog("|- Forcing balance")
-            amount=bal
-
-# Closing the position
-
-        if bal>0 and action=='close':
             WriteLog("|- Forcing balance")
             amount=bal
 
