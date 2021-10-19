@@ -12,7 +12,7 @@ from datetime import datetime
 import json
 import ccxt
 
-Version="0.0.0.0.1"
+Version="0.0.0.0.15"
 PlaceOrderHeader='PlaceOrder SPOT '+Version
 
 Spacer=" "*80
@@ -473,7 +473,7 @@ def main():
 
 # If the amount is less then the minimum and action is to sell/close
 
-        if bal<minimum and bal>0 and (action=='close' or action=='sell'):
+        if bal<minimum and (action=='close' or action=='sell'):
             ErrorLog(exchangeName, "not enough to sell/close position")
 
 # Test to see if amount is more than balance and correct in needed
