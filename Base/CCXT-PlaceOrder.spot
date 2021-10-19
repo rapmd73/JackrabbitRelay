@@ -12,7 +12,7 @@ from datetime import datetime
 import json
 import ccxt
 
-Version="0.0.0.0.15"
+Version="0.0.0.0.30"
 PlaceOrderHeader='PlaceOrder SPOT '+Version
 
 Spacer=" "*80
@@ -86,7 +86,7 @@ def PlaceOrder(exchange, pair, market, action, amount, close, RetryLimit, Reduce
             else:
                 WriteLog('Retrying ('+str(retry+1)+'), '+str(e))
         except Exception as e:
-            raise
+            ErrorLog("Placing Order",e)
         else:
             WriteLog("|- ID: "+order['id'])
             break
@@ -109,7 +109,7 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
                 else:
                     WriteLog('Retrying ('+str(retry+1)+'), '+str(e))
         except Exception as e:
-            raise
+            ErrorLog("Placing Order",e)
         else:
             break
         retry+=1
@@ -124,7 +124,7 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
             else:
                 WriteLog('Retrying ('+str(retry+1)+'), '+str(e))
         except Exception as e:
-            raise
+            ErrorLog("Placing Order",e)
         else:
             break
         retry+=1
@@ -161,7 +161,7 @@ def GetBalance(exchange,base,RetryLimit):
             else:
                 WriteLog('Retrying ('+str(retry+1)+'), '+str(e))
         except Exception as e:
-            raise
+            ErrorLog("Placing Order",e)
         else:
             break
         retry+=1
@@ -181,7 +181,7 @@ def GetMarkets(exchange,RetryLimit):
             else:
                 WriteLog('Retrying ('+str(retry+1)+'), '+str(e))
         except Exception as e:
-            raise
+            ErrorLog("Placing Order",e)
         else:
             break
         retry+=1
