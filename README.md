@@ -48,11 +48,16 @@ made or lost in the same situation.
 
 ## Notes
 
-**IMPORTANT** READ BEFORE UPDATING. **NOT FULLY TESTED YET**
+**Special Thanks to the following people for providing me with a test
+account.
 
-A special thank you to **Me4tGrinf3r | Jonas** for providing me with a
-small test account where I can analyze perpetual markets. It has be
-invaluable in finding and fixing issues.
+    1. Me4tGrinf3r | Jonas
+    2. MisterCrease
+
+Having the test accounts really help in tracking issues and solving
+problems. If you would like to donate a test account, please DM me of Discord.
+
+**IMPORTANT** READ BEFORE UPDATING. **NOT FULLY TESTED YET**
 
 This is a major update with many core changes.
 
