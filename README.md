@@ -59,48 +59,12 @@ problems. If you would like to donate a test account, please DM me of Discord.
 
 **IMPORTANT** READ BEFORE UPDATING. **NOT FULLY TESTED YET**
 
-This is a major update with many core changes.
+This is ***another*** major update with many core changes.
 
-1. The Jackrabbit Relay server program now creates a process ID file that
-can identify a specific Relay server by its port number. This allows
-multiple Relays to run on a single server, providing each has its own
-unique port number.
-
-    Added a KillRelay script to the base directory that will kill a Relay
-    server based upon its port.
-
-    If you want to run multuple Relay servers on a single machine, each
-    will need to bew started with the RelayLauncher script.
-
-2. Versioning system has been added (finally).
-
-5. The PlaceOrder program has been seperated between SPOT and FUTURE markets
-
-    Previous PlaceOrder script only needed the exchange name,
-
-        PlaceOrder.ftx
-
-    New PlaceOrder script needs the exchange and the market,
-
-        PlaceOrder.ftx.spot
-
-    The exchange and market MUST be in lower case.
-
-6. In the main JackrabbitRelay folder, an UpdatePlaceOrder script is
-provided for convience for updating the PlaceOrder programs for each
-exchange you might trade on.
-
-    Examples:
-
-        ./UpdatePlaceOrder binance spot
-
-        ./UpdatePlaceOrder binanceusdm future
-
-        ./UpdatePlaceOrder ftx future
-
-        ./UpdatePlaceOrder ftxus spot
-
-        ./UpdatePlaceOrder kraken spot
+The PlaceOrder programs have been broken down to use library files now.
+There is simply too much overlap now that it is too easy to introduce
+errors on the simplest changes. This process will mitigate that. The
+newly updated *update* script handles the library file updates.
 
 ## Video
 
