@@ -5,3 +5,6 @@ $pip3 install -U ccxt
 
 cd /home/GitHub/JackrabbitRelay
 git pull https://github.com/rapmd73/JackrabbitRelay
+
+mkdir -p /home/JackrabbitRelay/Base/Library > /dev/null 2>&1
+cp /home/GitHub/JackrabbitRelay/Base/Library/* /home/JackrabbitRelay/Base/Library
