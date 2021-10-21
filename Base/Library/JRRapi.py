@@ -9,7 +9,6 @@ import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 import os
 import time
-from datetime import datetime
 import json
 import ccxt
 
@@ -32,7 +31,10 @@ def PlaceOrder(exchange, pair, market, action, amount, close, RetryLimit, Reduce
     retry=0
     while retry<RetryLimit:
         try:
-            order=exchange.create_order(pair, market, action, amount, close, params)
+            if ReduceOnly==True:
+                order=exchange.create_order(pair, market, action, amount, close, params)
+            else:
+                order=exchange.create_order(pair, market, action, amount, close)
         except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError, ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError) as e:
             if retry>=RetryLimit:
                 JRRlog.ErrorLog("Placing Order",e)
@@ -42,8 +44,10 @@ def PlaceOrder(exchange, pair, market, action, amount, close, RetryLimit, Reduce
             JRRlog.ErrorLog("Placing Order",e)
         else:
             JRRlog.WriteLog("|- ID: "+order['id'])
-            break
+            return order
         retry+=1
+
+    return order
 
 # If fetch_ohlcv fails, revert to fetch_ticker and parse it manually
 # if open is None, use low.
@@ -62,7 +66,7 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
                 else:
                     JRRlog.WriteLog('Retrying ('+str(retry+1)+'), '+str(e))
         except Exception as e:
-            JRRlog.ErrorLog("Placing Order",e)
+            JRRlog.ErrorLog("Fetching OHLCV",e)
         else:
             break
         retry+=1
@@ -77,7 +81,7 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
             else:
                 JRRlog.WriteLog('Retrying ('+str(retry+1)+'), '+str(e))
         except Exception as e:
-            JRRlog.ErrorLog("Placing Order",e)
+            JRRlog.ErrorLog("Fetching Ticker",e)
         else:
             break
         retry+=1
@@ -114,7 +118,7 @@ def GetBalance(exchange,base,RetryLimit):
             else:
                 JRRlog.WriteLog('Retrying ('+str(retry+1)+'), '+str(e))
         except Exception as e:
-            JRRlog.ErrorLog("Placing Order",e)
+            JRRlog.ErrorLog("Fetching Balance",e)
         else:
             break
         retry+=1
@@ -132,11 +136,11 @@ def GetPosition(exchange,pair,RetryLimit):
             position = exchange.safe_value(positions_by_symbol, pair)
         except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError, ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError) as e:
             if retry>=RetryLimit:
-                JRRlog.ErrorLog("Fetching Balance",e)
+                JRRlog.ErrorLog("Fetching Position",e)
             else:
                 JRRlog.WriteLog('Retrying ('+str(retry+1)+'), '+str(e))
         except Exception as e:
-            JRRlog.ErrorLog("Fetching Markets",e)
+            JRRlog.ErrorLog("Fetching Position",e)
         else:
             break
         retry+=1
@@ -156,7 +160,7 @@ def GetMarkets(exchange,RetryLimit):
             else:
                 JRRlog.WriteLog('Retrying ('+str(retry+1)+'), '+str(e))
         except Exception as e:
-            JRRlog.ErrorLog("Placing Order",e)
+            JRRlog.ErrorLog("Fetching Markets",e)
         else:
             break
         retry+=1
