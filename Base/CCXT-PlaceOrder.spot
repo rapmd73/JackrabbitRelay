@@ -248,8 +248,8 @@ def main():
                 else:
                     amount=round(float(Order['Base']),6)
 
-        JRRlog.WriteLog("|- Minimum: "+str(minimum))
-        JRRlog.WriteLog("|- Amount: "+str(amount))
+        JRRlog.WriteLog("|- Minimum: "+f'{minimum:.6f}')
+        JRRlog.WriteLog("|- Amount: "+f'{amount:.6f}')
 
         bal=JRRapi.GetBalance(exchange,base,RetryLimit)
         sbal=f"{float(bal):.6f}"

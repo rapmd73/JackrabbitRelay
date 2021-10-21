@@ -249,8 +249,8 @@ def main():
                 else:
                     amount=round(float(Order['Base']),6)
 
-        JRRlog.WriteLog("|- Minimum: "+str(minimum))
-        JRRlog.WriteLog("|- Amount: "+str(amount))
+        JRRlog.WriteLog("|- Minimum: "+f'{minimum:.6f}')
+        JRRlog.WriteLog("|- Amount: "+f'{amount:.6f}')
 
         position=JRRapi.GetPosition(exchange,pair,RetryLimit)
         if position is None:
