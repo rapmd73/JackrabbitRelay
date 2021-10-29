@@ -122,6 +122,7 @@ class Handler(BaseHTTPRequestHandler):
         res=ProcessTrade(addr,payload)
 
         if res!=None:
+            WriteLog(addr,res)
             self.wfile.write(res)
         return
 
