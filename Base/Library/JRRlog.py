@@ -34,6 +34,7 @@ def WriteLog(msg):
     fh.write(s)
     fh.close()
     print(s.rstrip())
+    sys.stdout.flush()
 
 def ErrorLog(func,e):
     msg=func+' failed with: '+str(e)
