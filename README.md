@@ -68,6 +68,8 @@ everything. Rinse and repeat as many times as needed :)
 
 [Big update to Jackrabbit Relay](https://youtu.be/27XXZTIWSrw)
 
+[Testing the Jackrabbit Relay Server](https://youtu.be/4l3yMbMc6Wc)
+
 ## Confirmed working exchanges
 
     ftx         ftxus               kraken
@@ -417,6 +419,41 @@ Here is an example of the Place Order log for the FTX US exchange:
     2021-09-22 22:34:54.398102 1009381 New Balance: 0.000000 SUSHI
     2021-09-22 22:34:54.398277 1009381 Processing Completed: 01.120702 seconds
 
+## Extras
+
+The Extras folder has many interesting scripts/programs
+
+    ListMarkets <exchange> <ratelimit>
+
+        Exchange is the exchange you want to line, ie ftx
+
+        Rate limit is a number of 1 o more. This lets you find a good
+        rate limit value your exchange will accept. The program will
+        crash with a rate limit error if your value is too low.
+
+        This program lists the markets of a given exchange. Here is an example from FTX:
+
+            LINK/BTC             spot                      0.100000           0.000050
+            LINK/USD             spot                      0.100000           3.094800
+            LINK/USDT            spot                      0.100000           3.094700
+
+        The first column is the pair. The second is the market, the third
+        is the minimum the exchange will accept. Thwe above example is
+        for the LINK market, so the minimum is expressed in LINK. The
+        forth colum is what the amount would be if expressed is USD or a
+        simplar stablecoin.
+
+    RelayPassThru
+
+        This program is a bridge between Apache and Jackrabbit Relay.
+        You'll need tp add your webhook and copy it into your cgi-bin
+        folder.
+
+    Tester.PineScript.txt
+
+        This is the pine script program from the above video on testing
+        Jackrabbit Relay's server.
+
 ## Donations
 
 If you would like to help support this project financially, please use
@@ -429,3 +466,4 @@ sustaining Jackrabbit Relay. Thank you.
     LINK    0xd8Fd4fA3b489861ad6Eb95a0617B4DA7c78123F8
     LTC     MHj8nQcRdJWVVNeHUemSQgzBw3cPrZEtRU
     USDT    0xd8Fd4fA3b489861ad6Eb95a0617B4DA7c78123F8
+
