@@ -57,15 +57,6 @@ account.
 Having the test accounts really help in tracking issues and solving
 problems. If you would like to donate a test account, please DM me of Discord.
 
-**IMPORTANT** READ BEFORE UPDATING. **NOT FULLY TESTED YET**
-
-This is ***another*** major update with many core changes.
-
-The PlaceOrder programs have been broken down to use library files now.
-There is simply too much overlap now that it is too easy to introduce
-errors on the simplest changes. This process will mitigate that. The
-newly updated *update* script handles the library file updates.
-
 ## Video
 
 Yes, there's videos. Please watch them, then come back here and read
@@ -79,7 +70,11 @@ everything. Rinse and repeat as many times as needed :)
 
 ## Confirmed working exchanges
 
-    binance         ftx         ftxus               kraken
+    ftx         ftxus               kraken
+
+## Problematic exchanges
+
+    binance
 
 ## Theorically supported
 
@@ -209,11 +204,10 @@ files:
         directly, but rather copy them to the actual exchange designated
         order transactor, for example PlaceOrder.ftxus.spot
 
-    PlaceOrder.tester
+    PlaceOrder.tester.spot
 
         This is just a dummy test module that you can use to test the
-        connection with TradingView. It too, gets copied to the exchange
-        designator, for example, PlaceOrder.kraken
+        connection with TradingView. 
 
     JackrabbitRelay
 
@@ -326,11 +320,11 @@ This example purchases BCH by the value of BTC
 
 This example purchase of a perpetual contract of AAVE with a leverage of 5
 
-    { "Exchange":"ftx","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"AAVE-PREP","Base":"1","Leverage":"5" }
+    { "Exchange":"ftx","Market":"Future","Account":"MAIN","Action":"Buy","Asset":"AAVE-PREP","Base":"1","Leverage":"5" }
 
 This example purchase of a perpetual contract of AAVE with a leverage of 20, using an isolated margin
 
-    { "Exchange":"ftx","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"AAVEPREP","Base":"1","Leverage":"20","Margin":"Isolated" }
+    { "Exchange":"ftx","Market":"Future","Account":"MAIN","Action":"Buy","Asset":"AAVEPREP","Base":"1","Leverage":"20","Margin":"Isolated" }
 
 Discriptionn of the payload
 
@@ -343,7 +337,7 @@ Discriptionn of the payload
         This is the market you are trading. 
 
         Spot            Working
-        Future          Testing
+        Future          Working
         Margin          In progress
 
     Account
@@ -356,6 +350,8 @@ Discriptionn of the payload
         Buy             Make a purchase
         Sell            Sell a portion. If amount is more then balance, position will be closed
         Close           Sell all of the asset
+        Long            Opens a long position and can flip a short to long
+        Short           Opens a short position and can flip a long position to short
 
     Asset
 

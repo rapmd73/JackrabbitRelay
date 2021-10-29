@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay/Base/Library')
+import os
+import requests
+
+import JRRconfig
+import JRRlog
+import JRRapi
+import JRRsupport
+
+#
+# The webhook to use. YOU MUST EDIT THIS LINE CAREFULLY.
+#
+
+Webhook='http://1.2.3.4:567'
+
+# 
+# This module just passes the message from Apache to Jackrabbit Relay,
+# without exposing Relay to the world #
+#
+
+print("Content-type: text/html\r\n\r\n")
+
+payload=JRRsupport.pFilter(sys.stdin.read())
+
+headers={'content-type': 'text/plain', 'Connection': 'close'}
+
+resp=None
+try:
+    resp=requests.post(Webhook,headers=headers,data=payload)
+except:
+    resp=None
+

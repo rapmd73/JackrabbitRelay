@@ -28,6 +28,5 @@ def WriteLog(msg):
 
 if __name__ == '__main__':
     for i in sys.stdin:
-        print(i.rstrip())
         WriteLog(i.rstrip())
 
