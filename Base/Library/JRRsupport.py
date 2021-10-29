@@ -42,9 +42,12 @@ def ReadConfig(echg,account):
                     keys.append(key)
         cf.close()
 
+        if keys==[]:
+            JRRlog.ErrorLog("Reading Configuration",account+' reference not found, check spelling/case')
+
         return keys
     else:
-        return []
+        JRRlog.ErrorLog("Reading Configuration",echg+'.cfg not found in config directory')
 
 # Read the json entry and verify the required elements as present
 
