@@ -1,0 +1,25 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+
+// © RobertD7723
+
+
+
+// This script generates signals to test Jackrabbit Relay. 
+
+// DO NOT USE IT FOR LIVE TRADING. 
+
+// YOU WILL LOOSE ALL YOUR MONEY IF YOU DO.
+
+
+
+//@version=4
+study("Tester",overlay=true)
+
+BuySignal=open>close
+SellSignal=close>open
+
+alertcondition(BuySignal, "BUY ASSET", "Below buy zone")
+alertcondition(SellSignal,"SELL ASSET","Above sell zone")
+
+plotshape(BuySignal,style=shape.triangleup,location=location.bottom,color=#000000,size=size.tiny,title="Buy")
+plotshape(SellSignal,style=shape.triangledown,location=location.top,color=#000000,size=size.tiny,title="Sell")
