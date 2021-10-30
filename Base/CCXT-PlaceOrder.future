@@ -152,6 +152,7 @@ def main():
 
     if "ReduceOnly" in Active:
         ReduceOnly=True
+        JRRlog.WriteLog("|- ReduceOnly set ")
     else:
         ReduceOnly=False
 
@@ -298,10 +299,14 @@ def main():
     JRRlog.WriteLog("|- Price: "+str(round(amount*close,6)))
 
     if action.lower()=='long':
+        if ReduceOnly:
+            JRRlog.WriteLog("|- ReduceOnly overide by long action")
         action='buy'
         ReduceOnly=False
     else:
         if action.lower()=='short':
+            if ReduceOnly:
+                JRRlog.WriteLog("|- ReduceOnly overide by short action")
             action='sell'
             ReduceOnly=False
 

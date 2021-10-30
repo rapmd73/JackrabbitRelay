@@ -150,10 +150,10 @@ def main():
 
 # Check for reduce only in active config
 
-    if "ReduceOnly" in Active:
-        ReduceOnly=True
-    else:
-        ReduceOnly=False
+#    if "ReduceOnly" in Active:
+#        ReduceOnly=True
+#    else:
+#        ReduceOnly=False
 
     markets=JRRapi.GetMarkets(exchange,RetryLimit)
     JRRlog.WriteLog("Markets loaded")
@@ -301,7 +301,8 @@ def main():
         action='sell'
 
     if amount>0.0:
-        JRRapi.PlaceOrder(exchange,pair, 'market', action, amount, close, RetryLimit, ReduceOnly)
+        JRRapi.PlaceOrder(exchange,pair, 'market', action, amount, close, RetryLimit, False)
+#        JRRapi.PlaceOrder(exchange,pair, 'market', action, amount, close, RetryLimit, ReduceOnly)
 
         bal=JRRapi.GetBalance(exchange,base,RetryLimit)
         sbal=f"{float(bal):.6f}"
