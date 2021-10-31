@@ -185,6 +185,9 @@ def main():
 
     JRRlog.WriteLog("Base currency:  "+base)
     JRRlog.WriteLog("Quote currency: "+quote)
+    if quote.upper()=='USD' and hasQuote:
+        hasQuote=False
+        hasUSD=True
 
 # Make USD conversion if needed
 
