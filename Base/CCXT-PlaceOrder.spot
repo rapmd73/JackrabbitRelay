@@ -274,12 +274,13 @@ def main():
 
 # Determine trade action and carry it out
 
+    price=round(amount*close,6)
     JRRlog.WriteLog("Placing Order")
     JRRlog.WriteLog("|- Pair: "+pair)
     JRRlog.WriteLog("|- Action: "+action)
-    JRRlog.WriteLog("|- Amount: "+str(amount))
-    JRRlog.WriteLog("|- Close: "+str(close))
-    JRRlog.WriteLog("|- Price: "+str(round(amount*close,6)))
+    JRRlog.WriteLog("|- Amount: "+f'{amount:.6f}')
+    JRRlog.WriteLog("|- Close: "+f'{close:.6f}')
+    JRRlog.WriteLog("|- Price: "+f'{price:.6f}')
 
     try: # Isolated or Crossed
         if "set_margin_mode" in exchange and "Margin" in Order:
