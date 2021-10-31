@@ -294,8 +294,8 @@ def main():
     JRRlog.WriteLog("Placing Order")
     JRRlog.WriteLog("|- Pair: "+pair)
     JRRlog.WriteLog("|- Action: "+action)
-    JRRlog.WriteLog("|- Amount: "+str(amount))
-    JRRlog.WriteLog("|- Close: "+str(close))
+    JRRlog.WriteLog("|- Amount: "+f'{amount:.6f}')
+    JRRlog.WriteLog("|- Close: "+f'{close:.6f}')
     JRRlog.WriteLog("|- Price: "+str(round(amount*close,6)))
 
     if action.lower()=='long':
