@@ -182,7 +182,8 @@ def main():
     if minimum3==None:
         minimum3=0
 
-    amount=max(minimum1,minimum2,minimum3)
+    minimum=max(minimum1,minimum2,minimum3)
+    amount=minimum
 
     JRRlog.WriteLog("Base currency:  "+base)
     JRRlog.WriteLog("Quote currency: "+quote)
@@ -220,7 +221,8 @@ def main():
             if minimum3==None:
                 minimum3=0
 
-            amount=max(minimum1,minimum2,minimum3,amount)
+            minimum=max(minimum1,minimum2,minimum3,amount)
+            amount=minimum
         else:
 # Every thing else
             ohlcv,ticker=JRRapi.FetchRetry(exchange,pair,"1m",RetryLimit)
