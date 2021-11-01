@@ -9,11 +9,11 @@ import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 from datetime import datetime
 
-Version="0.0.0.0.105"
+Version="0.0.0.0.120"
 LogDirectory="/home/JackrabbitRelay/Logs"
 BaseDirectory='/home/JackrabbitRelay/Base'
 ConfigDirectory='/home/JackrabbitRelay/Config'
-StableCoinUSD=['USD','USDT','USDC','BUSD','TUSD','USDS','DAI']
+StableCoinUSD=['USDT','USDC','BUSD','TUSD','USDS','DAI','USD']
 
 # Needsa to be global and above all code
 

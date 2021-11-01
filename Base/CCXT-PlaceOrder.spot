@@ -210,7 +210,7 @@ def main():
             qpair=JRRapi.FindMatchingPair(quote,exchange.markets)
             if qpair==None:
                 JRRlog.ErrorLog(exchangeName,"NO compatable coin for conversion reference: "+qpair)
-            JRRlog.WriteLog("Quote Conversionm market: "+qpair)
+            JRRlog.WriteLog("Quote Conversion market: "+qpair)
             ohlcv,ticker=JRRapi.FetchRetry(exchange,qpair,"1m",RetryLimit)
         else:
 # Every thing else
