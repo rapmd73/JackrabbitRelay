@@ -174,7 +174,7 @@ def main():
     base=exchange.markets[pair]['base']
     quote=exchange.markets[pair]['quote']
 
-    minimum=exchange.markets[pair]['limits']['amount']['min']
+    minimum1=exchange.markets[pair]['limits']['amount']['min']
     minimum2=exchange.markets[pair]['limits']['cost']['min']
     if minimum2==None:
         minimum2=0
@@ -182,7 +182,7 @@ def main():
     if minimum3==None:
         minimum3=0
 
-    amount=minimum
+    amount=max(minimum1,minimum2,minimum3)
 
     JRRlog.WriteLog("Base currency:  "+base)
     JRRlog.WriteLog("Quote currency: "+quote)
@@ -211,6 +211,16 @@ def main():
                 JRRlog.ErrorLog(exchangeName,"NO compatable coin for conversion reference: "+qpair)
             JRRlog.WriteLog("Quote Conversionm market: "+qpair)
             ohlcv,ticker=JRRapi.FetchRetry(exchange,qpair,"1m",RetryLimit)
+
+            minimum1=exchange.markets[qpair]['limits']['amount']['min']
+            minimum2=exchange.markets[qpair]['limits']['cost']['min']
+            if minimum2==None:
+                minimum2=0
+            minimum3=exchange.markets[qpair]['limits']['price']['min']
+            if minimum3==None:
+                minimum3=0
+
+            amount=max(minimum1,minimum2,minimum3,amount)
         else:
 # Every thing else
             ohlcv,ticker=JRRapi.FetchRetry(exchange,pair,"1m",RetryLimit)
