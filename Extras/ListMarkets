@@ -120,13 +120,15 @@ for pair in exchange.markets:
             else:
                 marketType="spot"
 
-    minimum=exchange.markets[pair]['limits']['amount']['min']
+    minimum1=exchange.markets[pair]['limits']['amount']['min']
     minimum2=exchange.markets[pair]['limits']['cost']['min']
     if minimum2==None:
         minimum2=0
     minimum3=exchange.markets[pair]['limits']['price']['min']
     if minimum3==None:
         minimum3=0
+
+    minimum=max(minimum1,minimum2,minimum3)
 
     ohlcv=FetchRetry(exchange,pair,"1m",5)
 
@@ -142,6 +144,6 @@ for pair in exchange.markets:
 
         # In base currency
 
-        mincost=max(minimum*close,minimum2,minimum3)
+        mincost=max(minimum1*close,minimum2,minimum3)
 
         print(f"{pair:20} {marketType:15} {minimum:18.6f} {mincost:18.6f}")
