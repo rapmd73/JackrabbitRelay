@@ -23,10 +23,73 @@ def FindMatchingPair(base,markets):
 
     return None
 
+# Pull the information about the asset minimums from the exchangew.
+# Amount is the minimum amount in the ASSET, it TRX/BTC, amount is always BASE value
+# Cost in USD/Stablecoins
+# Price in USD/Stablecoins
+
+def GetAssetMinimum(exchange,pair,diagnostics,RetryLimit):
+    ohlcv,ticker=FetchRetry(exchange,pair,"1m",RetryLimit)
+
+    close=ohlcv[4]
+
+    minimum1=exchange.markets[pair]['limits']['amount']['min']
+    minimum2=exchange.markets[pair]['limits']['cost']['min']
+    if minimum2==None:
+        minimum2=0
+    minimum3=exchange.markets[pair]['limits']['price']['min']
+    if minimum3==None:
+        minimum3=0
+
+    minimum=max(minimum1,minimum2/close,minimum3/close)
+    mincost=max(minimum1*close,minimum2,minimum3)
+
+    if diagnostics:
+        JRRlog.WriteLog(f"| |- Close: {close:.6f}")
+        JRRlog.WriteLog(f"| |- Minimum Amount: {minimum1:.6f}, {minimum1*close:.6f}")
+        JRRlog.WriteLog(f"| |- Minimum Cost:   {minimum2:.6f}, {minimum2/close:.6f}")
+        JRRlog.WriteLog(f"| |- Minimum Price:  {minimum3:.6f}, {minimum3/close:.6f}")
+
+    return(minimum, mincost)
+
+# Get asset information
+
+def GetMinimum(exchange,pair,forceQuote,diagnostics,RetryLimit):
+    base=exchange.markets[pair]['base']
+    quote=exchange.markets[pair]['quote']
+
+# Get BASE minimum. This is all that is needed if quote is USD/Stablecoins
+
+    if diagnostics:
+        JRRlog.WriteLog("Minimum asset analysis")
+        JRRlog.WriteLog("|- Base: "+base)
+    minimum,mincost=GetAssetMinimum(exchange,pair,diagnostics,RetryLimit)
+    if diagnostics:
+        JRRlog.WriteLog("| |- Minimum: "+f"{minimum:.6f}")
+        JRRlog.WriteLog("| |- Min Cost: "+f"{mincost:.6f}")
+
+# If quote is NOT USD/Stablecoin. NOTE: This is an API penality for the
+# overhead of pulling quote currency. Quote currenct OVERRIDES base ALWAYS.
+
+    if diagnostics:
+        JRRlog.WriteLog("|- Quote: "+quote)
+
+    if quote not in JRRconfig.StableCoinUSD or forceQuote:
+        bpair=FindMatchingPair(quote,exchange.markets)
+        if bpair!=None:
+            minimum,mincost=GetAssetMinimum(exchange,bpair,diagnostics,RetryLimit)
+
+            if diagnostics:
+                JRRlog.WriteLog("| |- Minimum: "+f"{minimum:.6f}")
+                JRRlog.WriteLog("| |- Min Cost: "+f"{mincost:.6f}")
+
+    return minimum,mincost
+
 # Place the order
 
 def PlaceOrder(exchange, pair, market, action, amount, close, RetryLimit, ReduceOnly):
     params = { 'reduce_only': ReduceOnly, }
+    order=None
 
     retry=0
     while retry<RetryLimit:
@@ -45,8 +108,11 @@ def PlaceOrder(exchange, pair, market, action, amount, close, RetryLimit, Reduce
         else:
             JRRlog.WriteLog("|- ID: "+order['id'])
             return order
-        retry+=1
+        finally:
+            retry+=1
 
+    if retry>=RetryLimit:
+        JRRlog.ErrorLog("Placing Order","order unsuccessful")
     return order
 
 # If fetch_ohlcv fails, revert to fetch_ticker and parse it manually
