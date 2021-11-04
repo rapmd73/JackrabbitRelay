@@ -185,7 +185,7 @@ def main():
 
 # Get exchange required minimums
 
-    minimum,mincost=JRRapi.GetMinimum(exchange,pair,False,hasQuote,RetryLimit)
+    minimum,mincost=JRRapi.GetMinimum(exchange,pair,hasQuote,True,RetryLimit)
     amount=minimum
 
     ohlcv,ticker=JRRapi.FetchRetry(exchange,pair,"1m",RetryLimit)
