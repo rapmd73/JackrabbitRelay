@@ -14,136 +14,89 @@ exmo, kucoin
 """
 
 import sys
+sys.path.append('/home/JackrabbitRelay/Base/Library')
 import time
 import ccxt
 
-Spacer=" "*80
+import JRRconfig
+import JRRlog
+import JRRapi
+import JRRsupport
 
-def ErrorLog(func,e):
-    msg=func+' failed with:'+str(e)
+AnalyzeHeader='AnalyzeAsset '+JRRconfig.Version
 
-    print(msg)
-    sys.exit(3)
+def main():
+    JRRlog.WriteLog(AnalyzeHeader)
 
-def FindMatchingPair(base,markets):
-    for quote in StableCoinUSD:
-        pair=base+'/'+quote
-        if pair in markets:
-            return pair
-
-    return None
-
-# If fetch_ohlcv fails, revert to fetch_ticker and parse it manually
-# if open is None, use low.
-
-def FetchRetry(exchange,pair,tf,MaxRetry):
-    ohlc=[]
-    try:
-        ohlcv=exchange.fetch_ohlcv(symbol=pair,timeframe=tf,limit=1)
-    except Exception as e:
-        ErrorLog("Fetching OHLCV",e)
-
-    if ohlcv == []:
-        try:
-            ticker=exchange.fetch_ticker(pair)
-        except Exception as e:
-            ErrorLog("Fetching OHLCV",e)
-        ohlc.append(ticker['timestamp'])
-        if ticker['open']==None:
-            ohlc.append(ticker['low'])
-        else:
-            ohlc.append(ticker['open'])
-        ohlc.append(ticker['high'])
-        ohlc.append(ticker['low'])
-        ohlc.append(ticker['close'])
+    if len(sys.argv) > 1:
+        exchangeName=sys.argv[1]
     else:
-        for i in range(5):
-            ohlc.append(ohlcv[0][i])
-
-    return ohlc
-
-# if quote price is true, the exchange represents pairs in quote price vs base price.
-# ADA/BTC -> ADA/USD for base price to USD equivalent
-
-# load exchange
-
-if len(sys.argv) > 1:
-    exchangeName=sys.argv[1]
-else:
-    print("One of the following Exchanges must be given: ",str(ccxt.exchanges))
-    sys.exit(2)
-
-RateLimit=1000
-if len(sys.argv) > 2:
-    RateLimit=int(sys.argv[2])
-
-if exchangeName in ccxt.exchanges:
-    exchange=getattr(ccxt,exchangeName)()
-else:
-    if exchangeName=="ftxus":
-        exchange=ccxt.ftx({'hostname': 'ftx.us'})
-    else:
-        print("Invalid exchange")
+        print("One of the following Exchanges must be given: ",str(ccxt.exchanges))
         sys.exit(1)
 
-if "createMarketBuyOrderRequiresPrice" in exchange.options:
-    print("Exchange not supported")
-    sys.exit(1)
+    RetryLimit=3
+    RateLimit=1000
+    if len(sys.argv) > 2:
+        RateLimit=int(sys.argv[2])
 
-exchange.enableRateLimit=True
-exchange.rateLimit=RateLimit
-
-try:
-    exchange.load_markets()
-except Exception as e:
-    ErrorLog("Loading Markets",e)
-
-for pair in exchange.markets:
-    if pair[0]=='.' or pair.find(".d")>-1:
-        continue
-    if 'active' in exchange.markets[pair]:
-        if exchange.markets[pair]['active']==False:
-            continue
-    try:
-        ticker=exchange.fetchTicker(pair)
-    except Exception as e:
-        ErrorLog("Fetching Ticker",e)
-
-    if ticker['info']!=None and "type" in ticker['info']:
-        marketType=ticker['info']['type']
+    if exchangeName in ccxt.exchanges:
+        exchange=getattr(ccxt,exchangeName)()
     else:
-        if "type" in exchange.markets[pair]:
-            marketType=exchange.markets[pair]['type']
+        if exchangeName=="ftxus":
+            exchange=ccxt.ftx({'hostname': 'ftx.us'})
         else:
-            if "permissions" in exchange.markets[pair]['info']:
-                marketType=' '.join(exchange.markets[pair]['info']['permissions'])
+            print("Invalid exchange")
+            sys.exit(1)
+
+    if "createMarketBuyOrderRequiresPrice" in exchange.options:
+        print("Exchange not supported")
+        sys.exit(1)
+
+    exchange.enableRateLimit=True
+    exchange.rateLimit=RateLimit
+
+    try:
+        exchange.load_markets()
+    except Exception as e:
+        ErrorLog("Loading Markets",e)
+
+    for pair in exchange.markets:
+        if pair[0]=='.' or pair.find(".d")>-1:
+            continue
+        if 'active' in exchange.markets[pair]:
+            if exchange.markets[pair]['active']==False:
+                continue
+        try:
+            ticker=exchange.fetchTicker(pair)
+        except Exception as e:
+            ErrorLog("Fetching Ticker",e)
+
+        if ticker['info']!=None and "type" in ticker['info']:
+            marketType=ticker['info']['type']
+        else:
+            if "type" in exchange.markets[pair]:
+                marketType=exchange.markets[pair]['type']
             else:
-                marketType="spot"
+                if "permissions" in exchange.markets[pair]['info']:
+                    marketType=' '.join(exchange.markets[pair]['info']['permissions'])
+                else:
+                    marketType="spot"
 
-    minimum1=exchange.markets[pair]['limits']['amount']['min']
-    minimum2=exchange.markets[pair]['limits']['cost']['min']
-    if minimum2==None:
-        minimum2=0
-    minimum3=exchange.markets[pair]['limits']['price']['min']
-    if minimum3==None:
-        minimum3=0
-
-    minimum=max(minimum1,minimum2,minimum3)
-
-    ohlcv=FetchRetry(exchange,pair,"1m",5)
-
-    if ohlcv!=[] and ohlcv!=None and \
-       type(ohlcv[1]) is float and type(ohlcv[4]) is float and \
-       type(minimum) is float:
-
-        usdConvert=False
+# Get exchange required minimums
 
         quote=exchange.markets[pair]['quote']
         base=exchange.markets[pair]['base']
-        close=ohlcv[4]
 
-        # In base currency
+        if quote not in JRRconfig.StableCoinUSD:
+            forceQuote=True
+        else:
+            forceQuote=False
 
-        mincost=max(minimum1*close,minimum2,minimum3)
-
+        minimum,mincost=JRRapi.GetMinimum(exchange,pair,forceQuote,False,RetryLimit)
         print(f"{pair:20} {marketType:15} {minimum:18.6f} {mincost:18.6f}")
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Terminated")
