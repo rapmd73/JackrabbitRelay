@@ -23,10 +23,10 @@ import JRRlog
 import JRRapi
 import JRRsupport
 
-AnalyzeHeader='AnalyzeAsset '+JRRconfig.Version
+ListMarketsHeader='ListMarkets '+JRRconfig.Version
 
 def main():
-    JRRlog.WriteLog(AnalyzeHeader)
+    JRRlog.WriteLog(ListMarketsHeader)
 
     if len(sys.argv) > 1:
         exchangeName=sys.argv[1]
