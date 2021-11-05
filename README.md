@@ -70,6 +70,8 @@ everything. Rinse and repeat as many times as needed :)
 
 [Testing the Jackrabbit Relay Server](https://youtu.be/4l3yMbMc6Wc)
 
+[Relay Extras](https://youtu.be/qXykEckzEgs)
+
 ## Confirmed working exchanges
 
     ftx         ftxus               kraken
@@ -442,6 +444,10 @@ The Extras folder has many interesting scripts/programs
         for the LINK market, so the minimum is expressed in LINK. The
         forth colum is what the amount would be if expressed is USD or a
         simplar stablecoin.
+
+    AnalyzeAsset <exchange> <account or NONE> <asset>
+
+        This program allows for the examination of a signle asset.
 
     RelayPassThru
 
