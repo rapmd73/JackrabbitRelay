@@ -106,6 +106,12 @@ def main():
                 exchange.headers['FTXUS-SUBACCOUNT']=Active['Account']
                 exchange.apiKey=Active['API']
                 exchange.secret=Active['SECRET']
+            else:
+                if exchangeName=="kucoin":
+                    if 'Passphrase' in Active:
+                        exchange.password=Active['Passphrase']
+                    else:
+                        JRRlog.ErrorLog("Connecting to exchange","Kucoin requires a passphrase as well")
 
         if "RateLimit" in Active:
             exchange.enableRateLimit=True

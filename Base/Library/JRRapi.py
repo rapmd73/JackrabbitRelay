@@ -170,6 +170,7 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
 # Fetch the balance of a given BASE of a pair
 
 def GetBalance(exchange,base,RetryLimit):
+    bal=-1
     retry=0
     while retry<RetryLimit:
         try:
