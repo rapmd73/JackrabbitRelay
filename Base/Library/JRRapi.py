@@ -15,6 +15,58 @@ import ccxt
 import JRRconfig
 import JRRlog
 
+# Register the exchange
+
+def ExchangeLogin(exchangeName,Active):
+    if exchangeName in ccxt.exchanges:
+        try:
+            exchange=getattr(ccxt,exchangeName)( \
+                { 'apiKey': Active['API'],'secret': Active['SECRET'] })
+        except Exception as e:
+            JRRlog.ErrorLog("Connecting to exchange",e)
+    else:
+        if exchangeName=="ftxus":
+            try:
+                exchange=ccxt.ftx({ 'hostname': 'ftx.us', \
+                    'apiKey': Active['API'],'secret': Active['SECRET'] })
+            except Exception as e:
+                JRRlog.ErrorLog("Connecting to exchange",e)
+        else:
+            JRRlog.ErrorLog(exchangeName,"Exchange not supported")
+
+# Special settings
+
+    if "createMarketBuyOrderRequiresPrice" in exchange.options:
+        JRRlog.ErrorLog(exchangeName,"Exchange not supported")
+
+    # Set FTX and FTX US subaccount. Not sure if I need to reset API/secret yet.
+
+    if exchangeName=="ftx" and Active['Account']!='MAIN':
+        exchange.headers['FTX-SUBACCOUNT']=Active['Account']
+        exchange.apiKey=Active['API']
+        exchange.secret=Active['SECRET']
+    else:
+        if exchangeName=="ftxus" and Active['Account']!='MAIN':
+            exchange.headers['FTXUS-SUBACCOUNT']=Active['Account']
+            exchange.apiKey=Active['API']
+            exchange.secret=Active['SECRET']
+        else:
+            if exchangeName=="kucoin":
+                if 'Passphrase' in Active:
+                    exchange.password=Active['Passphrase']
+                else:
+                    JRRlog.ErrorLog("Connecting to exchange","Kucoin requires a passphrase as well")
+
+    exchange.verbose=False
+
+    if "RateLimit" in Active:
+        exchange.enableRateLimit=True
+        exchange.rateLimit=int(Active['RateLimit'])
+        JRRlog.WriteLog("|- Rate limit set to "+str(Active['RateLimit'])+' ms')
+    else:
+        exchange.enableRateLimit=False
+    return(exchange)
+
 def FindMatchingPair(base,markets):
     for quote in JRRconfig.StableCoinUSD:
         pair=base+'/'+quote
@@ -178,14 +230,15 @@ def GetBalance(exchange,base,RetryLimit):
             if base in balance['total']:
                 bal=float(balance['total'][base])
             else:
-                bal=float(balance['total']['USD'])
+                if 'USD' in balance['total']:
+                    bal=float(balance['total']['USD'])
+                else:
+                    bal=0
         except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError, ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError) as e:
             if retry>=RetryLimit:
                 JRRlog.ErrorLog("Fetching Balance",e)
             else:
                 JRRlog.WriteLog('Retrying ('+str(retry+1)+'), '+str(e))
-        except Exception as e:
-            JRRlog.ErrorLog("Fetching Balance",e)
         else:
             break
         retry+=1
@@ -216,7 +269,7 @@ def GetPosition(exchange,pair,RetryLimit):
 
 # Fetch the market list
 
-def GetMarkets(exchange,RetryLimit):
+def GetMarkets(exchange,pair,RetryLimit):
     retry=0
     while retry<RetryLimit:
         try:
@@ -231,6 +284,18 @@ def GetMarkets(exchange,RetryLimit):
         else:
             break
         retry+=1
+
+    JRRlog.WriteLog("Markets loaded")
+
+    if pair[0]=='.' or pair.find(".d")>-1:
+        JRRlog.ErrorLog(ExchangeName,pair+" is not tradable on this exchange")
+
+    if pair not in exchange.markets:
+        JRRlog.ErrorLog(exchangeName,pair+" is not traded on this exchange")
+
+    if 'active' in exchange.markets[pair]:
+        if exchange.markets[pair]['active']==False:
+            JRRlog.ErrorLog(exchangeName,pair+" is not active on this exchange")
 
     return markets
 

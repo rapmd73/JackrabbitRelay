@@ -6,27 +6,26 @@
 BaseDir="/home/JackrabbitRelay/Base"
 GitHubBase="/home/GitHub/JackrabbitRelay/Base"
 
-exchange=$1
-
-if [ -z $exchange ] ; then
-    echo An exchange name to use must be given.
+if [ -z $1 ] ; then
+    echo At least onwe exchange name to use must be given.
     exit 1
 fi
 
 cd $BaseDir
 
-fn1=$GitHubBase"/CCXT-PlaceOrder.spot"
-fn2=$BaseDir"/CCXT-PlaceOrder.spot"
+fnSpot="CCXT-PlaceOrder.spot"
+fnFuture="CCXT-PlaceOrder.future"
 
 echo Updating / replacing PlaceOrder spot
-cp $fn1 $fn2
-
-fn1=$GitHubBase"/CCXT-PlaceOrder.future"
-fn2=$BaseDir"/CCXT-PlaceOrder.future"
+cp $GitHubBase"/"$fnSpot $BaseDir"/"$snSpot
 
 echo Updating / replacing PlaceOrder future
-cp $fn1 $fn2
+cp $GitHubBase"/"$fnFuture $BaseDir"/"$fnFuture
 
-echo Updating / replacing PlaceOrder.$exchange spot/future
-cp CCXT-PlaceOrder.spot PlaceOrder.$exchange.spot
-cp CCXT-PlaceOrder.future PlaceOrder.$exchange.future
+for i in $@ ; do
+    exchange=$1
+    echo Updating / replacing PlaceOrder.$exchange spot/future
+    cp $GitHubBase"/"$fnSpot PlaceOrder.$exchange.spot
+    cp $GitHubBase"/"$fnFuture PlaceOrder.$exchange.future
+    shift
+done

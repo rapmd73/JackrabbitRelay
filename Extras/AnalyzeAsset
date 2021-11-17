@@ -131,20 +131,7 @@ def main():
 
     exchange.verbose=False
 
-    markets=JRRapi.GetMarkets(exchange,RetryLimit)
-    JRRlog.WriteLog("Markets loaded")
-
-# Sanity check
-
-    if pair[0]=='.' or pair.find(".d")>-1:
-        JRRlog.ErrorLog(ExchangeName,pair+" is not tradable on this exchange")
-
-    if pair not in exchange.markets:
-        JRRlog.ErrorLog(exchangeName,pair+" is not traded on this exchange")
-
-    if 'active' in exchange.markets[pair]:
-        if exchange.markets[pair]['active']==False:
-            JRRlog.ErrorLog(exchangeName,pair+" is not active on this exchange")
+    markets=JRRapi.GetMarkets(exchange,pair,RetryLimit)
 
     quote=exchange.markets[pair]['quote']
     if quote not in JRRconfig.StableCoinUSD:
