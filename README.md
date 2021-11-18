@@ -423,42 +423,7 @@ Here is an example of the Place Order log for the FTX US exchange:
 
 ## Extras
 
-The Extras folder has many interesting scripts/programs
-
-    ListMarkets <exchange> <ratelimit>
-
-        Exchange is the exchange you want to line, ie ftx
-
-        Rate limit is a number of 1 o more. This lets you find a good
-        rate limit value your exchange will accept. The program will
-        crash with a rate limit error if your value is too low.
-
-        This program lists the markets of a given exchange. Here is an example from FTX:
-
-            LINK/BTC             spot                      0.100000           0.000050
-            LINK/USD             spot                      0.100000           3.094800
-            LINK/USDT            spot                      0.100000           3.094700
-
-        The first column is the pair. The second is the market, the third
-        is the minimum the exchange will accept. Thwe above example is
-        for the LINK market, so the minimum is expressed in LINK. The
-        forth colum is what the amount would be if expressed is USD or a
-        simplar stablecoin.
-
-    AnalyzeAsset <exchange> <account or NONE> <asset>
-
-        This program allows for the examination of a signle asset.
-
-    RelayPassThru
-
-        This program is a bridge between Apache and Jackrabbit Relay.
-        You'll need tp add your webhook and copy it into your cgi-bin
-        folder.
-
-    Tester.PineScript.txt
-
-        This is the pine script program from the above video on testing
-        Jackrabbit Relay's server.
+The Extras folder has many interesting scripts/programs and its own README.
 
 ## Donations
 
