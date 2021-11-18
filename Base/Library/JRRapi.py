@@ -34,8 +34,11 @@ def ExchangeLogin(exchangeName,Active):
         else:
             JRRlog.ErrorLog(exchangeName,"Exchange not supported")
 
-# Special settings
+    SetExchangeAPI(exchangeName,exchange,Active,notify=True)
 
+    return(exchange)
+
+def SetExchangeAPI(exchangeName,exchange,Active,notify=False):
     if "createMarketBuyOrderRequiresPrice" in exchange.options:
         JRRlog.ErrorLog(exchangeName,"Exchange not supported")
 
@@ -62,9 +65,11 @@ def ExchangeLogin(exchangeName,Active):
     if "RateLimit" in Active:
         exchange.enableRateLimit=True
         exchange.rateLimit=int(Active['RateLimit'])
-        JRRlog.WriteLog("|- Rate limit set to "+str(Active['RateLimit'])+' ms')
+        if notify:
+            JRRlog.WriteLog("|- Rate limit set to "+str(Active['RateLimit'])+' ms')
     else:
         exchange.enableRateLimit=False
+
     return(exchange)
 
 def FindMatchingPair(base,markets):
@@ -288,14 +293,14 @@ def GetMarkets(exchange,pair,RetryLimit):
     JRRlog.WriteLog("Markets loaded")
 
     if pair[0]=='.' or pair.find(".d")>-1:
-        JRRlog.ErrorLog(ExchangeName,pair+" is not tradable on this exchange")
+        JRRlog.ErrorLog('Get Markets',pair+" is not tradable on this exchange")
 
     if pair not in exchange.markets:
-        JRRlog.ErrorLog(exchangeName,pair+" is not traded on this exchange")
+        JRRlog.ErrorLog('Get Markets',pair+" is not traded on this exchange")
 
     if 'active' in exchange.markets[pair]:
         if exchange.markets[pair]['active']==False:
-            JRRlog.ErrorLog(exchangeName,pair+" is not active on this exchange")
+            JRRlog.ErrorLog('Get Markets',pair+" is not active on this exchange")
 
     return markets
 
