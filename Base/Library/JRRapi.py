@@ -163,7 +163,7 @@ def PlaceOrder(exchange, pair, market, action, amount, close, RetryLimit, Reduce
         except Exception as e:
             JRRlog.ErrorLog("Placing Order",e)
         else:
-            JRRlog.WriteLog("|- ID: "+order['id'])
+            JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
             return order
         finally:
             retry+=1
@@ -235,10 +235,10 @@ def GetBalance(exchange,base,RetryLimit):
             if base in balance['total']:
                 bal=float(balance['total'][base])
             else:
-                if 'USD' in balance['total']:
-                    bal=float(balance['total']['USD'])
-                else:
-                    bal=0
+                # This is an absolute horrible way to handle this, but unfortunately the only way.
+                # Many wexchanges don't report a balance at all if an asset hasn't been traded in
+                # a given timeframe (usually fee based tier resets designate the cycle).
+                bal=0
         except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError, ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError) as e:
             if retry>=RetryLimit:
                 JRRlog.ErrorLog("Fetching Balance",e)
