@@ -1,7 +1,9 @@
 #!/bin/bash
 pip3=`which pip3`
 
-$pip3 install -U ccxt
+for i in `cat requirements.txt` ; do
+    $pip3 install -U $i
+done
 
 cd /home/GitHub/JackrabbitRelay
 git pull https://github.com/rapmd73/JackrabbitRelay

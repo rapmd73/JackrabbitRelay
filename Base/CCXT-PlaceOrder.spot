@@ -185,7 +185,7 @@ def main():
 
 # Test to see if amount is more than balance and correct in needed
 
-    if (action=='close' or action=='sell'):
+    if (action=='close' or action=='sell') and (amount>bal and bal>0):
         JRRlog.WriteLog("|- Forcing balance")
         amount=bal
 
