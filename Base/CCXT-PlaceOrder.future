@@ -188,7 +188,7 @@ def main():
 
 # Test to see if amount is more than balance and correct if needed
 
-    if (amount>bal and bal>0) and (action=='close' or action=='sell'):
+    if ((amount>bal and bal>0) and (action=='close' or action=='sell')):
         JRRlog.WriteLog("|- Forcing position size")
         amount=bal
 
