@@ -34,11 +34,13 @@ def ExchangeLogin(exchangeName,Active):
         else:
             JRRlog.ErrorLog(exchangeName,"Exchange not supported")
 
-    SetExchangeAPI(exchangeName,exchange,Active,notify=True)
+    SetExchangeAPI(exchange,Active,notify=True)
 
     return(exchange)
 
-def SetExchangeAPI(exchangeName,exchange,Active,notify=False):
+def SetExchangeAPI(exchange,Active,notify=False):
+    exchangeName=exchange.name.lower()
+
     if "createMarketBuyOrderRequiresPrice" in exchange.options:
         JRRlog.ErrorLog(exchangeName,"Exchange not supported")
 
