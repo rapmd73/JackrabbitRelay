@@ -178,8 +178,22 @@ def PlaceOrder(exchange, pair, market, action, amount, close, RetryLimit, Reduce
 # if open is None, use low.
 
 def FetchRetry(exchange,pair,tf,RetryLimit):
+    exchangeName=exchange.name.lower()
     ohlcv=[]
+    retry429=0
     retry=0
+
+    # For kucoin only, 429000 errors are a mess. Not the best way to
+    # manage them, but the onle way I know of currently to prevent losses.
+
+    # Save the only rate limit and remap it.
+
+    if exchangeName=='kucoin':
+        rleSave=exchange.enableRateLimit
+        rlvSave=exchange.rateLimit
+        exchange.enableRateLimit=True
+        exchange.rateLimit=100
+
     done=False
     while not done:
         try:
@@ -187,28 +201,49 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
              if ohlcv==[]:
                 ohlcv=None
         except Exception as e:
+            if exchangeName=='kucoin':
+                x=str(e)
+                if x.find('429000')>-1:
+                    retry429+=1
             if retry>=RetryLimit:
                 JRRlog.ErrorLog("Fetching OHLCV",e)
             else:
                 JRRlog.WriteLog('Fetch OHLCV Retrying ('+str(retry+1)+'), '+str(e))
         else:
             done=True
-        retry+=1
+
+        if exchangeName=='kucoin':
+            if retry429>=(RetryLimit*7):
+                retry429=0
+                retry+=1
+        else:
+            retry+=1
 
     ticker=None
     retry=0
+    retry429=0
     done=False
     while not done:
         try:
             ticker=exchange.fetch_ticker(pair)
         except Exception as e:
+            if exchangeName=='kucoin':
+                x=str(e)
+                if x.find('429000')>-1:
+                    retry429+=1
             if retry>=RetryLimit:
                 JRRlog.ErrorLog("Fetching Ticker",e)
             else:
                 JRRlog.WriteLog('Fetch Ticker Retrying ('+str(retry+1)+'), '+str(e))
         else:
             done=True
-        retry+=1
+
+        if exchangeName=='kucoin':
+            if retry429>=(RetryLimit*7):
+                retry429=0
+                retry+=1
+        else:
+            retry+=1
 
     ohlc=[]
     if ohlcv==None:
@@ -223,6 +258,10 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
     else:
         for i in range(6):
             ohlc.append(ohlcv[0][i])
+
+    if exchangeName=='kucoin':
+        exchange.enableRateLimit=rleSave
+        exchange.rateLimit=rlvSave
 
     return ohlc, ticker
 
