@@ -15,6 +15,8 @@ import ccxt
 import JRRconfig
 import JRRlog
 
+KuCoinSupress429=True
+
 # Register the exchange
 
 def ExchangeLogin(exchangeName,Active):
@@ -192,7 +194,7 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
         rleSave=exchange.enableRateLimit
         rlvSave=exchange.rateLimit
         exchange.enableRateLimit=True
-        exchange.rateLimit=100
+        exchange.rateLimit=372
 
     done=False
     while not done:
@@ -208,7 +210,8 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
             if retry>=RetryLimit:
                 JRRlog.ErrorLog("Fetching OHLCV",e)
             else:
-                JRRlog.WriteLog('Fetch OHLCV Retrying ('+str(retry+1)+'), '+str(e))
+                if not KuCoinSupress429:
+                    JRRlog.WriteLog('Fetch OHLCV Retrying ('+str(retry+1)+'), '+str(e))
         else:
             done=True
 
@@ -234,7 +237,8 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
             if retry>=RetryLimit:
                 JRRlog.ErrorLog("Fetching Ticker",e)
             else:
-                JRRlog.WriteLog('Fetch Ticker Retrying ('+str(retry+1)+'), '+str(e))
+                if not KuCoinSupress429:
+                    JRRlog.WriteLog('Fetch Ticker Retrying ('+str(retry+1)+'), '+str(e))
         else:
             done=True
 
