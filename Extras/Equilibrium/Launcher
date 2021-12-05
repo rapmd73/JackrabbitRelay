@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Crontab entry ( without has mark #
+# @reboot ( /home/JackrabbitRelay/Base/RelayLauncher & ) > /dev/null 2>&1
+
+BaseDir="/home/Equilibrium"
+
+cd $BaseDir
+
+while true ; do
+    $BaseDir/Equilibrium.spot $@
+    sleep 60
+done
+
+

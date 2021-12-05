@@ -95,6 +95,8 @@ def GetAssetMinimum(exchange,pair,diagnostics,RetryLimit):
     close=ohlcv[4]
 
     minimum1=exchange.markets[pair]['limits']['amount']['min']
+    if minimum1==None:
+        minimum1=0
     minimum2=exchange.markets[pair]['limits']['cost']['min']
     if minimum2==None:
         minimum2=0
