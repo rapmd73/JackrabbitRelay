@@ -49,6 +49,7 @@ made or lost in the same situation.
 ## Videos
 
 [Introducing Equilibruim: Abstract Theory](https://youtu.be/kGpoD-dJ1k4)
+
 [Equilibrium: trial by fire](https://youtu.be/RU8zgGDfbao)
 
 ## Reboot startup
@@ -56,7 +57,7 @@ made or lost in the same situation.
 For Equilibrium to auto start after a reboot, the following line
 needs to be added to your crontab. 
 
-    @reboot ( /home/Equilibrium/Launcher & ) > /dev/null 2>&1
+    @reboot ( /home/Equilibrium/Launcher ftxus MAIN trx/usd 2 1 PAPER & ) > /dev/null 2>&1
 
 ## Usage
 
