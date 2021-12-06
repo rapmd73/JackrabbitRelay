@@ -52,6 +52,15 @@ made or lost in the same situation.
 
 [Equilibrium: trial by fire](https://youtu.be/RU8zgGDfbao)
 
+[Equilibrium unleashed (installing it)](https://youtu.be/Nwr2fH8LQw8)
+
+## Installation
+
+Installation is very simple. Just follow thebelow:
+
+    cd /home/GitHub/JackrabbitRelay/Extras/Equilibrium
+    ./install
+
 ## Reboot startup
 
 For Equilibrium to auto start after a reboot, the following line
