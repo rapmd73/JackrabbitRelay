@@ -114,6 +114,9 @@ def main():
     else:
         RetryLimit=10
 
+    if not "Webhook" in Active:
+        JRRlog.ErrorLog("Equilibrium","Webhook NOT present")
+
     markets=JRRapi.GetMarkets(exchange,pair,RetryLimit)
 
 # This is where a looping method would go if this were to serve a single exchange
@@ -159,7 +162,7 @@ def main():
                 if Trade['PCTValue']==0:
                     Trade['PCTValue']=round(close*pct,6)
                 Trade['Counter']=0
-                JRRlog.WriteLog(f"Balance ({bal:.6f}) < Amount ({amount:.6f}), Resetting grid")
+                JRRlog.WriteLog(f"{pair:10} Balance ({bal:.6f}) < Amount ({amount:.6f}), Resetting grid")
 
         # Rotate the key
 

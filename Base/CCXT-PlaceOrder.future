@@ -197,7 +197,7 @@ def main():
 
     if bal>0 and action=='close':
         if position['side']=='long':
-            action='sell' 
+            action='sell'
         else:
             action='buy'
         JRRlog.WriteLog("|- Forcing direction to "+action)
