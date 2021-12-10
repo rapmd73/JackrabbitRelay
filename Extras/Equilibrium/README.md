@@ -1,7 +1,19 @@
 # Equilibrium
 
-The byproduct of the Jackrabbit Savings Account and a grid bot.... (This
-needs work)
+The byproduct of the Jackrabbit Savings Account and a grid bot...
+
+That is the simple explanation. The proper one is far more complicated.
+
+Equilibrium is a "grid tracking" algorithm that works very similar to the
+Jackrabbit Savings Account module, with one very distinct difference.
+
+Equilibrium does not channel lock. Its algorithms allow it to buy and
+sell in ranged markets. The more prolonged the ranged market is, the more
+profitable Equilibrium is.
+
+**Equilibrium is very different from every other Jackrabbit paradigm**.
+Please be sure to read this entire file first and paper trade before
+risking real money.
 
 ## Disclaimer
 
@@ -56,7 +68,7 @@ made or lost in the same situation.
 
 ## Installation
 
-Installation is very simple. Just follow thebelow:
+Installation is very simple. Just follow the below:
 
     cd /home/GitHub/JackrabbitRelay/Extras/Equilibrium
     ./install
@@ -68,8 +80,42 @@ needs to be added to your crontab.
 
     @reboot ( /home/Equilibrium/Launcher ftxus MAIN trx/usd 2 1 PAPER & ) > /dev/null 2>&1
 
+Please be awarew that the exchange, coin, and other parameters **MUST**
+match the below usage. The cronjob will only work properly when it is
+aligned with a tested working coin.
+
+You should extensively test your coin first with a virtual console
+**before** setting up a cronjob.
+
+## Configuration
+
+Equilibrium uses the same configuration as Jackrabbit Relay, *with one
+very import addition*. Your configuration must have a webhook item on
+each API/Secret combination the Equilibrium uses.
+
+This example is for KuCoin, but applies to *all* exchanges where
+Equilibrium will be used. The Webhook **MUST** be present and point to
+your IP address/port entry for Jackrabbit Relay.
+
+    # Spot Market - JackrabbitRelay
+    { "Account":"MAIN","API":"API1","SECRET":"SECRET1","Passphrase":"pw1","RateLimit":"1000","Retry":"3","Webhook":"http://127.0.0.1:7732" }
+
+    # Spot Market - JackrabbitRelay1
+    { "Account":"MAIN","API":"API2","SECRET":"SECRET2","Passphrase":"pw2","RateLimit":"1000","Retry":"3","Webhook":"http://127.0.0.1:7732" }
+
+    # Spot Market - JackrabbitRelay2
+    { "Account":"MAIN","API":"API3","SECRET":"SECRET3","Passphrase":"pw3","RateLimit":"1000","Retry":"3","Webhook":"http://127.0.0.1:7732" }
+
+Equilibrium rotates your API/Secret on **EVERY** call to your exchange.
+You should have *at least* **THREE (3)** API/Secret listings in your
+exchange configuration that Equilibrium will use.
+
+Equilibrium does not have to be on the same machine as Relay, but latency
+and slippage will be a consideration otherwise, not to mention security.
+
 ## Usage
 
+    cd /home/Extras/Equilibrium
     ./Launcher ftxus MAIN trx/usd 2 1 PAPER
 
     This launches Equilibrium. The arguments are as follows,
