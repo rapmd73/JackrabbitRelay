@@ -80,7 +80,7 @@ needs to be added to your crontab.
 
     @reboot ( /home/Equilibrium/Launcher ftxus MAIN trx/usd 2 1 PAPER & ) > /dev/null 2>&1
 
-Please be awarew that the exchange, coin, and other parameters **MUST**
+Please be aware that the exchange, coin, and other parameters **MUST**
 match the below usage. The cronjob will only work properly when it is
 aligned with a tested working coin.
 
