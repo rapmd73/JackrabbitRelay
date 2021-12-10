@@ -16,6 +16,49 @@ import ccxt
 import JRRconfig
 import JRRlog
 
+# Reusable file locks, using atomic operations
+# NOT suitable for distributed systems.
+#
+# fw=FileWatch(filename)
+# fw.Lock()
+# ( do somwething )
+# fw.Unlock()
+
+class FileWatch:
+
+    # Initialize the file name
+
+    def __init__(self,filename):
+        self.filename=filename+'.lock'
+
+    # Lock the file
+
+    def Lock(self):
+        p=str(os.getpid())
+        tn=self.filename+'.'+p
+        fh=open(tn,'w')
+        fh.write(f"{p}\n")
+        fh.close()
+
+        done=False
+        while not done:
+            try:
+                os.rename(tn,self.filename)
+            except:
+                pass
+            else:
+                done=True
+
+            time.sleep(0.1)
+
+    # Unlock the file
+
+    def Unlock(self):
+        try:
+            os.remove(self.filename)
+        except:
+            pass
+
 # Filter end of line and hard spaces
 
 def pFilter(s):
