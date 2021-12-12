@@ -60,6 +60,8 @@ def SetExchangeAPI(exchange,Active,notify=False):
         else:
             if exchangeName=="kucoin":
                 if 'Passphrase' in Active:
+                    exchange.apiKey=Active['API']
+                    exchange.secret=Active['SECRET']
                     exchange.password=Active['Passphrase']
                 else:
                     JRRlog.ErrorLog("Connecting to exchange","Kucoin requires a passphrase as well")
