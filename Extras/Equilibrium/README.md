@@ -136,7 +136,11 @@ and slippage will be a consideration otherwise, not to mention security.
         PAPER
 
             This activates the paper mode. Equilibrium will do everything
-            except actually place orders to the exchange. 
+            except actually place orders to the exchange.
+
+            **Even in PAPER mode, you API/Secret and Webhook must be
+            correct as Equilibrium WILL login into your account for youe
+            exchange's private API/rate limit values to get the prices.**
 
 ## Donations
 
