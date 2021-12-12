@@ -105,12 +105,11 @@ def main():
     else:
         RetryLimit=1
 
-# Check for reduce only in active config
+# Check for maximum allowed assets
 
-#    if "ReduceOnly" in Active:
-#        ReduceOnly=True
-#    else:
-#        ReduceOnly=False
+    if "MaxAssets" in Active:
+        delete=(action=='close')
+        JRRsupport.ReadAssetList(exchangeName,account,pair,Active['MaxAssets'],delete)
 
     markets=JRRapi.GetMarkets(exchange,pair,RetryLimit)
 

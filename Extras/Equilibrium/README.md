@@ -95,7 +95,10 @@ each API/Secret combination the Equilibrium uses.
 
 This example is for KuCoin, but applies to *all* exchanges where
 Equilibrium will be used. The Webhook **MUST** be present and point to
-your IP address/port entry for Jackrabbit Relay.
+your IP address/port entry for Jackrabbit Relay. 
+
+**The port used below, 7732, is EXAMPLE ONLY. It MUST be changed to YOUR
+installation.**
 
     # Spot Market - JackrabbitRelay
     { "Account":"MAIN","API":"API1","SECRET":"SECRET1","Passphrase":"pw1","RateLimit":"1000","Retry":"3","Webhook":"http://127.0.0.1:7732" }

@@ -105,6 +105,12 @@ def main():
     else:
         RetryLimit=1
 
+# Check for maximum allowed assets
+
+    if "MaxAssets" in Active:
+        delete=(action=='close')
+        JRRsupport.ReadAssetList(exchangeName,account,pair,Active['MaxAssets'],delete)
+
 # Check for reduce only in active config
 
     if "ReduceOnly" in Active:
