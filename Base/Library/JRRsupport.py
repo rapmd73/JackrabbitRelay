@@ -59,6 +59,65 @@ class FileWatch:
         except:
             pass
 
+# Read the asset list and verify max asset allowance
+
+def ReadAssetList(exchange,account,pair,mp,delete):
+    JRRlog.WriteLog('|- Verifying maximum asset allowwance of '+str(mp))
+    coins=[]
+    fn=JRRconfig.LogDirectory+'/'+exchange+'.'+account+'.coinlist'
+
+    p=pair.upper()
+
+    fw=FileWatch(fn)
+    fw.Lock()
+
+    c=0
+    try:
+        if os.path.exists(fn):
+            cf=open(fn,'rt+')
+            for line in cf.readlines():
+                l=line.strip().upper()
+                if len(l)>0:
+                    if not delete:
+                        c+=1
+                        coins.append(l)
+                    else:
+                        JRRlog.WriteLog('|-- '+p+' removed')
+            cf.close()
+
+            if not p in coins and c<int(mp) and not delete:
+                JRRlog.WriteLog('|-- '+p+' added')
+                coins.append(p)
+        else:
+            if not delete:
+                c+=1
+                JRRlog.WriteLog('|-- '+p+' added')
+                coins.append(p)
+
+        WriteAssetList(exchange,account,coins)
+    except:
+        pass
+
+    fw.Unlock()
+
+    if c>=int(mp):
+        JRRlog.ErrorLog("MaxAsset Verification",account+'Exceeded maximum asset limit')
+
+def WriteAssetList(exchange,account,coins):
+    fn=JRRconfig.LogDirectory+'/'+exchange+'.'+account+'.coinlist'
+
+    if coins==[]:
+        try:
+            os.remove(fn)
+        except:
+            pass
+    else:
+        fh=open(fn,'a')
+        for p in coins:
+            s=f"{p}\n"
+            fh.write(s)
+        fh.close()
+
 # Filter end of line and hard spaces
 
 def pFilter(s):
