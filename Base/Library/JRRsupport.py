@@ -30,22 +30,42 @@ class FileWatch:
 
     def __init__(self,filename):
         self.filename=filename+'.lock'
+        self.RetryLimit=37
 
     # Lock the file
 
     def Lock(self):
+        # Deal with a dead lock file.
+        # This will start a race with other programs waiting and testing
+        # Under no circumstances should a lock last more then 5 minutes (300 seconds)
+
+        try:
+            st=os.stat(self.filename)
+            age=time.time()-st.st_mtime
+            if age>300:
+                self.Unlock()
+        except:
+            pass
+
+        # Set up the local lock file
+
         p=str(os.getpid())
         tn=self.filename+'.'+p
         fh=open(tn,'w')
         fh.write(f"{p}\n")
         fh.close()
 
+        # Let the battle begin...
+
         done=False
+        retry=0
         while not done:
             try:
                 os.rename(tn,self.filename)
             except:
-                pass
+                retry+=1
+                if retry>=RetryLimit:
+                    JRRlog.ErrorLog("MaxAsset","exclusive access request failed")
             else:
                 done=True
 
