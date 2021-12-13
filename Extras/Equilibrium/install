@@ -2,6 +2,8 @@
 
 cd /home/GitHub/JackrabbitRelay/Extras/Equilibrium
 
+echo Installing/Updating Equilibrium
+
 mkdir -p /home/Equilibrium/ > /dev/null 2>&1
 cp -r * /home/Equilibrium/
 
