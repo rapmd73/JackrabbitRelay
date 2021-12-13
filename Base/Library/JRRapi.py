@@ -46,22 +46,21 @@ def SetExchangeAPI(exchange,Active,notify=False):
     if "createMarketBuyOrderRequiresPrice" in exchange.options:
         JRRlog.ErrorLog(exchangeName,"Exchange not supported")
 
-    # Set FTX and FTX US subaccount. Not sure if I need to reset API/secret yet.
+    # Set API/Secret for every exchange
+
+    exchange.apiKey=Active['API']
+    exchange.secret=Active['SECRET']
+
+    # Set special setting for specific exchange.
 
     if exchangeName=="ftx" and Active['Account']!='MAIN':
         exchange.headers['FTX-SUBACCOUNT']=Active['Account']
-        exchange.apiKey=Active['API']
-        exchange.secret=Active['SECRET']
     else:
         if exchangeName=="ftxus" and Active['Account']!='MAIN':
             exchange.headers['FTXUS-SUBACCOUNT']=Active['Account']
-            exchange.apiKey=Active['API']
-            exchange.secret=Active['SECRET']
         else:
             if exchangeName=="kucoin":
                 if 'Passphrase' in Active:
-                    exchange.apiKey=Active['API']
-                    exchange.secret=Active['SECRET']
                     exchange.password=Active['Passphrase']
                 else:
                     JRRlog.ErrorLog("Connecting to exchange","Kucoin requires a passphrase as well")
