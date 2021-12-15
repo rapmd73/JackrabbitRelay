@@ -48,8 +48,8 @@ def SendWebhook(Active,exchangeName,account,pair,action,amount):
 
     return res
 
-def ReadGrid(exchangeName,Asset):
-    fn=exchangeName+'.'+Asset.replace("-","").replace("/","")+'.grid'
+def ReadGrid(exchangeName,account,Asset):
+    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","")+'.grid'
     if os.path.exists(fn):
         JRRlog.WriteLog("Reading Grid file")
         fh=open(fn,'r')
@@ -68,8 +68,8 @@ def ReadGrid(exchangeName,Asset):
 
     return(Trade)
 
-def WriteGrid(exchangeName,Trade,Asset):
-    fn=exchangeName+'.'+Asset.replace("-","").replace("/","")+'.grid'
+def WriteGrid(exchangeName,account,Trade,Asset):
+    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","")+'.grid'
 
     if Trade['Counter']>0:
         fh=open(fn,'w')
@@ -133,7 +133,7 @@ def main():
     minimum,mincost=JRRapi.GetMinimum(exchange,pair,False,False,RetryLimit)
     amount=minimum*buyAMT
 
-    Trade=ReadGrid(exchangeName,pair)
+    Trade=ReadGrid(exchangeName,account,pair)
 
     while True:
         # Rotate the key
@@ -184,7 +184,7 @@ def main():
                     bal=JRRapi.GetBalance(exchange,base,RetryLimit)
                     JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.6f} {Trade['Close']:.6f} {Trade['Sell']:.6f} {bal:.6f}")
 
-                    WriteGrid(exchangeName,Trade,pair)
+                    WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
@@ -195,7 +195,7 @@ def main():
                 Trade['Counter']+=1
 
                 JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.6f} {Trade['Close']:.6f} {Trade['Sell']:.6f}")
-                WriteGrid(exchangeName,Trade,pair)
+                WriteGrid(exchangeName,account,Trade,pair)
 
 # Make a purchase.
 
@@ -212,7 +212,7 @@ def main():
                     bal=JRRapi.GetBalance(exchange,base,RetryLimit)
                     JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.6f} {Trade['Close']:.6f} {Trade['Sell']:.6f} {bal:.6f}")
 
-                    WriteGrid(exchangeName,Trade,pair)
+                    WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
@@ -222,7 +222,7 @@ def main():
                 Trade['Counter']+=1
 
                 JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.6f} {Trade['Close']:.6f} {Trade['Sell']:.6f}")
-                WriteGrid(exchangeName,Trade,pair)
+                WriteGrid(exchangeName,account,Trade,pair)
 
 # Make a sell only if balance > minimum
 
@@ -243,7 +243,7 @@ def main():
                         JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f} {Trade['Buy']:.6f} {Trade['Close']:.6f} {Trade['Sell']:.6f} {bal:.6f}")
                     else:
                         JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f} {bal:.6f}")
-                    WriteGrid(exchangeName,Trade,pair)
+                    WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
@@ -256,7 +256,7 @@ def main():
                     JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f} {Trade['Buy']:.6f} {Trade['Close']:.6f} {Trade['Sell']:.6f}")
                 else:
                     JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f}")
-                WriteGrid(exchangeName,Trade,pair)
+                WriteGrid(exchangeName,account,Trade,pair)
 
         time.sleep(1)
 

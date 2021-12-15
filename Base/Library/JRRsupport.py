@@ -98,9 +98,10 @@ def ReadAssetList(exchange,account,pair,mp,delete):
             for line in cf.readlines():
                 l=line.strip().upper()
                 if len(l)>0:
-                    if not delete:
-                        c+=1
-                        coins.append(l)
+                    if not delete and not pair in coins:
+                        if not pair in coins:
+                            c+=1
+                            coins.append(l)
                     else:
                         JRRlog.WriteLog('|-- '+p+' removed')
             cf.close()
