@@ -119,28 +119,58 @@ and slippage will be a consideration otherwise, not to mention security.
 ## Usage
 
     cd /home/Extras/Equilibrium
-    ./Launcher ftxus MAIN trx/usd 2 1 PAPER
+    ./Launcher ftxus MAIN trx/usd 2 1 AUTO PAPER
 
-    This launches Equilibrium. The arguments are as follows,
+Or
 
-        ftxus       Exchange
-        MAIN        Account (Case sensitive)
-        trx/usd     Asset
-        2           Deviation/Take Profit in percent form
-        1           Number of lots.
+    cd /home/Extras/Equilibrium
+    ./Launcher ftxus MAIN trx/usd 2 1 1.1 PAPER
 
-            A lot is the minimum position size. if you wanted a $10
-            position of and asset that has a minimum position size of
-            $2.50, you would want 4 lots.
+Or
 
-        PAPER
+    cd /home/Extras/Equilibrium
+    ./Launcher ftxus MAIN trx/usd 2 1 0.9 PAPER
 
-            This activates the paper mode. Equilibrium will do everything
-            except actually place orders to the exchange.
+Or
 
-            **Even in PAPER mode, you API/Secret and Webhook must be
-            correct as Equilibrium WILL login into your account for youe
-            exchange's private API/rate limit values to get the prices.**
+    cd /home/Extras/Equilibrium
+    ./Launcher ftxus MAIN trx/usd 2 1 1 PAPER
+
+This launches Equilibrium. The arguments are as follows,
+
+    ftxus       Exchange
+    MAIN        Account (Case sensitive)
+    trx/usd     Asset
+    2           Deviation/Take Profit in percent form
+    1           Number of lots to buy
+
+        A lot is the minimum position size. if you wanted a $10
+        position of and asset that has a minimum position size of
+        $2.50, you would want 4 lots.
+
+    1.1 or AUTO Number of lots to sell
+
+        This is the number of lots to sell. It works exactly like the
+        buy lots with one very distinct difference, if you put
+        **AUTO**, the selling lot size will be 10% more then the
+        buying lot size.
+
+        If your selling lot size is equal to your buying lot size,
+        reverse trading will **NOT** take place.
+
+        If your selling lots size is less then your buying size, you
+        will ACCUMULATE the diffence in your account. For example, if
+        your buying lot size is 2 and your selling lot size is 1.9,
+        you will ACCUMULATE 0.1 of the asset with each SELL.
+
+    PAPER
+
+        This activates the paper mode. Equilibrium will do everything
+        except actually place orders to the exchange.
+
+        **Even in PAPER mode, you API/Secret and Webhook must be
+        correct as Equilibrium WILL login into your account for youe
+        exchange's private API/rate limit values to get the prices.**
 
 ## Donations
 
