@@ -48,6 +48,15 @@ def SendWebhook(Active,exchangeName,account,pair,action,amount):
 
     return res
 
+def CheckStopTracer(exchangeName,account,Asset):
+    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","")+'.stop'
+    if os.path.exists(fn):
+        try:
+            os.remove(fn)
+        except:
+            pass
+        JRRlog.ErrorLog("STOP", "tracer detected")
+
 def ReadGrid(exchangeName,account,Asset):
     fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","")+'.grid'
     if os.path.exists(fn):
@@ -86,18 +95,19 @@ def WriteGrid(exchangeName,account,Trade,Asset):
 def main():
     JRRlog.WriteLog(Header)
 
-    if len(sys.argv) > 5:
+    if len(sys.argv) > 6:
         exchangeName=sys.argv[1].lower()
         account=sys.argv[2]
         pair=sys.argv[3].upper()
         pct=float(sys.argv[4])/100
         buyAMT=float(sys.argv[5])
+        sellAMT=sys.argv[6]
     else:
-        print("An exchange, a (sub)account, an asset, % take profit, and # of lots must be provided.")
+        print("An exchange, a (sub)account, an asset, % take profit, buy lots, and sell lots must be provided.")
         sys.exit(1)
 
     paper=False
-    if len(sys.argv) > 6 and sys.argv[6].lower()=='paper':
+    if len(sys.argv) > 7 and sys.argv[7].lower()=='paper':
         paper=True
 
     keys=JRRsupport.ReadConfig(exchangeName,account)
@@ -131,7 +141,11 @@ def main():
     JRRlog.WriteLog("Quote currency: "+quote)
 
     minimum,mincost=JRRapi.GetMinimum(exchange,pair,False,False,RetryLimit)
-    amount=minimum*buyAMT
+    BuyAmount=minimum*buyAMT
+    if str(sellAMT.lower())=='auto':
+        SellAmount=BuyAmount+(BuyAmount*0.1)
+    else:
+        SellAmount=minimum*float(sellAMT)
 
     Trade=ReadGrid(exchangeName,account,pair)
 
@@ -158,11 +172,11 @@ def main():
 # Reset the cycle if either Counter is 0 or bal is less than minimum.
 
         if not paper:
-            if bal<amount:
+            if bal<BuyAmount:
                 if Trade['PCTValue']==0:
                     Trade['PCTValue']=round(close*pct,6)
                 Trade['Counter']=0
-                JRRlog.WriteLog(f"{pair:10} Balance ({bal:.6f}) < Amount ({amount:.6f}), Resetting grid")
+                JRRlog.WriteLog(f"{pair:10} Balance ({bal:.6f}) < Amount ({BuyAmount:.6f}), Resetting grid")
 
         # Rotate the key
 
@@ -171,8 +185,10 @@ def main():
         JRRapi.SetExchangeAPI(exchange,Active)
 
         if Trade['Counter']==0:
+            CheckStopTracer(exchangeName,account,pair)
             if not paper:
-                res=SendWebhook(Active,exchangeName,account,pair,'buy',amount)
+
+                res=SendWebhook(Active,exchangeName,account,pair,'buy',BuyAmount)
                 if res.find('Order Confirmation ID')>-1:
                     if Trade['PCTValue']==0:
                         Trade['PCTValue']=round(close*pct,6)
@@ -201,7 +217,7 @@ def main():
 
         if close<Trade['Buy']:
             if not paper:
-                res=SendWebhook(Active,exchangeName,account,pair,'buy',amount)
+                res=SendWebhook(Active,exchangeName,account,pair,'buy',BuyAmount)
                 time.sleep(1)
                 if res.find('Order Confirmation ID')>-1:
                     Trade['Close']=round(Trade['Buy'],6)
@@ -228,7 +244,7 @@ def main():
 
         if Trade['Counter']>0 and close>Trade['Sell']:
             if not paper:
-                SellAMT=amount+(amount*0.1)
+                SellAMT=SellAmount
                 if SellAMT>bal:
                     SellAMT=bal
                 res=SendWebhook(Active,exchangeName,account,pair,'sell',SellAMT)
