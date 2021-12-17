@@ -66,7 +66,7 @@ def ReadGrid(exchangeName,account,Asset):
             Trade={}
             Trade=json.loads(line.rstrip())
         fh.close()
-        JRRlog.WriteLog(f"|- {Asset:10} {Trade['Buy']:.6f} {Trade['Close']:.6f} {Trade['Sell']:.6f}")
+        JRRlog.WriteLog(f"|- {Asset:10} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
     else:
         Trade={}
         Trade['PCTValue']=0.000000
@@ -167,16 +167,16 @@ def main():
         JRRapi.SetExchangeAPI(exchange,Active)
 
         ohlcv,ticker=JRRapi.FetchRetry(exchange,pair,"1m",RetryLimit)
-        close=round(ohlcv[4],6)
+        close=round(ohlcv[4],8)
 
 # Reset the cycle if either Counter is 0 or bal is less than minimum.
 
         if not paper:
             if bal<BuyAmount:
                 if Trade['PCTValue']==0:
-                    Trade['PCTValue']=round(close*pct,6)
+                    Trade['PCTValue']=round(close*pct,8)
                 Trade['Counter']=0
-                JRRlog.WriteLog(f"{pair:10} Balance ({bal:.6f}) < Amount ({BuyAmount:.6f}), Resetting grid")
+                JRRlog.WriteLog(f"{pair:10} Balance ({bal:.8f}) < Amount ({BuyAmount:.8f}), Resetting grid")
 
         # Rotate the key
 
@@ -191,26 +191,26 @@ def main():
                 res=SendWebhook(Active,exchangeName,account,pair,'buy',BuyAmount)
                 if res.find('Order Confirmation ID')>-1:
                     if Trade['PCTValue']==0:
-                        Trade['PCTValue']=round(close*pct,6)
-                    Trade['Close']=round(close,6)
-                    Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],6)
-                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],6)
+                        Trade['PCTValue']=round(close*pct,8)
+                    Trade['Close']=round(close,8)
+                    Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
+                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                     Trade['Counter']+=1
 
                     bal=JRRapi.GetBalance(exchange,base,RetryLimit)
-                    JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.6f} {Trade['Close']:.6f} {Trade['Sell']:.6f} {bal:.6f}")
+                    JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
 
                     WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
-                Trade['PCTValue']=round(close*pct,6)
-                Trade['Close']=round(close,6)
-                Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],6)
-                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],6)
+                Trade['PCTValue']=round(close*pct,8)
+                Trade['Close']=round(close,8)
+                Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
+                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                 Trade['Counter']+=1
 
-                JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.6f} {Trade['Close']:.6f} {Trade['Sell']:.6f}")
+                JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
                 WriteGrid(exchangeName,account,Trade,pair)
 
 # Make a purchase.
@@ -220,24 +220,24 @@ def main():
                 res=SendWebhook(Active,exchangeName,account,pair,'buy',BuyAmount)
                 time.sleep(1)
                 if res.find('Order Confirmation ID')>-1:
-                    Trade['Close']=round(Trade['Buy'],6)
-                    Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],6)
-                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],6)
+                    Trade['Close']=round(Trade['Buy'],8)
+                    Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
+                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                     Trade['Counter']+=1
 
                     bal=JRRapi.GetBalance(exchange,base,RetryLimit)
-                    JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.6f} {Trade['Close']:.6f} {Trade['Sell']:.6f} {bal:.6f}")
+                    JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
 
                     WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
-                Trade['Close']=round(Trade['Buy'],6)
-                Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],6)
-                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],6)
+                Trade['Close']=round(Trade['Buy'],8)
+                Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
+                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                 Trade['Counter']+=1
 
-                JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.6f} {Trade['Close']:.6f} {Trade['Sell']:.6f}")
+                JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
                 WriteGrid(exchangeName,account,Trade,pair)
 
 # Make a sell only if balance > minimum
@@ -249,27 +249,27 @@ def main():
                     SellAMT=bal
                 res=SendWebhook(Active,exchangeName,account,pair,'sell',SellAMT)
                 if res.find('Order Confirmation ID')>-1:
-                    Trade['Close']=round(Trade['Sell'],6)
-                    Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],6)
-                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],6)
+                    Trade['Close']=round(Trade['Sell'],8)
+                    Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
+                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                     Trade['Counter']-=1
 
                     bal=JRRapi.GetBalance(exchange,base,RetryLimit)
                     if Trade['Counter']>0:
-                        JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f} {Trade['Buy']:.6f} {Trade['Close']:.6f} {Trade['Sell']:.6f} {bal:.6f}")
+                        JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
                     else:
-                        JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f} {bal:.6f}")
+                        JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f} {bal:.8f}")
                     WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
-                Trade['Close']=round(Trade['Sell'],6)
-                Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],6)
-                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],6)
+                Trade['Close']=round(Trade['Sell'],8)
+                Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
+                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                 Trade['Counter']-=1
 
                 if Trade['Counter']>0:
-                    JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f} {Trade['Buy']:.6f} {Trade['Close']:.6f} {Trade['Sell']:.6f}")
+                    JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
                 else:
                     JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f}")
                 WriteGrid(exchangeName,account,Trade,pair)
