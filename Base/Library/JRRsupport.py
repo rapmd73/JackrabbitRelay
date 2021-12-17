@@ -98,20 +98,19 @@ def ReadAssetList(exchange,account,pair,mp,delete):
             for line in cf.readlines():
                 l=line.strip().upper()
                 if len(l)>0:
-                    if not delete and not pair in coins:
-                        if not pair in coins:
-                            c+=1
-                            coins.append(l)
-                    else:
-                        JRRlog.WriteLog('|-- '+p+' removed')
+                    if not l in coins:
+                        coins.append(l)
             cf.close()
 
-            if not p in coins and c<int(mp) and not delete:
+            if not p in coins and len(coins)<int(mp) and not delete:
                 JRRlog.WriteLog('|-- '+p+' added')
                 coins.append(p)
+            else:
+                if delete and p in coins:
+                    JRRlog.WriteLog('|-- '+p+' removed')
+                    coins.remove(p)
         else:
             if not delete:
-                c+=1
                 JRRlog.WriteLog('|-- '+p+' added')
                 coins.append(p)
 
@@ -121,7 +120,7 @@ def ReadAssetList(exchange,account,pair,mp,delete):
 
     fw.Unlock()
 
-    if c>=int(mp):
+    if len(coins)>=int(mp):
         JRRlog.ErrorLog("MaxAsset Verification",account+'Exceeded maximum asset limit')
 
 def WriteAssetList(exchange,account,coins):
@@ -133,7 +132,7 @@ def WriteAssetList(exchange,account,coins):
         except:
             pass
     else:
-        fh=open(fn,'a')
+        fh=open(fn,'w')
         for p in coins:
             s=f"{p}\n"
             fh.write(s)
