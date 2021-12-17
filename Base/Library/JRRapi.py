@@ -109,10 +109,10 @@ def GetAssetMinimum(exchange,pair,diagnostics,RetryLimit):
     mincost=max(minimum1*close,minimum2,minimum3)
 
     if diagnostics:
-        JRRlog.WriteLog(f"| |- Close: {close:.6f}")
-        JRRlog.WriteLog(f"| |- Minimum Amount: {minimum1:.6f}, {minimum1*close:.6f}")
-        JRRlog.WriteLog(f"| |- Minimum Cost:   {minimum2:.6f}, {minimum2/close:.6f}")
-        JRRlog.WriteLog(f"| |- Minimum Price:  {minimum3:.6f}, {minimum3/close:.6f}")
+        JRRlog.WriteLog(f"| |- Close: {close:.8f}")
+        JRRlog.WriteLog(f"| |- Minimum Amount: {minimum1:.8f}, {minimum1*close:.8f}")
+        JRRlog.WriteLog(f"| |- Minimum Cost:   {minimum2:.8f}, {minimum2/close:.8f}")
+        JRRlog.WriteLog(f"| |- Minimum Price:  {minimum3:.8f}, {minimum3/close:.8f}")
 
     return(minimum, mincost)
 
@@ -129,8 +129,8 @@ def GetMinimum(exchange,pair,forceQuote,diagnostics,RetryLimit):
         JRRlog.WriteLog("|- Base: "+base)
     minimum,mincost=GetAssetMinimum(exchange,pair,diagnostics,RetryLimit)
     if diagnostics:
-        JRRlog.WriteLog("| |- Minimum: "+f"{minimum:.6f}")
-        JRRlog.WriteLog("| |- Min Cost: "+f"{mincost:.6f}")
+        JRRlog.WriteLog("| |- Minimum: "+f"{minimum:.8f}")
+        JRRlog.WriteLog("| |- Min Cost: "+f"{mincost:.8f}")
 
 # If quote is NOT USD/Stablecoin. NOTE: This is an API penality for the
 # overhead of pulling quote currency. Quote currenct OVERRIDES base ALWAYS.
@@ -144,8 +144,8 @@ def GetMinimum(exchange,pair,forceQuote,diagnostics,RetryLimit):
             minimum,mincost=GetAssetMinimum(exchange,bpair,diagnostics,RetryLimit)
 
             if diagnostics:
-                JRRlog.WriteLog("| |- Minimum: "+f"{minimum:.6f}")
-                JRRlog.WriteLog("| |- Min Cost: "+f"{mincost:.6f}")
+                JRRlog.WriteLog("| |- Minimum: "+f"{minimum:.8f}")
+                JRRlog.WriteLog("| |- Min Cost: "+f"{mincost:.8f}")
 
     return minimum,mincost
 
