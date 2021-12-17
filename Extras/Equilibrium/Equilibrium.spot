@@ -69,10 +69,10 @@ def ReadGrid(exchangeName,account,Asset):
         JRRlog.WriteLog(f"|- {Asset:10} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
     else:
         Trade={}
-        Trade['PCTValue']=0.000000
-        Trade['Close']=0.000000
-        Trade['Buy']=0.000000
-        Trade['Sell']=0.000000
+        Trade['PCTValue']=0.0
+        Trade['Close']=0.0
+        Trade['Buy']=0.0
+        Trade['Sell']=0.0
         Trade['Counter']=0
 
     return(Trade)
