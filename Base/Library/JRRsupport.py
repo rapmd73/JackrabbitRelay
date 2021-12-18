@@ -82,8 +82,8 @@ class FileWatch:
 # Read the asset list and verify max asset allowance
 
 def ReadAssetList(exchange,account,pair,mp,delete):
-    JRRlog.WriteLog('|- Verifying maximum asset allowwance of '+str(mp))
-    coins=[]
+    JRRlog.WriteLog('Verifying maximum asset allowwance of '+str(mp))
+    coins={}
     fn=JRRconfig.LogDirectory+'/'+exchange+'.'+account+'.coinlist'
 
     p=pair.upper()
@@ -91,28 +91,42 @@ def ReadAssetList(exchange,account,pair,mp,delete):
     fw=FileWatch(fn)
     fw.Lock()
 
-    c=0
     try:
         if os.path.exists(fn):
             cf=open(fn,'rt+')
-            for line in cf.readlines():
-                l=line.strip().upper()
-                if len(l)>0:
-                    if not l in coins:
-                        coins.append(l)
+            buffer=cf.read()
             cf.close()
+            coins=json.loads(buffer)
 
             if not p in coins and len(coins)<int(mp) and not delete:
-                JRRlog.WriteLog('|-- '+p+' added')
-                coins.append(p)
+                JRRlog.WriteLog('|- '+p+' added')
+                coins[p]=time.time()
             else:
-                if delete and p in coins:
-                    JRRlog.WriteLog('|-- '+p+' removed')
-                    coins.remove(p)
+                if p in coins:
+                    if delete:
+                        JRRlog.WriteLog('|- '+p+' removed')
+                        try:
+                            coins.pop(p,None)
+                        except:
+                            pass
+                    else:
+                        JRRlog.WriteLog('|- '+p+' updated')
+                        coins[p]=time.time()
         else:
             if not delete:
-                JRRlog.WriteLog('|-- '+p+' added')
-                coins.append(p)
+                JRRlog.WriteLog('|- '+p+' added')
+                coins[p]=time.time()
+
+        # Remove any coin over 7 days
+
+        for c in coins:
+            t=(time.time()-coins[c])
+            if t>(7*86400):
+                JRRlog.WriteLog('|- '+p+' aged out')
+                try:
+                    coins.pop(c,None)
+                except:
+                    pass
 
         WriteAssetList(exchange,account,coins)
     except:
@@ -122,6 +136,8 @@ def ReadAssetList(exchange,account,pair,mp,delete):
 
     if len(coins)>=int(mp):
         JRRlog.ErrorLog("MaxAsset Verification",account+'Exceeded maximum asset limit')
+
+    return coins
 
 def WriteAssetList(exchange,account,coins):
     fn=JRRconfig.LogDirectory+'/'+exchange+'.'+account+'.coinlist'
@@ -133,9 +149,7 @@ def WriteAssetList(exchange,account,coins):
             pass
     else:
         fh=open(fn,'w')
-        for p in coins:
-            s=f"{p}\n"
-            fh.write(s)
+        fh.write(json.dumps(coins))
         fh.close()
 
 # Filter end of line and hard spaces
