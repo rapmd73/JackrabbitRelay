@@ -51,10 +51,6 @@ def SendWebhook(Active,exchangeName,account,pair,action,amount):
 def CheckStopTracer(exchangeName,account,Asset):
     fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","")+'.stop'
     if os.path.exists(fn):
-        try:
-            os.remove(fn)
-        except:
-            pass
         JRRlog.ErrorLog("STOP", "tracer detected")
 
 def ReadGrid(exchangeName,account,Asset):
