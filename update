@@ -9,7 +9,7 @@ cd /home/GitHub/JackrabbitRelay
 git pull https://github.com/rapmd73/JackrabbitRelay
 
 mkdir -p /home/JackrabbitRelay/Base/Library > /dev/null 2>&1
-cp /home/GitHub/JackrabbitRelay/Base/Library/* /home/JackrabbitRelay/Base/Library
+cp -r /home/GitHub/JackrabbitRelay/Base/* /home/JackrabbitRelay/Base
 
 if test -f /home/Equilibrium/install ; then
     /home/GitHub/JackrabbitRelay/Extras/Equilibrium/install

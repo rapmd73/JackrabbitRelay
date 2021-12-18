@@ -227,7 +227,12 @@ files:
 
 The Jackrabbit Relay files are ver sime JSON based text.  Here is an example:
 
-    { "Account":"MAIN","API":"YourAPI","SECRET":"YourSecret","RateLimit":"200","Reduction":"0.00001","ReduceOnly":"Yes" }
+    { "Account":"MAIN","API":"YourAPI","SECRET":"YourSecret","RateLimit":"200","MaxAssets":"7","Reduction":"0.00001","ReduceOnly":"Yes" }
+
+KuCoin *requires* a passphrase as well. It is case sensitive and must be
+*EXACTLY* as you gave it to KuCoin. Here is an example:
+
+    { "Account":"MAIN","API":"YourAPI","SECRET":"YourSecret"."Passphrase":"LuckyME","RateLimit":"1000","MaxAssets":"7","Reduction":"0.00001","ReduceOnly":"Yes" }
 
 This would be placed in a folder called /home/JackrabbitRelay/Config and
 named something like ftxus.cfg
@@ -253,17 +258,20 @@ Now for the details:
         exchange, most likely temporarily. You will have to tweak this
         number based upon your exchange.
 
-    Reduction: The amount to reducew your position to all your exchange
-    to close it. 
-
-        This is a percentage. Do NOT put a percent (%) sign. Use this
-        ONLY if you receive errors closing a position. Finding the amount
-        of the reduction is strictly trial and error.
+    MaxAssets: This is the maximum number of assets that can be traded
+    simultaneously.
 
     ReduceOnly: This tells the exchange NOT to flip a position from long
     to short or vice-versa.
 
         It can have any value as it presence is only required.
+
+    Reduction: The amount to reducew your position to all your exchange
+    to close it. Depreciated...
+
+        This is a percentage. Do NOT put a percent (%) sign. Use this
+        ONLY if you receive errors closing a position. Finding the amount
+        of the reduction is strictly trial and error.
 
 Jackrabbit support multiple API per exchange (sub)account. This is
 accomplished by this format:
@@ -354,8 +362,8 @@ Discriptionn of the payload
         Buy             Make a purchase
         Sell            Sell a portion. If amount is more then balance, position will be closed
         Close           Sell all of the asset
-        Long            Opens a long position and can flip a short to long
-        Short           Opens a short position and can flip a long position to short
+        Long            (Perpetuals) Opens a long position and can flip a short to long
+        Short           (Perpetuals) Opens a short position and can flip a long position to short
 
     Asset
 
