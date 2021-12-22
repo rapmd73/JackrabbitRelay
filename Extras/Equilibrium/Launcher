@@ -8,11 +8,11 @@ BaseDir="/home/Equilibrium"
 cd $BaseDir
 
 while true ; do
+    $BaseDir/Equilibrium.spot $@
     $BaseDir/CheckStop $@
     if [ $? -eq 1 ] ; then
         exit
     fi
-    $BaseDir/Equilibrium.spot $@
     sleep 60
 done
 
