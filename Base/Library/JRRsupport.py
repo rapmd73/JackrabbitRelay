@@ -135,7 +135,7 @@ def ReadAssetList(exchange,account,pair,mp,delete):
     fw.Unlock()
 
     if len(coins)>=int(mp):
-        JRRlog.ErrorLog("MaxAsset Verification",account+'Exceeded maximum asset limit')
+        JRRlog.ErrorLog("MaxAsset Verification",p+' not allowed to trade')
 
     return coins
 
