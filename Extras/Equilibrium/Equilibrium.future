@@ -21,7 +21,7 @@ import JRRsupport
 Header='Equilibrium '+JRRconfig.Version
 
 def SendWebhook(Active,exchangeName,account,pair,action,amount):
-    exc='"Exchange":"'+exchangeName+'", "Market":"Spot"'
+    exc='"Exchange":"'+exchangeName+'", "Market":"Future"'
     account='"Account":"'+account+'"'
     sym='"Asset":"'+pair+'"'
     direction='"Action":"'+action.lower()+'"'
@@ -91,20 +91,33 @@ def WriteGrid(exchangeName,account,Trade,Asset):
 def main():
     JRRlog.WriteLog(Header)
 
-    if len(sys.argv) > 6:
+    if len(sys.argv) > 7:
         exchangeName=sys.argv[1].lower()
         account=sys.argv[2]
         pair=sys.argv[3].upper()
         pct=float(sys.argv[4])/100
         buyAMT=float(sys.argv[5])
         sellAMT=sys.argv[6]
+        direction=sys.argv[7].lower()
     else:
-        print("An exchange, a (sub)account, an asset, % take profit, buy lots, and sell lots must be provided.")
+        print("An exchange, a (sub)account, an asset, % take profit, buy lots, sell lots, and direction must be provided.")
         sys.exit(1)
 
     paper=False
-    if len(sys.argv) > 7 and sys.argv[7].lower()=='paper':
+    if len(sys.argv) > 8 and sys.argv[8].lower()=='paper':
         paper=True
+
+# Figure out the direction of the trade
+
+    if direction!='long' and direction!='short':
+        JRRlog.ErrorLog("Equilibrium","Direction MUST be long or short")
+
+    if direction=='long':
+        BuyDir='long'
+        SellDir='short'
+    else:
+        BuyDir='short'
+        SellDir='long'
 
     keys=JRRsupport.ReadConfig(exchangeName,account)
     JRRlog.WriteLog("API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
@@ -128,6 +141,7 @@ def main():
 # This is where a looping method would go if this were to serve a single exchange
 # with multiple pairs.
 
+
 # Get asset information
 
     base=exchange.markets[pair]['base']
@@ -135,6 +149,7 @@ def main():
 
     JRRlog.WriteLog("Base currency:  "+base)
     JRRlog.WriteLog("Quote currency: "+quote)
+    JRRlog.WriteLog("Trade direction: "+direction)
 
     minimum,mincost=JRRapi.GetMinimum(exchange,pair,False,False,RetryLimit)
     BuyAmount=minimum*buyAMT
@@ -154,7 +169,11 @@ def main():
 
         # Actual algorithm
 
-        bal=JRRapi.GetBalance(exchange,base,RetryLimit)
+        position=JRRapi.GetPosition(exchange,pair,RetryLimit)
+        if position is None:
+            bal=0
+        else:
+            bal=position['contracts']
 
         # Rotate the key
 
@@ -184,7 +203,7 @@ def main():
             CheckStopTracer(exchangeName,account,pair)
             if not paper:
 
-                res=SendWebhook(Active,exchangeName,account,pair,'buy',BuyAmount)
+                res=SendWebhook(Active,exchangeName,account,pair,BuyDir,BuyAmount)
                 if res.find('Order Confirmation ID')>-1:
                     if Trade['PCTValue']==0:
                         Trade['PCTValue']=round(close*pct,8)
@@ -193,8 +212,12 @@ def main():
                     Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                     Trade['Counter']+=1
 
-                    bal=JRRapi.GetBalance(exchange,base,RetryLimit)
-                    JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
+                    position=JRRapi.GetPosition(exchange,pair,RetryLimit)
+                    if position is None:
+                        bal=0
+                    else:
+                        bal=position['contracts']
+                    JRRlog.WriteLog(f"{pair:10} {BuyDir:5} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
 
                     WriteGrid(exchangeName,account,Trade,pair)
                 else:
@@ -206,14 +229,14 @@ def main():
                 Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                 Trade['Counter']+=1
 
-                JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
+                JRRlog.WriteLog(f"{pair:10} {BuyDir:5} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
                 WriteGrid(exchangeName,account,Trade,pair)
 
 # Make a purchase.
 
         if close<Trade['Buy']:
             if not paper:
-                res=SendWebhook(Active,exchangeName,account,pair,'buy',BuyAmount)
+                res=SendWebhook(Active,exchangeName,account,pair,BuyDir,BuyAmount)
                 time.sleep(1)
                 if res.find('Order Confirmation ID')>-1:
                     Trade['Close']=round(Trade['Buy'],8)
@@ -221,8 +244,12 @@ def main():
                     Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                     Trade['Counter']+=1
 
-                    bal=JRRapi.GetBalance(exchange,base,RetryLimit)
-                    JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
+                    position=JRRapi.GetPosition(exchange,pair,RetryLimit)
+                    if position is None:
+                        bal=0
+                    else:
+                        bal=position['contracts']
+                    JRRlog.WriteLog(f"{pair:10} {BuyDir:5} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
 
                     WriteGrid(exchangeName,account,Trade,pair)
                 else:
@@ -233,7 +260,7 @@ def main():
                 Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                 Trade['Counter']+=1
 
-                JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
+                JRRlog.WriteLog(f"{pair:10} {BuyDir:5} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
                 WriteGrid(exchangeName,account,Trade,pair)
 
 # Make a sell only if balance > minimum
@@ -243,18 +270,22 @@ def main():
                 SellAMT=SellAmount
                 if SellAMT>bal:
                     SellAMT=bal
-                res=SendWebhook(Active,exchangeName,account,pair,'sell',SellAMT)
+                res=SendWebhook(Active,exchangeName,account,pair,SellDir,SellAMT)
                 if res.find('Order Confirmation ID')>-1:
                     Trade['Close']=round(Trade['Sell'],8)
                     Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
                     Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                     Trade['Counter']-=1
 
-                    bal=JRRapi.GetBalance(exchange,base,RetryLimit)
-                    if Trade['Counter']>0:
-                        JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
+                    position=JRRapi.GetPosition(exchange,pair,RetryLimit)
+                    if position is None:
+                        bal=0
                     else:
-                        JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f} {bal:.8f}")
+                        bal=position['contracts']
+                    if Trade['Counter']>0:
+                        JRRlog.WriteLog(f"{pair:10} {SellDir:5} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
+                    else:
+                        JRRlog.WriteLog(f"{pair:10} {SellDir:5} {Trade['Counter']:2.0f} {bal:.8f}")
                     WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
@@ -265,9 +296,9 @@ def main():
                 Trade['Counter']-=1
 
                 if Trade['Counter']>0:
-                    JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
+                    JRRlog.WriteLog(f"{pair:10} {SellDir:5} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
                 else:
-                    JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f}")
+                    JRRlog.WriteLog(f"{pair:10} {SellDir:5} {Trade['Counter']:2.0f}")
                 WriteGrid(exchangeName,account,Trade,pair)
 
         time.sleep(1)
