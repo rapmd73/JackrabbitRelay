@@ -284,7 +284,7 @@ def GetBalance(exchange,base,RetryLimit):
                 bal=float(balance['total'][base])
             else:
                 # This is an absolute horrible way to handle this, but unfortunately the only way.
-                # Many wexchanges don't report a balance at all if an asset hasn't been traded in
+                # Many exchanges don't report a balance at all if an asset hasn't been traded in
                 # a given timeframe (usually fee based tier resets designate the cycle).
                 bal=0
         except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError, ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError) as e:

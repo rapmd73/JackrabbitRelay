@@ -13,7 +13,9 @@ if len(sys.argv) > 3:
     account=sys.argv[2]
     pair=sys.argv[3].upper()
 
-    fn=exchangeName+'.'+account+'.'+pair.replace("-","").replace("/","")+'.stop'
-    if os.path.exists(fn):
+    fn=exchangeName+'.'+account+'.'+pair.replace("-","").replace("/","")
+    fnGrid=fn+'.grid'
+    fnStop=fn+'.stop'
+    if os.path.exists(fnStop) and not os.path.exists(fnGrid):
         sys.exit(1)
 
