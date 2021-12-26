@@ -103,6 +103,10 @@ def main():
         print("An exchange, a (sub)account, an asset, % take profit, buy lots, sell lots, and direction must be provided.")
         sys.exit(1)
 
+    once=False
+    if len(sys.argv) > 8 and sys.argv[8].lower()=='once':
+        once=True
+
     paper=False
     if len(sys.argv) > 8 and sys.argv[8].lower()=='paper':
         paper=True
@@ -141,7 +145,6 @@ def main():
 # This is where a looping method would go if this were to serve a single exchange
 # with multiple pairs.
 
-
 # Get asset information
 
     base=exchange.markets[pair]['base']
@@ -158,7 +161,11 @@ def main():
     else:
         SellAmount=minimum*float(sellAMT)
 
+    JRRlog.WriteLog(f"Lot size: {buyAMT:.8f}")
+
     Trade=ReadGrid(exchangeName,account,pair)
+
+    first=True
 
     while True:
         # Rotate the key
@@ -200,7 +207,10 @@ def main():
         JRRapi.SetExchangeAPI(exchange,Active)
 
         if Trade['Counter']==0:
-            CheckStopTracer(exchangeName,account,pair)
+            if not first and once:
+                JRRlog.ErrorLog("Equilibrium","One cycle completed")
+            if not first:
+                CheckStopTracer(exchangeName,account,pair)
             if not paper:
 
                 res=SendWebhook(Active,exchangeName,account,pair,BuyDir,BuyAmount)
@@ -301,6 +311,7 @@ def main():
                     JRRlog.WriteLog(f"{pair:10} {SellDir:5} {Trade['Counter']:2.0f}")
                 WriteGrid(exchangeName,account,Trade,pair)
 
+        first=True
         time.sleep(1)
 
 if __name__ == '__main__':

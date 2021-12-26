@@ -19,7 +19,7 @@ KuCoinSupress429=True
 
 # Register the exchange
 
-def ExchangeLogin(exchangeName,Active):
+def ExchangeLogin(exchangeName,Active,Notify=True):
     if exchangeName in ccxt.exchanges:
         try:
             exchange=getattr(ccxt,exchangeName)( \
@@ -36,7 +36,7 @@ def ExchangeLogin(exchangeName,Active):
         else:
             JRRlog.ErrorLog(exchangeName,"Exchange not supported")
 
-    SetExchangeAPI(exchange,Active,notify=True)
+    SetExchangeAPI(exchange,Active,Notify)
 
     return(exchange)
 
@@ -321,7 +321,7 @@ def GetPosition(exchange,pair,RetryLimit):
 
 # Fetch the market list
 
-def GetMarkets(exchange,pair,RetryLimit):
+def GetMarkets(exchange,pair,RetryLimit,Notify=True):
     retry=0
     done=False
     while not done:
@@ -331,12 +331,14 @@ def GetMarkets(exchange,pair,RetryLimit):
             if retry>=RetryLimit:
                 JRRlog.ErrorLog("Fetch Markets",e)
             else:
-                JRRlog.WriteLog('Fetch Markets Retrying ('+str(retry+1)+'), '+str(e))
+                if Notify:
+                    JRRlog.WriteLog('Fetch Markets Retrying ('+str(retry+1)+'), '+str(e))
         else:
             done=True
         retry+=1
 
-    JRRlog.WriteLog("Markets loaded")
+    if Notify:
+        JRRlog.WriteLog("Markets loaded")
 
     if pair[0]=='.' or pair.find(".d")>-1:
         JRRlog.ErrorLog('Get Markets',pair+" is not tradable on this exchange")
