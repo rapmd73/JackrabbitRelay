@@ -119,7 +119,7 @@ and slippage will be a consideration otherwise, not to mention security.
 ## Usage
 
     cd /home/Extras/Equilibrium
-    ./Launcher ftxus MAIN trx/usd 2 1 AUTO PAPER
+    ./Launcher ftxus MAIN trx/usd 2 Bal AUTO PAPER
 
 Or
 
@@ -136,17 +136,25 @@ Or
     cd /home/Extras/Equilibrium
     ./Launcher ftxus MAIN trx/usd 2 1 1 PAPER
 
+Or
+
+    cd /home/Extras/Equilibrium
+    ./LauncherFuture ftx MAIN TRX-PERP 0.5 Bal AUTO Short
+
 This launches Equilibrium. The arguments are as follows,
 
     ftxus       Exchange
     MAIN        Account (Case sensitive)
     trx/usd     Asset
     2           Deviation/Take Profit in percent form
-    1           Number of lots to buy
+    1 or Bal    Number of lots to buy
 
         A lot is the minimum position size. if you wanted a $10
         position of and asset that has a minimum position size of
-        $2.50, you would want 4 lots.
+        $2.50, you would want 4 lots. 
+
+        Bal load the balance of the (sub)account and converts it into
+        lots based upon the boundary.
 
     1.1 or AUTO Number of lots to sell
 
@@ -162,6 +170,11 @@ This launches Equilibrium. The arguments are as follows,
         will ACCUMULATE the diffence in your account. For example, if
         your buying lot size is 2 and your selling lot size is 1.9,
         you will ACCUMULATE 0.1 of the asset with each SELL.
+
+    Long/Short  Trade direction for futures ONLY. Not used for SPOT.
+
+        Long or Short direction for trading. You can NOT use both in the
+        same (sub)account, doing so WILL cause losses.
 
     PAPER
 
