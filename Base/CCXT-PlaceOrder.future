@@ -237,14 +237,14 @@ def main():
             ReduceOnly=False
 
     try: # Isolated or Crossed
-        if "set_margin_mode" in exchange and "Margin" in Order:
+        if exchange.has["set_margin_mode"] and "Margin" in Order:
             exchange.set_margin_mode(pair,Order['Margin'].upper())
             JRRlog.WriteLog("|- Margin: "+Order['Margin'])
     except:
         pass
 
     try:
-        if "set_leverage" in exchange and "Leverage" in Order:
+        if exchange.has["set_leverage"] and "Leverage" in Order:
             exchange.set_legerage(int(Order['Leverage']),pair)
             JRRlog.WriteLog("|- Leverage: "+str(Order['Leverage']))
     except:

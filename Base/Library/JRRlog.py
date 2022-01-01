@@ -18,7 +18,7 @@ import JRRconfig
 def ElapsedTime(StartTime):
     EndTime=datetime.now()
     Elapsed=(EndTime-StartTime)
-    WriteLog("Processing Completed: "+str(Elapsed)[5:]+" seconds")
+    WriteLog("Processing Completed: "+str(Elapsed)+" seconds")
 
 # Write log entry
 
@@ -38,6 +38,14 @@ def WriteLog(msg):
 
 def ErrorLog(func,e):
     msg=func+' failed with: '+str(e)
+
+    WriteLog(msg)
+    ElapsedTime(JRRconfig.StartTime)
+    sys.stdout.flush()
+    sys.exit(3)
+
+def SuccessLog(func,e):
+    msg=func+' successful with: '+str(e)
 
     WriteLog(msg)
     ElapsedTime(JRRconfig.StartTime)
