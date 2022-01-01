@@ -134,8 +134,7 @@ def ReadAssetList(exchange,account,pair,mp,delete):
 
     fw.Unlock()
 
-    JRRlog.WriteLog(f'Delta Trace: {len(coins)} > {int(mp)}')
-    if len(coins)>=int(mp):
+    if len(coins)>=int(mp) and len(coins)>1:
         JRRlog.ErrorLog("MaxAsset Verification",p+' not allowed to trade')
 
     return coins
