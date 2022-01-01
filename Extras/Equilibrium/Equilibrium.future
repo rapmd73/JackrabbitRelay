@@ -51,7 +51,7 @@ def SendWebhook(Active,exchangeName,account,pair,action,amount):
 def CheckStopTracer(exchangeName,account,Asset):
     fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","")+'.stop'
     if os.path.exists(fn):
-        JRRlog.ErrorLog("STOP", "tracer detected")
+        JRRlog.SuccessLog("STOP", "tracer detected")
 
 def ReadGrid(exchangeName,account,Asset):
     fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","")+'.grid'
@@ -208,7 +208,7 @@ def main():
 
         if Trade['Counter']==0:
             if not first and once:
-                JRRlog.ErrorLog("Equilibrium","One cycle completed")
+                JRRlog.SuccessLog("Equilibrium","One cycle completed")
             if not first:
                 CheckStopTracer(exchangeName,account,pair)
             if not paper:
