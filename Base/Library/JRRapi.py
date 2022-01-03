@@ -105,10 +105,6 @@ def GetAssetMinimum(exchange,pair,diagnostics,RetryLimit):
     if minimum3==None:
         minimum3=0
 
-    print(minimum1)
-    print(minimum2/close)
-    print(minimum3/close)
-
     minimum=max(minimum1,minimum2/close,minimum3/close)
     mincost=max(minimum1*close,minimum2,minimum3)
 
