@@ -48,11 +48,14 @@ made or lost in the same situation.
 
 ## Notes
 
-**Special Thanks to the following people for providing me with a test
-account.
+**Special Thanks** to the following people for providing me with testing
+accounts.
 
     1. Me4tGrinf3r | Jonas
     2. MisterCrease
+    3. Riodda
+    4. Cozzy
+    5. bobo2314
 
 Having the test accounts really help in tracking issues and solving
 problems. If you would like to donate a test account, please DM me of Discord.
@@ -332,11 +335,11 @@ This example purchases BCH by the value of BTC
 
 This example purchase of a perpetual contract of AAVE with a leverage of 5
 
-    { "Exchange":"ftx","Market":"Future","Account":"MAIN","Action":"Buy","Asset":"AAVE-PREP","Base":"1","Leverage":"5" }
+    { "Exchange":"ftx","Market":"Future","Account":"MAIN","Action":"Buy","Asset":"AAVE/USD:USD","Base":"1","Leverage":"5" }
 
 This example purchase of a perpetual contract of AAVE with a leverage of 20, using an isolated margin
 
-    { "Exchange":"ftx","Market":"Future","Account":"MAIN","Action":"Buy","Asset":"AAVEPREP","Base":"1","Leverage":"20","Margin":"Isolated" }
+    { "Exchange":"ftx","Market":"Future","Account":"MAIN","Action":"Buy","Asset":"AAVE/USD:USD","Base":"1","Leverage":"20","Margin":"Isolated" }
 
 Discriptionn of the payload
 
