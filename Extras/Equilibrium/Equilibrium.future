@@ -49,12 +49,12 @@ def SendWebhook(Active,exchangeName,account,pair,action,amount):
     return res
 
 def CheckStopTracer(exchangeName,account,Asset):
-    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","")+'.stop'
+    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.stop'
     if os.path.exists(fn):
         JRRlog.SuccessLog("STOP", "tracer detected")
 
 def ReadGrid(exchangeName,account,Asset):
-    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","")+'.grid'
+    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.grid'
     if os.path.exists(fn):
         JRRlog.WriteLog("Reading Grid file")
         fh=open(fn,'r')
@@ -74,7 +74,7 @@ def ReadGrid(exchangeName,account,Asset):
     return(Trade)
 
 def WriteGrid(exchangeName,account,Trade,Asset):
-    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","")+'.grid'
+    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.grid'
 
     if Trade['Counter']>0:
         fh=open(fn,'w')
