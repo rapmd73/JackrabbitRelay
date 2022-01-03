@@ -32,8 +32,11 @@ def main():
 
     RetryLimit=3
     RateLimit=1000
+    srch=None
     if len(sys.argv) > 2:
         RateLimit=int(sys.argv[2])
+    if len(sys.argv) > 3:
+        srch=sys.argv[3].upper()
 
     if exchangeName in ccxt.exchanges:
         exchange=getattr(ccxt,exchangeName)()
@@ -44,7 +47,7 @@ def main():
             print("Invalid exchange")
             sys.exit(1)
 
-    if "createMarketBuyOrderRequiresPrice" in exchange.options:
+    if  exchange.options["createMarketBuyOrderRequiresPrice"]:
         print("Exchange not supported")
         sys.exit(1)
 
@@ -62,6 +65,10 @@ def main():
         if 'active' in exchange.markets[pair]:
             if exchange.markets[pair]['active']==False:
                 continue
+        if srch!=None:
+            if pair.find(srch)<0:
+                continue
+
         try:
             ticker=exchange.fetchTicker(pair)
         except Exception as e:

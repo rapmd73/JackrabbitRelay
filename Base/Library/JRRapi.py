@@ -97,22 +97,35 @@ def GetAssetMinimum(exchange,pair,diagnostics,RetryLimit):
 
     minimum1=exchange.markets[pair]['limits']['amount']['min']
     if minimum1==None:
-        minimum1=0
+        minimum1=0.0
     minimum2=exchange.markets[pair]['limits']['cost']['min']
     if minimum2==None:
-        minimum2=0
+        minimum2=0.0
     minimum3=exchange.markets[pair]['limits']['price']['min']
     if minimum3==None:
-        minimum3=0
+        minimum3=0.0
 
-    minimum=max(minimum1,minimum2/close,minimum3/close)
-    mincost=max(minimum1*close,minimum2,minimum3)
+    if minimum1==0:
+        m1=0.0
+    else:
+        m1=float(minimum1)*close
+    if minimum2==0:
+        m2=0.0
+    else:
+        m2=float(minimum2)/close
+    if minimum3==0:
+        m3=0.0
+    else:
+        m3=float(minimum3)/close
+
+    minimum=max(float(minimum1),m2,m3)
+    mincost=max(m1,float(minimum2),float(minimum3))
 
     if diagnostics:
         JRRlog.WriteLog(f"| |- Close: {close:.8f}")
-        JRRlog.WriteLog(f"| |- Minimum Amount: {minimum1:.8f}, {minimum1*close:.8f}")
-        JRRlog.WriteLog(f"| |- Minimum Cost:   {minimum2:.8f}, {minimum2/close:.8f}")
-        JRRlog.WriteLog(f"| |- Minimum Price:  {minimum3:.8f}, {minimum3/close:.8f}")
+        JRRlog.WriteLog(f"| |- Minimum Amount: {minimum1:.8f}, {m1:.8f}")
+        JRRlog.WriteLog(f"| |- Minimum Cost:   {minimum2:.8f}, {m2:.8f}")
+        JRRlog.WriteLog(f"| |- Minimum Price:  {minimum3:.8f}, {m3:.8f}")
 
     return(minimum, mincost)
 

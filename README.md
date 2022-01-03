@@ -77,7 +77,7 @@ everything. Rinse and repeat as many times as needed :)
 
 ## Confirmed working exchanges
 
-    ftx         ftxus               kraken
+    ftx                 ftxus           kraken          kucoin
 
 ## Problematic exchanges
 
@@ -89,35 +89,31 @@ This is a theorical list. The exchange name listed below is what MUST be
 used in your alwert message to interact with a given exchangge. Some
 exchange may NOT work, but I have no way of testing them.
 
-    aax            aofex          ascendex           bequant
-    bibox          bigone         binance            binancecoinm 
-    binanceus      binanceusdm    bit2c              bitbank
-    bitbay         bitbns         bitcoincom         bitfinex
-    bitfinex2      bitflyer       bitforex           bitget
-    bithumb        bitmart        bitmex             bitpanda 
-    bitso          bitstamp       bitstamp1          bittrex
-    bitvavo        bitz           bl3p               braziliex 
-    btcalpha       btcbox         btcmarkets         btctradeua 
-    btcturk        buda           bw                 bybit 
-    cdax           cex            coinbase           coinbaseprime 
-    coinbasepro    coincheck      coinegg            coinex
-    coinfalcon     coinfloor      coinmarketcap      coinmate 
-    coinone        coinspot       crex24             currencycom 
-    delta          deribit        digifinex          eqonex
-    equos          exmo           exx                flowbtc 
-    ftx            ftxus          gateio             gemini 
-    hbtc           hitbtc         hollaex            huobi 
-    huobijp        huobipro       idex               independentreserve 
-    indodax        itbit          kraken             kucoin
-    kuna           latoken        lbank              liquid 
-    luno           lykke          mercado            mixcoins 
-    ndax           novadax        oceanex            okcoin 
-    okex           okex3          okex5              paymium 
-    phemex         poloniex       probit             qtrade 
-    ripio          stex           therock            tidebit 
-    tidex          timex          upbit              vcc 
-    wavesexchange  whitebit       xena               yobit 
-    zaif           zb
+    aax                 ascendex        bequant         bibox
+    bigone              binance         binancecoinm    binanceus
+    binanceusdm         bit2c           bitbank         bitbay 
+    bitbns              bitcoincom      bitfinex        bitfinex2 
+    bitflyer            bitforex        bithumb         bitmex 
+    bitpanda            bitrue          bitso           bitstamp 
+    bitstamp1           bittrex         bitvavo         bl3p 
+    blockchaincom       btcalpha        btcbox          btcmarkets 
+    btctradeua          btcturk         buda            bw 
+    bybit               bytetrade       coinbase        coinbaseprime 
+    coinbasepro         coincheck       coinfalcon      coinmate 
+    coinone             coinspot        crex24          cryptocom 
+    currencycom         delta           deribit         digifinex 
+    eqonex              equos           exmo            flowbtc 
+    ftx                 ftxus           gateio          gemini 
+    hitbtc              hitbtc3         hollaex         idex 
+    independentreserve  indodax         itbit           kraken 
+    kucoin              kucoinfutures   kuna            latoken 
+    latoken1            lbank           liquid          luno 
+    lykke               mercado         mexc            ndax 
+    novadax             oceanex         paymium         phemex 
+    poloniex            qtrade          ripio           stex 
+    therock             tidebit         tidex           timex 
+    vcc                 wavesexchange   xena            yobit 
+    zaif                zb              zipmex          zonda 
 
 ## Requirements
 
