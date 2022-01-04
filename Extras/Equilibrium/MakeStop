@@ -13,7 +13,7 @@ if len(sys.argv) > 3:
     account=sys.argv[2]
     pair=sys.argv[3].upper()
 
-    fn=exchangeName+'.'+account+'.'+pair.replace("-","").replace("/","")
+    fn=exchangeName+'.'+account+'.'+pair.replace("-","").replace("/","").replace(":","")
     fnStop=fn+'.stop'
     fh=open(fnStop,'w')
     fh.write("Stop!\n")
