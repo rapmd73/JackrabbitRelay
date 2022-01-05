@@ -37,6 +37,11 @@ def main():
         print("An exchange, a (sub)account, an asset, and a percentage boundary must be provided.")
         sys.exit(1)
 
+    if len(sys.argv) > 5:
+        maxSteps=float(sys.argv[5])
+    else:
+        maxSteps=100
+
 # Load the API/Secret information
 
     keys=JRRsupport.ReadConfig(exchangeName,account)
@@ -73,7 +78,7 @@ def main():
 
     balance = exchange.fetch_balance()
     bal=float(balance['total'][quote])
-    steps=100/pct
+    steps=maxSteps/pct
     priceStep=bal/steps
     Lots=priceStep/mincost
 
