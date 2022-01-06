@@ -82,6 +82,9 @@ def main():
     priceStep=bal/steps
     Lots=priceStep/mincost
 
+    if Lots<1:
+        Lots=1
+
     print(f"{Lots:.8f}")
 
 if __name__ == '__main__':
