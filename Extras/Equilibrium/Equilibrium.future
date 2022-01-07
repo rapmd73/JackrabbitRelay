@@ -5,6 +5,9 @@
 # 2021 Copyright © Robert APM Darin
 # All rights reserved unconditionally.
 
+# LONG -    buy when the price goes down
+# SHORT -   buy when the price goes up
+
 import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 import os
@@ -234,8 +237,12 @@ def main():
                     if Trade['PCTValue']==0:
                         Trade['PCTValue']=round(close*pct,8)
                     Trade['Close']=round(close,8)
-                    Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
-                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                    if direction=='long':
+                        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                        Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                    else:
+                        Trade['Buy']= round(Trade['Close']+Trade['PCTValue'],8)
+                        Trade['Sell']=round(Trade['Close']-Trade['PCTValue'],8)
                     Trade['Counter']+=1
 
                     position=JRRapi.GetPosition(exchange,pair,RetryLimit)
@@ -251,8 +258,12 @@ def main():
             else:
                 Trade['PCTValue']=round(close*pct,8)
                 Trade['Close']=round(close,8)
-                Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
-                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                if direction=='long':
+                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                else:
+                    Trade['Buy']= round(Trade['Close']+Trade['PCTValue'],8)
+                    Trade['Sell']=round(Trade['Close']-Trade['PCTValue'],8)
                 Trade['Counter']+=1
 
                 WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {BuyDir:5} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
@@ -260,14 +271,23 @@ def main():
 
 # Make a purchase.
 
-        if close<Trade['Buy']:
+        if direction=='long':
+            IsBuy=close<Trade['Buy']
+        else:
+            IsBuy=close>Trade['Buy']
+
+        if IsBuy:
             if not paper:
                 res=SendWebhook(Active,exchangeName,account,pair,BuyDir,BuyAmount)
                 time.sleep(1)
                 if res.find('Order Confirmation ID')>-1:
                     Trade['Close']=round(Trade['Buy'],8)
-                    Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
-                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                    if direction=='long':
+                        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                        Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                    else:
+                        Trade['Buy']= round(Trade['Close']+Trade['PCTValue'],8)
+                        Trade['Sell']=round(Trade['Close']-Trade['PCTValue'],8)
                     Trade['Counter']+=1
 
                     position=JRRapi.GetPosition(exchange,pair,RetryLimit)
@@ -282,8 +302,12 @@ def main():
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
                 Trade['Close']=round(Trade['Buy'],8)
-                Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
-                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                if direction=='long':
+                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                else:
+                    Trade['Buy']= round(Trade['Close']+Trade['PCTValue'],8)
+                    Trade['Sell']=round(Trade['Close']-Trade['PCTValue'],8)
                 Trade['Counter']+=1
 
                 WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {BuyDir:5} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
@@ -291,7 +315,12 @@ def main():
 
 # Make a sell only if balance > minimum
 
-        if Trade['Counter']>0 and close>Trade['Sell']:
+        if direction=='long':
+            IsSell=close>Trade['Sell']
+        else:
+            IsSell=close<Trade['Sell']
+
+        if Trade['Counter']>0 and IsSell:
             if not paper:
                 SellAMT=SellAmount
                 if SellAMT>bal:
@@ -299,8 +328,12 @@ def main():
                 res=SendWebhook(Active,exchangeName,account,pair,SellDir,SellAMT)
                 if res.find('Order Confirmation ID')>-1:
                     Trade['Close']=round(Trade['Sell'],8)
-                    Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
-                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                    if direction=='long':
+                        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                        Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                    else:
+                        Trade['Buy']= round(Trade['Close']+Trade['PCTValue'],8)
+                        Trade['Sell']=round(Trade['Close']-Trade['PCTValue'],8)
                     Trade['Counter']-=1
 
                     position=JRRapi.GetPosition(exchange,pair,RetryLimit)
@@ -317,8 +350,12 @@ def main():
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
                 Trade['Close']=round(Trade['Sell'],8)
-                Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
-                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                if direction=='long':
+                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                else:
+                    Trade['Buy']= round(Trade['Close']+Trade['PCTValue'],8)
+                    Trade['Sell']=round(Trade['Close']-Trade['PCTValue'],8)
                 Trade['Counter']-=1
 
                 if Trade['Counter']>0:
