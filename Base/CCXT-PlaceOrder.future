@@ -118,8 +118,11 @@ def main():
     else:
         ReduceOnly=False
 
+    print('** A')
+
     markets=JRRapi.GetMarkets(exchange,pair,RetryLimit)
 
+    print('** B')
 # Get asset information
 
     base=exchange.markets[pair]['base']
