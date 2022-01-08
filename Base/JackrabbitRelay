@@ -116,7 +116,7 @@ class Handler(BaseHTTPRequestHandler):
         fh.close()
 
     def do_POST(self):
-        # Send the client a success reponse
+        # Send the client a success response
         addr=self.client_address[0]
         self.send_response(200)
         self.end_headers()
