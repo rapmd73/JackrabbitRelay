@@ -117,7 +117,7 @@ support:
 
     https://www.patreon.com/RD3277
 
-If you perfer crypto or just a one time donation, please use any of the
+If you prefer crypto or just a one time donation, please use any of the
 below:
 
     BCH     bitcoincash:qzw5h5ccfz6v7zzh0vf5pl0eqp3zjmp5us07l72nvv
