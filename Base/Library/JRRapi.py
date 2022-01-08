@@ -7,9 +7,6 @@
 
 import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
-import os
-import time
-import json
 import ccxt
 
 import JRRconfig
