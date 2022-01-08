@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Crontab entry ( without has mark #
+# Crontab entry ( without hash mark #)
 # @reboot ( /home/JackrabbitRelay/Base/RelayLauncher & ) > /dev/null 2>&1
 # echo "BalAnce" | tr "[:upper:]" "[:lower:]"
 
@@ -12,6 +12,7 @@
 # $4 Boundary Percentage, Take Profit, Deviation
 # $5 Buy Lots
 # $6 Sell Lots
+# $7 Paper trading indicator
 
 BaseDir="/home/Equilibrium"
 

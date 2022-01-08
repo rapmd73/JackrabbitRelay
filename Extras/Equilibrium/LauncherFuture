@@ -12,6 +12,7 @@
 # $5 Buy Lots
 # $6 Sell Lots
 # $7 Direction
+# $8 Paper trading indicator
 
 BaseDir="/home/Equilibrium"
 
