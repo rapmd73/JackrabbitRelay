@@ -51,7 +51,7 @@ made or lost in the same situation.
 **Special Thanks** to the following people for providing me with testing
 accounts.
 
-    1. Me4tGrinf3r | Jonas
+    1. Me4tGrind3r | Jonas
     2. MisterCrease
     3. Riodda
     4. Cozzy
@@ -367,7 +367,7 @@ Description of the payload
         A base of 1 for BTC is to purchase 1 BTC.
     * `Quote` is the value of the asset in its quote currency. For
         example, if you want to purchase BCH/BTC using the price value of
-        BTC, then you specify your amout in the quote currency.
+        BTC, then you specify your amount in the quote currency.
 
 * `Leverage`: For binanceusdm and ftx, this sets the leverage amount
 
