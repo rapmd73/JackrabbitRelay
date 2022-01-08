@@ -6,7 +6,6 @@
 # All rights reserved unconditionally.
 
 import sys
-import os
 
 if len(sys.argv) > 3:
     exchangeName=sys.argv[1].lower()

@@ -10,9 +10,7 @@ sys.path.append('/home/JackrabbitRelay/Base/Library')
 import os
 import ccxt
 
-import JRRconfig
 import JRRlog
-import JRRapi
 import JRRsupport
 
 ###
