@@ -215,8 +215,8 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
     done=False
     while not done:
         try:
-             ohlcv=exchange.fetch_ohlcv(symbol=pair,timeframe=tf,limit=1)
-             if ohlcv==[]:
+            ohlcv=exchange.fetch_ohlcv(symbol=pair,timeframe=tf,limit=1)
+            if ohlcv==[]:
                 ohlcv=None
         except Exception as e:
             if exchangeName=='kucoin':

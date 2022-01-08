@@ -75,18 +75,19 @@ everything. Rinse and repeat as many times as needed :)
 
 [Relay Extras](https://youtu.be/qXykEckzEgs)
 
-## Confirmed working exchanges
+## Exchanges
+### Confirmed working exchanges
 
     ftx                 ftxus           kraken          kucoin
 
-## Problematic exchanges
+### Problematic exchanges
 
     binance
 
-## Theorically supported
+### Theorically supported
 
 This is a theorical list. The exchange name listed below is what MUST be
-used in your alwert message to interact with a given exchangge. Some
+used in your alert message to interact with a given exchangge. Some
 exchange may NOT work, but I have no way of testing them.
 
     aax                 ascendex        bequant         bibox
@@ -337,26 +338,19 @@ This example purchase of a perpetual contract of AAVE with a leverage of 20, usi
 
     { "Exchange":"ftx","Market":"Future","Account":"MAIN","Action":"Buy","Asset":"AAVE/USD:USD","Base":"1","Leverage":"20","Margin":"Isolated" }
 
-Discriptionn of the payload
+Description of the payload
 
-    Exchange
+* `Exchange`: This is one of the [supported exchanges](#exchanges).
 
-        This is one of the supported exchanges.
-
-    Market
-
-        This is the market you are trading. 
+* `Market`: This is the market you are trading. 
 
         Spot            Working
         Future          Working
         Margin          In progress
 
-    Account
+* `Account`: All main accounts must be called MAIN. Subaccounts can be used (if your exchange supports them) and must be exactly as listed on the exchange.
 
-        All main accounts must be called MAIN. Subaccounts can be used
-        and must be exactly as listed on the exchange.
-
-    Action
+* `Action`:
 
         Buy             Make a purchase
         Sell            Sell a portion. If amount is more then balance, position will be closed
@@ -364,31 +358,20 @@ Discriptionn of the payload
         Long            (Perpetuals) Opens a long position and can flip a short to long
         Short           (Perpetuals) Opens a short position and can flip a long position to short
 
-    Asset
+* `Asset`: The asset you are trading. Must be exactly as the exchange lists it. Hint: Use [ListMarkets](Extras/README.md#listmarkets) to confirm
 
-        The asset you are trading. Must be exactly as the exchange lists it
-
-    USD/Base/Quote
-
-        Choose only one to set the amount to be purchased/sold
-
-        USD will only work if the asset has a coresponsing USD pair to do
+* `USD`/`Base`/`Quote`: Choose only one to set the amount to be purchased/sold
+    * `USD` will only work if the asset has a coresponsing USD pair to do
         a proper base conversion on.
-
-        Base is the asset itself value, ie BTC, ADA, AAVE, so one.
-            A base of 1 for BTC is to purchase 1 BTC.
-
-        Quote is the value of the asset in its quote currency. For
+    * `Base` is the asset itself value, ie BTC, ADA, AAVE, so one. 
+        A base of 1 for BTC is to purchase 1 BTC.
+    * `Quote` is the value of the asset in its quote currency. For
         example, if you want to purchase BCH/BTC using the price value of
         BTC, then you specify your amout in the quote currency.
 
-    Leverage
+* `Leverage`: For binanceusdm and ftx, this sets the leverage amount
 
-        For binanceusdm and ftx, this sets the leverage amount
-
-    Margin
-
-        For binanceusdm, this sets the margin to Crossed or Isolated.
+* `Margin`: For binanceusdm, this sets the margin to `Crossed` or `Isolated`.
 
 ## Logging
 

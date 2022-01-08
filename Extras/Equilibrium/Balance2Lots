@@ -18,7 +18,7 @@ import JRRsupport
 Bal2LotsHeader='Balance2Lots '+JRRconfig.Version
 
 ###
-### Main code base. Place order on exchange
+### Determine number of lots based on balance on exchange
 ###
 
 def main():
