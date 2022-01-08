@@ -60,7 +60,7 @@ made or lost in the same situation.
 
 ## Videos
 
-[Introducing Equilibruim: Abstract Theory](https://youtu.be/kGpoD-dJ1k4)
+[Introducing Equilibrium: Abstract Theory](https://youtu.be/kGpoD-dJ1k4)
 
 [Equilibrium: trial by fire](https://youtu.be/RU8zgGDfbao)
 
@@ -150,7 +150,7 @@ This launches Equilibrium. The arguments are as follows:
 | 3 | `trx/usd` | Asset                |
 | 4 | `2`       | Deviation/Take Profit/Boundary in percent form. (`2` maps to 2%) |
 | 5 | `1` or `Bal` | **Number of lots to buy** <br><br> A lot is the minimum position size. If you wanted a $10 position of an asset that has a minimum position size of $2.50, you would want `4` lots. <br><br> `Bal`: This tells Equilibrium to calculate the number of lots based on the balance of the (sub)account and the boundary. **NOTE**: This also tells Equilibrium to replace the value for the 6th argument. |
-| 6 | `1.1` or `AUTO` | **Number of lots to sell** <br><br> This is the number of lots to sell. It works exactly like the buy lots with one very distinct difference: If you put **`AUTO`** (or if you set `Bal` for the 5th argument), the selling lot size will be 10% more then the buying lot size. <br><br> If your selling lot size is equal to your buying lot size, reverse trading will **NOT** take place. <br><br> If your selling lots size is less then your buying size, you will ACCUMULATE the diffence in your account. For example, if your buying lot size is 2 and your selling lot size is 1.9, you will ACCUMULATE 0.1 of the asset with each SELL. |
+| 6 | `1.1` or `AUTO` | **Number of lots to sell** <br><br> This is the number of lots to sell. It works exactly like the buy lots with one very distinct difference: If you put **`AUTO`** (or if you set `Bal` for the 5th argument), the selling lot size will be 10% more then the buying lot size. <br><br> If your selling lot size is equal to your buying lot size, reverse trading will **NOT** take place. <br><br> If your selling lots size is less then your buying size, you will ACCUMULATE the difference in your account. For example, if your buying lot size is 2 and your selling lot size is 1.9, you will ACCUMULATE 0.1 of the asset with each SELL. |
 | 7 | `Long` or `Short` | **Trade direction, used with futures ONLY.** Not used for SPOT. *(Simply leave this out for spot)* <br><br> Long or Short direction for trading. You can NOT use both in the same (sub)account, doing so WILL cause losses. |
 | 8 | `PAPER` | This activates the paper trading mode. Equilibrium will do everything except actually place orders to the exchange. <br><br> **Even in PAPER mode, you API/Secret and Webhook must be correct as Equilibrium WILL login into your account using your exchange's private API/rate limit values to get the prices.** <br><br> After testing in paper trading mode, you can remove this to enable live trading. |
 
@@ -165,7 +165,7 @@ support:
 
     https://www.patreon.com/RD3277
 
-If you perfer crypto or just a one time donation, please use any of the
+If you prefer crypto or just a one time donation, please use any of the
 below:
 
     BCH     bitcoincash:qzw5h5ccfz6v7zzh0vf5pl0eqp3zjmp5us07l72nvv

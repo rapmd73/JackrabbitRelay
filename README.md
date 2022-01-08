@@ -67,7 +67,7 @@ everything. Rinse and repeat as many times as needed :)
 
 [Installing Jackrabbit Relay](https://youtu.be/cvtSHj1ubJs)
 
-[Updaing Jackrabbit Relay](https://youtu.be/Yb05lp9BPL4)
+[Updating Jackrabbit Relay](https://youtu.be/Yb05lp9BPL4)
 
 [Big update to Jackrabbit Relay](https://youtu.be/27XXZTIWSrw)
 
@@ -84,10 +84,10 @@ everything. Rinse and repeat as many times as needed :)
 
     binance
 
-### Theorically supported
+### Theoretically supported
 
-This is a theorical list. The exchange name listed below is what MUST be
-used in your alert message to interact with a given exchangge. Some
+This is a theoretical list. The exchange name listed below is what MUST be
+used in your alert message to interact with a given exchange. Some
 exchange may NOT work, but I have no way of testing them.
 
     aax                 ascendex        bequant         bibox
@@ -147,10 +147,10 @@ documentation of your VPS for establishing your firewall rules.
 ## Installation
 
 Please be aware that you may need to switch to your root account. Please
-follow the neccessary instructions provided by your VPS provider. This
+follow the necessary instructions provided by your VPS provider. This
 document assumes you are already at root level or have your virtual
-environment established, both are beyound the scope of this
-documentatiom.
+environment established, both are beyond the scope of this
+documentation.
 
 Start with these shell commands
 
@@ -164,7 +164,7 @@ everything.
     cd /home/GitHub/JackrabbitRelay
     ./install
 
-At this point the files are inatalled, but more setup is required before
+At this point the files are installed, but more setup is required before
 Relay is ready to run. Configuring the exchanges and crontab need to be
 completed next.
 
@@ -175,8 +175,8 @@ Please be sure to update Jackrabbit Relay frequently. The following commands can
     cd /home/GitHub/JackrabbitRelay
     git pull https://github.com/rapmd73/JackrabbitRelay
 
-**IMPORTANT** This only updates the files in the GitHuib directory. **IT
-DOES NOT OVERWWITE ANY FILES IN THE WORKING DIRECTORIES**
+**IMPORTANT** This only updates the files in the GitHub directory. **IT
+DOES NOT OVERWRITE ANY FILES IN THE WORKING DIRECTORIES**
 
 ## Configuration
 
@@ -215,7 +215,7 @@ files:
 
     JackrabbitRelay
 
-        This is the actual server program that waits for a connewction.
+        This is the actual server program that waits for a connection.
         It should NOT be ran directly, but rather through the
         RelayLauncher shell script.
 
@@ -266,7 +266,7 @@ Now for the details:
 
         It can have any value as it presence is only required.
 
-    Reduction: The amount to reducew your position to all your exchange
+    Reduction: The amount to reduce your position to all your exchange
     to close it. Depreciated...
 
         This is a percentage. Do NOT put a percent (%) sign. Use this
@@ -280,13 +280,13 @@ accomplished by this format:
     { "Account":"MAIN","API 2":"YourAPI","SECRET 2":"YourSecret","RateLimit":"200" }
 
 The above means the your MAIN account has two API/SECRET combinations the
-Relay will rotate between. Each (sub)account can hace as many as your
+Relay will rotate between. Each (sub)account can have as many as your
 exchange will allow.
 
 ## Reboot startup
 
 For Jackrabbit Relay to auto start after a reboot, the following line
-neesa to be added to your crontab. BE SURE TO CHANGE THE 12345 TO THE
+needs to be added to your crontab. BE SURE TO CHANGE THE 12345 TO THE
 PORT YOU WANT.
 
     @reboot ( /home/JackrabbitRelay/Base/RelayLauncher 12345 & ) > /dev/null 2>&1
@@ -361,7 +361,7 @@ Description of the payload
 * `Asset`: The asset you are trading. Must be exactly as the exchange lists it. Hint: Use [ListMarkets](Extras/README.md#listmarkets) to confirm
 
 * `USD`/`Base`/`Quote`: Choose only one to set the amount to be purchased/sold
-    * `USD` will only work if the asset has a coresponsing USD pair to do
+    * `USD` will only work if the asset has a corresponding USD pair to do
         a proper base conversion on.
     * `Base` is the asset itself value, ie BTC, ADA, AAVE, so one. 
         A base of 1 for BTC is to purchase 1 BTC.
