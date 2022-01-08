@@ -9,11 +9,17 @@ import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 from datetime import datetime
 
-Version="0.0.0.0.560"
+Version="0.0.0.0.565"
 LogDirectory="/home/JackrabbitRelay/Logs"
 BaseDirectory='/home/JackrabbitRelay/Base'
 ConfigDirectory='/home/JackrabbitRelay/Config'
-StableCoinUSD=['USDT','USDC','BUSD','TUSD','USDS','USD','DAI','HUSD']
+
+# This is sorted by market cap. Hopefully it will speed up the conversion
+# process. Coins only with 100 million or more listed.
+
+StableCoinUSD=['USDT','USDC','BUSD','UST','DAI','FRAX','TUSD','USDP','LUSD', \
+               'USDN','HUSD','FEI','TRIBE','RSR','OUSD','XSGD','GUSD','USDX', \
+               'SUSD','EURS','CUSD','USD']
 
 # Needs to be global and above all code
 
