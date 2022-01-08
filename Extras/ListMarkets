@@ -15,13 +15,10 @@ exmo, kucoin
 
 import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
-import time
 import ccxt
 
 import JRRconfig
-import JRRlog
 import JRRapi
-import JRRsupport
 
 def main():
     if len(sys.argv) > 1:
