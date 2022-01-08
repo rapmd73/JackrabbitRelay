@@ -51,7 +51,7 @@ made or lost in the same situation.
 **Special Thanks** to the following people for providing me with testing
 accounts.
 
-    1. Me4tGrinf3r | Jonas
+    1. Me4tGrind3r | Jonas
     2. MisterCrease
     3. Riodda
     4. Cozzy
@@ -67,7 +67,7 @@ everything. Rinse and repeat as many times as needed :)
 
 [Installing Jackrabbit Relay](https://youtu.be/cvtSHj1ubJs)
 
-[Updaing Jackrabbit Relay](https://youtu.be/Yb05lp9BPL4)
+[Updating Jackrabbit Relay](https://youtu.be/Yb05lp9BPL4)
 
 [Big update to Jackrabbit Relay](https://youtu.be/27XXZTIWSrw)
 
@@ -75,18 +75,19 @@ everything. Rinse and repeat as many times as needed :)
 
 [Relay Extras](https://youtu.be/qXykEckzEgs)
 
-## Confirmed working exchanges
+## Exchanges
+### Confirmed working exchanges
 
     ftx                 ftxus           kraken          kucoin
 
-## Problematic exchanges
+### Problematic exchanges
 
     binance
 
-## Theorically supported
+### Theoretically supported
 
-This is a theorical list. The exchange name listed below is what MUST be
-used in your alwert message to interact with a given exchangge. Some
+This is a theoretical list. The exchange name listed below is what MUST be
+used in your alert message to interact with a given exchange. Some
 exchange may NOT work, but I have no way of testing them.
 
     aax                 ascendex        bequant         bibox
@@ -146,10 +147,10 @@ documentation of your VPS for establishing your firewall rules.
 ## Installation
 
 Please be aware that you may need to switch to your root account. Please
-follow the neccessary instructions provided by your VPS provider. This
+follow the necessary instructions provided by your VPS provider. This
 document assumes you are already at root level or have your virtual
-environment established, both are beyound the scope of this
-documentatiom.
+environment established, both are beyond the scope of this
+documentation.
 
 Start with these shell commands
 
@@ -163,7 +164,7 @@ everything.
     cd /home/GitHub/JackrabbitRelay
     ./install
 
-At this point the files are inatalled, but more setup is required before
+At this point the files are installed, but more setup is required before
 Relay is ready to run. Configuring the exchanges and crontab need to be
 completed next.
 
@@ -174,8 +175,8 @@ Please be sure to update Jackrabbit Relay frequently. The following commands can
     cd /home/GitHub/JackrabbitRelay
     git pull https://github.com/rapmd73/JackrabbitRelay
 
-**IMPORTANT** This only updates the files in the GitHuib directory. **IT
-DOES NOT OVERWWITE ANY FILES IN THE WORKING DIRECTORIES**
+**IMPORTANT** This only updates the files in the GitHub directory. **IT
+DOES NOT OVERWRITE ANY FILES IN THE WORKING DIRECTORIES**
 
 ## Configuration
 
@@ -214,7 +215,7 @@ files:
 
     JackrabbitRelay
 
-        This is the actual server program that waits for a connewction.
+        This is the actual server program that waits for a connection.
         It should NOT be ran directly, but rather through the
         RelayLauncher shell script.
 
@@ -265,7 +266,7 @@ Now for the details:
 
         It can have any value as it presence is only required.
 
-    Reduction: The amount to reducew your position to all your exchange
+    Reduction: The amount to reduce your position to all your exchange
     to close it. Depreciated...
 
         This is a percentage. Do NOT put a percent (%) sign. Use this
@@ -279,13 +280,13 @@ accomplished by this format:
     { "Account":"MAIN","API 2":"YourAPI","SECRET 2":"YourSecret","RateLimit":"200" }
 
 The above means the your MAIN account has two API/SECRET combinations the
-Relay will rotate between. Each (sub)account can hace as many as your
+Relay will rotate between. Each (sub)account can have as many as your
 exchange will allow.
 
 ## Reboot startup
 
 For Jackrabbit Relay to auto start after a reboot, the following line
-neesa to be added to your crontab. BE SURE TO CHANGE THE 12345 TO THE
+needs to be added to your crontab. BE SURE TO CHANGE THE 12345 TO THE
 PORT YOU WANT.
 
     @reboot ( /home/JackrabbitRelay/Base/RelayLauncher 12345 & ) > /dev/null 2>&1
@@ -337,26 +338,19 @@ This example purchase of a perpetual contract of AAVE with a leverage of 20, usi
 
     { "Exchange":"ftx","Market":"Future","Account":"MAIN","Action":"Buy","Asset":"AAVE/USD:USD","Base":"1","Leverage":"20","Margin":"Isolated" }
 
-Discriptionn of the payload
+Description of the payload
 
-    Exchange
+* `Exchange`: This is one of the [supported exchanges](#exchanges).
 
-        This is one of the supported exchanges.
-
-    Market
-
-        This is the market you are trading. 
+* `Market`: This is the market you are trading. 
 
         Spot            Working
         Future          Working
         Margin          In progress
 
-    Account
+* `Account`: All main accounts must be called MAIN. Subaccounts can be used (if your exchange supports them) and must be exactly as listed on the exchange.
 
-        All main accounts must be called MAIN. Subaccounts can be used
-        and must be exactly as listed on the exchange.
-
-    Action
+* `Action`:
 
         Buy             Make a purchase
         Sell            Sell a portion. If amount is more then balance, position will be closed
@@ -364,31 +358,20 @@ Discriptionn of the payload
         Long            (Perpetuals) Opens a long position and can flip a short to long
         Short           (Perpetuals) Opens a short position and can flip a long position to short
 
-    Asset
+* `Asset`: The asset you are trading. Must be exactly as the exchange lists it. Hint: Use [ListMarkets](Extras/README.md#listmarkets) to confirm
 
-        The asset you are trading. Must be exactly as the exchange lists it
-
-    USD/Base/Quote
-
-        Choose only one to set the amount to be purchased/sold
-
-        USD will only work if the asset has a coresponsing USD pair to do
+* `USD`/`Base`/`Quote`: Choose only one to set the amount to be purchased/sold
+    * `USD` will only work if the asset has a corresponding USD pair to do
         a proper base conversion on.
-
-        Base is the asset itself value, ie BTC, ADA, AAVE, so one.
-            A base of 1 for BTC is to purchase 1 BTC.
-
-        Quote is the value of the asset in its quote currency. For
+    * `Base` is the asset itself value, ie BTC, ADA, AAVE, so one. 
+        A base of 1 for BTC is to purchase 1 BTC.
+    * `Quote` is the value of the asset in its quote currency. For
         example, if you want to purchase BCH/BTC using the price value of
-        BTC, then you specify your amout in the quote currency.
+        BTC, then you specify your amount in the quote currency.
 
-    Leverage
+* `Leverage`: For binanceusdm and ftx, this sets the leverage amount
 
-        For binanceusdm and ftx, this sets the leverage amount
-
-    Margin
-
-        For binanceusdm, this sets the margin to Crossed or Isolated.
+* `Margin`: For binanceusdm, this sets the margin to `Crossed` or `Isolated`.
 
 ## Logging
 

@@ -9,9 +9,7 @@ import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 import os
 import time
-from datetime import datetime
 import json
-import ccxt
 
 import JRRconfig
 import JRRlog
@@ -82,7 +80,7 @@ class FileWatch:
 # Read the asset list and verify max asset allowance
 
 def ReadAssetList(exchange,account,pair,mp,delete):
-    JRRlog.WriteLog('Verifying maximum asset allowwance of '+str(mp))
+    JRRlog.WriteLog('Verifying maximum asset allowance of '+str(mp))
     coins={}
     fn=JRRconfig.LogDirectory+'/'+exchange+'.'+account+'.coinlist'
 

@@ -13,9 +13,9 @@ Version="0.0.0.0.560"
 LogDirectory="/home/JackrabbitRelay/Logs"
 BaseDirectory='/home/JackrabbitRelay/Base'
 ConfigDirectory='/home/JackrabbitRelay/Config'
-StableCoinUSD=['USDT','USDC','BUSD','TUSD','USDS','USD','DAI']
+StableCoinUSD=['USDT','USDC','BUSD','TUSD','USDS','USD','DAI','HUSD']
 
-# Needsa to be global and above all code
+# Needs to be global and above all code
 
 StartTime=datetime.now()
 

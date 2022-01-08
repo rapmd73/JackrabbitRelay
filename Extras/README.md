@@ -55,62 +55,56 @@ wealth of information.
 
 [Relay Extras](https://youtu.be/qXykEckzEgs)
 
-## ListMarkets <exchange> <ratelimit>
+## ListMarkets
 
-    Exchange is the exchange you want to line, ie ftx
+    ListMarkets <exchange> <ratelimit>
 
-    Rate limit is a number of 1 o more. This lets you find a good
-    rate limit value your exchange will accept. The program will
-    crash with a rate limit error if your value is too low.
+**Exchange** is the exchange you want to line, ie ftx
 
-    This program lists the markets of a given exchange. Here is an example from FTX:
+**Rate limit** is a number of 1 or more. This lets you find a good rate limit value your exchange will accept. The program will crash with a rate limit error if your value is too low.
 
-        LINK/BTC             spot                      0.100000           0.000050
-        LINK/USD             spot                      0.100000           3.094800
-        LINK/USDT            spot                      0.100000           3.094700
+This program lists the markets of a given exchange. Here is an example from FTX:
 
-    The first column is the pair. The second is the market, the third
-    is the minimum the exchange will accept. Thwe above example is
-    for the LINK market, so the minimum is expressed in LINK. The
-    forth colum is what the amount would be if expressed is USD or a
-    simplar stablecoin.
+    LINK/BTC             spot              0.100000           0.000050
+    LINK/USD             spot              0.100000           3.094800
+    LINK/USDT            spot              0.100000           3.094700
 
-## AnalyzeAsset <exchange> <account or NONE> <asset>
+The first column is the pair. The second is the market type. The third is the minimum the exchange will accept. The above example is for the LINK market, so the minimum is expressed in LINK. The forth colum is what the amount would be if expressed is USD or a similar stablecoin.
 
-    This program allows for the examination of a signle asset.
+## AnalyzeAsset
 
-        2021-11-18 23:01:56.891213 3077942 AnalyzeAsset 0.0.0.0.230
-        2021-11-18 23:01:56.891631 3077942 |- Exchange: kucoin
-        2021-11-18 23:01:56.891798 3077942 |- Account: NONE
-        2021-11-18 23:01:56.892012 3077942 |- Asset: BTC/USDT
-        2021-11-18 23:01:56.892174 3077942 NO API/Secret loaded, using public API
-        2021-11-18 23:01:57.852855 3077942 Markets loaded
-        2021-11-18 23:01:57.853307 3077942 Minimum asset analysis
-        2021-11-18 23:01:57.853432 3077942 |- Base: BTC
-        2021-11-18 23:01:58.440601 3077942 | |- Close: 56534.600000
-        2021-11-18 23:01:58.440977 3077942 | |- Minimum Amount: 0.000010, 0.565346
-        2021-11-18 23:01:58.441118 3077942 | |- Minimum Cost:   0.010000, 0.000000
-        2021-11-18 23:01:58.441288 3077942 | |- Minimum Price:  0.100000, 0.000002
-        2021-11-18 23:01:58.441461 3077942 | |- Minimum: 0.000010
-        2021-11-18 23:01:58.441684 3077942 | |- Min Cost: 0.565346
-        2021-11-18 23:01:58.441844 3077942 |- Quote: USDT
-        2021-11-18 23:01:58.442042 3077942 Exchange required minimum:  0.000010
-        2021-11-18 23:01:58.442135 3077942 Exchange required min cost: 0.565346
-        2021-11-18 23:01:58.442291 3077942 Processing Completed: 01.551824 seconds
+    AnalyzeAsset <exchange> <account or NONE> <asset>
 
-    The information provided lists the exact minimum position size (lot)
-    for a given asset.
+This program allows for the examination of a single asset.
+
+    2021-11-18 23:01:56.891213 3077942 AnalyzeAsset 0.0.0.0.230
+    2021-11-18 23:01:56.891631 3077942 |- Exchange: kucoin
+    2021-11-18 23:01:56.891798 3077942 |- Account: NONE
+    2021-11-18 23:01:56.892012 3077942 |- Asset: BTC/USDT
+    2021-11-18 23:01:56.892174 3077942 NO API/Secret loaded, using public API
+    2021-11-18 23:01:57.852855 3077942 Markets loaded
+    2021-11-18 23:01:57.853307 3077942 Minimum asset analysis
+    2021-11-18 23:01:57.853432 3077942 |- Base: BTC
+    2021-11-18 23:01:58.440601 3077942 | |- Close: 56534.600000
+    2021-11-18 23:01:58.440977 3077942 | |- Minimum Amount: 0.000010, 0.565346
+    2021-11-18 23:01:58.441118 3077942 | |- Minimum Cost:   0.010000, 0.000000
+    2021-11-18 23:01:58.441288 3077942 | |- Minimum Price:  0.100000, 0.000002
+    2021-11-18 23:01:58.441461 3077942 | |- Minimum: 0.000010
+    2021-11-18 23:01:58.441684 3077942 | |- Min Cost: 0.565346
+    2021-11-18 23:01:58.441844 3077942 |- Quote: USDT
+    2021-11-18 23:01:58.442042 3077942 Exchange required minimum:  0.000010
+    2021-11-18 23:01:58.442135 3077942 Exchange required min cost: 0.565346
+    2021-11-18 23:01:58.442291 3077942 Processing Completed: 01.551824 seconds
+
+The information provided lists the exact minimum position size (lot) for a given asset.
 
 ## RelayPassThru
 
-    This program is a bridge between Apache and Jackrabbit Relay.
-    You'll need tp add your webhook and copy it into your cgi-bin
-    folder.
+This program is a bridge between Apache and Jackrabbit Relay. You'll need to add your webhook and copy it into your cgi-bin folder.
 
 ## Tester.PineScript.txt
 
-    This is the pine script program from the above video on testing
-    Jackrabbit Relay's server.
+This is the pine script program from the above video on testing Jackrabbit Relay's server.
 
 ## Donations
 
@@ -123,7 +117,7 @@ support:
 
     https://www.patreon.com/RD3277
 
-If you perfer crypto or just a one time donation, please use any of the
+If you prefer crypto or just a one time donation, please use any of the
 below:
 
     BCH     bitcoincash:qzw5h5ccfz6v7zzh0vf5pl0eqp3zjmp5us07l72nvv

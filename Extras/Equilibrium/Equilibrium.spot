@@ -11,7 +11,6 @@ import os
 import time
 import requests
 import json
-import ccxt
 
 import JRRconfig
 import JRRlog

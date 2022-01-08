@@ -7,15 +7,12 @@
 
 import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
-import os
-import time
-import json
 import ccxt
 
 import JRRconfig
 import JRRlog
 
-KuCoinSupress429=True
+KuCoinSuppress429=True
 
 # Register the exchange
 
@@ -85,7 +82,7 @@ def FindMatchingPair(base,markets):
 
     return None
 
-# Pull the information about the asset minimums from the exchangew.
+# Pull the information about the asset minimums from the exchange.
 # Amount is the minimum amount in the ASSET, it TRX/BTC, amount is always BASE value
 # Cost in USD/Stablecoins
 # Price in USD/Stablecoins
@@ -145,8 +142,8 @@ def GetMinimum(exchange,pair,forceQuote,diagnostics,RetryLimit):
         JRRlog.WriteLog("| |- Minimum: "+f"{minimum:.8f}")
         JRRlog.WriteLog("| |- Min Cost: "+f"{mincost:.8f}")
 
-# If quote is NOT USD/Stablecoin. NOTE: This is an API penality for the
-# overhead of pulling quote currency. Quote currenct OVERRIDES base ALWAYS.
+# If quote is NOT USD/Stablecoin. NOTE: This is an API penalty for the
+# overhead of pulling quote currency. Quote currency OVERRIDES base ALWAYS.
 
     if diagnostics:
         JRRlog.WriteLog("|- Quote: "+quote)
@@ -215,8 +212,8 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
     done=False
     while not done:
         try:
-             ohlcv=exchange.fetch_ohlcv(symbol=pair,timeframe=tf,limit=1)
-             if ohlcv==[]:
+            ohlcv=exchange.fetch_ohlcv(symbol=pair,timeframe=tf,limit=1)
+            if ohlcv==[]:
                 ohlcv=None
         except Exception as e:
             if exchangeName=='kucoin':
@@ -226,7 +223,7 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
             if retry>=RetryLimit:
                 JRRlog.ErrorLog("Fetching OHLCV",e)
             else:
-                if not KuCoinSupress429:
+                if not KuCoinSuppress429:
                     JRRlog.WriteLog('Fetch OHLCV Retrying ('+str(retry+1)+'), '+str(e))
         else:
             done=True
@@ -253,7 +250,7 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
             if retry>=RetryLimit:
                 JRRlog.ErrorLog("Fetching Ticker",e)
             else:
-                if not KuCoinSupress429:
+                if not KuCoinSuppress429:
                     JRRlog.WriteLog('Fetch Ticker Retrying ('+str(retry+1)+'), '+str(e))
         else:
             done=True
