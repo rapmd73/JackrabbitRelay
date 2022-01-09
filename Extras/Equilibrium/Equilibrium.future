@@ -134,12 +134,8 @@ def main():
     if direction!='long' and direction!='short':
         JRRlog.ErrorLog("Equilibrium","Direction MUST be long or short")
 
-    if direction=='long':
-        BuyDir='long'
-        SellDir='short'
-    else:
-        BuyDir='short'
-        SellDir='long'
+    BuyDir='long'
+    SellDir='short'
 
     keys=JRRsupport.ReadConfig(exchangeName,account)
     JRRlog.WriteLog("API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
@@ -174,6 +170,7 @@ def main():
 
     minimum,mincost=JRRapi.GetMinimum(exchange,pair,False,False,RetryLimit)
     BuyAmount=minimum*buyAMT
+
     if str(sellAMT.lower())=='auto':
         SellAmount=BuyAmount+(BuyAmount*0.1)
     else:
@@ -227,10 +224,11 @@ def main():
         if Trade['Counter']==0:
             if not first and once:
                 JRRlog.SuccessLog("Equilibrium","One cycle completed")
+
             if not first:
                 CheckStopTracer(exchangeName,account,pair)
-            if not paper:
 
+            if not paper:
                 res=SendWebhook(Active,exchangeName,account,pair,BuyDir,BuyAmount)
                 if res.find('Order Confirmation ID')>-1:
                     if Trade['PCTValue']==0:
@@ -340,6 +338,7 @@ def main():
                         bal=0
                     else:
                         bal=position['contracts']
+
                     if Trade['Counter']>0:
                         WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {SellDir:5} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
                     else:
