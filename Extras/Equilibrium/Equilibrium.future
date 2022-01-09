@@ -134,12 +134,8 @@ def main():
     if direction!='long' and direction!='short':
         JRRlog.ErrorLog("Equilibrium","Direction MUST be long or short")
 
-    if direction=='long':
-        BuyDir='long'
-        SellDir='short'
-    else:
-        BuyDir='short'
-        SellDir='long'
+    BuyDir='long'
+    SellDir='short'
 
     keys=JRRsupport.ReadConfig(exchangeName,account)
     JRRlog.WriteLog("API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
