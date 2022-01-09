@@ -134,8 +134,22 @@ def main():
     if direction!='long' and direction!='short':
         JRRlog.ErrorLog("Equilibrium","Direction MUST be long or short")
 
-    BuyDir='long'
-    SellDir='short'
+# Theory:
+#
+# Long direction trading:
+#       Buy when price is below boundary.   API: short
+#       Sell when price is above boundary.  API: long
+#
+# Short direction trading:
+#       Buy when price is above boundary.   API: long
+#       Sell when price is below boundary.  API: short
+
+    if direction=='long':
+        BuyDir='short'
+        SellDir='long'
+    else:
+        BuyDir='long'
+        SellDir='short'
 
     keys=JRRsupport.ReadConfig(exchangeName,account)
     JRRlog.WriteLog("API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
@@ -181,7 +195,6 @@ def main():
     Trade=ReadGrid(exchangeName,account,pair)
 
     first=True
-
     while True:
         # Rotate the key
 
@@ -228,18 +241,17 @@ def main():
             if not first:
                 CheckStopTracer(exchangeName,account,pair)
 
+            # First purchase sets the direction. MUST be in the direction
+            # specified on the command line or in the confguration file.
+
             if not paper:
                 res=SendWebhook(Active,exchangeName,account,pair,BuyDir,BuyAmount)
                 if res.find('Order Confirmation ID')>-1:
                     if Trade['PCTValue']==0:
                         Trade['PCTValue']=round(close*pct,8)
                     Trade['Close']=round(close,8)
-                    if direction=='long':
-                        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
-                        Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
-                    else:
-                        Trade['Buy']= round(Trade['Close']+Trade['PCTValue'],8)
-                        Trade['Sell']=round(Trade['Close']-Trade['PCTValue'],8)
+                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                     Trade['Counter']+=1
 
                     position=JRRapi.GetPosition(exchange,pair,RetryLimit)
@@ -255,12 +267,8 @@ def main():
             else:
                 Trade['PCTValue']=round(close*pct,8)
                 Trade['Close']=round(close,8)
-                if direction=='long':
-                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
-                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
-                else:
-                    Trade['Buy']= round(Trade['Close']+Trade['PCTValue'],8)
-                    Trade['Sell']=round(Trade['Close']-Trade['PCTValue'],8)
+                Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                 Trade['Counter']+=1
 
                 WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {BuyDir:5} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
@@ -271,20 +279,19 @@ def main():
         if direction=='long':
             IsBuy=close<Trade['Buy']
         else:
-            IsBuy=close>Trade['Buy']
+            IsBuy=close>Trade['Sell']
 
         if IsBuy:
             if not paper:
                 res=SendWebhook(Active,exchangeName,account,pair,BuyDir,BuyAmount)
                 time.sleep(1)
                 if res.find('Order Confirmation ID')>-1:
-                    Trade['Close']=round(Trade['Buy'],8)
                     if direction=='long':
-                        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
-                        Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                        Trade['Close']=round(Trade['Buy'],8)
                     else:
-                        Trade['Buy']= round(Trade['Close']+Trade['PCTValue'],8)
-                        Trade['Sell']=round(Trade['Close']-Trade['PCTValue'],8)
+                        Trade['Close']=round(Trade['Sell'],8)
+                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                     Trade['Counter']+=1
 
                     position=JRRapi.GetPosition(exchange,pair,RetryLimit)
@@ -298,13 +305,12 @@ def main():
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
-                Trade['Close']=round(Trade['Buy'],8)
                 if direction=='long':
-                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
-                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                    Trade['Close']=round(Trade['Buy'],8)
                 else:
-                    Trade['Buy']= round(Trade['Close']+Trade['PCTValue'],8)
-                    Trade['Sell']=round(Trade['Close']-Trade['PCTValue'],8)
+                    Trade['Close']=round(Trade['Sell'],8)
+                Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                 Trade['Counter']+=1
 
                 WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {BuyDir:5} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
@@ -315,7 +321,7 @@ def main():
         if direction=='long':
             IsSell=close>Trade['Sell']
         else:
-            IsSell=close<Trade['Sell']
+            IsSell=close<Trade['Buy']
 
         if Trade['Counter']>0 and IsSell:
             if not paper:
@@ -324,13 +330,12 @@ def main():
                     SellAMT=bal
                 res=SendWebhook(Active,exchangeName,account,pair,SellDir,SellAMT)
                 if res.find('Order Confirmation ID')>-1:
-                    Trade['Close']=round(Trade['Sell'],8)
                     if direction=='long':
-                        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
-                        Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                        Trade['Close']=round(Trade['Sell'],8)
                     else:
-                        Trade['Buy']= round(Trade['Close']+Trade['PCTValue'],8)
-                        Trade['Sell']=round(Trade['Close']-Trade['PCTValue'],8)
+                        Trade['Close']=round(Trade['Buy'],8)
+                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                     Trade['Counter']-=1
 
                     position=JRRapi.GetPosition(exchange,pair,RetryLimit)
@@ -347,13 +352,12 @@ def main():
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
-                Trade['Close']=round(Trade['Sell'],8)
                 if direction=='long':
-                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
-                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                    Trade['Close']=round(Trade['Sell'],8)
                 else:
-                    Trade['Buy']= round(Trade['Close']+Trade['PCTValue'],8)
-                    Trade['Sell']=round(Trade['Close']-Trade['PCTValue'],8)
+                    Trade['Close']=round(Trade['Buy'],8)
+                Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                 Trade['Counter']-=1
 
                 if Trade['Counter']>0:
