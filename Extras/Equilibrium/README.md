@@ -70,15 +70,19 @@ made or lost in the same situation.
 
 Installation is very simple. Just follow the below:
 
-    cd /home/GitHub/JackrabbitRelay/Extras/Equilibrium
-    ./install
+```bash
+cd /home/GitHub/JackrabbitRelay/Extras/Equilibrium
+./install
+```
 
 ## Reboot startup
 
 For Equilibrium to auto start after a reboot, the following line
 needs to be added to your crontab. 
 
-    @reboot ( /home/Equilibrium/Launcher ftxus MAIN trx/usd 2 1 PAPER & ) > /dev/null 2>&1
+```crontab
+@reboot ( /home/Equilibrium/Launcher ftxus MAIN trx/usd 2 1 PAPER & ) > /dev/null 2>&1
+```
 
 Please be aware that the exchange, coin, and other parameters **MUST**
 match the below usage. The cronjob will only work properly when it is
@@ -100,14 +104,16 @@ your IP address/port entry for Jackrabbit Relay.
 **The port used below, 7732, is EXAMPLE ONLY. It MUST be changed to YOUR
 installation.**
 
-    # Spot Market - JackrabbitRelay
-    { "Account":"MAIN","API":"API1","SECRET":"SECRET1","Passphrase":"pw1","RateLimit":"1000","Retry":"3","Webhook":"http://127.0.0.1:7732" }
+```json
+# Spot Market - JackrabbitRelay
+{ "Account":"MAIN","API":"API1","SECRET":"SECRET1","Passphrase":"pw1","RateLimit":"1000","Retry":"3","Webhook":"http://127.0.0.1:7732" }
 
-    # Spot Market - JackrabbitRelay1
-    { "Account":"MAIN","API":"API2","SECRET":"SECRET2","Passphrase":"pw2","RateLimit":"1000","Retry":"3","Webhook":"http://127.0.0.1:7732" }
+# Spot Market - JackrabbitRelay1
+{ "Account":"MAIN","API":"API2","SECRET":"SECRET2","Passphrase":"pw2","RateLimit":"1000","Retry":"3","Webhook":"http://127.0.0.1:7732" }
 
-    # Spot Market - JackrabbitRelay2
-    { "Account":"MAIN","API":"API3","SECRET":"SECRET3","Passphrase":"pw3","RateLimit":"1000","Retry":"3","Webhook":"http://127.0.0.1:7732" }
+# Spot Market - JackrabbitRelay2
+{ "Account":"MAIN","API":"API3","SECRET":"SECRET3","Passphrase":"pw3","RateLimit":"1000","Retry":"3","Webhook":"http://127.0.0.1:7732" }
+```
 
 Equilibrium rotates your API/Secret on **EVERY** call to your exchange.
 You should have *at least* **THREE (3)** API/Secret listings in your
@@ -118,32 +124,42 @@ and slippage will be a consideration otherwise, not to mention security.
 
 ## Usage
 
-    cd /home/Equilibrium
-    ./Launcher       ftxus MAIN trx/usd  2   Bal AUTO PAPER
+```bash
+cd /home/Equilibrium
+./Launcher       ftxus MAIN trx/usd  2   Bal AUTO PAPER
+```
 
 Or
 
-    cd /home/Equilibrium
-    ./Launcher       ftxus MAIN trx/usd  2   1   1.1  PAPER
+```bash
+cd /home/Equilibrium
+./Launcher       ftxus MAIN trx/usd  2   1   1.1  PAPER
+```
 
 Or
 
-    cd /home/Equilibrium
-    ./Launcher       ftxus MAIN trx/usd  2   1.1 1    PAPER
+```bash
+cd /home/Equilibrium
+./Launcher       ftxus MAIN trx/usd  2   1.1 1    PAPER
+```
 
 Or
 
-    cd /home/Equilibrium
-    ./Launcher       ftxus MAIN trx/usd  2   1   1    PAPER
+```bash
+cd /home/Equilibrium
+./Launcher       ftxus MAIN trx/usd  2   1   1    PAPER
+```
 
 Or, for futures trading
 
-    cd /home/Equilibrium
-    ./LauncherFuture ftx   MAIN TRX-PERP 0.5 Bal AUTO Short
+```bash
+cd /home/Equilibrium
+./LauncherFuture ftx   MAIN TRX-PERP 0.5 Bal AUTO Short
+```
 
 This launches Equilibrium. The arguments are as follows:
 
-| Argument | Example   | Argument description |
+| Argument | Example   | Description |
 | --- | --------- | -------------------- |
 | 1 | `ftxus`   | Exchange             |
 | 2 | `MAIN`    | Account (Case sensitive) |
@@ -167,10 +183,11 @@ support:
 
 If you prefer crypto or just a one time donation, please use any of the
 below:
-
-    BCH     bitcoincash:qzw5h5ccfz6v7zzh0vf5pl0eqp3zjmp5us07l72nvv
-    BTC     3JUbL3Vsj61VBAmyHtQhyiFJcizEfxAvzV
-    ETH     0x3c6C06150B2f24b3179a50b618aD3c0f58CF74FD
-    LINK    0xd8Fd4fA3b489861ad6Eb95a0617B4DA7c78123F8
-    LTC     MHj8nQcRdJWVVNeHUemSQgzBw3cPrZEtRU
-    USDT    0xd8Fd4fA3b489861ad6Eb95a0617B4DA7c78123F8
+| | |
+| :--- | :--- |
+| BCH | bitcoincash:qzw5h5ccfz6v7zzh0vf5pl0eqp3zjmp5us07l72nvv|
+| BTC | 3JUbL3Vsj61VBAmyHtQhyiFJcizEfxAvzV |
+| ETH | 0x3c6C06150B2f24b3179a50b618aD3c0f58CF74FD |
+| LINK | 0xd8Fd4fA3b489861ad6Eb95a0617B4DA7c78123F8 |
+| LTC | MHj8nQcRdJWVVNeHUemSQgzBw3cPrZEtRU |
+| USDT | 0xd8Fd4fA3b489861ad6Eb95a0617B4DA7c78123F8 |
