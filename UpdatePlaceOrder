@@ -7,7 +7,7 @@ BaseDir="/home/JackrabbitRelay/Base"
 GitHubBase="/home/GitHub/JackrabbitRelay/Base"
 
 if [ -z $1 ] ; then
-    echo At least onwe exchange name to use must be given.
+    echo At least one exchange name to use must be given.
     exit 1
 fi
 
