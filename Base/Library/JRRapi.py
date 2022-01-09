@@ -137,7 +137,9 @@ def GetMinimum(exchange,pair,forceQuote,diagnostics,RetryLimit):
     if diagnostics:
         JRRlog.WriteLog("Minimum asset analysis")
         JRRlog.WriteLog("|- Base: "+base)
+
     minimum,mincost=GetAssetMinimum(exchange,pair,diagnostics,RetryLimit)
+
     if diagnostics:
         JRRlog.WriteLog("| |- Minimum: "+f"{minimum:.8f}")
         JRRlog.WriteLog("| |- Min Cost: "+f"{mincost:.8f}")
