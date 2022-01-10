@@ -244,8 +244,14 @@ def main():
             # First purchase sets the direction. MUST be in the direction
             # specified on the command line or in the confguration file.
 
+            # the first position must be opened up in the direction of
+            # the trade itself even though it is the opposite of the
+            # functionality of the API. FTX in particular using this 
+            # to lock the direction of the trade.
+
             if not paper:
-                res=SendWebhook(Active,exchangeName,account,pair,BuyDir,BuyAmount)
+                res=SendWebhook(Active,exchangeName,account,pair,direction,BuyAmount)
+#                res=SendWebhook(Active,exchangeName,account,pair,BuyDir,BuyAmount)
                 if res.find('Order Confirmation ID')>-1:
                     if Trade['PCTValue']==0:
                         Trade['PCTValue']=round(close*pct,8)
