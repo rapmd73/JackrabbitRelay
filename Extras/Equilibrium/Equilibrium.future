@@ -144,12 +144,12 @@ def main():
 #       Buy when price is above boundary.   API: long
 #       Sell when price is below boundary.  API: short
 
-    if direction=='long':
-        BuyDir='short'
-        SellDir='long'
-    else:
-        BuyDir='long'
-        SellDir='short'
+#    if direction=='long':
+#        BuyDir='short'
+#        SellDir='long'
+#    else:
+    BuyDir='long'
+    SellDir='short'
 
     keys=JRRsupport.ReadConfig(exchangeName,account)
     JRRlog.WriteLog("API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
