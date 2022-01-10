@@ -144,10 +144,6 @@ def main():
 #       Buy when price is above boundary.   API: long
 #       Sell when price is below boundary.  API: short
 
-#    if direction=='long':
-#        BuyDir='short'
-#        SellDir='long'
-#    else:
     BuyDir='long'
     SellDir='short'
 
@@ -265,7 +261,9 @@ def main():
                         bal=0
                     else:
                         bal=position['contracts']
-                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {BuyDir:5} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
+
+                    vbuy='Buy/'+direction.capitalize()
+                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
 
                     WriteGrid(exchangeName,account,Trade,pair)
                 else:
@@ -277,7 +275,8 @@ def main():
                 Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                 Trade['Counter']+=1
 
-                WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {BuyDir:5} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
+                vbuy='Buy/'+direction.capitalize()
+                WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
                 WriteGrid(exchangeName,account,Trade,pair)
 
 # Make a purchase.
@@ -305,7 +304,9 @@ def main():
                         bal=0
                     else:
                         bal=position['contracts']
-                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {BuyDir:5} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
+
+                    vbuy='Buy/'+BuyDir.capitalize()
+                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
 
                     WriteGrid(exchangeName,account,Trade,pair)
                 else:
@@ -319,7 +320,8 @@ def main():
                 Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                 Trade['Counter']+=1
 
-                WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {BuyDir:5} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
+                vbuy='Buy/'+BuyDir.capitalize()
+                WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
                 WriteGrid(exchangeName,account,Trade,pair)
 
 # Make a sell only if balance > minimum
@@ -350,10 +352,11 @@ def main():
                     else:
                         bal=position['contracts']
 
+                    vsell='Sell/'+SellDir.capitalize()
                     if Trade['Counter']>0:
-                        WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {SellDir:5} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
+                        WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
                     else:
-                        WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {SellDir:5} {Trade['Counter']:2.0f} {bal:.8f}")
+                        WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {bal:.8f}")
                     WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
@@ -366,10 +369,11 @@ def main():
                 Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                 Trade['Counter']-=1
 
+                vsell='Sell/'+SellDir.capitalize()
                 if Trade['Counter']>0:
-                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {SellDir:5} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
+                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
                 else:
-                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {SellDir:5} {Trade['Counter']:2.0f}")
+                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f}")
                 WriteGrid(exchangeName,account,Trade,pair)
 
         first=True
