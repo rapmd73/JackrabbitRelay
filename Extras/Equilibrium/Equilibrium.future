@@ -137,15 +137,19 @@ def main():
 # Theory:
 #
 # Long direction trading:
-#       Buy when price is below boundary.   API: short
-#       Sell when price is above boundary.  API: long
+#       Buy when price is below boundary.   API: long
+#       Sell when price is above boundary.  API: short
 #
 # Short direction trading:
-#       Buy when price is above boundary.   API: long
-#       Sell when price is below boundary.  API: short
+#       Buy when price is above boundary.   API: short
+#       Sell when price is below boundary.  API: long
 
-    BuyDir='long'
-    SellDir='short'
+    if direction=='long':
+        BuyDir='long'
+        SellDir='short'
+    else:
+        BuyDir='short'
+        SellDir='long'
 
     keys=JRRsupport.ReadConfig(exchangeName,account)
     JRRlog.WriteLog("API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
@@ -246,8 +250,7 @@ def main():
             # to lock the direction of the trade.
 
             if not paper:
-                res=SendWebhook(Active,exchangeName,account,pair,direction,BuyAmount)
-#                res=SendWebhook(Active,exchangeName,account,pair,BuyDir,BuyAmount)
+                res=SendWebhook(Active,exchangeName,account,pair,BuyDir,BuyAmount)
                 if res.find('Order Confirmation ID')>-1:
                     if Trade['PCTValue']==0:
                         Trade['PCTValue']=round(close*pct,8)
