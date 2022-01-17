@@ -82,7 +82,7 @@ if len(sys.argv) > 7:
     end_time_datetime = sys.argv[7]
 else:
     print("A timeframe, an exchange, a (sub)account, an asset a candle count and start time stamp and end time stamp must be provided, example:")
-    print("Backtest 1m ftx test_subaccount SPELL/USD 5 '2021-12-01 00:00:00' '2021-12-31 23:59:59'")
+    print("Backtest 1m exchange test_subaccount btc/usd 5 '2021-12-01 00:00:00' '2021-12-31 23:59:59'")
     sys.exit(1)
 
 keys=JRRsupport.ReadConfig(exchangeName,account)
@@ -106,7 +106,6 @@ p=0.0
 oldp=0.0
 w=0
 l=0
-
 Average=0.0
 SumCount=0
 Total=0.0
@@ -116,7 +115,8 @@ bl=0.0
 
 IsBuy=False
 IsCandlePattern=False
-
+total_income = 0
+max_spent = 0 
 for i in range(CandleCount+1,len(candles)):
     t=candles[i][0]/1000
 
@@ -129,9 +129,14 @@ for i in range(CandleCount+1,len(candles)):
     if SumCount>0.0 and close>tp:
         result=close-Average
         print(f"{dt:12} Sell {close:16.8f} {result:16.8f} {Total:16.8f}")
+        if Total > max_spent:
+            max_spent = Total
         SumCount=0
         Total=0.0
         Average=0.0
+        total_income += result
+
+        
 
     if IsCandlePattern and SumCount>0.0 and close<bl:
         SumCount+=1
@@ -147,3 +152,5 @@ for i in range(CandleCount+1,len(candles)):
         tp=Average+(Average*pct)
         bl=Average-(Average*pct)
         print(f"{dt:12} Buy  {close:16.8f} {blank:16} {blank:16} {tp:16.8f}")
+
+print("Total Income for period =",total_income," Max Spent: ",max_spent)
