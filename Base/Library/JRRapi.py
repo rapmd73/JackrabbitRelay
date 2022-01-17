@@ -17,6 +17,8 @@ KuCoinSuppress429=True
 
 msec = 1000
 minute = 60 * msec
+hour = 60 * minute
+day = 24 * hour
 hold = 30
 
 
@@ -280,7 +282,18 @@ def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLi
             ohlcvs = exchange.fetch_ohlcv(pair,tf,from_timestamp)
             first = ohlcvs[0][0]
             last = ohlcvs[-1][0]
-            from_timestamp += len(ohlcvs) * minute #likely to change for non 1m canles
+            if tf == "1m":
+                from_timestamp += len(ohlcvs) * minute 
+            if tf == "5m":
+                from_timestamp += len(ohlcvs) * 5 * minute 
+            if tf == "15m":
+                from_timestamp += len(ohlcvs) * 15 * minute 
+            if tf == "1h":
+                from_timestamp += len(ohlcvs) * hour
+            if tf == "1d":
+                from_timestamp += len(ohlcvs) * day                 
+
+
             data += ohlcvs
             
             
