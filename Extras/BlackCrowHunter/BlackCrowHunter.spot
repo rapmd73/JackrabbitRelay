@@ -1,0 +1,412 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit BlackCrowHunter
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay/Base/Library')
+import os
+import time
+import requests
+import json
+
+import JRRconfig
+import JRRlog
+import JRRapi
+import JRRsupport
+
+blank=" "
+Header='BlackCrowHunter '+JRRconfig.Version
+
+def SendWebhook(Active,exchangeName,account,pair,action,amount):
+    exc='"Exchange":"'+exchangeName+'", "Market":"Spot"'
+    account='"Account":"'+account+'"'
+    sym='"Asset":"'+pair+'"'
+    direction='"Action":"'+action.lower()+'"'
+    psize='"Base":"'+str(amount)+'"'
+
+    cmd='{ '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
+
+    headers={'content-type': 'text/plain', 'Connection': 'close'}
+
+    resp=None
+    res=None
+    try:
+        resp=requests.post(Active['Webhook'],headers=headers,data=cmd)
+        try:
+            r=json.loads(resp.text)
+            try:
+                res=r['message']
+            except:
+                res=json.dumps(r)
+        except:
+            res=resp.text
+    except:
+        res=None
+
+    return res
+
+def CheckStopTracer(exchangeName,account,Asset):
+    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.stop'
+    if os.path.exists(fn):
+        JRRlog.SuccessLog("STOP", "tracer detected")
+
+def ReadData(exchangeName,account,Asset):
+    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.BlackCrow'
+    if os.path.exists(fn):
+        JRRlog.WriteLog("Reading Data file")
+        fh=open(fn,'r')
+        for line in fh:
+            Trade={}
+            Trade=json.loads(line.rstrip())
+        fh.close()
+        JRRlog.WriteLog(f"|- {Asset:10} {Trade['Average']:.8f} {Trade['TakeProfit']:.8f}")
+    else:
+        Trade={}
+        Trade['Total']=0.0
+        Trade['Average']=0.0
+        Trade['TakeProfit']=0.0
+        Trade['SumCount']=0
+
+    return(Trade)
+
+def WriteData(exchangeName,account,Trade,Asset):
+    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.BlackCrow'
+
+    if Trade!=None:
+        fh=open(fn,'w')
+        fh.write(json.dumps(Trade)+"\n")
+        fh.close()
+    else:
+        if os.path.exists(fn):
+            os.remove(fn)
+
+###
+### Algorithm support
+###
+
+def IsRedCandle(Previous,Current):
+    po=Previous[1]
+    pc=Previous[4]
+    co=Current[1]
+    cc=Current[4]
+
+    red=co>cc and cc<pc
+
+    return red
+
+def IsGreenCandle(Previous,Current):
+    po=Previous[1]
+    pc=Previous[4]
+    co=Current[1]
+    cc=Current[4]
+
+    green=co<cc and cc>pc
+
+    return green
+
+# Black Crow Algorithm
+#
+# Count the number of downward candles, must match candle count from command line
+# Last candle MUST be upward
+
+def IsBlackCrow(candles,CandleCount):
+    i=len(candles)-1
+    # Find 3 down candles in a row followed by 1 up candle
+
+    IsDown=False
+    IsBuy=False
+    IsCandlePattern=False
+
+    offset=1
+    for z in range(offset,CandleCount+offset):
+        x=i-z
+        red=IsRedCandle(candles[x-2],candles[x-1])
+        if z==offset:
+            IsDown=red
+        else:
+            IsDown=IsDown and red
+
+    # Last candle shows up swing, if so, BUY
+    IsUp=IsGreenCandle(candles[i-1],candles[i])
+
+    if IsDown and IsUp:
+        return True
+    return False
+
+###
+### Main code base. Place order on exchange
+###
+
+def main():
+    JRRlog.WriteLog(Header)
+
+    if len(sys.argv) > 6:
+        exchangeName=sys.argv[1].lower()
+        account=sys.argv[2]
+        pair=sys.argv[3].upper()
+        CandleCount=int(sys.argv[4])
+        pct=float(sys.argv[5])/100
+        buyAMT=float(sys.argv[6])
+    else:
+        print("An exchange, a (sub)account, an asset, candle count, % take profit, buy lots must be provided.")
+        sys.exit(1)
+
+    paper=False
+    if len(sys.argv) > 7 and sys.argv[7].lower()=='paper':
+        paper=True
+
+    keys=JRRsupport.ReadConfig(exchangeName,account)
+    JRRlog.WriteLog("API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
+
+    CurrentKey=(os.getpid()%len(keys))
+    Active=keys[CurrentKey]
+
+    exchange=JRRapi.ExchangeLogin(exchangeName,Active)
+
+    if "Retry" in Active:
+        RetryLimit=int(Active['Retry'])
+        JRRlog.WriteLog("|- API Retry limit set to "+str(RetryLimit)+' times')
+    else:
+        RetryLimit=10
+
+    if not "Webhook" in Active:
+        JRRlog.ErrorLog("BlackCrowHunter","Webhook NOT present")
+
+    markets=JRRapi.GetMarkets(exchange,pair,RetryLimit)
+
+# This is where a looping method would go if this were to serve a single exchange
+# with multiple pairs.
+
+# Get asset information
+
+    base=exchange.markets[pair]['base']
+    quote=exchange.markets[pair]['quote']
+
+    JRRlog.WriteLog("Base currency:  "+base)
+    JRRlog.WriteLog("Quote currency: "+quote)
+
+    minimum,mincost=JRRapi.GetMinimum(exchange,pair,False,False,RetryLimit)
+    BuyAmount=minimum*buyAMT
+
+    JRRlog.WriteLog(f"Lot size: {buyAMT:.8f}")
+
+    Trade=ReadData(exchangeName,account,pair)
+
+    first=True
+
+    while True:
+        # Rotate the key
+
+        CurrentKey=((CurrentKey+1)%len(keys))
+        Active=keys[CurrentKey]
+        JRRapi.SetExchangeAPI(exchange,Active)
+
+        bal=JRRapi.GetBalance(exchange,base,RetryLimit)
+
+        # Rotate the key
+
+        CurrentKey=((CurrentKey+1)%len(keys))
+        Active=keys[CurrentKey]
+        JRRapi.SetExchangeAPI(exchange,Active)
+
+        candles=JRRapi.FetchCandles(exchange,pair,'1m',CandleCount+3,RetryLimit)
+
+        IsCandlePattern=IsBlackCrow(candles,CandleCount)
+
+        idx=len(candles)-1
+        close=round(candles[idx][4],8)
+
+        # Rotate the key
+
+        CurrentKey=((CurrentKey+1)%len(keys))
+        Active=keys[CurrentKey]
+        JRRapi.SetExchangeAPI(exchange,Active)
+
+        # Place thwe orders
+
+        if Trade['SumCount']>0 and close>Trade['TakeProfit']:
+            if not paper:
+                res=SendWebhook(Active,exchangeName,account,pair,'close',BuyAmount)
+                if res.find('Order Confirmation ID')>-1:
+                    WriteData(exchangeName,account,None,pair)
+                    result=close-Trade['Average']
+                    JRRlog.WriteLog(f"{pair:10} Sell {close:16.8f} {result:16.8f} {Trade['Total']:16.8f}")
+                    Trade['SumCount']=0
+                    Trade['Total']=0.0
+                    Trade['Average']=0.0
+                    Trade['TakeProfit']=0.0
+            else:
+                WriteData(exchangeName,account,None,pair)
+                result=close-Average
+                JRRlog.WriteLog(f"{pair:10} Sell {close:16.8f} {result:16.8f} {Trade['Total']:16.8f}")
+                Trade['SumCount']=0
+                Trade['Total']=0.0
+                Trade['Average']=0.0
+                Trade['TakeProfit']=0.0
+
+        if IsCandlePattern and Trade['SumCount']>0.0 and close<Trade['Average']:
+            if not paper:
+                res=SendWebhook(Active,exchangeName,account,pair,'buy',BuyAmount)
+                if res.find('Order Confirmation ID')>-1:
+                    Trade['SumCount']+=1
+                    Trade['Total']+=close
+                    Trade['Average']=Trade['Total']/Trade['SumCount']
+                    Trade['TakeProfit']=Trade['Average']+(Trade['Average']*pct)
+                    JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {Trade['Average']:16.8f} {Trade['TakeProfit']:16.8f}")
+                    WriteData(exchangeName,account,Trade,pair)
+            else:
+                Trade['SumCount']+=1
+                Trade['Total']+=close
+                Trade['Average']=Trade['Total']/Trade['SumCount']
+                Trade['TakeProfit']=Trade['Average']+(Trade['Average']*pct)
+                JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {Trade['Average']:16.8f} {Trade['TakeProfit']:16.8f}")
+                WriteData(exchangeName,account,Trade,pair)
+
+        if IsCandlePattern and Trade['SumCount']==0:
+            if not paper:
+                res=SendWebhook(Active,exchangeName,account,pair,'buy',BuyAmount)
+                if res.find('Order Confirmation ID')>-1:
+                    Trade['SumCount']=1
+                    Trade['Total']=close
+                    Trade['Average']=Trade['Total']/Trade['SumCount']
+                    Trade['TakeProfit']=Trade['Average']+(Trade['Average']*pct)
+                    JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {blank:16} {blank:16} {Trade['TakeProfit']:16.8f}")
+                    WriteData(exchangeName,account,Trade,pair)
+            else:
+                Trade['SumCount']=1
+                Trade['Total']=close
+                Trade['Average']=Trade['Total']/Trade['SumCount']
+                Trade['TakeProfit']=Trade['Average']+(Trade['Average']*pct)
+                JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {blank:16} {blank:16} {Trade['TakeProfit']:16.8f}")
+                WriteData(exchangeName,account,Trade,pair)
+
+        first=False
+        time.sleep(60)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Terminated")
+
+"""
+        if Trade['Counter']==0:
+            if not first:
+                CheckStopTracer(exchangeName,account,pair)
+            if not paper:
+                res=SendWebhook(Active,exchangeName,account,pair,'buy',BuyAmount)
+                if res.find('Order Confirmation ID')>-1:
+
+
+                    if Trade['PCTValue']==0:
+                        Trade['PCTValue']=round(close*pct,8)
+                    Trade['Close']=round(close,8)
+                    Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
+                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                    Trade['Counter']+=1
+
+                    bal=JRRapi.GetBalance(exchange,base,RetryLimit)
+                    JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
+
+                    WriteData(exchangeName,account,Trade,pair)
+                else:
+                    JRRlog.ErrorLog("BlackCrowHunter","Order failed")
+            else:
+                Trade['PCTValue']=round(close*pct,8)
+                Trade['Close']=round(close,8)
+                Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
+                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                Trade['Counter']+=1
+
+                JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
+                WriteData(exchangeName,account,Trade,pair)
+
+# Make a purchase.
+
+        if close<Trade['Buy']:
+            if not paper:
+                res=SendWebhook(Active,exchangeName,account,pair,'buy',BuyAmount)
+                time.sleep(1)
+                if res.find('Order Confirmation ID')>-1:
+                    Trade['Close']=round(Trade['Buy'],8)
+                    Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
+                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                    Trade['Counter']+=1
+
+                    bal=JRRapi.GetBalance(exchange,base,RetryLimit)
+                    JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
+
+                    WriteData(exchangeName,account,Trade,pair)
+                else:
+                    JRRlog.ErrorLog("BlackCrowHunter","Order failed")
+            else:
+                Trade['Close']=round(Trade['Buy'],8)
+                Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
+                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                Trade['Counter']+=1
+
+                JRRlog.WriteLog(f"{pair:10} Buy  {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
+                WriteData(exchangeName,account,Trade,pair)
+
+# Make a sell only if balance > minimum
+
+        if Trade['Counter']>0 and close>Trade['Sell']:
+            if not paper:
+                SellAMT=bal
+                res=SendWebhook(Active,exchangeName,account,pair,'close',SellAMT)
+                if res.find('Order Confirmation ID')>-1:
+                    Trade['Close']=round(Trade['Sell'],8)
+                    Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
+                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                    Trade['Counter']-=1
+
+                    bal=JRRapi.GetBalance(exchange,base,RetryLimit)
+                    if Trade['Counter']>0:
+                        JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
+                    else:
+                        JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f} {bal:.8f}")
+                    WriteData(exchangeName,account,Trade,pair)
+                else:
+                    JRRlog.ErrorLog("BlackCrowHunter","Order failed")
+            else:
+                Trade['Close']=round(Trade['Sell'],8)
+                Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
+                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+                Trade['Counter']-=1
+
+                if Trade['Counter']>0:
+                    JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
+                else:
+                    JRRlog.WriteLog(f"{pair:10} Sell {Trade['Counter']:2.0f}")
+                WriteData(exchangeName,account,Trade,pair)
+"""
+
+
+
+"""
+    close=candles[i][4]
+
+    if SumCount>0.0 and close>tp:
+        result=close-Average
+        print(f"Sell {close:16.8f} {result:16.8f} {Total:16.8f}")
+        SumCount=0
+        Total=0.0
+        Average=0.0
+
+    if IsCandlePattern and SumCount>0.0 and close<bl:
+        SumCount+=1
+        Total+=close
+        Average=Total/SumCount
+        print(f"Buy  {close:16.8f} {bl:16.8f} {Average:16.8f} {tp:16.8f}")
+
+    if IsCandlePattern and SumCount==0:
+        SumCount=1
+        Total=close
+        Average=Total/SumCount
+        tp=Average+(Average*pct)
+        bl=Average-(Average*pct)
+        print(f"Buy  {close:16.8f} {blank:16} {blank:16} {tp:16.8f}")
+"""

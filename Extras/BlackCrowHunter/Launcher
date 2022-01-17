@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Crontab entry ( without hash mark #)
+# @reboot ( /home/JackrabbitRelay/Base/RelayLauncher & ) > /dev/null 2>&1
+# echo "BalAnce" | tr "[:upper:]" "[:lower:]"
+
+# /home/BlackCrowHunter/BlackCrowHunter.spot kucoin MAIN ada/usdt 5 1 1
+
+# $1 Exchange
+# $2 Account
+# $3 Pair
+# $4 Boundary Percentage, Take Profit, Deviation
+# $5 Buy Lots
+# $6 Sell Lots
+# $7 Paper trading indicator
+
+BaseDir="/home/BlackCrowHunter"
+
+cd $BaseDir
+
+while true ; do
+    blot=`echo $5 | tr "[:upper:]" "[:lower:]"`
+
+    if [ $blot == "bal" ] ; then
+        lots=`$BaseDir/Balance2Lots $1 $2 $3 $4`
+        slots="AUTO"
+        once="ONCE"
+    else
+        lots=$5
+        slots=$6
+        once=$7
+    fi
+
+    $BaseDir/BlackCrowHunter.spot $1 $2 $3 $4 $lots $slots $once $8 $9
+    $BaseDir/CheckStop $@
+    if [ $? -eq 1 ] ; then
+        exit
+    fi
+    sleep 60
+done
+
+
