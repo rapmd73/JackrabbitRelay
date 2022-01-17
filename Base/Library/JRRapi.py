@@ -8,6 +8,7 @@
 import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 import ccxt
+from datetime import datetime
 
 import JRRconfig
 import JRRlog
@@ -248,6 +249,58 @@ def FetchCandles(exchange,pair,tf,CandleCount,RetryLimit):
 
     return ohlcv
 
+def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLimit):
+    exchangeName=exchange.name.lower()
+    ohlcv=[]
+    data=[]
+    retry429=0
+    retry
+    from_timestamp = exchange.parse8601(start_date_time)
+    to_timestamp = exchange.parse8601(end_date_time)
+
+    # For kucoin only, 429000 errors are a mess. Not the best way to
+    # manage them, but the onle way I know of currently to prevent losses.
+    # Save the only rate limit and remap it.
+
+    if exchangeName=='kucoin':
+        rleSave=exchange.enableRateLimit
+        rlvSave=exchange.rateLimit
+        exchange.enableRateLimit=True
+        exchange.rateLimit=372
+
+    done=False
+    while from_timestamp < to_timestamp:
+        try:
+
+            ohlcvs = exchange.fetch_ohlcv(symbol,timeframe,from_timestamp)
+            first = ohlcvs[0][0]
+            last = ohlcvs[-1][0]
+            from_timestamp += len(ohlcvs) * minute #likely to change for non 1m canles
+            data += ohlcvs
+            
+            
+        except Exception as e:
+            if exchangeName=='kucoin':
+                x=str(e)
+                if x.find('429000')>-1:
+                    retry429+=1
+            if retry>=RetryLimit:
+                JRRlog.ErrorLog("Fetching OHLCV",e)
+        else:
+            done=True
+
+        if exchangeName=='kucoin':
+            if retry429>=(RetryLimit*7):
+                retry429=0
+                retry+=1
+        else:
+            retry+=1
+
+    if exchangeName=='kucoin':
+        exchange.enableRateLimit=rleSave
+        exchange.rateLimit=rlvSave
+
+    return data 
 
 
 # If fetch_ohlcv fails, revert to fetch_ticker and parse it manually
