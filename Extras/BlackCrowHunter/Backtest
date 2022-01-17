@@ -71,15 +71,18 @@ def IsBlackCrow(candles,idx,CandleCount):
 
 
 
-if len(sys.argv) > 6:
+if len(sys.argv) > 8:
     tf=sys.argv[1].lower()
     exchangeName=sys.argv[2].lower()
     account=sys.argv[3]
     pair=sys.argv[4].upper()
     CandleCount=int(sys.argv[5])
     pct=float(sys.argv[6])/100
+    start_time_datetime = sys.argv[7]
+    end_time_datetime = sys.argv[8]
 else:
-    print("A timeframe, an exchange, a (sub)account, an asset, and candle count must be provided.")
+    print("A timeframe, an exchange, a (sub)account, an asset a candle cound, pct gain and start time stamp and end time stamp must be provided, example:")
+    print("Backtest 1m exchange test_subaccount btc/usd 5 '2021-12-01 00:00:00' '2021-12-31 23:59:59'")
     sys.exit(1)
 
 keys=JRRsupport.ReadConfig(exchangeName,account)
@@ -95,13 +98,14 @@ else:
     RetryLimit=10
 
 markets=JRRapi.GetMarkets(exchange,pair,RetryLimit,Notify=False)
-candles=JRRapi.FetchCandles(exchange,pair,tf,0,RetryLimit)
+#candles=JRRapi.FetchCandles(exchange,pair,tf,0,RetryLimit)
+#def FetchCandles_timestamp(exchange,pair,tf,start_date_time,end_date_time,RetryLimit):
+candles = JRRapi.FetchCandles_interval(exchange,pair,tf,start_time_datetime,end_time_datetime,RetryLimit)
 
 p=0.0
 oldp=0.0
 w=0
 l=0
-
 Average=0.0
 SumCount=0
 Total=0.0
@@ -111,7 +115,8 @@ bl=0.0
 
 IsBuy=False
 IsCandlePattern=False
-
+total_income = 0
+max_spent = 0 
 for i in range(CandleCount+1,len(candles)):
     t=candles[i][0]/1000
 
@@ -124,9 +129,14 @@ for i in range(CandleCount+1,len(candles)):
     if SumCount>0.0 and close>tp:
         result=close-Average
         print(f"{dt:12} Sell {close:16.8f} {result:16.8f} {Total:16.8f}")
+        if Total > max_spent:
+            max_spent = Total
         SumCount=0
         Total=0.0
         Average=0.0
+        total_income += result
+
+        
 
     if IsCandlePattern and SumCount>0.0 and close<bl:
         SumCount+=1
@@ -143,3 +153,4 @@ for i in range(CandleCount+1,len(candles)):
         bl=Average-(Average*pct)
         print(f"{dt:12} Buy  {close:16.8f} {blank:16} {blank:16} {tp:16.8f}")
 
+print("Total Income for period =",total_income," Max Spent: ",max_spent)

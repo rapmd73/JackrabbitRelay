@@ -8,11 +8,19 @@
 import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 import ccxt
+from datetime import datetime
 
 import JRRconfig
 import JRRlog
 
 KuCoinSuppress429=True
+
+msec = 1000
+minute = 60 * msec
+hour = 60 * minute
+day = 24 * hour
+hold = 30
+
 
 # Dirty support function to block HTML exchange payloads
 
@@ -248,6 +256,69 @@ def FetchCandles(exchange,pair,tf,CandleCount,RetryLimit):
 
     return ohlcv
 
+def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLimit):
+    exchangeName=exchange.name.lower()
+    ohlcv=[]
+    data=[]
+    retry429=0
+    retry=0
+    from_timestamp = exchange.parse8601(start_date_time)
+    to_timestamp = exchange.parse8601(end_date_time)
+
+    # For kucoin only, 429000 errors are a mess. Not the best way to
+    # manage them, but the onle way I know of currently to prevent losses.
+    # Save the only rate limit and remap it.
+
+    if exchangeName=='kucoin':
+        rleSave=exchange.enableRateLimit
+        rlvSave=exchange.rateLimit
+        exchange.enableRateLimit=True
+        exchange.rateLimit=372
+
+    done=False
+    while from_timestamp < to_timestamp:
+        try:
+
+            ohlcvs = exchange.fetch_ohlcv(pair,tf,from_timestamp)
+            first = ohlcvs[0][0]
+            last = ohlcvs[-1][0]
+            if tf == "1m":
+                from_timestamp += len(ohlcvs) * minute 
+            if tf == "5m":
+                from_timestamp += len(ohlcvs) * 5 * minute 
+            if tf == "15m":
+                from_timestamp += len(ohlcvs) * 15 * minute 
+            if tf == "1h":
+                from_timestamp += len(ohlcvs) * hour
+            if tf == "1d":
+                from_timestamp += len(ohlcvs) * day                 
+
+
+            data += ohlcvs
+            
+            
+        except Exception as e:
+            if exchangeName=='kucoin':
+                x=str(e)
+                if x.find('429000')>-1:
+                    retry429+=1
+            if retry>=RetryLimit:
+                JRRlog.ErrorLog("Fetching OHLCV",e)
+        else:
+            done=True
+
+        if exchangeName=='kucoin':
+            if retry429>=(RetryLimit*7):
+                retry429=0
+                retry+=1
+        else:
+            retry+=1
+
+    if exchangeName=='kucoin':
+        exchange.enableRateLimit=rleSave
+        exchange.rateLimit=rlvSave
+
+    return data 
 
 
 # If fetch_ohlcv fails, revert to fetch_ticker and parse it manually
