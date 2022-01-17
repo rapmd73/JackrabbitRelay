@@ -15,6 +15,11 @@ import JRRlog
 
 KuCoinSuppress429=True
 
+msec = 1000
+minute = 60 * msec
+hold = 30
+
+
 # Dirty support function to block HTML exchange payloads
 
 def StopHTMLtags(txt):
@@ -254,7 +259,7 @@ def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLi
     ohlcv=[]
     data=[]
     retry429=0
-    retry
+    retry=0
     from_timestamp = exchange.parse8601(start_date_time)
     to_timestamp = exchange.parse8601(end_date_time)
 
@@ -272,7 +277,7 @@ def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLi
     while from_timestamp < to_timestamp:
         try:
 
-            ohlcvs = exchange.fetch_ohlcv(symbol,timeframe,from_timestamp)
+            ohlcvs = exchange.fetch_ohlcv(pair,tf,from_timestamp)
             first = ohlcvs[0][0]
             last = ohlcvs[-1][0]
             from_timestamp += len(ohlcvs) * minute #likely to change for non 1m canles
