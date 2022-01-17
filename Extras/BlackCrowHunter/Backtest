@@ -84,7 +84,7 @@ if len(sys.argv) == 7:
     end_time_datetime = sys.argv[7]
 else:
     print("A timeframe, an exchange, a (sub)account, an asset a candle count and start time stamp and end time stamp must be provided, example:")
-    print("Backtest 1m ftx test_subaccount SPELL/USD 5 '2021-12-01 00:00:00' '2021-12-31 23:59:59')
+    print("Backtest 1m ftx test_subaccount SPELL/USD 5 '2021-12-01 00:00:00' '2021-12-31 23:59:59'")
     sys.exit(1)
 
 keys=JRRsupport.ReadConfig(exchangeName,account)
