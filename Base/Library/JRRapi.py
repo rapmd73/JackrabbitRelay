@@ -21,7 +21,6 @@ hour = 60 * minute
 day = 24 * hour
 hold = 30
 
-
 # Dirty support function to block HTML exchange payloads
 
 def StopHTMLtags(txt):
@@ -295,8 +294,7 @@ def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLi
 
 
             data += ohlcvs
-            
-            
+
         except Exception as e:
             if exchangeName=='kucoin':
                 x=str(e)
@@ -319,7 +317,6 @@ def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLi
         exchange.rateLimit=rlvSave
 
     return data 
-
 
 # If fetch_ohlcv fails, revert to fetch_ticker and parse it manually
 # if open is None, use low.
