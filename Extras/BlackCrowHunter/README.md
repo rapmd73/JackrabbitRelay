@@ -1,5 +1,7 @@
 # Black Crow Hunter
 
+***HAVE YOUR BANKRUPTCY PAPERS READY***
+
 **WORKING DRAFT**
 
 In trading, a black crow is 3 consecutive downwards candles.
