@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit BlackCrowHunter
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay/Base/Library')
+import os
+import time
+import datetime
+import requests
+import json
+
+import JRRconfig
+import JRRlog
+import JRRapi
+import JRRsupport
+
+blank=" "
+msec = 1000
+minute = 60 * msec
+hour = 60 * minute
+day = 24 * hour
+hold = 10
+
+def IsRedCandle(Previous,Current):
+    po=Previous[1]
+    pc=Previous[4]
+    co=Current[1]
+    cc=Current[4]
+
+    red=co>cc and cc<pc
+
+    return red
+
+def IsGreenCandle(Previous,Current):
+    po=Previous[1]
+    pc=Previous[4]
+    co=Current[1]
+    cc=Current[4]
+
+    green=co<cc and cc>pc
+
+    return green
+
+# Black Crow Algorithm
+#
+# Count the number of downward candles, must match candle count from command line
+# Last candle MUST be upward
+
+def IsBlackCrow(candles,idx,CandleCount):
+    # Find 3 down candles in a row followed by 1 up candle
+
+    IsDown=False
+    IsBuy=False
+
+    offset=1
+    for z in range(offset,CandleCount+offset):
+        x=idx-z
+        red=IsRedCandle(candles[x-2],candles[x-1])
+        if z==offset:
+            IsDown=red
+        else:
+            IsDown=IsDown and red
+
+    # Last candle shows up swing, if so, BUY
+    IsUp=IsGreenCandle(candles[i-1],candles[i])
+
+    if IsDown and IsUp:
+        return True
+    return False
+
+if len(sys.argv) > 6:
+    tf=sys.argv[1]
+    exchangeName=sys.argv[2].lower()
+    account=sys.argv[3]
+    pair=sys.argv[4].upper()
+    StartCandleCount=int(sys.argv[5])
+    pct=float(sys.argv[6])/100
+else:
+    print("An exchange, a (sub)account, an asset, and candle count must be provided.")
+    sys.exit(1)
+
+fn=exchangeName+'.'+account+'.'+pair.replace("-","").replace("/","").replace(':','')+'.'+tf+'.history'
+if not os.path.exists(fn):
+    print('You must run the candle collector first.\n')
+    print('./CandleCollector '+tf+' '+exchangeName+' '+account+' '+pair+' <#Days, ie 30>')
+    sys.exit(1)
+
+keys=JRRsupport.ReadConfig(exchangeName,account)
+
+CurrentKey=(os.getpid()%len(keys))
+Active=keys[CurrentKey]
+
+exchange=JRRapi.ExchangeLogin(exchangeName,Active,Notify=False)
+
+if "Retry" in Active:
+    RetryLimit=int(Active['Retry'])
+else:
+    RetryLimit=10
+
+candles=[[]]
+print('Reading historic data...')
+fn=exchangeName+'.'+account+'.'+pair.replace("-","").replace("/","").replace(':','')+'.'+tf+'.history'
+fh=open(fn,'r')
+while True:
+    line=fh.readline().strip()
+    if not line:
+        break
+    n=line.split(' ')
+    data=[0,0,0,0,0,0]
+    for i in range(len(n)):
+        data[i]=float(n[i])
+    candles.append(data)
+fh.close()
+
+Average=0.0
+SumCount=0
+Total=0.0
+offset=1
+tp=0.0
+
+CandleCount=StartCandleCount
+
+IsBuy=False
+IsCandlePattern=False
+
+for i in range(CandleCount+3,len(candles)):
+    t=candles[i][0]/1000
+
+    timestamp=datetime.datetime.fromtimestamp(t)
+    dt=timestamp.strftime('%Y-%m-%d %H:%M')
+
+    IsCandlePattern=IsBlackCrow(candles,i,CandleCount)
+    close=candles[i][4]
+
+    if SumCount>0.0 and close>tp:
+        result=close-Average
+        print(f"{dt:12} Sell {close:16.8f} {result:16.8f} {Total:16.8f}")
+        SumCount=0
+        Total=0.0
+        Average=0.0
+
+    if IsCandlePattern and SumCount>0.0 and close<Average:
+        SumCount+=1
+        Total+=close
+        Average=Total/SumCount
+        tp=Average+(Average*pct)
+        if SumCount>(CandleCount/2):
+            CandleCount+=int(CandleCount/3)
+        print(f"{dt:12} Buy  {close:16.8f} {Average:16.8f} {tp:16.8f} {CandleCount:2.0f}")
+
+    if IsCandlePattern and SumCount==0:
+        CandleCount=StartCandleCount
+        SumCount=1
+        Total=close
+        Average=Total/SumCount
+        tp=Average+(Average*pct)
+        print(f"{dt:12} Buy  {close:16.8f} {blank:16} {tp:16.8f}")
+

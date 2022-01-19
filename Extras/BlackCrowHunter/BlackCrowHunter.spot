@@ -147,7 +147,7 @@ def main():
         exchangeName=sys.argv[1].lower()
         account=sys.argv[2]
         pair=sys.argv[3].upper()
-        CandleCount=int(sys.argv[4])
+        StartCandleCount=int(sys.argv[4])
         pct=float(sys.argv[5])/100
         buyAMT=float(sys.argv[6])
     else:
@@ -190,12 +190,14 @@ def main():
 
     minimum,mincost=JRRapi.GetMinimum(exchange,pair,False,False,RetryLimit)
     BuyAmount=minimum*buyAMT
-
+    NextStep=BuyAmount
+    
     JRRlog.WriteLog(f"Lot size: {buyAMT:.8f}")
 
     Trade=ReadData(exchangeName,account,pair)
 
     first=True
+    CandleCount=StartCandleCount
 
     while True:
         # Rotate the key
@@ -255,20 +257,25 @@ def main():
                     Trade['Total']+=close
                     Trade['Average']=Trade['Total']/Trade['SumCount']
                     Trade['TakeProfit']=Trade['Average']+(Trade['Average']*pct)
-                    JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {Trade['Average']:16.8f} {Trade['TakeProfit']:16.8f}")
+                    if SumCount>(CandleCount/2):
+                        CandleCount+=int(CandleCount/3)
+                    JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {Trade['Average']:16.8f} {Trade['TakeProfit']:16.8f} {CandleCount:2.0f}")
                     WriteData(exchangeName,account,Trade,pair)
             else:
                 Trade['SumCount']+=1
                 Trade['Total']+=close
                 Trade['Average']=Trade['Total']/Trade['SumCount']
                 Trade['TakeProfit']=Trade['Average']+(Trade['Average']*pct)
-                JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {Trade['Average']:16.8f} {Trade['TakeProfit']:16.8f}")
+                JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {Trade['Average']:16.8f} {Trade['TakeProfit']:16.8f} {CandleCount:2.0f}")
+                if SumCount>(CandleCount/2):
+                    CandleCount+=int(CandleCount/3)
                 WriteData(exchangeName,account,Trade,pair)
 
         if IsCandlePattern and Trade['SumCount']==0:
             if not paper:
                 res=SendWebhook(Active,exchangeName,account,pair,'buy',BuyAmount)
                 if res.find('Order Confirmation ID')>-1:
+                    CandleCount=StartCandleCount
                     Trade['SumCount']=1
                     Trade['Total']=close
                     Trade['Average']=Trade['Total']/Trade['SumCount']
@@ -276,6 +283,7 @@ def main():
                     JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {blank:16} {blank:16} {Trade['TakeProfit']:16.8f}")
                     WriteData(exchangeName,account,Trade,pair)
             else:
+                CandleCount=StartCandleCount
                 Trade['SumCount']=1
                 Trade['Total']=close
                 Trade['Average']=Trade['Total']/Trade['SumCount']
