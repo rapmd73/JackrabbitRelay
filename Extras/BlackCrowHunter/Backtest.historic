@@ -80,7 +80,7 @@ if len(sys.argv) > 6:
     StartCandleCount=int(sys.argv[5])
     pct=float(sys.argv[6])/100
 else:
-    print("An exchange, a (sub)account, an asset, and candle count must be provided.")
+    print("a timeframe, an exchange, a (sub)account, an asset, and candle count must be provided.")
     sys.exit(1)
 
 fn=exchangeName+'.'+account+'.'+pair.replace("-","").replace("/","").replace(':','')+'.'+tf+'.history'
