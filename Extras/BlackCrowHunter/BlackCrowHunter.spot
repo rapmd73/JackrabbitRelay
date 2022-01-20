@@ -21,13 +21,13 @@ blank=" "
 Header='BlackCrowHunter '+JRRconfig.Version
 
 def SendWebhook(Active,exchangeName,account,pair,action,amount):
-    exc=f'"Exchange":"{exchangeName}", "Market":"Spot"'
-    account=f'"Account":"{account}"'
-    sym=f'"Asset":"{pair}"'
-    direction=f'"Action":"{action.lower()}"'
-    psize=f'"Base":"{str(amount)}"'
+    exc='"Exchange":"'+exchangeName+'", "Market":"Spot"'
+    account='"Account":"'+account+'"'
+    sym='"Asset":"'+pair+'"'
+    direction='"Action":"'+action.lower()+'"'
+    psize='"Base":"'+str(amount)+'"'
 
-    cmd=f'{{ {exc}, {account}, {direction}, {sym}, {psize} }}'
+    cmd='{ '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
 
     headers={'content-type': 'text/plain', 'Connection': 'close'}
 
@@ -233,7 +233,7 @@ def main():
         Active=keys[CurrentKey]
         JRRapi.SetExchangeAPI(exchange,Active)
 
-        # Place the orders
+        # Place thwe orders
 
         if Trade['SumCount']>0 and close>Trade['TakeProfit']:
             if not paper:
@@ -275,7 +275,7 @@ def main():
                     # for the next black crow.
                     if Trade['SumCount']>(Trade['CandleCount']/2):
                         Trade['CandleCount']+=int(Trade['CandleCount']/3)
-                    JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {Trade['Average']:16.8f} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:16.8}")
+                    JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {Trade['Average']:16.8f} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:3.0f}")
                     WriteData(exchangeName,account,Trade,pair)
                 else:
                     Trade=OldTrade
@@ -286,7 +286,7 @@ def main():
                 Trade['TakeProfit']=Trade['Average']+(Trade['Average']*pct)
                 if Trade['SumCount']>(Trade['CandleCount']/2):
                     Trade['CandleCount']+=int(Trade['CandleCount']/3)
-                JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {Trade['Average']:16.8f} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:16.8}")
+                JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {Trade['Average']:16.8f} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:3.0f}")
                 WriteData(exchangeName,account,Trade,pair)
 
         if IsCandlePattern and Trade['SumCount']==0:
@@ -299,14 +299,14 @@ def main():
                     Trade['Total']=close
                     Trade['Average']=Trade['Total']/Trade['SumCount']
                     Trade['TakeProfit']=Trade['Average']+(Trade['Average']*pct)
-                    JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {blank:16} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:16.8}")
+                    JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {blank:16} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:3.0f}")
                     WriteData(exchangeName,account,Trade,pair)
             else:
                 Trade['SumCount']=1
                 Trade['Total']=close
                 Trade['Average']=Trade['Total']/Trade['SumCount']
                 Trade['TakeProfit']=Trade['Average']+(Trade['Average']*pct)
-                JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {blank:16} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:16.8}")
+                JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {blank:16} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:3.0f}")
                 WriteData(exchangeName,account,Trade,pair)
 
         first=False
