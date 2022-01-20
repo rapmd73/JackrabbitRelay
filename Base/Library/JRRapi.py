@@ -8,11 +8,26 @@
 import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 import ccxt
+from datetime import datetime
 
 import JRRconfig
 import JRRlog
 
 KuCoinSuppress429=True
+
+msec = 1000
+minute = 60 * msec
+hour = 60 * minute
+day = 24 * hour
+hold = 30
+
+# Dirty support function to block HTML exchange payloads
+
+def StopHTMLtags(txt):
+    p=txt.find('<')
+    if p>-1:
+        return txt[:p]
+    return txt
 
 # Register the exchange
 
@@ -179,7 +194,7 @@ def PlaceOrder(exchange, pair, market, action, amount, close, RetryLimit, Reduce
             if retry>=RetryLimit:
                 JRRlog.ErrorLog("Placing Order",e)
             else:
-                JRRlog.WriteLog('Place Order Retrying ('+str(retry+1)+'), '+str(e))
+                JRRlog.WriteLog('Place Order Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
         else:
             done=True
             JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
@@ -189,7 +204,119 @@ def PlaceOrder(exchange, pair, market, action, amount, close, RetryLimit, Reduce
     if retry>=RetryLimit:
         JRRlog.ErrorLog("Placing Order","order unsuccessful")
 
-    return order
+# Customized fetch OHLCV. Fetches an entire page
+
+def FetchCandles(exchange,pair,tf,CandleCount,RetryLimit):
+    exchangeName=exchange.name.lower()
+    ohlcv=[]
+    retry429=0
+    retry=0
+
+    # For kucoin only, 429000 errors are a mess. Not the best way to
+    # manage them, but the onle way I know of currently to prevent losses.
+
+    # Save the only rate limit and remap it.
+
+    if exchangeName=='kucoin':
+        rleSave=exchange.enableRateLimit
+        rlvSave=exchange.rateLimit
+        exchange.enableRateLimit=True
+        exchange.rateLimit=372
+
+    done=False
+    while not done:
+        try:
+            if CandleCount>0:
+                ohlcv=exchange.fetch_ohlcv(symbol=pair,timeframe=tf,limit=CandleCount)
+            else:
+                ohlcv=exchange.fetch_ohlcv(symbol=pair,timeframe=tf)
+            if ohlcv==[]:
+                ohlcv=None
+        except Exception as e:
+            if exchangeName=='kucoin':
+                x=str(e)
+                if x.find('429000')>-1:
+                    retry429+=1
+            if retry>=RetryLimit:
+                JRRlog.ErrorLog("Fetching OHLCV",e)
+        else:
+            done=True
+
+        if exchangeName=='kucoin':
+            if retry429>=(RetryLimit*7):
+                retry429=0
+                retry+=1
+        else:
+            retry+=1
+
+    if exchangeName=='kucoin':
+        exchange.enableRateLimit=rleSave
+        exchange.rateLimit=rlvSave
+
+    return ohlcv
+
+def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLimit):
+    exchangeName=exchange.name.lower()
+    ohlcv=[]
+    data=[]
+    retry429=0
+    retry=0
+    from_timestamp = exchange.parse8601(start_date_time)
+    to_timestamp = exchange.parse8601(end_date_time)
+
+    # For kucoin only, 429000 errors are a mess. Not the best way to
+    # manage them, but the onle way I know of currently to prevent losses.
+    # Save the only rate limit and remap it.
+
+    if exchangeName=='kucoin':
+        rleSave=exchange.enableRateLimit
+        rlvSave=exchange.rateLimit
+        exchange.enableRateLimit=True
+        exchange.rateLimit=372
+
+    done=False
+    while from_timestamp < to_timestamp:
+        try:
+
+            ohlcvs = exchange.fetch_ohlcv(pair,tf,from_timestamp)
+            first = ohlcvs[0][0]
+            last = ohlcvs[-1][0]
+            if tf == "1m":
+                from_timestamp += len(ohlcvs) * minute 
+            if tf == "5m":
+                from_timestamp += len(ohlcvs) * 5 * minute 
+            if tf == "15m":
+                from_timestamp += len(ohlcvs) * 15 * minute 
+            if tf == "1h":
+                from_timestamp += len(ohlcvs) * hour
+            if tf == "1d":
+                from_timestamp += len(ohlcvs) * day                 
+
+
+            data += ohlcvs
+
+        except Exception as e:
+            if exchangeName=='kucoin':
+                x=str(e)
+                if x.find('429000')>-1:
+                    retry429+=1
+            if retry>=RetryLimit:
+                JRRlog.ErrorLog("Fetching OHLCV",e)
+        else:
+            done=True
+
+        if exchangeName=='kucoin':
+            if retry429>=(RetryLimit*7):
+                retry429=0
+                retry+=1
+        else:
+            retry+=1
+
+    if exchangeName=='kucoin':
+        exchange.enableRateLimit=rleSave
+        exchange.rateLimit=rlvSave
+
+    return data 
 
 # If fetch_ohlcv fails, revert to fetch_ticker and parse it manually
 # if open is None, use low.
@@ -223,10 +350,10 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
                 if x.find('429000')>-1:
                     retry429+=1
             if retry>=RetryLimit:
-                JRRlog.ErrorLog("Fetching OHLCV",e)
+                JRRlog.ErrorLog("Fetching OHLCV",StopHTMLtags(e))
             else:
                 if not KuCoinSuppress429:
-                    JRRlog.WriteLog('Fetch OHLCV Retrying ('+str(retry+1)+'), '+str(e))
+                    JRRlog.WriteLog('Fetch OHLCV Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
         else:
             done=True
 
@@ -250,10 +377,10 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
                 if x.find('429000')>-1:
                     retry429+=1
             if retry>=RetryLimit:
-                JRRlog.ErrorLog("Fetching Ticker",e)
+                JRRlog.ErrorLog("Fetching Ticker",StopHTMLtags(e))
             else:
                 if not KuCoinSuppress429:
-                    JRRlog.WriteLog('Fetch Ticker Retrying ('+str(retry+1)+'), '+str(e))
+                    JRRlog.WriteLog('Fetch Ticker Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
         else:
             done=True
 
@@ -303,7 +430,7 @@ def GetBalance(exchange,base,RetryLimit):
             if retry>=RetryLimit:
                 JRRlog.ErrorLog("Fetch Balance",e)
             else:
-                JRRlog.WriteLog('Fetch Balance Retrying ('+str(retry+1)+'), '+str(e))
+                JRRlog.WriteLog('Fetch Balance Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
         else:
             done=True
         retry+=1
@@ -324,7 +451,7 @@ def GetPosition(exchange,pair,RetryLimit):
             if retry>=RetryLimit:
                 JRRlog.ErrorLog("Fetch Position",e)
             else:
-                JRRlog.WriteLog('Fetch Position Retrying ('+str(retry+1)+'), '+str(e))
+                JRRlog.WriteLog('Fetch Position Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
         else:
             done=True
         retry+=1
@@ -344,7 +471,7 @@ def GetMarkets(exchange,pair,RetryLimit,Notify=True):
                 JRRlog.ErrorLog("Fetch Markets",e)
             else:
                 if Notify:
-                    JRRlog.WriteLog('Fetch Markets Retrying ('+str(retry+1)+'), '+str(e))
+                    JRRlog.WriteLog('Fetch Markets Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
         else:
             done=True
         retry+=1

@@ -149,7 +149,17 @@ def main():
     WritePID(port)
     WriteLog(JRRconfig.Version,"Jackrabbit Relay")
 
-    server = ForkingSimpleServer(('', port), Handler)
+    try:
+        server = ForkingSimpleServer(('', port), Handler)
+    except OSError as err:
+        x=str(err)
+        if x.find('Address already in use')>-1:
+            print('Another program is using this port: '+str(port))
+        else:
+            print(x)
+        WriteLog(JRRconfig.Version,x)
+        sys.exit(1)
+
     addr, port = server.server_address
 
     try:

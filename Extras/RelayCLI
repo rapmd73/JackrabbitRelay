@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay/Base/Library')
+import requests
+
+import JRRsupport
+
+if len(sys.argv) > 6:
+    webhook=sys.argv[1]
+    exchangeName=sys.argv[2].lower()
+    market=sys.argv[3].lower()
+    account=sys.argv[4]
+    action=sys.argv[5].lower()
+    pair=sys.argv[6].upper()
+else:
+    print("a webhook, an exchange, a market, a (sub)account, a direction, and an asset must be provided.")
+    sys.exit(1)
+
+exc='"Exchange":"'+exchangeName+'", "Market":"'+market+'"'
+account='"Account":"'+account+'"'
+sym='"Asset":"'+pair+'"'
+direction='"Action":"'+action.lower()+'"'
+
+if len(sys.argv) > 7:
+    psize='"Base":"'+str(sys.argv[7])+'"'
+    payload='{ '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
+else:
+    payload='{ '+exc+', '+account+', '+direction+', '+sym+' }'
+
+headers={'content-type': 'text/plain', 'Connection': 'close'}
+
+resp=None
+try:
+    resp=requests.post(webhook,headers=headers,data=payload)
+    try:
+        r=json.loads(resp.text)
+        try:
+            res=r['message']
+        except:
+            res=json.dumps(r)
+    except:
+        res=resp.text
+except:
+    res=None
+
+if res:
+    print(res)
