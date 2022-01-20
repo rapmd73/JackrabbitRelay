@@ -107,6 +107,26 @@ The information provided lists the exact minimum position size (lot) for a given
 
 This program is a bridge between Apache and Jackrabbit Relay. You'll need to add your webhook and copy it into your cgi-bin folder.
 
+## RelayCLI
+```bash
+RelayCLI <webhook> <exchange> <market> <(sub)account> <action> <asset>
+```
+
+Commandline breakdown:
+
+| Key | Description |
+| :--- | :--- |
+| `Exchange` | This is one of the supported exchanges |
+| `Market` | This is the market you are trading. <table><tr><td>`Spot`<td><td>Working</td></tr><tr><td>`Future`<td><td>Working</td></tr></table> |
+| `Account` | All main accounts must be called `MAIN`. Subaccounts can be used (if your exchange supports them) and must be exactly as listed on the exchange. |
+| `Action` | Buy, Sell, Close, Long, Short |
+| `Asset` | The asset you are trading.  Must be exactly as the exchange lists it. |
+
+Example:
+```bash
+RelayCLI "http://127.0.0.1:7732" ftxus spot MAIN close ltc/btc
+```
+
 ## Tester.PineScript.txt
 
 This is the pine script program from the above video on testing Jackrabbit Relay's server.

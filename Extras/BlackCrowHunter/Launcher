@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Crontab entry ( without hash mark #)
+# @reboot ( /home/JackrabbitRelay/Base/RelayLauncher & ) > /dev/null 2>&1
+# echo "BalAnce" | tr "[:upper:]" "[:lower:]"
+
+# /home/BlackCrowHunter/BlackCrowHunter.spot kucoin MAIN ada/usdt 5 1 1
+
+# $1 Exchange
+# $2 Account
+# $3 Pair
+# $4 Number of consecutive downward candles
+# $5 Buy Lots
+# $6 Take Profit %
+# $7 Paper trading indicator
+
+BaseDir="/home/BlackCrowHunter"
+
+cd $BaseDir
+
+while true ; do
+    $BaseDir/BlackCrowHunter.spot $1 $2 $3 $4 $5 $6 $7 $8 $9
+    sleep 60
+done
+
+
