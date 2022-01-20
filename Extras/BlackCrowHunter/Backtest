@@ -81,7 +81,7 @@ if len(sys.argv) > 8:
     start_time_datetime = sys.argv[7]
     end_time_datetime = sys.argv[8]
 else:
-    print("A timeframe, an exchange, a (sub)account, an asset a candle cound, pct gain and start time stamp and end time stamp must be provided, example:")
+    print("A timeframe, an exchange, a (sub)account, an asset a candle count, pct gain, start time stamp, and end time stamp must be provided, example:")
     print("Backtest 1m exchange test_subaccount btc/usd 5 '2021-12-01 00:00:00' '2021-12-31 23:59:59'")
     sys.exit(1)
 

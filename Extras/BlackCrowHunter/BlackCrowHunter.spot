@@ -21,13 +21,13 @@ blank=" "
 Header='BlackCrowHunter '+JRRconfig.Version
 
 def SendWebhook(Active,exchangeName,account,pair,action,amount):
-    exc='"Exchange":"'+exchangeName+'", "Market":"Spot"'
-    account='"Account":"'+account+'"'
-    sym='"Asset":"'+pair+'"'
-    direction='"Action":"'+action.lower()+'"'
-    psize='"Base":"'+str(amount)+'"'
+    exc=f'"Exchange":"{exchangeName}", "Market":"Spot"'
+    account=f'"Account":"{account}"'
+    sym=f'"Asset":"{pair}"'
+    direction=f'"Action":"{action.lower()}"'
+    psize=f'"Base":"{str(amount)}"'
 
-    cmd='{ '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
+    cmd=f'{{ {exc}, {account}, {direction}, {sym}, {psize} }}'
 
     headers={'content-type': 'text/plain', 'Connection': 'close'}
 
@@ -233,7 +233,7 @@ def main():
         Active=keys[CurrentKey]
         JRRapi.SetExchangeAPI(exchange,Active)
 
-        # Place thwe orders
+        # Place the orders
 
         if Trade['SumCount']>0 and close>Trade['TakeProfit']:
             if not paper:
