@@ -128,7 +128,7 @@ Collects the historical data and saves it to a file. The arguments are as follow
 | 2 | `binance`  | Exchange              |
 | 3 | `MAIN`     | Account (Case sensitive) |
 | 4 | `BNB/USDT` | Asset                |
-| 5 | `30`       | The number of previoius days you want to save. *Just because you **CAN** download *2 years* of one minute candle data **doesn't mean you SHOULD**. This can be a **VERY** memory intensive and time consuming process. |
+| 5 | `30`       | The number of previous days you want to save. *Just because you **CAN** download *2 years* of one minute candle data **doesn't mean you SHOULD**. This can be a **VERY** memory intensive and time consuming process. |
 
 ```bash
 cd /home/BlackCrowHunter
@@ -161,11 +161,12 @@ This launches BlackCrowHunter. The arguments are as follows:
 | Argument | Example   | Description |
 | --- | --------- | -------------------- |
 | 1 | `kucoin`   | Exchange              |
-| 2 | `MAIN`     | Account (Case sensitive) |
+| 2 | `MAIN`     | Account or subaccount (Case sensitive) |
 | 3 | `ada/usdt` | Asset                |
 | 4 | `5`        | Number of consecutive red or downward candles to match. The larger this number, the more defensive BlackCrowHunter will be. |
 | 5 | `1`        | **Number of lots to buy** <br><br> A lot is the minimum position size. If you wanted a $10 position of an asset that has a minimum position size of $2.50, you would want `4` lots. |
 | 6 | `1`        | Take Profit in percent form. (`1` maps to 1%) |
+| 7 | `PAPER`    | This activates the paper trading mode. After testing in paper trading mode, you can remove this to enable live trading. |
 
 ## Results
 
@@ -176,7 +177,7 @@ Results breakdown for buys,
 | 1 | `2021-12-19 19:24` | Date/Time |
 | 2 | `Buy`              | Direction |
 | 3 | `46699.70000000`   | Closing (Buy) price |
-| 4 | `46690.45000000`   | Running Average is more then 1 purchase has occured |
+| 4 | `46690.45000000`   | Running Average is more then 1 purchase has occurred |
 | 5 | `47166.69700000`   | Take profit price. Recalculated every purchase |
 | 6 | `5`                | The Number of red candles that *this* purchase matched. This will increase as purchases increase. This is a deliberate limiter to slow accumulation extensively. |
 

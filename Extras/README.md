@@ -57,7 +57,7 @@ wealth of information.
 
 ## ListMarkets
 ```bash
-ListMarkets <exchange> <ratelimit>
+./ListMarkets <exchange> <ratelimit>
 ```
 
 **Exchange** is the exchange you want to line, ie ftx
@@ -75,7 +75,7 @@ The first column is the pair. The second is the market type. The third is the mi
 ## AnalyzeAsset
 
 ```bash
-AnalyzeAsset <exchange> <account or NONE> <asset>
+./AnalyzeAsset <exchange> <account or NONE> <asset>
 ```
 
 This program allows for the examination of a single asset.
