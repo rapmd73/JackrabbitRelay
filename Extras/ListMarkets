@@ -1,18 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-
-This program works with the following exchanges without error:
-
-ftx, ftx.us, binance, binance.us, kraken,
-
-Inconsistent exchanges:
-
-exmo, kucoin
-
-"""
-
 import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 import ccxt
@@ -21,19 +9,30 @@ import JRRconfig
 import JRRapi
 
 def main():
-    if len(sys.argv) > 1:
-        exchangeName=sys.argv[1]
+    if len(sys.argv) > 2:
+        exchangeName=sys.argv[1].lower()
+        market=sys.argv[2].lower()
     else:
-        print("One of the following Exchanges must be given: ",str(ccxt.exchanges))
+        print("One of the following Exchanges must be given, followed by a market type (spot, future). \n\nExchanges: ",str(ccxt.exchanges))
         sys.exit(1)
 
     RetryLimit=3
     RateLimit=1000
     srch=None
-    if len(sys.argv) > 2:
-        RateLimit=int(sys.argv[2])
     if len(sys.argv) > 3:
-        srch=sys.argv[3].upper()
+        RateLimit=int(sys.argv[3])
+    if len(sys.argv) > 4:
+        srch=sys.argv[4].upper()
+    if len(sys.argv) > 5:
+        srchLT=True
+        sLT=float(sys.argv[5])
+    else:
+        srchLT=False
+    if len(sys.argv) > 6:
+        srchGT=True
+        sGT=float(sys.argv[6])
+    else:
+        srchGT=False
 
     if exchangeName in ccxt.exchanges:
         exchange=getattr(ccxt,exchangeName)()
@@ -45,7 +44,7 @@ def main():
             sys.exit(1)
 
     try:
-        if  exchange.options["createMarketBuyOrderRequiresPrice"]:
+        if  "createMarketBuyOrderRequiresPrice" in exchange.options:
             print("Exchange not supported")
             sys.exit(1)
     except KeyError as err:
@@ -65,7 +64,8 @@ def main():
         if 'active' in exchange.markets[pair]:
             if exchange.markets[pair]['active']==False:
                 continue
-        if srch!=None:
+
+        if srch!=None and srch!='ALL':
             if pair.find(srch)<0:
                 continue
 
@@ -85,6 +85,10 @@ def main():
                 else:
                     marketType="spot"
 
+        if market.lower()!='all':
+            if marketType!=market:
+                continue
+
 # Get exchange required minimums
 
         quote=exchange.markets[pair]['quote']
@@ -96,6 +100,14 @@ def main():
             forceQuote=False
 
         minimum,mincost=JRRapi.GetMinimum(exchange,pair,forceQuote,False,RetryLimit)
+
+        if srchLT:
+            if mincost>sLT:
+                continue
+        if srchGT:
+            if mincost<sGT:
+                continue
+
         print(f"{pair:20} {marketType:15} {minimum:18.6f} {mincost:18.6f}")
 
 if __name__ == '__main__':
