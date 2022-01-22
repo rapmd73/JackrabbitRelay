@@ -12,6 +12,7 @@ import time
 import datetime
 import requests
 import json
+import pathlib
 
 import JRRconfig
 import JRRlog
@@ -57,43 +58,81 @@ def FetchNumberCandles(exchange,pair,tf,days):
 
     return candles
 
-if len(sys.argv) > 5:
-    tf=sys.argv[1].lower()
-    exchangeName=sys.argv[2].lower()
-    account=sys.argv[3]
-    pair=sys.argv[4].upper()
-    TotalDays=int(sys.argv[5])
-else:
-    print("A timeframe, an exchange, a (sub)account, an asset, and total days must be provided.")
-    sys.exit(1)
+def ReadConfig(fn):
+    Required=[ "Timeframe", "TotalDays", "Exchange", "Account", "Asset" ]
 
-keys=JRRsupport.ReadConfig(exchangeName,account)
+    Config={}
 
-CurrentKey=(os.getpid()%len(keys))
-Active=keys[CurrentKey]
+    if os.path.exists(fn):
+        try:
+            raw=pathlib.Path(fn).read_text()
+        except:
+            print(f"Can't read {fn}")
+            sys.exit(1)
 
-exchange=JRRapi.ExchangeLogin(exchangeName,Active,Notify=False)
+        txt=JRRsupport.pFilter(raw)
 
-if "Retry" in Active:
-    RetryLimit=int(Active['Retry'])
-else:
-    RetryLimit=10
+        try:
+            Config=json.loads(txt)
+        except:
+            print(f"Damaged JSON: {txt}")
+            sys.exit(1)
+    else:
+        print('Config file not found.')
+        sys.exit(1)
 
-candles=FetchNumberCandles(exchange,pair,tf,TotalDays)
+    for i in Required:
+        if i not in Config:
+            print(f"Missing required item: {i}")
+            sys.exit(1)
 
-# Write OHLCV to file
+    Config['Exchange']=Config['Exchange'].lower()
+    Config['Asset']=Config['Asset'].upper()
+    Config['TotalDays']=int(Config['TotalDays'])
 
-print('Writing historic data...')
-fn=exchangeName+'.'+account+'.'+pair.replace("-","").replace("/","").replace(':','')+'.'+tf+'.history'
-fh=open(fn,'w')
-for idx in candles:
-    t=idx[0]
-    o=idx[1]
-    h=idx[2]
-    l=idx[3]
-    c=idx[4]
-    v=idx[5]
-    s=f'{t} {o} {h} {l} {c} {v}\n'
-    fh.write(s)
+    return(Config)
 
-fh.close()
+###
+### Main code base. Place order on exchange
+###
+
+def main():
+    Config=ReadConfig(sys.argv[1])
+
+    keys=JRRsupport.ReadConfig(Config['Exchange'],Config['Account'])
+
+    CurrentKey=(os.getpid()%len(keys))
+    Active=keys[CurrentKey]
+
+    exchange=JRRapi.ExchangeLogin(Config['Exchange'],Active,Notify=False)
+
+    if "Retry" in Active:
+        RetryLimit=int(Active['Retry'])
+    else:
+        RetryLimit=10
+
+    candles=FetchNumberCandles(exchange,Config['Asset'],Config['Timeframe'],Config['TotalDays'])
+
+    # Write OHLCV to file
+
+    print('Writing historic data...')
+    fn=Config['Exchange']+'.'+Config['Account']+'.'+Config['Asset'].replace("-","").replace("/","").replace(':','')+'.'+Config['Timeframe']+'.history'
+    fh=open(fn,'w')
+    for idx in candles:
+        t=idx[0]
+        o=idx[1]
+        h=idx[2]
+        l=idx[3]
+        c=idx[4]
+        v=idx[5]
+        s=f'{t} {o} {h} {l} {c} {v}\n'
+        fh.write(s)
+
+    fh.close()
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Terminated")
+

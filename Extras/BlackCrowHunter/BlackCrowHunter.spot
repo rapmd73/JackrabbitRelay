@@ -11,6 +11,7 @@ import os
 import time
 import requests
 import json
+import pathlib
 
 import JRRconfig
 import JRRlog
@@ -137,6 +138,45 @@ def IsBlackCrow(candles,CandleCount):
         return True
     return False
 
+# Read config file
+
+def ReadConfig(fn):
+    Required=[ "Exchange", "Account", "Asset", "StartCandles", "TakeProfit", "BuyLots" ]
+
+    Config={}
+
+    JRRlog.WriteLog("Reading configuration file")
+
+    if os.path.exists(fn):
+        try:
+            raw=pathlib.Path(fn).read_text()
+        except:
+            JRRlog.ErrorLog("ReadConfig",f"Can't read {fn}")
+
+        txt=JRRsupport.pFilter(raw)
+
+        try:
+            Config=json.loads(txt)
+        except:
+            JRRlog.ErrorLog("ReadConfig",f"Damaged JSON: {txt}")
+    else:
+        JRRlog.ErrorLog("ReadConfig",'Config file not found.')
+
+    for i in Config:
+        JRRlog.WriteLog(f"|- {i}: {Config[i]}")
+
+    for i in Required:
+        if i not in Config:
+            JRRlog.ErrorLog("ReadConfig",f"Missing required item: {i}")
+
+    Config['Exchange']=Config['Exchange'].lower()
+    Config['Asset']=Config['Asset'].upper()
+    Config['StartCandles']=int(Config['StartCandles'])
+    Config['BuyLots']=float(Config['BuyLots'])
+    Config['TakeProfit']=float(Config['TakeProfit'])/100
+
+    return(Config)
+
 ###
 ### Main code base. Place order on exchange
 ###
@@ -144,27 +184,18 @@ def IsBlackCrow(candles,CandleCount):
 def main():
     JRRlog.WriteLog(Header)
 
-    if len(sys.argv) > 6:
-        exchangeName=sys.argv[1].lower()
-        account=sys.argv[2]
-        pair=sys.argv[3].upper()
-        StartCandleCount=int(sys.argv[4])
-        pct=float(sys.argv[5])/100
-        buyAMT=float(sys.argv[6])
-    else:
-        print("An exchange, a (sub)account, an asset, candle count, % take profit, buy lots must be provided.")
-        sys.exit(1)
+    Config=ReadConfig(sys.argv[1])
 
-    if StartCandleCount<3:
+    if Config['StartCandles']<3:
         print("A black crow pattern requires a minimum of 3 candles.")
         sys.exit(1)
 
     paper=False
-    if len(sys.argv) > 7 and sys.argv[7].lower()=='paper':
+    if 'Paper' in Config:
         paper=True
 
-    keys=JRRsupport.ReadConfig(exchangeName,account)
-    JRRlog.WriteLog("API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
+    keys=JRRsupport.ReadConfig(Config['Exchange'],Config['Account'])
+    JRRlog.WriteLog("API(s)/Secret(s) loaded for "+Config['Exchange']+", (sub)account: "+Config['Account'])
 
     CurrentKey=(os.getpid()%len(keys))
     Active=keys[CurrentKey]
@@ -172,7 +203,7 @@ def main():
     if not "Webhook" in Active:
         JRRlog.ErrorLog("BlackCrowHunter","Webhook NOT present")
 
-    exchange=JRRapi.ExchangeLogin(exchangeName,Active)
+    exchange=JRRapi.ExchangeLogin(Config['Exchange'],Active)
 
     if "Retry" in Active:
         RetryLimit=int(Active['Retry'])
@@ -180,28 +211,28 @@ def main():
     else:
         RetryLimit=10
 
-    markets=JRRapi.GetMarkets(exchange,pair,RetryLimit)
+    markets=JRRapi.GetMarkets(exchange,Config['Asset'],RetryLimit)
 
 # This is where a looping method would go if this were to serve a single exchange
-# with multiple pairs.
+# with multiple Config['Asset']s.
 
 # Get asset information
 
-    base=exchange.markets[pair]['base']
-    quote=exchange.markets[pair]['quote']
+    base=exchange.markets[Config['Asset']]['base']
+    quote=exchange.markets[Config['Asset']]['quote']
 
     JRRlog.WriteLog("Base currency:  "+base)
     JRRlog.WriteLog("Quote currency: "+quote)
 
-    minimum,mincost=JRRapi.GetMinimum(exchange,pair,False,False,RetryLimit)
-    BuyAmount=minimum*buyAMT
+    minimum,mincost=JRRapi.GetMinimum(exchange,Config['Asset'],False,False,RetryLimit)
+    BuyAmount=minimum*Config['BuyLots']
 
-    JRRlog.WriteLog(f"Lot size: {buyAMT:.8f}")
+    JRRlog.WriteLog(f"Lot size: {Config['BuyLots']:.8f}")
 
-    Trade=ReadData(exchangeName,account,pair)
+    Trade=ReadData(Config['Exchange'],Config['Account'],Config['Asset'])
     if Trade['CandleCount']==0:
-        Trade['CandleCount']=StartCandleCount
-        Trade['Martingale']=buyAMT
+        Trade['CandleCount']=Config['StartCandles']
+        Trade['Martingale']=Config['BuyLots']
 
     first=True
 
@@ -220,7 +251,7 @@ def main():
         Active=keys[CurrentKey]
         JRRapi.SetExchangeAPI(exchange,Active)
 
-        candles=JRRapi.FetchCandles(exchange,pair,'1m',Trade['CandleCount']+3,RetryLimit)
+        candles=JRRapi.FetchCandles(exchange,Config['Asset'],'1m',Trade['CandleCount']+3,RetryLimit)
 
         IsCandlePattern=IsBlackCrow(candles,Trade['CandleCount'])
 
@@ -237,25 +268,25 @@ def main():
 
         if Trade['SumCount']>0 and close>Trade['TakeProfit']:
             if not paper:
-                res=SendWebhook(Active,exchangeName,account,pair,'close',BuyAmount*Trade['Martingale'])
+                res=SendWebhook(Active,Config['Exchange'],Config['Account'],Config['Asset'],'close',BuyAmount*Trade['Martingale'])
                 if res.find('Order Confirmation ID')>-1:
-                    WriteData(exchangeName,account,None,pair)
+                    WriteData(Config['Exchange'],Config['Account'],None,Config['Asset'])
                     result=close-Trade['Average']
-                    JRRlog.WriteLog(f"{pair:10} Sell {close:16.8f} {result:16.8f} {Trade['Total']:16.8f}")
+                    JRRlog.WriteLog(f"{Config['Asset']:10} Sell {close:16.8f} {result:16.8f} {Trade['Total']:16.8f}")
                     Trade['SumCount']=0
                     Trade['Total']=0.0
                     Trade['Average']=0.0
                     Trade['TakeProfit']=0.0
-                    Trade['Martingale']=buyAMT
+                    Trade['Martingale']=Config['BuyLots']
             else:
-                WriteData(exchangeName,account,None,pair)
+                WriteData(Config['Exchange'],Config['Account'],None,Config['Asset'])
                 result=close-Trade['Average']
-                JRRlog.WriteLog(f"{pair:10} Sell {close:16.8f} {result:16.8f} {Trade['Total']:16.8f}")
+                JRRlog.WriteLog(f"{Config['Asset']:10} Sell {close:16.8f} {result:16.8f} {Trade['Total']:16.8f}")
                 Trade['SumCount']=0
                 Trade['Total']=0.0
                 Trade['Average']=0.0
                 Trade['TakeProfit']=0.0
-                Trade['Martingale']=buyAMT
+                Trade['Martingale']=Config['BuyLots']
 
         if IsCandlePattern and Trade['SumCount']>0.0 and close<Trade['Average']:
             # If the order doesn't go through, the previous state is needed to 
@@ -264,50 +295,50 @@ def main():
             # Martingale
             Trade['Martingale']*=2
             if not paper:
-                res=SendWebhook(Active,exchangeName,account,pair,'buy',BuyAmount*Trade['Martingale'])
+                res=SendWebhook(Active,Config['Exchange'],Config['Account'],Config['Asset'],'buy',BuyAmount*Trade['Martingale'])
                 if res.find('Order Confirmation ID')>-1:
                     Trade['SumCount']+=Trade['Martingale']
                     Trade['Total']+=close*Trade['Martingale']
                     Trade['Average']=Trade['Total']/Trade['SumCount']
-                    Trade['TakeProfit']=Trade['Average']+(Trade['Average']*pct)
+                    Trade['TakeProfit']=Trade['Average']+(Trade['Average']*Config['TakeProfit'])
                     # In order to keep Martingale from getting out of
                     # control, increase the number of consecutive candles
                     # for the next black crow.
                     if Trade['SumCount']>(Trade['CandleCount']/2):
                         Trade['CandleCount']+=int(Trade['CandleCount']/3)
-                    JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {Trade['Average']:16.8f} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:3.0f}")
-                    WriteData(exchangeName,account,Trade,pair)
+                    JRRlog.WriteLog(f"{Config['Asset']:10} Buy  {close:16.8f} {Trade['Average']:16.8f} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:3.0f}")
+                    WriteData(Config['Exchange'],Config['Account'],Trade,Config['Asset'])
                 else:
                     Trade=OldTrade
             else:
                 Trade['SumCount']+=Trade['Martingale']
                 Trade['Total']+=close*Trade['Martingale']
                 Trade['Average']=Trade['Total']/Trade['SumCount']
-                Trade['TakeProfit']=Trade['Average']+(Trade['Average']*pct)
+                Trade['TakeProfit']=Trade['Average']+(Trade['Average']*Config['TakeProfit'])
                 if Trade['SumCount']>(Trade['CandleCount']/2):
                     Trade['CandleCount']+=int(Trade['CandleCount']/3)
-                JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {Trade['Average']:16.8f} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:3.0f}")
-                WriteData(exchangeName,account,Trade,pair)
+                JRRlog.WriteLog(f"{Config['Asset']:10} Buy  {close:16.8f} {Trade['Average']:16.8f} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:3.0f}")
+                WriteData(Config['Exchange'],Config['Account'],Trade,Config['Asset'])
 
         if IsCandlePattern and Trade['SumCount']==0:
-            Trade['CandleCount']=StartCandleCount
-            Trade['Martingale']=buyAMT
+            Trade['CandleCount']=Config['StartCandles']
+            Trade['Martingale']=Config['BuyLots']
             if not paper:
-                res=SendWebhook(Active,exchangeName,account,pair,'buy',BuyAmount)
+                res=SendWebhook(Active,Config['Exchange'],Config['Account'],Config['Asset'],'buy',BuyAmount)
                 if res.find('Order Confirmation ID')>-1:
                     Trade['SumCount']=1
                     Trade['Total']=close
                     Trade['Average']=Trade['Total']/Trade['SumCount']
-                    Trade['TakeProfit']=Trade['Average']+(Trade['Average']*pct)
-                    JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {blank:16} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:3.0f}")
-                    WriteData(exchangeName,account,Trade,pair)
+                    Trade['TakeProfit']=Trade['Average']+(Trade['Average']*Config['TakeProfit'])
+                    JRRlog.WriteLog(f"{Config['Asset']:10} Buy  {close:16.8f} {blank:16} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:3.0f}")
+                    WriteData(Config['Exchange'],Config['Account'],Trade,Config['Asset'])
             else:
                 Trade['SumCount']=1
                 Trade['Total']=close
                 Trade['Average']=Trade['Total']/Trade['SumCount']
-                Trade['TakeProfit']=Trade['Average']+(Trade['Average']*pct)
-                JRRlog.WriteLog(f"{pair:10} Buy  {close:16.8f} {blank:16} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:3.0f}")
-                WriteData(exchangeName,account,Trade,pair)
+                Trade['TakeProfit']=Trade['Average']+(Trade['Average']*Config['TakeProfit'])
+                JRRlog.WriteLog(f"{Config['Asset']:10} Buy  {close:16.8f} {blank:16} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:3.0f}")
+                WriteData(Config['Exchange'],Config['Account'],Trade,Config['Asset'])
 
         first=False
         time.sleep(60)

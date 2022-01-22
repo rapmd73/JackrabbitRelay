@@ -55,6 +55,11 @@ substantial risk. Any past  results provided are intended as examples
 only and are in no way a reflection of what an individual  could have
 made or lost in the same situation.
 
+## Notes
+
+All programs now use a config file in JSON format. Commandline arguments 
+are **NO LONGER USED.**
+
 ## Installation
 
 Installation is very simple. Just follow the below:
@@ -64,13 +69,43 @@ cd /home/GitHub/JackrabbitRelay/Extras/BlackCrowHunter
 ./install
 ```
 
+## Configuration file
+
+The following describes the new configuration layout. This is the **NEW
+STANDARD** moving forward as it is extendable and more robust then the
+commandline. *This MUST be in proper JSON format*.
+
+```json
+{
+    "Timeframe":"1m",
+    "TotalDays":"30",
+    "Exchange":"kucoin",
+    "Account":"MAIN",
+    "Asset":"ADA/USDT",
+    "StartCandles":"3",
+    "TakeProfit":"1",
+    "BuyLots":"1"
+}
+```
+
+| Item             | Value        | Description |
+| ----             | -----        | -------------------- |
+| `"Timeframe"`    | `"1m"`       | Used in collection, backtesting. Timeframe. Most exchanges support `1m`, `5m`, `15m`, `1h`, `4h`, `1d` for timeframes |
+| `"TotalDays"`    | `"30"`       | Used in collection. The number of days of historical data to collect. |
+| `"Exchange"`     | `"kucoin"`   | Your exchange |
+| `"Account"`      | `"MAIN"`     | Your (sub)account |
+| `"Asset"`        | `"ADA/USDT"` | The asset (pair) you want to trade |
+| `"StartCandles"` | `"3"`        | The starting number of candles to match for the Black Crow pattern |
+| `"TakeProfit"`   | `"1"`        | Take profit in percentage |
+| `"BuyLots"`      | `"1"`        | The number of lots to begin the first purchased |
+
 ## Reboot startup
 
 For BlackCrowHunter to auto start after a reboot, the following line
 needs to be added to your crontab. 
 
 ```crontab
-@reboot ( /home/BlackCrowHunter/Launcher kucoin MAIN trx/usd 5 1 1 PAPER & ) > /dev/null 2>&1
+@reboot ( /home/BlackCrowHunter/Launcher /home/BlackCrowHunter/TRX.cfg & ) > /dev/null 2>&1
 ```
 
 Please be aware that the exchange, coin, and other parameters **MUST**
@@ -117,22 +152,8 @@ and slippage will be a consideration otherwise, not to mention security.
 
 ```bash
 cd /home/BlackCrowHunter
-./CandleCollector 1m binance MAIN BNB/USDT 30
-```
-
-Collects the historical data and saves it to a file. The arguments are as follows. *Only run the collector once, unless you want to update or change the amount of data stored*.
-
-| Argument | Example   | Description |
-| --- | --------- | -------------------- |
-| 1 | `1m`       | Timeframe. Most exchanges support `1m`, `5m`, `15m`, `1h`, `4h`, `1d` for timeframes |
-| 2 | `binance`  | Exchange              |
-| 3 | `MAIN`     | Account (Case sensitive) |
-| 4 | `BNB/USDT` | Asset                |
-| 5 | `30`       | The number of previous days you want to save. *Just because you **CAN** download *2 years* of one minute candle data **doesn't mean you SHOULD**. This can be a **VERY** memory intensive and time consuming process. |
-
-```bash
-cd /home/BlackCrowHunter
-./Backtest.historic 1m kucoin MAIN bnb/usdt 5 1
+./CandleCollector /home/BlackCrowHunter/BNB.cfg
+./Backtest.historic /home/BlackCrowHunter/BNB.cfg
 ```
 
 Runs a backtest with results. You must have collected the historic data
@@ -140,33 +161,12 @@ with the above process. You can run multiple tests with different candle
 counts without having to redownload (recollect) the data. The more data
 you collect, the more memory intensive the process will be.
 
-| Argument | Example   | Description |
-| --- | --------- | -------------------- |
-| 1 | `1m`       | Timeframe. Most exchanges support `1m`, `5m`, `15m`, `1h`, `4h`, `1d` for timeframes |
-| 2 | `binance`  | Exchange              |
-| 3 | `MAIN`     | Account (Case sensitive) |
-| 4 | `BNB/USDT` | Asset                |
-| 5 | `5`        | The number of consecutive red candles to match followed by one green candle. |
-| 6 | `1`        | Take Profit in percent form. (`1` maps to 1%) |
-
 ## Usage
 
 ```bash
 cd /home/BlackCrowHunter
-./Launcher kucoin MAIN ada/usdt  5   1   1    PAPER
+./Launcher /home/BlackCrowHunter/ADA.cfg
 ```
-
-This launches BlackCrowHunter. The arguments are as follows:
-
-| Argument | Example   | Description |
-| --- | --------- | -------------------- |
-| 1 | `kucoin`   | Exchange              |
-| 2 | `MAIN`     | Account or subaccount (Case sensitive) |
-| 3 | `ada/usdt` | Asset                |
-| 4 | `5`        | Number of consecutive red or downward candles to match. The larger this number, the more defensive BlackCrowHunter will be. |
-| 5 | `1`        | **Number of lots to buy** <br><br> A lot is the minimum position size. If you wanted a $10 position of an asset that has a minimum position size of $2.50, you would want `4` lots. |
-| 6 | `1`        | Take Profit in percent form. (`1` maps to 1%) |
-| 7 | `PAPER`    | This activates the paper trading mode. After testing in paper trading mode, you can remove this to enable live trading. |
 
 ## Results
 
