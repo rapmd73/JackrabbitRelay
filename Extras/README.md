@@ -57,12 +57,18 @@ wealth of information.
 
 ## ListMarkets
 ```bash
-./ListMarkets <exchange> <ratelimit>
+./ListMarkets ftx spot 100 "USDT" 0.10 0.01
 ```
 
-**Exchange** is the exchange you want to line, ie ftx
+| Key | Description |
+| :--- | :--- |
+| `ftx` | This is one of the supported exchanges |
+| `spot` | This is the market you are trading. <table><tr><td>`Spot`<td><td>Working</td></tr><tr><td>`Future`<td><td>Working</td></tr></table> |
+| `100` | Rate limit is a number of 1 or more. This lets you find a good rate limit value your exchange will accept. The program will crash with a rate limit error if your value is too low. |
+| `USDT` or `ALL` | **OPTIONAL**, Pattern to search for. USDT will list all USDT coins |
+| `0.10` | **OPTIONAL** List all assets below this value|
+| `0.01` | **OPTIONAL**, list all assets above this value |
 
-**Rate limit** is a number of 1 or more. This lets you find a good rate limit value your exchange will accept. The program will crash with a rate limit error if your value is too low.
 
 This program lists the markets of a given exchange. Here is an example from FTX:
 
@@ -116,6 +122,7 @@ Commandline breakdown:
 
 | Key | Description |
 | :--- | :--- |
+| `Webhook` | The webhook to your Relay installation |
 | `Exchange` | This is one of the supported exchanges |
 | `Market` | This is the market you are trading. <table><tr><td>`Spot`<td><td>Working</td></tr><tr><td>`Future`<td><td>Working</td></tr></table> |
 | `Account` | All main accounts must be called `MAIN`. Subaccounts can be used (if your exchange supports them) and must be exactly as listed on the exchange. |
