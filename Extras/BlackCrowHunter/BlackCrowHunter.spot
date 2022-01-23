@@ -184,7 +184,10 @@ def ReadConfig(fn):
 def main():
     JRRlog.WriteLog(Header)
 
-    Config=ReadConfig(sys.argv[1])
+    if sys.argv>1:
+        Config=ReadConfig(sys.argv[1])
+    else:
+        JRRlog.ErrorLog("BlackCrowHunter","must provide config file")
 
     if Config['StartCandles']<3:
         print("A black crow pattern requires a minimum of 3 candles.")
