@@ -143,6 +143,9 @@ def main():
 # Short direction trading:
 #       Buy when price is above boundary.   API: short
 #       Sell when price is below boundary.  API: long
+#
+# Realization: PCT value needs to be set to ATH like long positions.
+#              Defensiveness is needed to stop excess accumulation.
 
     if direction=='long':
         BuyDir='long'
@@ -150,6 +153,7 @@ def main():
     else:
         BuyDir='short'
         SellDir='long'
+        AllTimeHigh=0.0
 
     keys=JRRsupport.ReadConfig(exchangeName,account)
     JRRlog.WriteLog("API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
@@ -192,6 +196,7 @@ def main():
 
     JRRlog.WriteLog(f"Lot size: {buyAMT:.8f}")
 
+    AllTimeHigh=0.0
     Trade=ReadGrid(exchangeName,account,pair)
 
     first=True
@@ -234,6 +239,20 @@ def main():
         Active=keys[CurrentKey]
         JRRapi.SetExchangeAPI(exchange,Active)
 
+        # The rational behind this is that as the price
+        # drops, so does the percentage require to make each
+        # boundary. In shorting, this will mean excessive
+        # purchases. The only real way to counter this is to
+        # forwce the buying percentage to be based upon the 
+        # all time high, just as the long PCT is at grid reset.
+        # The ATH is then used at 4 time the percentage boundary
+        # to ensure that runaway markets (DASH) don't destroy
+        # the portfolio.
+
+        if direction=='short':
+            if close>AllTimeHigh:
+                AllTimeHigh=close
+
         if Trade['Counter']==0:
             if not first and once:
                 JRRlog.SuccessLog("Equilibrium","One cycle completed")
@@ -254,8 +273,13 @@ def main():
                 if res.find('Order Confirmation ID')>-1:
                     if Trade['PCTValue']==0:
                         Trade['PCTValue']=round(close*pct,8)
+
                     Trade['Close']=round(close,8)
-                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+
+                    if direction=='short':
+                        Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
+                    else:
+                        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
                     Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                     Trade['Counter']+=1
 
@@ -274,7 +298,10 @@ def main():
             else:
                 Trade['PCTValue']=round(close*pct,8)
                 Trade['Close']=round(close,8)
-                Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                if direction=='short':
+                    Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
+                else:
+                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
                 Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                 Trade['Counter']+=1
 
@@ -298,7 +325,10 @@ def main():
                         Trade['Close']=round(Trade['Buy'],8)
                     else:
                         Trade['Close']=round(Trade['Sell'],8)
-                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                    if direction=='short':
+                        Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
+                    else:
+                        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
                     Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                     Trade['Counter']+=1
 
@@ -319,7 +349,10 @@ def main():
                     Trade['Close']=round(Trade['Buy'],8)
                 else:
                     Trade['Close']=round(Trade['Sell'],8)
-                Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                if direction=='short':
+                    Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
+                else:
+                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
                 Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                 Trade['Counter']+=1
 
@@ -345,7 +378,10 @@ def main():
                         Trade['Close']=round(Trade['Sell'],8)
                     else:
                         Trade['Close']=round(Trade['Buy'],8)
-                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                    if direction=='short':
+                        Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
+                    else:
+                        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
                     Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                     Trade['Counter']-=1
 
@@ -368,7 +404,10 @@ def main():
                     Trade['Close']=round(Trade['Sell'],8)
                 else:
                     Trade['Close']=round(Trade['Buy'],8)
-                Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                if direction=='short':
+                    Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
+                else:
+                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
                 Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                 Trade['Counter']-=1
 
