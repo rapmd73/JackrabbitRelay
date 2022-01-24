@@ -184,14 +184,19 @@ def ReadConfig(fn):
 def main():
     JRRlog.WriteLog(Header)
 
-    if sys.argv>1:
+    if len(sys.argv)>1:
         Config=ReadConfig(sys.argv[1])
     else:
-        JRRlog.ErrorLog("BlackCrowHunter","must provide config file")
+        JRRlog.ErrorLog("BlackCrowHunter","no config file provided")
 
     if Config['StartCandles']<3:
         print("A black crow pattern requires a minimum of 3 candles.")
         sys.exit(1)
+
+    if 'Multiplier' in Config:
+        Multiplier=float(Config['Multiplier'])
+    else:
+        Multiplier=1
 
     paper=False
     if 'Paper' in Config:
@@ -280,7 +285,7 @@ def main():
                     Trade['Total']=0.0
                     Trade['Average']=0.0
                     Trade['TakeProfit']=0.0
-                    Trade['Martingale']=Config['BuyLots']
+                    Trade['Martingale']=Config['BuyLots']*Multiplier
             else:
                 WriteData(Config['Exchange'],Config['Account'],None,Config['Asset'])
                 result=close-Trade['Average']
@@ -289,7 +294,7 @@ def main():
                 Trade['Total']=0.0
                 Trade['Average']=0.0
                 Trade['TakeProfit']=0.0
-                Trade['Martingale']=Config['BuyLots']
+                Trade['Martingale']=Config['BuyLots']*Multiplier
 
         if IsCandlePattern and Trade['SumCount']>0.0 and close<Trade['Average']:
             # If the order doesn't go through, the previous state is needed to 
@@ -325,7 +330,7 @@ def main():
 
         if IsCandlePattern and Trade['SumCount']==0:
             Trade['CandleCount']=Config['StartCandles']
-            Trade['Martingale']=Config['BuyLots']
+            Trade['Martingale']=Config['BuyLots']*Multiplier
             if not paper:
                 res=SendWebhook(Active,Config['Exchange'],Config['Account'],Config['Asset'],'buy',BuyAmount)
                 if res.find('Order Confirmation ID')>-1:
