@@ -41,9 +41,10 @@ def FetchNumberCandles(exchange,pair,tf,days):
             l=len(data)
             if l>0:
                 cc+=l
-                for i in data:
-                    if i not in candles:
-                        candles.append(i)
+                candles+=data
+#                for i in data:
+#                    if i not in candles:
+#                        candles.append(i)
                 first = data[0][0]
                 ct-=(minute*l)
                 print(exchange.iso8601(ct),l,cc)
@@ -53,6 +54,9 @@ def FetchNumberCandles(exchange,pair,tf,days):
             print('Got an error', type(e).__name__, e.args, ', retrying in', hold, 'seconds...')
             time.sleep(hold)
 
+    print('Removing overlaps...')
+    candleset=set(map(tuple,candles))
+    candles=list(candleset)
     print('Sorting...')
     candles.sort()
 
