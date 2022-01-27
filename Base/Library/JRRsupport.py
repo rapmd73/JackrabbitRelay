@@ -77,6 +77,33 @@ class FileWatch:
         except:
             pass
 
+# Elastic Delay. This is designed to prevent the VPS from being overloaded
+
+def GetLoadAVG():
+    fh=open('/proc/loadavg')
+    l=fh.readline()
+    fh.close()
+
+    LoadAVG=l.split(' ')
+
+    return(LoadAVG)
+
+# Returns seconds
+
+def ElasticSleep(s):
+    LoadAVG=GetLoadAVG()
+    delay=float(max(LoadAVG[0],LoadAVG[1],LoadAVG[2]))
+
+    time.sleep(s+delay)
+
+# Returns milliseconds
+
+def ElasticDelay():
+    LoadAVG=GetLoadAVG()
+    delay=int(float(max(LoadAVG[0],LoadAVG[1],LoadAVG[2]))*1000)
+
+    return delay
+
 # Read the asset list and verify max asset allowance
 
 def ReadAssetList(exchange,account,pair,mp,delete):

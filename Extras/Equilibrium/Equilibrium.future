@@ -51,6 +51,15 @@ def SendWebhook(Active,exchangeName,account,pair,action,amount):
 
     return res
 
+def GetOrderID(res):
+    s=res.find('ID:')+4
+    for e in range(s,len(res)):
+        if res[e]=='\n':
+            break
+    oid=res[s:e]
+
+    return oid
+
 def CheckStopTracer(exchangeName,account,Asset):
     fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.stop'
     if os.path.exists(fn):
@@ -271,6 +280,7 @@ def main():
             if not paper:
                 res=SendWebhook(Active,exchangeName,account,pair,BuyDir,BuyAmount)
                 if res.find('Order Confirmation ID')>-1:
+                    OrderID=GetOrderID(res)
                     if Trade['PCTValue']==0:
                         Trade['PCTValue']=round(close*pct,8)
 
@@ -290,7 +300,7 @@ def main():
                         bal=position['contracts']
 
                     vbuy='Buy/'+direction.capitalize()
-                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
+                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
 
                     WriteGrid(exchangeName,account,Trade,pair)
                 else:
@@ -319,8 +329,9 @@ def main():
         if IsBuy:
             if not paper:
                 res=SendWebhook(Active,exchangeName,account,pair,BuyDir,BuyAmount)
-                time.sleep(1)
+                JRRsupport.ElasticSleep(1)
                 if res.find('Order Confirmation ID')>-1:
+                    OrderID=GetOrderID(res)
                     if direction=='long':
                         Trade['Close']=round(Trade['Buy'],8)
                     else:
@@ -339,7 +350,7 @@ def main():
                         bal=position['contracts']
 
                     vbuy='Buy/'+BuyDir.capitalize()
-                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
+                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
 
                     WriteGrid(exchangeName,account,Trade,pair)
                 else:
@@ -374,6 +385,7 @@ def main():
                     SellAMT=bal
                 res=SendWebhook(Active,exchangeName,account,pair,SellDir,SellAMT)
                 if res.find('Order Confirmation ID')>-1:
+                    OrderID=GetOrderID(res)
                     if direction=='long':
                         Trade['Close']=round(Trade['Sell'],8)
                     else:
@@ -393,9 +405,9 @@ def main():
 
                     vsell='Sell/'+SellDir.capitalize()
                     if Trade['Counter']>0:
-                        WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
+                        WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
                     else:
-                        WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {bal:.8f}")
+                        WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {OrderID} {bal:.8f}")
                     WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
@@ -419,7 +431,7 @@ def main():
                 WriteGrid(exchangeName,account,Trade,pair)
 
         first=True
-        time.sleep(1)
+        JRRsupport.ElasticSleep(1)
 
 if __name__ == '__main__':
     try:
