@@ -349,7 +349,7 @@ def main():
                 WriteData(Config['Exchange'],Config['Account'],Trade,Config['Asset'])
 
         first=False
-        time.sleep(60)
+        JRRsupport.ElasticSleep(60)
 
 if __name__ == '__main__':
     try:

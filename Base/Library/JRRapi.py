@@ -12,6 +12,7 @@ from datetime import datetime
 
 import JRRconfig
 import JRRlog
+import JRRsupport
 
 KuCoinSuppress429=True
 
@@ -81,9 +82,9 @@ def SetExchangeAPI(exchange,Active,notify=False):
 
     if "RateLimit" in Active:
         exchange.enableRateLimit=True
-        exchange.rateLimit=int(Active['RateLimit'])
+        exchange.rateLimit=int(Active['RateLimit'])+JRRsupport.ElasticDelay()
         if notify:
-            JRRlog.WriteLog("|- Rate limit set to "+str(Active['RateLimit'])+' ms')
+            JRRlog.WriteLog("|- Rate limit set to "+str(exchange.rateLimit)+' ms')
     else:
         exchange.enableRateLimit=False
 
@@ -221,7 +222,7 @@ def FetchCandles(exchange,pair,tf,CandleCount,RetryLimit):
         rleSave=exchange.enableRateLimit
         rlvSave=exchange.rateLimit
         exchange.enableRateLimit=True
-        exchange.rateLimit=372
+        exchange.rateLimit=372+JRRsupport.ElasticDelay()
 
     done=False
     while not done:
@@ -272,7 +273,7 @@ def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLi
         rleSave=exchange.enableRateLimit
         rlvSave=exchange.rateLimit
         exchange.enableRateLimit=True
-        exchange.rateLimit=372
+        exchange.rateLimit=372+JRRsupport.ElasticDelay()
 
     done=False
     while from_timestamp < to_timestamp:
@@ -336,7 +337,7 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
         rleSave=exchange.enableRateLimit
         rlvSave=exchange.rateLimit
         exchange.enableRateLimit=True
-        exchange.rateLimit=372
+        exchange.rateLimit=372+JRRsupport.ElasticDelay()
 
     done=False
     while not done:
