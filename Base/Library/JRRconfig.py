@@ -9,7 +9,7 @@ import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 from datetime import datetime
 
-Version="0.0.0.0.670"
+Version="0.0.0.0.675"
 LogDirectory="/home/JackrabbitRelay/Logs"
 BaseDirectory='/home/JackrabbitRelay/Base'
 ConfigDirectory='/home/JackrabbitRelay/Config'

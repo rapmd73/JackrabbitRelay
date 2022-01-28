@@ -90,7 +90,7 @@ else:
             for pos in positions:
                 bal=float(pos['contracts'])
                 if bal>0.0:
-                    Balance[coin]=f'{bal:.8f}'
+                    Balance[pos['symbol']]=f'{bal:.8f}'
         except:
             pass
 
