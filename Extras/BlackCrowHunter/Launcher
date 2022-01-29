@@ -1,0 +1,12 @@
+#!/bin/bash
+
+BaseDir="/home/BlackCrowHunter"
+
+cd $BaseDir
+
+while true ; do
+    $BaseDir/BlackCrowHunter.spot $1
+    sleep 60
+done
+
+

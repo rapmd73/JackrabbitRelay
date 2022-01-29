@@ -160,7 +160,7 @@ cd /home/GitHub
 git clone https://github.com/rapmd73/JackrabbitRelay
 ```
 
-You now have a copy of the Jackrabbit repository. Now its time to install
+You now have a copy of the Jackrabbit Relay repository. Now its time to install
 everything.
 
 ```bash
@@ -211,7 +211,14 @@ files:
 | `JackrabbitRelay` | This is the actual server program that waits for a connection. It should NOT be ran directly, but rather through the RelayLauncher shell script. |
 | `RelayLauncher` | This shell script sets the port and launches the server. It is the harness that keeps everything running and is what you place in your CronTab. |
 
-## Configuration
+## Configuration files
+### Location and file names
+This would be placed in a folder called `/home/JackrabbitRelay/Config/` and
+named something like `ftxus.cfg`. This file would be the configuration for the FTX.US exchange.
+
+In general, the name of each file is `[exchangename].cfg` where `[exchangename]` is the ccxt lowercase representation of your exchange. See the [Exchanges](#exchanges) section above.
+
+### File contents
 
 The Jackrabbit Relay configuration files contain JSON-based text. Here is an example:
 
@@ -223,17 +230,13 @@ Note: KuCoin *requires* a passphrase as well. It is case sensitive and must be
 *EXACTLY* as you gave it to KuCoin. Here is an example:
 
 ```json
+# ./JackrabbitRelay/Config/kucoin.cfg
 { "Account":"MAIN","API":"YourAPI","SECRET":"YourSecret","Passphrase":"YourPassphrase","RateLimit":"1000","MaxAssets":"7","Reduction":"0.00001","ReduceOnly":"Yes" }
 ```
 
-This would be placed in a folder called `/home/JackrabbitRelay/Config/` and
-named something like `ftxus.cfg`
-
-This file would be the configuration for the FTX.US exchange.
-
 Now for the details:
 
-| Key | Description |
+| Property Name | Description |
 | :--- | :--- |
 | `Account` | This MUST be `MAIN`, case sensitive, for the main account of every exchange. |
 | `API` | Your API key exactly as your exchange gives it to you. |
@@ -242,9 +245,9 @@ Now for the details:
 | `RateLimit` | This is the amount Relay waits between each exchange API call. <br> ALL EXCHANGES HAVE RATE LIMIT REQUIREMENTS. <br> This value represent milliseconds. 1000 is one second. If you leave this out, chances are you will be banned from your exchange, most likely temporarily. You will have to tweak this number based upon your exchange. |
 | `MaxAssets` | This is the maximum number of assets that can be traded simultaneously. |
 | `ReduceOnly` | This tells the exchange NOT to flip a position from long to short or vice-versa. <br> It can have any value as its presence is only required. |
-| `Reduction` | The amount to reduce your position to all your exchange to close it. Deprecated... <br> This is a percentage. Do NOT put a percent (%) sign. Use this ONLY if you receive erros closing a position. Finding the amount of the reduction is strictly trial and error. |
+| `Reduction` | The amount to reduce your position to all your exchange to close it. Deprecated... <br> This is a percentage. Do NOT put a percent (%) sign. Use this ONLY if you receive errors closing a position. Finding the amount of the reduction is strictly trial and error. |
 
-Jackrabbit supports multiple API keys per exchange (sub)account. This is
+Jackrabbit Relay supports multiple API keys per exchange (sub)account. This is
 accomplished by this format:
 
 ```json
@@ -274,10 +277,19 @@ Use the following command. Be sure to replace the 12345 with the proper port.
 ( /home/JackrabbitRelay/Base/RelayLauncher 12345 & ) > /dev/null 2>&1
 ```
 
-## The Payload
+## Incoming Messages
+sent from TradingView or similar webhook based application. Any tool that can make HTTP requests, such as Postman or curl, can be used as well. These can be POST requests with the payload as the body. 
 
-Here are examples of the payload sent from TradingView of similar webhook
-based application.
+HTTP request messages should be sent to the address can by the hostname (IP address) of your server, and the port specified above (under #reboot-startup and #manual-startup). For example:
+
+```
+POST http://YOUR.VPS.IP.ADDRESS:12345 [with payload as described below]
+```
+
+
+### The Payload
+
+Here are examples of the payload:
 
 This example purchased $30 of AAVE on the FTX US exchange.
 
@@ -335,7 +347,7 @@ This example purchase of a perpetual contract of AAVE with a leverage of 20, usi
 
 Description of the payload
 
-| Key | Description |
+| Property Name | Description |
 | :--- | :--- |
 | `Exchange` | This is one of the [supported exchanges](#exchanges) |
 | `Market` | This is the market you are trading. <table><tr><td>`Spot`<td><td>Working</td></tr><tr><td>`Future`<td><td>Working</td></tr><tr><td>`Margin`<td><td>In progress</td></tr></table> |

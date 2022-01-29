@@ -106,6 +106,21 @@ Equilibrium uses the same configuration as Jackrabbit Relay, *with one
 very import addition*. Your configuration must have a webhook item on
 each API/Secret combination the Equilibrium uses.
 
+However, you will likely benefit from using more than one API key for each exchange/(sub)account to avoid rate limiting issues. For example, KuCoin would require at least three API keys.
+
+JackrabbitRelay will cycle through the entries of each configuration file to make it less likely for your exchange to rate-limit you.
+
+
+| Property Name | Description |
+| --- | --- |
+| `Account` | See [main configuration documentation](../../README.md#file-contents) |
+| `API` | See [main configuration documentation](../../README.md#file-contents) |
+| `SECRET` | See [main configuration documentation](../../README.md#file-contents) |
+| `Passphrase` | See [main configuration documentation](../../README.md#file-contents) |
+| `RateLimit` | See [main configuration documentation](../../README.md#file-contents) |
+| `Retry` | See [main configuration documentation](../../README.md#file-contents) |
+| `Webhook` | Only used by Equilibrium. Ignored by JackrabbitRelay. <br> **Host:** If Equilibrium runs on a different server from your JackrabbitRelay instance, use that server's IP address. Otherwise, use `127.0.0.1` or `localhost`. <br> **Port:** Needs to match whatever port  |
+
 This example is for KuCoin, but applies to *all* exchanges where
 Equilibrium will be used. The Webhook **MUST** be present and point to
 your IP address/port entry for Jackrabbit Relay. 
@@ -171,7 +186,7 @@ This launches Equilibrium. The arguments are as follows:
 | Argument | Example   | Description |
 | --- | --------- | -------------------- |
 | 1 | `ftxus`   | Exchange             |
-| 2 | `MAIN`    | Account (Case sensitive) |
+| 2 | `MAIN`    | Account or subaccount (Case sensitive) |
 | 3 | `trx/usd` | Asset                |
 | 4 | `2`       | Deviation/Take Profit/Boundary in percent form. (`2` maps to 2%) |
 | 5 | `1` or `Bal` | **Number of lots to buy** <br><br> A lot is the minimum position size. If you wanted a $10 position of an asset that has a minimum position size of $2.50, you would want `4` lots. <br><br> `Bal`: This tells Equilibrium to calculate the number of lots based on the balance of the (sub)account and the boundary. **NOTE**: This also tells Equilibrium to replace the value for the 6th argument. |
