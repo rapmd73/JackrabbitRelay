@@ -184,7 +184,7 @@ git pull https://github.com/rapmd73/JackrabbitRelay
 **IMPORTANT** This only updates the files in the GitHub directory. **IT
 DOES NOT OVERWRITE ANY FILES IN THE WORKING DIRECTORIES**
 
-To update code that was install via the `./install` script, there is also an update script that will do this for you. It also updates the Extras and Equilibrium directories as applicable:
+To update code that was installed via the `./install` script, there is also an update script that will do this for you. It also updates the Extras and Equilibrium directories as applicable:
 
 ```bash
 cd /home/GitHub/JackrabbitRelay

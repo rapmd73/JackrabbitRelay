@@ -230,20 +230,6 @@ def main():
         Active=keys[CurrentKey]
         JRRapi.SetExchangeAPI(exchange,Active)
 
-        # The rationale behind this is that as the price
-        # drops, so does the percentage require to make each
-        # boundary. In shorting, this will mean excessive
-        # purchases. The only real way to counter this is to
-        # force the buying percentage to be based upon the 
-        # all time high, just as the long PCT is at grid reset.
-        # The ATH is then used at 4 time the percentage boundary
-        # to ensure that runaway markets (DASH) don't destroy
-        # the portfolio.
-
-        if direction=='short':
-            if close>AllTimeHigh:
-                AllTimeHigh=close
-
         if Trade['Counter']==0:
             if not first and once:
                 JRRlog.SuccessLog("Equilibrium","One cycle completed")
