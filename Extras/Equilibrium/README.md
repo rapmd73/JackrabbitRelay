@@ -76,22 +76,31 @@ cd /home/GitHub/JackrabbitRelay/Extras/Equilibrium
 ```
 
 ## Reboot startup
-
-For Equilibrium to auto start after a reboot, the following line
-needs to be added to your crontab. 
+For Equilibrium to auto start after a reboot, a line such as the following needs to be added to your crontab. 
 
 ```crontab
-@reboot ( /home/Equilibrium/Launcher ftxus MAIN trx/usd 2 1 PAPER & ) > /dev/null 2>&1
+@reboot ( /home/Equilibrium/Launcher ftxus MAIN trx/usd 2 1 1 PAPER & ) > /dev/null 2>&1
 ```
 
 Please be aware that the exchange, coin, and other parameters **MUST**
-match the below usage. The cronjob will only work properly when it is
+match the configuration as described [below](#configuration-files). The cronjob will only work properly when it is
 aligned with a tested working coin.
 
 You should extensively test your coin first with a virtual console
 **before** setting up a cronjob.
 
-## Configuration
+## Manual startup
+Use a command such as the following command.
+
+```bash
+( /home/Equilibrium/Launcher ftxus MAIN trx/usd 2 1 1 PAPER & ) > /dev/null 2>&1
+```
+
+## Configuration files
+### Location and file names
+Equilibrium use the [same configuration files as Jackrabbit Relay](../../README.md#configuration-files).
+
+### File contents
 
 Equilibrium uses the same configuration as Jackrabbit Relay, *with one
 very import addition*. Your configuration must have a webhook item on

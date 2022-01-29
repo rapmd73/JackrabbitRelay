@@ -174,7 +174,7 @@ completed next.
 
 ## Updating
 
-Please be sure to update Jackrabbit Relay frequently. The following commands can be used:
+Please be sure to update Jackrabbit Relay frequently. The following commands can be used to pull the latest code from GitHub:
 
 ```bash
 cd /home/GitHub/JackrabbitRelay
@@ -183,6 +183,13 @@ git pull https://github.com/rapmd73/JackrabbitRelay
 
 **IMPORTANT** This only updates the files in the GitHub directory. **IT
 DOES NOT OVERWRITE ANY FILES IN THE WORKING DIRECTORIES**
+
+To update code that was install via the `./install` script, there is also an update script that will do this for you. It also updates the Extras and Equilibrium directories as applicable:
+
+```bash
+cd /home/GitHub/JackrabbitRelay
+./update
+```
 
 ## Structure
 
