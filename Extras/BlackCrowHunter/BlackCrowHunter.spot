@@ -1,0 +1,359 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit BlackCrowHunter
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay/Base/Library')
+import os
+import time
+import requests
+import json
+import pathlib
+
+import JRRconfig
+import JRRlog
+import JRRapi
+import JRRsupport
+
+blank=" "
+Header='BlackCrowHunter '+JRRconfig.Version
+
+def SendWebhook(Active,exchangeName,account,pair,action,amount):
+    exc='"Exchange":"'+exchangeName+'", "Market":"Spot"'
+    account='"Account":"'+account+'"'
+    sym='"Asset":"'+pair+'"'
+    direction='"Action":"'+action.lower()+'"'
+    psize='"Base":"'+str(amount)+'"'
+
+    cmd='{ '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
+
+    headers={'content-type': 'text/plain', 'Connection': 'close'}
+
+    resp=None
+    res=None
+    try:
+        resp=requests.post(Active['Webhook'],headers=headers,data=cmd)
+        try:
+            r=json.loads(resp.text)
+            try:
+                res=r['message']
+            except:
+                res=json.dumps(r)
+        except:
+            res=resp.text
+    except:
+        res=None
+
+    return res
+
+def CheckStopTracer(exchangeName,account,Asset):
+    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.stop'
+    if os.path.exists(fn):
+        JRRlog.SuccessLog("STOP", "tracer detected")
+
+def ReadData(exchangeName,account,Asset):
+    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.BlackCrow'
+    if os.path.exists(fn):
+        JRRlog.WriteLog("Reading Data file")
+        fh=open(fn,'r')
+        for line in fh:
+            Trade={}
+            Trade=json.loads(line.rstrip())
+        fh.close()
+        JRRlog.WriteLog(f"|- {Asset:10} {Trade['Average']:.8f} {Trade['TakeProfit']:.8f}")
+    else:
+        Trade={}
+        Trade['Total']=0.0
+        Trade['Average']=0.0
+        Trade['TakeProfit']=0.0
+        Trade['SumCount']=0
+        Trade['CandleCount']=0
+
+    return(Trade)
+
+def WriteData(exchangeName,account,Trade,Asset):
+    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.BlackCrow'
+
+    if Trade!=None:
+        fh=open(fn,'w')
+        fh.write(json.dumps(Trade)+"\n")
+        fh.close()
+    else:
+        if os.path.exists(fn):
+            os.remove(fn)
+
+###
+### Algorithm support
+###
+
+def IsRedCandle(Previous,Current):
+    po=Previous[1]
+    pc=Previous[4]
+    co=Current[1]
+    cc=Current[4]
+
+    red=co>cc and cc<pc
+
+    return red
+
+def IsGreenCandle(Previous,Current):
+    po=Previous[1]
+    pc=Previous[4]
+    co=Current[1]
+    cc=Current[4]
+
+    green=co<cc and cc>pc
+
+    return green
+
+# Black Crow Algorithm
+#
+# Count the number of downward candles, must match candle count from command line
+# Last candle MUST be upward
+
+def IsBlackCrow(candles,CandleCount):
+    i=len(candles)-1
+    # Find 3 down candles in a row followed by 1 up candle
+
+    IsDown=False
+    IsBuy=False
+    IsCandlePattern=False
+
+    offset=1
+    for z in range(offset,CandleCount+offset):
+        x=i-z
+        red=IsRedCandle(candles[x-2],candles[x-1])
+        if z==offset:
+            IsDown=red
+        else:
+            IsDown=IsDown and red
+
+    # Last candle shows up swing, if so, BUY
+    IsUp=IsGreenCandle(candles[i-1],candles[i])
+
+    if IsDown and IsUp:
+        return True
+    return False
+
+# Read config file
+
+def ReadConfig(fn):
+    Required=[ "Exchange", "Account", "Asset", "StartCandles", "TakeProfit", "BuyLots" ]
+
+    Config={}
+
+    JRRlog.WriteLog("Reading configuration file")
+
+    if os.path.exists(fn):
+        try:
+            raw=pathlib.Path(fn).read_text()
+        except:
+            JRRlog.ErrorLog("ReadConfig",f"Can't read {fn}")
+
+        txt=JRRsupport.pFilter(raw)
+
+        try:
+            Config=json.loads(txt)
+        except:
+            JRRlog.ErrorLog("ReadConfig",f"Damaged JSON: {txt}")
+    else:
+        JRRlog.ErrorLog("ReadConfig",'Config file not found.')
+
+    for i in Config:
+        JRRlog.WriteLog(f"|- {i}: {Config[i]}")
+
+    for i in Required:
+        if i not in Config:
+            JRRlog.ErrorLog("ReadConfig",f"Missing required item: {i}")
+
+    Config['Exchange']=Config['Exchange'].lower()
+    Config['Asset']=Config['Asset'].upper()
+    Config['StartCandles']=int(Config['StartCandles'])
+    Config['BuyLots']=float(Config['BuyLots'])
+    Config['TakeProfit']=float(Config['TakeProfit'])/100
+
+    return(Config)
+
+###
+### Main code base. Place order on exchange
+###
+
+def main():
+    JRRlog.WriteLog(Header)
+
+    if len(sys.argv)>1:
+        Config=ReadConfig(sys.argv[1])
+    else:
+        JRRlog.ErrorLog("BlackCrowHunter","no config file provided")
+
+    if Config['StartCandles']<3:
+        print("A black crow pattern requires a minimum of 3 candles.")
+        sys.exit(1)
+
+    if 'Multiplier' in Config:
+        Multiplier=float(Config['Multiplier'])
+    else:
+        Multiplier=1
+
+    paper=False
+    if 'Paper' in Config:
+        paper=True
+
+    keys=JRRsupport.ReadConfig(Config['Exchange'],Config['Account'])
+    JRRlog.WriteLog("API(s)/Secret(s) loaded for "+Config['Exchange']+", (sub)account: "+Config['Account'])
+
+    CurrentKey=(os.getpid()%len(keys))
+    Active=keys[CurrentKey]
+
+    if not "Webhook" in Active:
+        JRRlog.ErrorLog("BlackCrowHunter","Webhook NOT present")
+
+    exchange=JRRapi.ExchangeLogin(Config['Exchange'],Active)
+
+    if "Retry" in Active:
+        RetryLimit=int(Active['Retry'])
+        JRRlog.WriteLog("|- API Retry limit set to "+str(RetryLimit)+' times')
+    else:
+        RetryLimit=10
+
+    markets=JRRapi.GetMarkets(exchange,Config['Asset'],RetryLimit)
+
+# This is where a looping method would go if this were to serve a single exchange
+# with multiple Config['Asset']s.
+
+# Get asset information
+
+    base=exchange.markets[Config['Asset']]['base']
+    quote=exchange.markets[Config['Asset']]['quote']
+
+    JRRlog.WriteLog("Base currency:  "+base)
+    JRRlog.WriteLog("Quote currency: "+quote)
+
+    minimum,mincost=JRRapi.GetMinimum(exchange,Config['Asset'],False,False,RetryLimit)
+    BuyAmount=minimum*Config['BuyLots']
+
+    JRRlog.WriteLog(f"Lot size: {Config['BuyLots']:.8f}")
+
+    Trade=ReadData(Config['Exchange'],Config['Account'],Config['Asset'])
+    if Trade['CandleCount']==0:
+        Trade['CandleCount']=Config['StartCandles']
+        Trade['Martingale']=Config['BuyLots']
+
+    first=True
+
+    while True:
+        # Rotate the key
+
+        CurrentKey=((CurrentKey+1)%len(keys))
+        Active=keys[CurrentKey]
+        JRRapi.SetExchangeAPI(exchange,Active)
+
+        bal=JRRapi.GetBalance(exchange,base,RetryLimit)
+
+        # Rotate the key
+
+        CurrentKey=((CurrentKey+1)%len(keys))
+        Active=keys[CurrentKey]
+        JRRapi.SetExchangeAPI(exchange,Active)
+
+        candles=JRRapi.FetchCandles(exchange,Config['Asset'],'1m',Trade['CandleCount']+3,RetryLimit)
+
+        IsCandlePattern=IsBlackCrow(candles,Trade['CandleCount'])
+
+        idx=len(candles)-1
+        close=round(candles[idx][4],8)
+
+        # Rotate the key
+
+        CurrentKey=((CurrentKey+1)%len(keys))
+        Active=keys[CurrentKey]
+        JRRapi.SetExchangeAPI(exchange,Active)
+
+        # Place thwe orders
+
+        if Trade['SumCount']>0 and close>Trade['TakeProfit']:
+            if not paper:
+                res=SendWebhook(Active,Config['Exchange'],Config['Account'],Config['Asset'],'close',BuyAmount*Trade['Martingale'])
+                if res.find('Order Confirmation ID')>-1:
+                    WriteData(Config['Exchange'],Config['Account'],None,Config['Asset'])
+                    result=close-Trade['Average']
+                    JRRlog.WriteLog(f"{Config['Asset']:10} Sell {close:16.8f} {result:16.8f} {Trade['Total']:16.8f}")
+                    Trade['SumCount']=0
+                    Trade['Total']=0.0
+                    Trade['Average']=0.0
+                    Trade['TakeProfit']=0.0
+                    Trade['Martingale']=Config['BuyLots']*Multiplier
+            else:
+                WriteData(Config['Exchange'],Config['Account'],None,Config['Asset'])
+                result=close-Trade['Average']
+                JRRlog.WriteLog(f"{Config['Asset']:10} Sell {close:16.8f} {result:16.8f} {Trade['Total']:16.8f}")
+                Trade['SumCount']=0
+                Trade['Total']=0.0
+                Trade['Average']=0.0
+                Trade['TakeProfit']=0.0
+                Trade['Martingale']=Config['BuyLots']*Multiplier
+
+        if IsCandlePattern and Trade['SumCount']>0.0 and close<Trade['Average']:
+            # If the order doesn't go through, the previous state is needed to 
+            # fix everything. Needed only for live trading.
+            OldTrade=Trade
+            # Martingale
+            Trade['Martingale']*=2
+            if not paper:
+                res=SendWebhook(Active,Config['Exchange'],Config['Account'],Config['Asset'],'buy',BuyAmount*Trade['Martingale'])
+                if res.find('Order Confirmation ID')>-1:
+                    Trade['SumCount']+=Trade['Martingale']
+                    Trade['Total']+=close*Trade['Martingale']
+                    Trade['Average']=Trade['Total']/Trade['SumCount']
+                    Trade['TakeProfit']=Trade['Average']+(Trade['Average']*Config['TakeProfit'])
+                    # In order to keep Martingale from getting out of
+                    # control, increase the number of consecutive candles
+                    # for the next black crow.
+                    if Trade['SumCount']>(Trade['CandleCount']/2):
+                        Trade['CandleCount']+=int(Trade['CandleCount']/3)
+                    JRRlog.WriteLog(f"{Config['Asset']:10} Buy  {close:16.8f} {Trade['Average']:16.8f} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:3.0f}")
+                    WriteData(Config['Exchange'],Config['Account'],Trade,Config['Asset'])
+                else:
+                    Trade=OldTrade
+            else:
+                Trade['SumCount']+=Trade['Martingale']
+                Trade['Total']+=close*Trade['Martingale']
+                Trade['Average']=Trade['Total']/Trade['SumCount']
+                Trade['TakeProfit']=Trade['Average']+(Trade['Average']*Config['TakeProfit'])
+                if Trade['SumCount']>(Trade['CandleCount']/2):
+                    Trade['CandleCount']+=int(Trade['CandleCount']/3)
+                JRRlog.WriteLog(f"{Config['Asset']:10} Buy  {close:16.8f} {Trade['Average']:16.8f} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:3.0f}")
+                WriteData(Config['Exchange'],Config['Account'],Trade,Config['Asset'])
+
+        if IsCandlePattern and Trade['SumCount']==0:
+            Trade['CandleCount']=Config['StartCandles']
+            Trade['Martingale']=Config['BuyLots']*Multiplier
+            if not paper:
+                res=SendWebhook(Active,Config['Exchange'],Config['Account'],Config['Asset'],'buy',BuyAmount)
+                if res.find('Order Confirmation ID')>-1:
+                    Trade['SumCount']=1
+                    Trade['Total']=close
+                    Trade['Average']=Trade['Total']/Trade['SumCount']
+                    Trade['TakeProfit']=Trade['Average']+(Trade['Average']*Config['TakeProfit'])
+                    JRRlog.WriteLog(f"{Config['Asset']:10} Buy  {close:16.8f} {blank:16} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:3.0f}")
+                    WriteData(Config['Exchange'],Config['Account'],Trade,Config['Asset'])
+            else:
+                Trade['SumCount']=1
+                Trade['Total']=close
+                Trade['Average']=Trade['Total']/Trade['SumCount']
+                Trade['TakeProfit']=Trade['Average']+(Trade['Average']*Config['TakeProfit'])
+                JRRlog.WriteLog(f"{Config['Asset']:10} Buy  {close:16.8f} {blank:16} {Trade['TakeProfit']:16.8f} {Trade['CandleCount']:2.0f} {Trade['Martingale']:3.0f}")
+                WriteData(Config['Exchange'],Config['Account'],Trade,Config['Asset'])
+
+        first=False
+        JRRsupport.ElasticSleep(60)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Terminated")
+

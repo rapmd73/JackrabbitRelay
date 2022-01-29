@@ -1,0 +1,208 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit BlackCrowHunter
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay/Base/Library')
+import os
+import time
+import datetime
+import requests
+import json
+import pathlib
+
+import JRRconfig
+import JRRlog
+import JRRapi
+import JRRsupport
+
+blank=" "
+msec = 1000
+minute = 60 * msec
+hour = 60 * minute
+day = 24 * hour
+hold = 10
+
+def IsRedCandle(Previous,Current):
+    po=Previous[1]
+    pc=Previous[4]
+    co=Current[1]
+    cc=Current[4]
+
+    red=co>cc and cc<pc
+
+    return red
+
+def IsGreenCandle(Previous,Current):
+    po=Previous[1]
+    pc=Previous[4]
+    co=Current[1]
+    cc=Current[4]
+
+    green=co<cc and cc>pc
+
+    return green
+
+# Black Crow Algorithm
+#
+# Count the number of downward candles, must match candle count from command line
+# Last candle MUST be upward
+
+def IsBlackCrow(candles,idx,CandleCount):
+    # Find 3 down candles in a row followed by 1 up candle
+
+    IsDown=False
+    IsBuy=False
+
+    offset=1
+    for z in range(offset,CandleCount+offset):
+        x=idx-z
+        red=IsRedCandle(candles[x-2],candles[x-1])
+        if z==offset:
+            IsDown=red
+        else:
+            IsDown=IsDown and red
+
+    # Last candle shows up swing, if so, BUY
+    IsUp=IsGreenCandle(candles[idx-1],candles[idx])
+
+    if IsDown and IsUp:
+        return True
+    return False
+
+def ReadConfig(fn):
+    Required=[ "Timeframe", "Exchange", "Account", "Asset", "StartCandles", "TakeProfit", "BuyLots" ]
+
+    Config={}
+
+    if os.path.exists(fn):
+        try:
+            raw=pathlib.Path(fn).read_text()
+        except:
+            print(f"Can't read {fn}")
+            sys.exit(1)
+
+        txt=JRRsupport.pFilter(raw)
+
+        try:
+            Config=json.loads(txt)
+        except:
+            print(f"Damaged JSON: {txt}")
+            sys.exit(1)
+    else:
+        print('Config file not found.')
+        sys.exit(1)
+
+    for i in Required:
+        if i not in Config:
+            print(f"Missing required item: {i}")
+            sys.exit(1)
+
+    Config['Exchange']=Config['Exchange'].lower()
+    Config['Asset']=Config['Asset'].upper()
+    Config['StartCandles']=int(Config['StartCandles'])
+    Config['TakeProfit']=float(Config['TakeProfit'])/100
+
+    return(Config)
+
+###
+### Main code base. Place order on exchange
+###
+
+def main():
+    Config=ReadConfig(sys.argv[1])
+
+    if Config['StartCandles']<3:
+        print("A black crow pattern requires a minimum of 3 candles.")
+        sys.exit(1)
+
+    fn=Config['Exchange']+'.'+Config['Account']+'.'+Config['Asset'].replace("-","").replace("/","").replace(':','')+'.'+Config['Timeframe']+'.history'
+    if not os.path.exists(fn):
+        print('You must run the candle collector first.\n')
+        print('./CandleCollector '+Config['Timeframe']+' '+Config['Exchange']+' '+Config['Account']+' '+Config['Asset']+' <#Days, ie 30>')
+        sys.exit(1)
+
+    keys=JRRsupport.ReadConfig(Config['Exchange'],Config['Account'])
+
+    CurrentKey=(os.getpid()%len(keys))
+    Active=keys[CurrentKey]
+
+    exchange=JRRapi.ExchangeLogin(Config['Exchange'],Active,Notify=False)
+
+    if "Retry" in Active:
+        RetryLimit=int(Active['Retry'])
+    else:
+        RetryLimit=10
+
+    candles=[[]]
+    print('Reading historic data...')
+    fn=Config['Exchange']+'.'+Config['Account']+'.'+Config['Asset'].replace("-","").replace("/","").replace(':','')+'.'+Config['Timeframe']+'.history'
+    fh=open(fn,'r')
+    while True:
+        line=fh.readline().strip()
+        if not line:
+            break
+        n=line.split(' ')
+        data=[0,0,0,0,0,0]
+        for i in range(len(n)):
+            data[i]=float(n[i])
+        candles.append(data)
+    fh.close()
+
+    Average=0.0
+    SumCount=0
+    Total=0.0
+    Martingale=1
+    offset=1
+    tp=0.0
+
+    CandleCount=Config['StartCandles']
+
+    IsBuy=False
+    IsCandlePattern=False
+
+    for i in range(CandleCount+3,len(candles)):
+        t=candles[i][0]/1000
+
+        timestamp=datetime.datetime.fromtimestamp(t)
+        dt=timestamp.strftime('%Y-%m-%d %H:%M')
+
+        IsCandlePattern=IsBlackCrow(candles,i,CandleCount)
+        close=candles[i][4]
+
+        if SumCount>0.0 and close>tp:
+            result=close-Average
+            print(f"{dt:12} Sell {close:16.8f} {result:16.8f} {Total:16.8f}")
+            SumCount=0
+            Total=0.0
+            Average=0.0
+            Martingale=1
+
+        if IsCandlePattern and SumCount>0.0 and close<Average:
+            Martingale*=2
+            SumCount+=Martingale
+            Total+=close*Martingale
+            Average=Total/SumCount
+            tp=Average+(Average*Config['TakeProfit'])
+            if SumCount>(CandleCount/2):
+                CandleCount+=int(CandleCount/3)
+            print(f"{dt:12} Buy  {close:16.8f} {Average:16.8f} {tp:16.8f} {CandleCount:2.0f} {Martingale:3.0f}")
+
+        if IsCandlePattern and SumCount==0:
+            CandleCount=Config['StartCandles']
+            SumCount=1
+            Total=close
+            Average=Total/SumCount
+            tp=Average+(Average*Config['TakeProfit'])
+            Martingale=1
+            print(f"{dt:12} Buy  {close:16.8f} {blank:16} {tp:16.8f}")
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Terminated")
+

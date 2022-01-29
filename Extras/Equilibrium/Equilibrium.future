@@ -51,6 +51,15 @@ def SendWebhook(Active,exchangeName,account,pair,action,amount):
 
     return res
 
+def GetOrderID(res):
+    s=res.find('ID:')+4
+    for e in range(s,len(res)):
+        if res[e]=='\n':
+            break
+    oid=res[s:e]
+
+    return oid
+
 def CheckStopTracer(exchangeName,account,Asset):
     fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.stop'
     if os.path.exists(fn):
@@ -137,15 +146,23 @@ def main():
 # Theory:
 #
 # Long direction trading:
-#       Buy when price is below boundary.   API: short
-#       Sell when price is above boundary.  API: long
+#       Buy when price is below boundary.   API: long
+#       Sell when price is above boundary.  API: short
 #
 # Short direction trading:
-#       Buy when price is above boundary.   API: long
-#       Sell when price is below boundary.  API: short
+#       Buy when price is above boundary.   API: short
+#       Sell when price is below boundary.  API: long
+#
+# Realization: PCT value needs to be set to ATH like long positions.
+#              Defensiveness is needed to stop excess accumulation.
 
-    BuyDir='long'
-    SellDir='short'
+    if direction=='long':
+        BuyDir='long'
+        SellDir='short'
+    else:
+        BuyDir='short'
+        SellDir='long'
+        AllTimeHigh=0.0
 
     keys=JRRsupport.ReadConfig(exchangeName,account)
     JRRlog.WriteLog("API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
@@ -188,6 +205,7 @@ def main():
 
     JRRlog.WriteLog(f"Lot size: {buyAMT:.8f}")
 
+    AllTimeHigh=0.0
     Trade=ReadGrid(exchangeName,account,pair)
 
     first=True
@@ -230,6 +248,20 @@ def main():
         Active=keys[CurrentKey]
         JRRapi.SetExchangeAPI(exchange,Active)
 
+        # The rational behind this is that as the price
+        # drops, so does the percentage require to make each
+        # boundary. In shorting, this will mean excessive
+        # purchases. The only real way to counter this is to
+        # forwce the buying percentage to be based upon the 
+        # all time high, just as the long PCT is at grid reset.
+        # The ATH is then used at 4 time the percentage boundary
+        # to ensure that runaway markets (DASH) don't destroy
+        # the portfolio.
+
+        if direction=='short':
+            if close>AllTimeHigh:
+                AllTimeHigh=close
+
         if Trade['Counter']==0:
             if not first and once:
                 JRRlog.SuccessLog("Equilibrium","One cycle completed")
@@ -246,13 +278,18 @@ def main():
             # to lock the direction of the trade.
 
             if not paper:
-                res=SendWebhook(Active,exchangeName,account,pair,direction,BuyAmount)
-#                res=SendWebhook(Active,exchangeName,account,pair,BuyDir,BuyAmount)
+                res=SendWebhook(Active,exchangeName,account,pair,BuyDir,BuyAmount)
                 if res.find('Order Confirmation ID')>-1:
+                    OrderID=GetOrderID(res)
                     if Trade['PCTValue']==0:
                         Trade['PCTValue']=round(close*pct,8)
+
                     Trade['Close']=round(close,8)
-                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+
+                    if direction=='short':
+                        Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
+                    else:
+                        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
                     Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                     Trade['Counter']+=1
 
@@ -263,7 +300,7 @@ def main():
                         bal=position['contracts']
 
                     vbuy='Buy/'+direction.capitalize()
-                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
+                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
 
                     WriteGrid(exchangeName,account,Trade,pair)
                 else:
@@ -271,7 +308,10 @@ def main():
             else:
                 Trade['PCTValue']=round(close*pct,8)
                 Trade['Close']=round(close,8)
-                Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                if direction=='short':
+                    Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
+                else:
+                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
                 Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                 Trade['Counter']+=1
 
@@ -289,13 +329,17 @@ def main():
         if IsBuy:
             if not paper:
                 res=SendWebhook(Active,exchangeName,account,pair,BuyDir,BuyAmount)
-                time.sleep(1)
+                JRRsupport.ElasticSleep(1)
                 if res.find('Order Confirmation ID')>-1:
+                    OrderID=GetOrderID(res)
                     if direction=='long':
                         Trade['Close']=round(Trade['Buy'],8)
                     else:
                         Trade['Close']=round(Trade['Sell'],8)
-                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                    if direction=='short':
+                        Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
+                    else:
+                        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
                     Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                     Trade['Counter']+=1
 
@@ -306,7 +350,7 @@ def main():
                         bal=position['contracts']
 
                     vbuy='Buy/'+BuyDir.capitalize()
-                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
+                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
 
                     WriteGrid(exchangeName,account,Trade,pair)
                 else:
@@ -316,7 +360,10 @@ def main():
                     Trade['Close']=round(Trade['Buy'],8)
                 else:
                     Trade['Close']=round(Trade['Sell'],8)
-                Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                if direction=='short':
+                    Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
+                else:
+                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
                 Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                 Trade['Counter']+=1
 
@@ -338,11 +385,15 @@ def main():
                     SellAMT=bal
                 res=SendWebhook(Active,exchangeName,account,pair,SellDir,SellAMT)
                 if res.find('Order Confirmation ID')>-1:
+                    OrderID=GetOrderID(res)
                     if direction=='long':
                         Trade['Close']=round(Trade['Sell'],8)
                     else:
                         Trade['Close']=round(Trade['Buy'],8)
-                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                    if direction=='short':
+                        Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
+                    else:
+                        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
                     Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                     Trade['Counter']-=1
 
@@ -354,9 +405,9 @@ def main():
 
                     vsell='Sell/'+SellDir.capitalize()
                     if Trade['Counter']>0:
-                        WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {bal:.8f}")
+                        WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
                     else:
-                        WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {bal:.8f}")
+                        WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {OrderID} {bal:.8f}")
                     WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
@@ -365,7 +416,10 @@ def main():
                     Trade['Close']=round(Trade['Sell'],8)
                 else:
                     Trade['Close']=round(Trade['Buy'],8)
-                Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+                if direction=='short':
+                    Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
+                else:
+                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
                 Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
                 Trade['Counter']-=1
 
@@ -377,7 +431,7 @@ def main():
                 WriteGrid(exchangeName,account,Trade,pair)
 
         first=True
-        time.sleep(1)
+        JRRsupport.ElasticSleep(1)
 
 if __name__ == '__main__':
     try:
