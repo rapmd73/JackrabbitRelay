@@ -30,7 +30,11 @@ def SendWebhook(Active,exchangeName,account,pair,action,amount):
     direction='"Action":"'+action.lower()+'"'
     psize='"Base":"'+str(amount)+'"'
 
-    cmd='{ '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
+    if "Identity" in Active:
+        idl='"Identity":"'+Active['Identity']+'"'
+        cmd='{ '+idl+', '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
+    else:
+        cmd='{ '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
 
     headers={'content-type': 'text/plain', 'Connection': 'close'}
 

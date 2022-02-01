@@ -25,9 +25,12 @@ hold = 30
 # Dirty support function to block HTML exchange payloads
 
 def StopHTMLtags(txt):
-    p=txt.find('<')
-    if p>-1:
-        return txt[:p]
+    try:
+        p=txt.find('<')
+        if p>-1:
+            return txt[:p]
+    except:
+        pass
     return txt
 
 # Register the exchange
@@ -174,6 +177,11 @@ def GetMinimum(exchange,pair,forceQuote,diagnostics,RetryLimit):
             if diagnostics:
                 JRRlog.WriteLog("| |- Minimum: "+f"{minimum:.8f}")
                 JRRlog.WriteLog("| |- Min Cost: "+f"{mincost:.8f}")
+
+    if minimum==0.0:
+        JRRlog.ErrorLog("Asset Analysis","minimum position size returmed as 0")
+    if mincost==0.0:
+        JRRlog.ErrorLog("Asset Analysis","minimum cost per position returmed as 0")
 
     return minimum,mincost
 

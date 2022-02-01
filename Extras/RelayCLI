@@ -5,11 +5,26 @@
 # 2021 Copyright © Robert APM Darin
 # All rights reserved unconditionally.
 
+import os
 import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
+import json
 import requests
 
+import JRRconfig
 import JRRsupport
+
+idl=""
+idf=JRRconfig.ConfigDirectory+'/Identity.cfg'
+if os.path.exists(idf):
+    cf=open(idf,'rt+')
+    try:
+        idl=json.loads(cf.readline())
+        ident='"Identity":"'+idl['Identity']+'", '
+    except:
+        print("Reading Configuration",'identity damaged')
+        sys.exit(1)
+    cf.close()
 
 if len(sys.argv) > 6:
     webhook=sys.argv[1]
@@ -29,9 +44,9 @@ direction='"Action":"'+action.lower()+'"'
 
 if len(sys.argv) > 7:
     psize='"Base":"'+str(sys.argv[7])+'"'
-    payload='{ '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
+    payload='{ '+ident+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
 else:
-    payload='{ '+exc+', '+account+', '+direction+', '+sym+' }'
+    payload='{ '+ident+exc+', '+account+', '+direction+', '+sym+' }'
 
 headers={'content-type': 'text/plain', 'Connection': 'close'}
 

@@ -6,7 +6,9 @@ sys.path.append('/home/JackrabbitRelay/Base/Library')
 import ccxt
 
 import JRRconfig
+import JRRsupport
 import JRRapi
+import JRRlog
 
 def main():
     if len(sys.argv) > 2:
@@ -53,10 +55,18 @@ def main():
     exchange.enableRateLimit=True
     exchange.rateLimit=RateLimit
 
-    try:
-        exchange.load_markets()
-    except Exception as e:
-        ErrorLog("Loading Markets",e)
+    done=False
+    c=0
+    while not done:
+        try:
+            exchange.load_markets()
+            done=True
+        except:
+            if c>4:
+                JRRlog.ErrorLog("Fetching Market","retries failed")
+            c+=1
+            JRRsupport.ElasticSleep(1)
+            pass
 
     for pair in exchange.markets:
         if pair[0]=='.' or pair.find(".d")>-1:
@@ -72,7 +82,7 @@ def main():
         try:
             ticker=exchange.fetchTicker(pair)
         except Exception as e:
-            ErrorLog("Fetching Ticker",e)
+            JRRlog.ErrorLog("Fetching Ticker",e)
 
         if ticker['info']!=None and "type" in ticker['info']:
             marketType=ticker['info']['type']

@@ -190,16 +190,34 @@ def pFilter(s):
 # Read the exchange config file and load API/SECRET for a given (sub)account.
 # MAIN is reserved for the main account
 
+# { "Indentity":"F}!2F[PI=-{e:7hM0Q4/642!m8;TL>S5LVfIb%)QzwP%9!@CWKwv#};e:3bPLcmEv/dnjC+NhY1D-rvb~037mOv(0J/9zmB-UD2ig1_I78b3=yK}N]xb4.}g^mLY@mctZ" }
+
 def ReadConfig(echg,account):
     keys=[]
-    fn=JRRconfig.ConfigDirectory+'/'+echg+'.cfg'
 
+    idl=None
+    idf=JRRconfig.ConfigDirectory+'/Identity.cfg'
+    if os.path.exists(idf):
+        cf=open(idf,'rt+')
+        try:
+            idl=json.loads(cf.readline())
+        except:
+            JRRlog.ErrorLog("Reading Configuration",'identity damaged')
+        cf.close()
+
+    fn=JRRconfig.ConfigDirectory+'/'+echg+'.cfg'
     if os.path.exists(fn):
         cf=open(fn,'rt+')
         for line in cf.readlines():
             if len(line.strip())>0 and line[0]!='#':
-                key=json.loads(line)
+                try:
+                    key=json.loads(line)
+                except:
+                    JRRlog.ErrorLog("Reading Configuration",'damaged: '+line)
                 if key['Account']==account:
+                    # Add identity to account reference
+                    if idl!=None:
+                        key= { **idl, **key }
                     keys.append(key)
         cf.close()
 

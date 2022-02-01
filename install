@@ -1,12 +1,13 @@
 #!/bin/bash
 pip3=`which pip3`
 
-$pip3 install ccxt
-
 cd /home/GitHub/JackrabbitRelay
 
-mkdir -p /home/JackrabbitRelay/Base
-mkdir -p /home/JackrabbitRelay/Config
-mkdir -p /home/JackrabbitRelay/Logs
-cp -r * /home/JackrabbitRelay
+for i in `cat requirements.txt` ; do
+    $pip3 install -U $i
+done
 
+mkdir -p /home/JackrabbitRelay/Base > /dev/null 2>&1
+mkdir -p /home/JackrabbitRelay/Config > /dev/null 2>&1
+mkdir -p /home/JackrabbitRelay/Logs > /dev/null 2>&1
+cp -r * /home/JackrabbitRelay
