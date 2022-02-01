@@ -28,7 +28,11 @@ def SendWebhook(Active,exchangeName,account,pair,action,amount):
     direction='"Action":"'+action.lower()+'"'
     psize='"Base":"'+str(amount)+'"'
 
-    cmd='{ '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
+    if "Identity" in Active:
+        idl='"Identity":"'+Active['Identity']+'"'
+        cmd='{ '+idl+', '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
+    else:
+        cmd='{ '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
 
     headers={'content-type': 'text/plain', 'Connection': 'close'}
 
@@ -349,7 +353,7 @@ def main():
                 WriteData(Config['Exchange'],Config['Account'],Trade,Config['Asset'])
 
         first=False
-        JRRsupport.ElasticSleep(60)
+        time.sleep(60)
 
 if __name__ == '__main__':
     try:

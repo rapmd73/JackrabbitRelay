@@ -104,6 +104,15 @@ def main():
     else:
         RetryLimit=1
 
+    if "Identity" in Active:
+        if "Identity" in Order:
+            if Order['Identity']==Active['Identity']:
+                JRRlog.WriteLog('Identity verification: PASSED')
+            else:
+                JRRlog.ErrorLog("Identity verification","FAILED: Identity does not match")
+        else:
+            JRRlog.ErrorLog("Identity verification","FAILED: Identity not in payload")
+
 # Check for maximum allowed assets
 
     if "MaxAssets" in Active:

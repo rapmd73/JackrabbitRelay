@@ -1,11 +1,12 @@
 #!/bin/bash
 pip3=`which pip3`
 
+cd /home/GitHub/JackrabbitRelay
+
 for i in `cat requirements.txt` ; do
     $pip3 install -U $i
 done
 
-cd /home/GitHub/JackrabbitRelay
 git pull https://github.com/rapmd73/JackrabbitRelay
 
 mkdir -p /home/JackrabbitRelay/Base/Library > /dev/null 2>&1
