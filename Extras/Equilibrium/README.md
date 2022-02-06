@@ -194,6 +194,13 @@ This launches Equilibrium. The arguments are as follows:
 | 7 | `Long` or `Short` | **Trade direction, used with futures ONLY.** Not used for SPOT. *(Simply leave this out for spot)* <br><br> Long or Short direction for trading. You can NOT use both in the same (sub)account, doing so WILL cause losses. |
 | 8 | `PAPER` | This activates the paper trading mode. Equilibrium will do everything except actually place orders to the exchange. <br><br> **Even in PAPER mode, you API/Secret and Webhook must be correct as Equilibrium WILL login into your account using your exchange's private API/rate limit values to get the prices.** <br><br> After testing in paper trading mode, you can remove this to enable live trading. |
 
+### Regarding Lot Size
+Within Equilibrium, the **lot size** refers to the smallest unit of trading that is possible on a given exchange and a given trading pair. For example, as of the last time this was edited:
+* On KuCoin, the lot size for TRX/USDT is 0.01 TRX.
+* On BinanceUS, the lot size for XLM/USD is 10 USD.
+
+Note that for the BinanceUS example, the lot size is 10 USD is denominated in USD, not in XLM. So, if only 1 lot is used for buy/sell and if the market is moving quickly, it is possible for an order to fail. This is because Equilibrium calculates amounts in terms of quote currency, not the base currency. So you may want to select a buy/sell lot size that is greater than 1 - say 1.01 or 1.1.
+
 ## Donations
 
 If you would like to help support this project financially, please use
