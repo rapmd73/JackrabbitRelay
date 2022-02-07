@@ -12,6 +12,7 @@ from datetime import datetime
 
 import JRRconfig
 import JRRlog
+import JRRledger
 import JRRsupport
 
 KuCoinSuppress429=True
@@ -192,7 +193,7 @@ def GetMinimum(exchange,pair,forceQuote,diagnostics,RetryLimit):
 
 # Place the order
 
-def PlaceOrder(exchange, pair, market, action, amount, close, RetryLimit, ReduceOnly):
+def PlaceOrder(exchange, account, pair, market, action, amount, close, RetryLimit, ReduceOnly):
     params = { 'reduce_only': ReduceOnly, }
     order=None
 
@@ -212,6 +213,8 @@ def PlaceOrder(exchange, pair, market, action, amount, close, RetryLimit, Reduce
         else:
             done=True
             JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
+            JRRledger.WriteLedger(exchange, account, pair, market, action, amount, close, order, RetryLimit)
+#            JRRlog.WriteLog("|- Order: "+str(order))
             return order
         retry+=1
 

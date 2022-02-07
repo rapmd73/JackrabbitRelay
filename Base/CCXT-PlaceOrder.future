@@ -268,7 +268,7 @@ def main():
         pass
 
     if amount>0.0:
-        JRRapi.PlaceOrder(exchange,pair, 'market', action, amount, close, RetryLimit, ReduceOnly)
+        JRRapi.PlaceOrder(exchange,account,pair, 'market', action, amount, close, RetryLimit, ReduceOnly)
 
         position=JRRapi.GetPosition(exchange,pair,RetryLimit)
         if position is None:
