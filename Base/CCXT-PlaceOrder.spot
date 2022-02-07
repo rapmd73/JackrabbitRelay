@@ -235,7 +235,7 @@ def main():
 # In spot markets, ReduceOnly is ALWAYS false
 
     if amount>0.0:
-        JRRapi.PlaceOrder(exchange,pair, 'market', action, amount, close, RetryLimit, False)
+        JRRapi.PlaceOrder(exchange,account,pair, 'market', action, amount, close, RetryLimit, False)
 
         bal=JRRapi.GetBalance(exchange,base,RetryLimit)
         sbal=f"{float(bal):.8f}"
