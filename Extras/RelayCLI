@@ -14,7 +14,7 @@ import requests
 import JRRconfig
 import JRRsupport
 
-idl=""
+ident=""
 idf=JRRconfig.ConfigDirectory+'/Identity.cfg'
 if os.path.exists(idf):
     cf=open(idf,'rt+')
