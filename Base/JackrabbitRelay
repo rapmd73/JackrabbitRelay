@@ -40,10 +40,34 @@ def WriteLog(addr,msg):
 
 # Process the trade and send it to the correct transactor
 
-def ProcessTrade(addr,payload):
+def ProcessSingleTrade(trades):
     res=""
+
     exchange=None
     ts=BaseDirectory+'/PlaceOrder.'
+
+    if "Exchange" in trades and "Market" in trades:
+        exchange=trades['Exchange'].lower()
+        market=trades['Market'].lower()
+        fn=ts+exchange+'.'+market
+
+        if os.path.exists(fn):
+            transactor= [ fn ]
+            subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            data=json.dumps(trades)
+
+            subp.stdin.write(data.encode())
+            res=subp.communicate()[0]
+            code=subp.poll()
+        else:
+            WriteLog(addr,f"Transactor not found for {exchange}/{market}")
+    else:
+        WriteLog(addr,"Exchange/Market not listed in payload")
+
+    return res
+
+def ProcessTrade(addr,payload):
+    res=""
 
     # This is where we need to break down the payload to see if it is a single JSON
     # or multiple JSON messages
@@ -52,54 +76,17 @@ def ProcessTrade(addr,payload):
         trades=json.loads(payload,strict=False)
     except:
         trades=None
-        WriteLog(addr,"Damaged payload:"+payload)
+        WriteLog(addr,"Damaged payload:"+str(payload))
 
     if trades!=None:
         if type(trades)==dict:
-            # identify Exchange for PlaceOrder transactor
-
-            if "Exchange" in trades:
-                exchange=trades['Exchange'].lower()
-                if "Market" in trades:
-                    market=trades['Market'].lower()
-                    fn=ts+exchange+'.'+market
-                else:
-                    fn=ts+exchange
-                if os.path.exists(fn):
-                    transactor= [ fn ]
-                    subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-                    data=json.dumps(trades)
-
-                    subp.stdin.write(data.encode())
-                    res=subp.communicate()[0]
-                    code=subp.poll()
-                else:
-                    WriteLog(addr,"Transactor not found for "+exchange)
-            else:
-                WriteLog(addr,"Exchange not listed in payload")
+            res=ProcessSingleTrade(trades)
         else:
             for trade in trades:
-                # identify Exchange for PlaceOrder transactor
+                res+=str(ProcessSingleTrade(trade))
 
-                if "Exchange" in trade:
-                    exchange=trade['Exchange'].lower()
-                    if "Market" in trades:
-                        market=trades['Market'].lower()
-                        fn=ts+exchange+'.'+market
-                    else:
-                        fn=ts+exchange
-                    if os.path.exists(fn):
-                        transactor= [ fn ]
-                        subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-                        data=json.dumps(trade)
-
-                        subp.stdin.write(str(data).encode())
-                        res=res+subp.communicate()[0]+"\n\n"
-                        code=subp.poll()
-                    else:
-                        WriteLog(addr,"Transactor not found for "+exchange)
-                else:
-                    WriteLog(addr,"Exchange not listed in payload")
+    if type(res)!=bytes:
+        res=res.encode('utf-8')
     return res
 
 class Handler(BaseHTTPRequestHandler):
@@ -133,6 +120,8 @@ class Handler(BaseHTTPRequestHandler):
         res=ProcessTrade(addr,payload)
 
         if res!=None:
+            if type(res)!=bytes:
+                res=res.encode('utf-8')
             self.wfile.write(res)
         return
 
