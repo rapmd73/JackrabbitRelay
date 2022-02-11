@@ -40,7 +40,7 @@ import JRRsupport
 def WriteLedger(exchange, account, pair, market, action, amount, close, order, RetryLimit):
     time=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
 
-    en=exchange.name.lower()
+    en=exchange.name.lower().replace(' ','')
     fn=JRRconfig.LedgerDirectory+'/'+en+'.'+account+'.ledger'
 
     ledger={}
