@@ -245,7 +245,17 @@ Now for the details:
 | `RateLimit` | This is the amount Relay waits between each exchange API call. <br> ALL EXCHANGES HAVE RATE LIMIT REQUIREMENTS. <br> This value represent milliseconds. 1000 is one second. If you leave this out, chances are you will be banned from your exchange, most likely temporarily. You will have to tweak this number based upon your exchange. |
 | `MaxAssets` | This is the maximum number of assets that can be traded simultaneously. |
 | `ReduceOnly` | This tells the exchange NOT to flip a position from long to short or vice-versa. <br> It can have any value as its presence is only required. |
+| `OrderTypeOverride` | This overrides the specified order type. |
 | `Reduction` | The amount to reduce your position to all your exchange to close it. Deprecated... <br> This is a percentage. Do NOT put a percent (%) sign. Use this ONLY if you receive errors closing a position. Finding the amount of the reduction is strictly trial and error. |
+
+Order types (for `OrderType`/`OrderTypeOverride`):
+
+| Property Name | Description |
+| :--- | :--- |
+| `Market` | Market order. You will pay taker fees |
+| `Limit` | Limit order. Exchange decides what you pay (maker/taker). Unlike market orders, limit order have a high rate of failure. |
+| `LimitTaker` | Limit order. You pay taker fee, This is a fill or kill order |
+| `LimitMaker` | Limit order. You pay maker fee. |
 
 Jackrabbit Relay supports multiple API keys per exchange (sub)account. This is
 accomplished by this format:
@@ -331,6 +341,12 @@ This example purchases BCH by the value of BTC
 
 ```json
 { "Exchange":"ftx","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"BCH/BTC","Quote":"1" }
+```
+
+This example purchases BCH by the value of BTC using a limit MAKER order
+
+```json
+{ "Exchange":"ftx","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"BCH/BTC","Quote":"1","OrderType":"LimitMaker","Close":"ASK" }
 ```
 
 This example purchase of a perpetual contract of AAVE with a leverage of 5
