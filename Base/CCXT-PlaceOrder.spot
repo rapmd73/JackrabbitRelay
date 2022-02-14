@@ -121,6 +121,12 @@ def main():
         else:
             JRRlog.ErrorLog("Identity verification","FAILED: Identity not in payload")
 
+# Check for order type override
+
+    if "OrderTypeOverride" in Active:
+        orderType=Active['OrderTypeOverride'].lower()
+        JRRlog.WriteLog('Order type Override: '+orderType)
+
 # Check for maximum allowed assets
 
     if "MaxAssets" in Active:
