@@ -192,19 +192,71 @@ def GetMinimum(exchange,pair,forceQuote,diagnostics,RetryLimit):
     return minimum,mincost
 
 # Place the order
+# Market - LimitTaker - IOC true, limit orders with taker fee, psuedo market orders
+#          LimitMaker - PostOnly true, full limit orders with maker fee
+
+def FetchExchangeOrderHistory(exchange, oi, pair, RetryLimit):
+    # Give the exchange time to settle
+    JRRsupport.ElasticSleep(1)
+
+    retry=0
+    done=False
+    fo=None
+    while not done:
+        try:
+            fo=exchange.fetchOrder(oi,symbol=pair)
+        except Exception as e:
+            if retry>=RetryLimit:
+                done=True
+                fo=None
+        else:
+            if fo['status']=='closed':
+                return True
+            if retry>=RetryLimit:
+                done=True
+        retry+=1
+        if not done and retry<RetryLimit:
+            JRRsupport.ElasticSleep(10)
+
+    return False
+
+def WaitLimitOrder(exchange,oi,pair,RetryLimit):
+    JRRlog.WriteLog("|- Waiting for limit order")
+    ohist=FetchExchangeOrderHistory(exchange,oi,pair,RetryLimit)
+
+    # cancel the order
+    if ohist==False:
+        try:
+            ct=exchange.cancel_order(oi,pair)
+        except:
+            pass
+    else:
+        return True
 
 def PlaceOrder(exchange, account, pair, market, action, amount, close, RetryLimit, ReduceOnly):
-    params = { 'reduce_only': ReduceOnly, }
+    params = {}
     order=None
+
+    m=market.lower()
+    if m=='limittaker':
+        m='limit'
+        params['timeInForce']='fok'
+    if m=='limitmaker':
+        m='limit'
+        params['postOnly']=True
 
     retry=0
     done=False
     while not done:
         try:
             if ReduceOnly==True:
-                order=exchange.create_order(pair, market, action, amount, close, params)
+                params['reduce_only']=ReduceOnly
+                order=exchange.create_order(pair, m, action, amount, close, params)
             else:
-                order=exchange.create_order(pair, market, action, amount, close)
+                if m=='limit':
+                    order=exchange.create_order(pair, m, action, amount, close, params)
+                else:
+                    order=exchange.create_order(pair, m, action, amount, close)
         except Exception as e:
             if retry>=RetryLimit:
                 JRRlog.ErrorLog("Placing Order",e)
@@ -212,9 +264,17 @@ def PlaceOrder(exchange, account, pair, market, action, amount, close, RetryLimi
                 JRRlog.WriteLog('Place Order Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
         else:
             done=True
-            JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
+            if m=='limit':
+                # wait no more then 3 minutes
+                successful=WaitLimitOrder(exchange,order['id'],pair,15)
+                if successful==True:
+                    JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
+                else:
+                    JRRlog.ErrorLog("Placing Order","limit order unsuccessful")
+            else:
+                JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
+
             JRRledger.WriteLedger(exchange, account, pair, market, action, amount, close, order, RetryLimit)
-#            JRRlog.WriteLog("|- Order: "+str(order))
             return order
         retry+=1
 

@@ -43,6 +43,13 @@ def main():
     market=Order['Market'].lower()
     JRRlog.WriteLog('|- Target Market: '+market)
 
+    if 'OrderType' in Order:
+        orderType=Order['OrderType'].lower()
+        JRRlog.WriteLog('|- Order Type: '+orderType)
+    else:
+        orderType='market'
+        JRRlog.WriteLog('|- Order Type: '+orderType)
+
     account=Order['Account']
     JRRlog.WriteLog('|- Account reference: '+account)
 
@@ -160,7 +167,19 @@ def main():
     if market not in marketType:
         JRRlog.ErrorLog(exchangeName, "wrong market type: "+marketType)
 
-    close=round(ohlcv[4],8)
+    if 'limit' in orderType:
+        if 'Close' in Order:
+            o=Order['Close'].lower()
+            if o=='bid':
+                close=round(float(ticker['bid']),8)
+            elif o=='ask':
+                close=round(float(ticker['ask']),8)
+            else:
+                close=round(float(Order['Close']),8)
+        else:
+            close=round(ohlcv[4],8)
+    else:
+        close=round(ohlcv[4],8)
 
     if not isMinimum:
         if hasUSD:
@@ -177,7 +196,11 @@ def main():
                 else:
                     amount=round(float(Order['Quote'])/close,8)
             else:
-                amount=round(float(Order['Base']),8)
+                if '%' in Order['Base']:
+                    bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
+                    amount=round(((float(Order['Base'].replace('%',''))/100)*bal)/close,8)
+                else:
+                    amount=round(float(Order['Base']),8)
 
         JRRlog.WriteLog("|- Minimum: "+f'{minimum:.8f}')
         JRRlog.WriteLog("|- Amount: "+f'{amount:.8f}')
@@ -235,7 +258,7 @@ def main():
 # In spot markets, ReduceOnly is ALWAYS false
 
     if amount>0.0:
-        JRRapi.PlaceOrder(exchange,account,pair, 'market', action, amount, close, RetryLimit, False)
+        JRRapi.PlaceOrder(exchange,account,pair, orderType, action, amount, close, RetryLimit, False)
 
         bal=JRRapi.GetBalance(exchange,base,RetryLimit)
         sbal=f"{float(bal):.8f}"
