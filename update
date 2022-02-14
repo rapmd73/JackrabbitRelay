@@ -3,9 +3,11 @@ pip3=`which pip3`
 
 cd /home/GitHub/JackrabbitRelay
 
-for i in `cat requirements.txt` ; do
-    $pip3 install -U $i
-done
+if [ x$1 != 'xnopull' ] ; then
+    for i in `cat requirements.txt` ; do
+        $pip3 install -U $i
+    done
+fi
 
 git pull https://github.com/rapmd73/JackrabbitRelay
 

@@ -26,24 +26,27 @@ if os.path.exists(idf):
         sys.exit(1)
     cf.close()
 
-if len(sys.argv) > 6:
+# orderType - LimitMaker/LimitTaker
+
+if len(sys.argv) > 7:
     webhook=sys.argv[1]
     exchangeName=sys.argv[2].lower()
     market=sys.argv[3].lower()
-    account=sys.argv[4]
-    action=sys.argv[5].lower()
-    pair=sys.argv[6].upper()
+    orderType=sys.argv[4].lower()
+    account=sys.argv[5]
+    action=sys.argv[6].lower()
+    pair=sys.argv[7].upper()
 else:
-    print("a webhook, an exchange, a market, a (sub)account, a direction, and an asset must be provided.")
+    print("a webhook, an exchange, a market, order type, a (sub)account, a direction, and an asset must be provided.")
     sys.exit(1)
 
-exc='"Exchange":"'+exchangeName+'", "Market":"'+market+'"'
+exc='"Exchange":"'+exchangeName+'", "Market":"'+market+'", "OrderType":"'+orderType+'"'
 account='"Account":"'+account+'"'
 sym='"Asset":"'+pair+'"'
 direction='"Action":"'+action.lower()+'"'
 
-if len(sys.argv) > 7:
-    psize='"Base":"'+str(sys.argv[7])+'"'
+if len(sys.argv) > 8:
+    psize='"Base":"'+str(sys.argv[8])+'"'
     payload='{ '+ident+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
 else:
     payload='{ '+ident+exc+', '+account+', '+direction+', '+sym+' }'
