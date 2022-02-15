@@ -89,11 +89,6 @@ def main():
             else:
                 JRRlog.ErrorLog(exchangeName,"Exchange not supported")
 
-# Special settings
-
-    if "createMarketBuyOrderRequiresPrice" in exchange.options:
-        JRRlog.ErrorLog(exchangeName,"Exchange not supported")
-
     # Set FTX and FTX US subaccount. Not sure if I need to reset API/secret yet.
 
     if account.upper()!='NONE':

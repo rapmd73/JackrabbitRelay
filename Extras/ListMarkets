@@ -45,13 +45,6 @@ def main():
             print("Invalid exchange")
             sys.exit(1)
 
-    try:
-        if  "createMarketBuyOrderRequiresPrice" in exchange.options:
-            print("Exchange not supported")
-            sys.exit(1)
-    except KeyError as err:
-        print(f"Key not found in exchange.options: {err}")
-
     exchange.enableRateLimit=True
     exchange.rateLimit=RateLimit
 
