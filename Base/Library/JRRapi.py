@@ -139,6 +139,11 @@ def GetAssetMinimum(exchange,pair,diagnostics,RetryLimit):
         if exchange.precisionMode==ccxt.TICK_SIZE:
             minimum=float(exchange.markets[pair]['precision']['amount'])
             mincost=minimum*close
+        else:
+            z='000000000'
+            factor=max(exchange.precisionMode,ccxt.TICK_SIZE)
+            minimum=float('0.'+str(z[:factor-1])+'1')
+            mincost=minimum*close
 
     if diagnostics:
         JRRlog.WriteLog(f"| |- Close: {close:.8f}")

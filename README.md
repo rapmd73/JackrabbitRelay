@@ -90,31 +90,36 @@ This is a theoretical list. The exchange name listed below is what MUST be
 used in your alert message to interact with a given exchange. Some
 exchange may NOT work, but I have no way of testing them.
 
-    aax                 ascendex        bequant         bibox
-    bigone              binance         binancecoinm    binanceus
-    binanceusdm         bit2c           bitbank         bitbay 
-    bitbns              bitcoincom      bitfinex        bitfinex2 
-    bitflyer            bitforex        bithumb         bitmex 
-    bitpanda            bitrue          bitso           bitstamp 
-    bitstamp1           bittrex         bitvavo         bl3p 
-    blockchaincom       btcalpha        btcbox          btcmarkets 
-    btctradeua          btcturk         buda            bw 
-    bybit               bytetrade       coinbase        coinbaseprime 
-    coinbasepro         coincheck       coinfalcon      coinmate 
-    coinone             coinspot        crex24          cryptocom 
-    currencycom         delta           deribit         digifinex 
-    eqonex              equos           exmo            flowbtc 
-    ftx                 ftxus           gateio          gemini 
-    hitbtc              hitbtc3         hollaex         idex 
-    independentreserve  indodax         itbit           kraken 
-    kucoin              kucoinfutures   kuna            latoken 
-    latoken1            lbank           liquid          luno 
-    lykke               mercado         mexc            ndax 
-    novadax             oceanex         paymium         phemex 
-    poloniex            qtrade          ripio           stex 
-    therock             tidebit         tidex           timex 
-    vcc                 wavesexchange   xena            yobit 
-    zaif                zb              zipmex          zonda 
+These exchanges accept market and limit orders,
+
+    aax                  ascendex             bequant              bibox                bigone               
+    binance              binancecoinm         binanceus            binanceusdm          bit2c                
+    bitbank              bitbay               bitbns               bitcoincom           bitfinex             
+    bitfinex2            bitflyer             bitforex             bithumb              bitmex               
+    bitpanda             bitrue               bitso                bitstamp             bitstamp1            
+    bittrex              bitvavo              bl3p                 blockchaincom        btcalpha             
+    btcbox               btcmarkets           btctradeua           btcturk              buda                 
+    bw                   bybit                bytetrade            coinbase             coinbaseprime        
+    coinbasepro          coincheck            coinfalcon           coinmate             coinone              
+    coinspot             crex24               cryptocom            currencycom          delta                
+    deribit              digifinex            eqonex               equos                exmo                 
+    flowbtc              fmfwio               ftx                  ftxus                gateio               
+    gemini               hitbtc               hitbtc3              hollaex              idex                 
+    independentreserve   indodax              itbit                kraken               kucoin               
+    kucoinfutures        kuna                 latoken              latoken1             lbank                
+    liquid               luno                 lykke                mercado              mexc                 
+    ndax                 novadax              oceanex              paymium              phemex               
+    poloniex             qtrade               ripio                stex                 therock              
+    tidebit              tidex                timex                vcc                  wazirx               
+    xena                 yobit                zaif                 zb                   zipmex               
+    zonda                
+
+These exchanges accept only LIMIT orders,
+
+    bitget               bitmart              cdax                 cex                  coinex               
+    huobi                huobijp              huobipro             okcoin               okex                 
+    okex5                okx                  probit               upbit                wavesexchange        
+    whitebit             woo                  
 
 ## Requirements
 
