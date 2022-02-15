@@ -60,9 +60,6 @@ def ExchangeLogin(exchangeName,Active,Notify=True):
 def SetExchangeAPI(exchange,Active,notify=False):
     exchangeName=exchange.name.lower()
 
-    if "createMarketBuyOrderRequiresPrice" in exchange.options:
-        JRRlog.ErrorLog(exchangeName,"Exchange not supported")
-
     # Set API/Secret for every exchange
 
     exchange.apiKey=Active['API']
@@ -238,6 +235,8 @@ def PlaceOrder(exchange, account, pair, market, action, amount, close, RetryLimi
     order=None
 
     m=market.lower()
+    if "createMarketBuyOrderRequiresPrice" in exchange.options and m=='market':
+        m='limit'
     if m=='limittaker':
         m='limit'
         params['timeInForce']='fok'
