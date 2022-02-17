@@ -53,6 +53,14 @@ def main():
     JRRlog.WriteLog('|- Account reference: '+account)
 
     action=Order['Action'].lower()
+    if 'SignalSource' in Order:
+        ssrc=Order['SignalSource'].lower()
+        JRRlog.WriteLog('|- Signal Source: '+ssrc)
+        if ssrc=='tvstrategy':
+            if action=='buy':
+                action='long'
+            elif action=='sell':
+                action='short'
     JRRlog.WriteLog('|- Trade Action: '+action)
 
     pair=Order['Asset'].upper()
