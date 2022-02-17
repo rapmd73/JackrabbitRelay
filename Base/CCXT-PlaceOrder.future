@@ -52,6 +52,8 @@ def main():
     account=Order['Account']
     JRRlog.WriteLog('|- Account reference: '+account)
 
+# specifically remap buy/sell to long/short for TradingView strategies
+
     action=Order['Action'].lower()
     if 'SignalSource' in Order:
         ssrc=Order['SignalSource'].lower()
