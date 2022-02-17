@@ -378,6 +378,7 @@ Description of the payload
 | `USD` / `Base` / `Quote` | Choose only one to set the amount to be purchased/sold: <li>`USD` will only work if the asset has a corresponding USD pair to do a proper base conversion on.</li> <li> `Base` is the asset itself value, ie BTC, ADA, AAVE, so one. A base of 1 for BTC is to purchase 1 BTC.</li> <li>`Quote` is the value of the asset in its quote currency. For example, if you want to purchase BCH/BTC using the price value of BTC, then you specify your amount in the quote currency.</li> |
 | `Leverage` | For binanceusdm and ftx, this sets the leverage amount |
 | `Margin` | For binanceusdm, this sets the margin to `Crossed` or `Isolated`. |
+| `SignalSource` | If this is `TVstrategy`, the buy/sell will be remapped to long/short. |
 
 ### Actions
 | Action | Description |
