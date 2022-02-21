@@ -33,6 +33,7 @@ def SendWebhook(Active,exchangeName,account,pair,action,amount):
     else:
         cmd='{ '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
 
+    print(cmd)
     headers={'content-type': 'text/plain', 'Connection': 'close'}
 
     resp=None

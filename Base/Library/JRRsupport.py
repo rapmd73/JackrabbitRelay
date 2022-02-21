@@ -12,6 +12,7 @@ import time
 import json
 
 import JRRconfig
+import JRRapi
 import JRRlog
 
 # Reusable file locks, using atomic operations
@@ -147,7 +148,7 @@ def ReadAssetList(exchange,account,pair,mp,delete):
         for c in coins:
             t=(time.time()-coins[c])
             if t>(7*86400):
-                JRRlog.WriteLog('|- '+p+' aged out')
+                JRRlog.WriteLog('|- '+c+' aged out')
                 try:
                     coins.pop(c,None)
                 except:
@@ -166,6 +167,89 @@ def ReadAssetList(exchange,account,pair,mp,delete):
 
 def WriteAssetList(exchange,account,coins):
     fn=JRRconfig.LogDirectory+'/'+exchange+'.'+account+'.coinlist'
+
+    if coins==[]:
+        try:
+            os.remove(fn)
+        except:
+            pass
+    else:
+        fh=open(fn,'w')
+        fh.write(json.dumps(coins))
+        fh.close()
+
+# This list determines a fixed percentage for a coin per balance for the
+# life of the trade, bot just the individual position
+
+def ReadPCTValueList(exchange,account,pair,pct,close,delete,RetryLimit):
+    coins={}
+    amount=0
+    en=exchange.name.lower().replace(' ','')
+    quote=exchange.markets[pair]['quote']
+    fn=JRRconfig.LogDirectory+'/'+en+'.'+account+'.pctvalue'
+
+    p=pair.upper()
+    JRRlog.WriteLog('Checking amount/percentage for '+p)
+
+    fw=FileWatch(fn)
+    fw.Lock()
+
+    try:
+        if os.path.exists(fn):
+            cf=open(fn,'rt+')
+            buffer=cf.read()
+            cf.close()
+            coins=json.loads(buffer)
+
+            if not p in coins and not delete:
+                # Read the existing value
+                jpkt=json.loads(coin[p])
+                bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
+                jpkt['Time']=time.time()
+                amount=jpkt['Amount']
+                coins[p]=json.dumps(jpkt)
+                JRRlog.WriteLog('|- '+p+' added')
+            else:
+                if p in coins:
+                    if delete:
+                        JRRlog.WriteLog('|- '+p+' removed')
+                        try:
+                            coins.pop(p,None)
+                        except:
+                            pass
+        else:
+            if not delete:
+                jpkt={}
+                bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
+                jpkt['Time']=time.time()
+                jpkt['Amount']=round(((pct/100)*bal)/close,8)
+                amount=jpkt['Amount']
+                coins[p]=json.dumps(jpkt)
+                JRRlog.WriteLog('|- '+p+' added')
+
+        # Remove any coin over 7 days
+
+        for c in coins:
+            jpkt=json.loads(coins[c])
+            t=(time.time()-jpkt['Time'])
+            if t>(7*86400):
+                JRRlog.WriteLog('|- '+c+' aged out')
+                try:
+                    coins.pop(c,None)
+                except:
+                    pass
+
+        WritePCTValueList(exchange,account,coins)
+    except:
+        pass
+
+    fw.Unlock()
+
+    return amount
+
+def WritePCTValueList(exchange,account,coins):
+    en=exchange.name.lower().replace(' ','')
+    fn=JRRconfig.LogDirectory+'/'+en+'.'+account+'.pctvalue'
 
     if coins==[]:
         try:
