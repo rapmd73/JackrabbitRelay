@@ -149,6 +149,22 @@ This example purchase of a perpetual contract of AAVE with a leverage of 20, usi
 { "Exchange":"ftx","Market":"Future","Account":"MAIN","Action":"Buy","Asset":"AAVE/USD:USD","Base":"1","Leverage":"20","Margin":"Isolated" }
 ```
 
+This example will purchasw 1% of the total value of the account using the
+USD conversion amount. Market order is assumed.
+
+```json
+{ "Exchange":"kucoin","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"ADA/USDT","USD":"1%" }
+```
+
+This example closes the above. It is important to remember to maintain
+the percentage reference in closing a position. Relay only checks its
+internal tables as needed to retain maximum effecincy. That means you
+must explicitly tell it what tables to check.
+
+```json
+{ "Exchange":"kucoin","Market":"Spot","Account":"MAIN","Action":"Close","Asset":"ADA/USDT","USD":"1%" }
+```
+
 ## Donations
 
 If you would like to help support this project financially, please use
