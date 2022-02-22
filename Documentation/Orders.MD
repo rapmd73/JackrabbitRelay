@@ -1,5 +1,7 @@
 # JackrabbitRelay Payloads
 
+**WORKING DRAFT**
+
 This document details the various types of order payloads.
 
 ## Disclaimer
@@ -54,10 +56,11 @@ Description of the payload items
 | `Exchange` | This is one of the supported exchanges |
 | `Market` | This is the market you are trading. <table><tr><td>`Spot`<td><td>Working</td></tr><tr><td>`Future`<td><td>Working</td></tr><tr><td>`Margin`<td><td>In progress</td></tr></table> |
 | `Account` | All main accounts must be called `MAIN`. Subaccounts can be used (if your exchange supports them) and must be exactly as listed on the exchange. |
-| `OrderType` | This is one of the allowed [order types](#OrderT ypes) |
+| `OrderType` | This is one of the allowed [order types](#Order Types) |
 | `Action` | This is one of the [supported actions](#actions) |
 | `Asset` | The asset you are trading.  Must be exactly as the exchange lists it. Hint: Use [ListMarkets](Extras/README.md#listmarkets) to confirm |
-| `USD` / `Base` / `Quote` | Choose only one to set the amount to be purchased/sold: <li>`USD` will only work if the asset has a corresponding USD pair to do a proper base conversion on.</li> <li> `Base` is the asset itself value, ie BTC, ADA, AAVE, so one. A base of 1 for BTC is to purchase 1 BTC.</li> <li>`Quote` is the value of the asset in its quote currency. For example, if you want to purchase BCH/BTC using the price value of BTC, then you specify your amount in the quote currency.</li> |
+| `USD` / `Base` / `Quote` | Choose only one to set the amount to be purchased/sold: <li>`USD` will only work if the asset has a corresponding USD pair to do a proper base conversion on.</li> <li> `Base` is the asset itself value, ie BTC, ADA, AAVE, so one. A base of 1 for BTC is to purchase 1 BTC.</li> <li>`Quote` is the value of the asset in its quote currency. For example, if you want to purchase BCH/BTC using the price value of BTC, then you specify your amount in the quote currency.</li> The amount can be expressed in percentage form, which will reflct the percentage ofthe balance of the account. |
+| `Close` | For limit orders. This value can be `bid`, `ask`, or a value. If this is not present, the current closing price is used. |
 | `Leverage` | For binanceusdm and ftx, this sets the leverage amount |
 | `Margin` | For binanceusdm, this sets the margin to `Crossed` or `Isolated`. |
 | `SignalSource` | If this is `TVstrategy`, the buy/sell will be remapped to long/short. |
@@ -76,7 +79,7 @@ Description of the payload items
 | Action | Description |
 | :--- | :--- |
 | `Buy` | Purchase an asset. |
-| `Sell` | Sell a portion of asset. If amount is more than balance, the full position will be plosed. |
+| `Sell` | Sell a portion of asset. If amount is more than balance, the full position will be closed. |
 | `Close` | Sell all of the asset. |
 | `Long` | (Perpetuals) Opens a long position, and can flip a short to long (if `ReduceOnly` is not included in configuration). |
 | `Short` | (Perpetuals) Opens a short position, and can flip a long to short (if `ReduceOnly` is not included in configuration). |
