@@ -9,7 +9,7 @@ import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 from datetime import datetime
 
-Version="0.0.0.0.765"
+Version="0.0.0.0.770"
 LedgerDirectory="/home/JackrabbitRelay/Ledger"
 LogDirectory="/home/JackrabbitRelay/Logs"
 BaseDirectory='/home/JackrabbitRelay/Base'

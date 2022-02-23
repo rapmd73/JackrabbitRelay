@@ -254,7 +254,10 @@ def PlaceOrder(exchange, account, pair, market, action, amount, close, RetryLimi
     while not done:
         try:
             if ReduceOnly==True:
-                params['reduce_only']=ReduceOnly
+                if exchange.id=='binanceusdm':
+                    params['reduceOnly']='true'
+                else:
+                    params['reduce_only']=ReduceOnly
                 order=exchange.create_order(pair, m, action, amount, close, params)
             else:
                 if m=='limit':
