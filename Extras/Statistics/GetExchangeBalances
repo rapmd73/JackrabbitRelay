@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Equilibrium
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay/Base/Library')
+import os
+import time
+import json
+
+import JRRconfig
+import JRRlog
+import JRRapi
+import JRRsupport
+
+def ReadConfigFile(cfg):
+    keys=[]
+
+    fn=JRRconfig.ConfigDirectory+'/'+cfg
+    cf=open(fn,'rt+')
+    for line in cf.readlines():
+        if len(line.strip())>0 and line[0]!='#':
+            try:
+                key=json.loads(line)
+            except:
+                JRRlog.ErrorLog("Reading Configuration",'damaged: '+line)
+
+            found=False
+            for k in keys:
+                if key['Account']==k['Account']:
+                    found=True
+
+            if not found:
+                keys.append(key)
+    cf.close()
+
+    return keys
+
+###
+### Main code base. 
+###
+
+cfiles=os.listdir(JRRconfig.ConfigDirectory)
+
+for cf in cfiles:
+    if cf.find('.cfg')>-1:
+        # Skip the identity file
+        if cf=='Identity.cfg':
+            continue
+        keys=ReadConfigFile(cf)
+
+        en=cf.split('.')[0]
+        for Active in keys:
+            ac=Active['Account']
+
+            exchange=JRRapi.ExchangeLogin(en,Active,Notify=False)
+
+            if "Retry" in Active:
+                RetryLimit=int(Active['Retry'])
+            else:
+                RetryLimit=10
+
+            done=False
+            while not done:
+                try:
+                    markets=exchange.load_markets()
+                except:
+                    pass
+                else:
+                    done=True
+
+            done=False
+            while not done:
+                try:
+                    balance=exchange.fetch_balance()
+                except:
+                    pass
+                else:
+                    done=True
+
+            Balance={}
+            cnt=0
+            Balance['DateTime']=f'{time.time()}'
+
+            coinList=balance['total']
+            for coin in coinList:
+                bal=float(balance['total'][coin])
+
+                if bal>0.0:
+                    cnt+=1
+                    Balance[coin]=f'{bal:.8f}'
+
+            if exchange.has['fetchPositions']:
+                try:
+                    positions = exchange.fetch_positions()
+                    for pos in positions:
+                        bal=float(pos['contracts'])
+                        if bal>0.0:
+                            cnt+=1
+                            Balance[pos['symbol']]=f'{bal:.8f}'
+                except:
+                    pass
+
+            # Write to file
+
+            if cnt>0:
+                fn=JRRconfig.BalancesDirectory+'/'+en+'.'+ac+'.balances'
+                fh=open(fn,'a')
+                fh.write(json.dumps(Balance)+"\n")
+                fh.close()

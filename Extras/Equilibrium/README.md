@@ -97,7 +97,9 @@ Use a command such as the following command.
 ```
 
 ## Configuration files
+
 ### Location and file names
+
 Equilibrium use the [same configuration files as Jackrabbit Relay](../../README.md#configuration-files).
 
 ### File contents
