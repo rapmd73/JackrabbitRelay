@@ -11,9 +11,14 @@ fi
 
 git pull https://github.com/rapmd73/JackrabbitRelay
 
-mkdir -p /home/JackrabbitRelay/Base/Library > /dev/null 2>&1
-mkdir -p /home/JackrabbitRelay/Extras > /dev/null 2>&1
+mkdir -p /home/JackrabbitRelay > /dev/null 2>&1
+mkdir -p /home/JackrabbitRelay/Base > /dev/null 2>&1
+mkdir -p /home/JackrabbitRelay/Config > /dev/null 2>&1
+mkdir -p /home/JackrabbitRelay/Logs > /dev/null 2>&1
 mkdir -p /home/JackrabbitRelay/Ledger > /dev/null 2>&1
+mkdir -p /home/JackrabbitRelay/Statistics/Balances > /dev/null 2>&1
+mkdir -p /home/JackrabbitRelay/Statistics/Charts > /dev/null 2>&1
+
 cp -r /home/GitHub/JackrabbitRelay/Base/* /home/JackrabbitRelay/Base
 cp -r /home/GitHub/JackrabbitRelay/Extras/* /home/JackrabbitRelay/Extras
 

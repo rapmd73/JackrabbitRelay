@@ -293,9 +293,14 @@ Use the following command. Be sure to replace the 12345 with the proper port.
 ```
 
 ## Incoming Messages
-sent from TradingView or similar webhook based application. Any tool that can make HTTP requests, such as Postman or curl, can be used as well. These can be POST requests with the payload as the body. 
 
-HTTP request messages should be sent to the address can by the hostname (IP address) of your server, and the port specified above (under #reboot-startup and #manual-startup). For example:
+Messages sent from TradingView or similar webhook based application. Any
+tool that can make HTTP requests, such as Postman or curl, can be used as
+well. These can be POST requests with the payload as the body. 
+
+HTTP request messages should be sent to the address can by the hostname
+(IP address) of your server, and the port specified above 
+(under #reboot-startup and #manual-startup). For example:
 
 ```
 POST http://YOUR.VPS.IP.ADDRESS:12345 [with payload as described below]
@@ -304,90 +309,7 @@ POST http://YOUR.VPS.IP.ADDRESS:12345 [with payload as described below]
 
 ### The Payload
 
-Here are examples of the payload:
-
-This example purchased $30 of AAVE on the FTX US exchange.
-
-```json
-{ "Exchange":"ftxus","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"AAVE/USD","USD":"30" }
-```
-
-This example purchases the minimum amount of AAVE in USD
-
-```json
-{ "Exchange":"ftxus","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"AAVE/USD" }
-```
-
-This example sells $7 of AAVE
-
-```json
-{ "Exchange":"ftxus","Market":"Spot","Account":"MAIN","Action":"Sell","Asset":"AAVE/USD","USD":"7" }
-```
-
-This example sells th exchange minimum of AAVE
-
-```json
-{ "Exchange":"ftxus","Market":"Spot","Account":"MAIN","Action":"Sell","Asset":"AAVE/USD" }
-```
-
-This example close out or sells all of AAVE
-
-```json
-{ "Exchange":"ftxus","Market":"Spot","Account":"MAIN","Action":"Close","Asset":"AAVE/USD" }
-```
-
-This example purchases AAVE using its base value, in this case, 1 AAVE
-
-```json
-{ "Exchange":"kraken","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"AAVE/USD","Base":"1" }
-```
-
-This example purchases BCH by the value of BTC
-
-```json
-{ "Exchange":"ftx","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"BCH/BTC","Quote":"1" }
-```
-
-This example purchases BCH by the value of BTC using a limit MAKER order
-
-```json
-{ "Exchange":"ftx","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"BCH/BTC","Quote":"1","OrderType":"LimitMaker","Close":"ASK" }
-```
-
-This example purchase of a perpetual contract of AAVE with a leverage of 5
-
-```json
-{ "Exchange":"ftx","Market":"Future","Account":"MAIN","Action":"Buy","Asset":"AAVE/USD:USD","Base":"1","Leverage":"5" }
-```
-
-This example purchase of a perpetual contract of AAVE with a leverage of 20, using an isolated margin
-
-```json
-{ "Exchange":"ftx","Market":"Future","Account":"MAIN","Action":"Buy","Asset":"AAVE/USD:USD","Base":"1","Leverage":"20","Margin":"Isolated" }
-```
-
-Description of the payload
-
-| Property Name | Description |
-| :--- | :--- |
-| `Exchange` | This is one of the [supported exchanges](#exchanges) |
-| `Market` | This is the market you are trading. <table><tr><td>`Spot`<td><td>Working</td></tr><tr><td>`Future`<td><td>Working</td></tr><tr><td>`Margin`<td><td>In progress</td></tr></table> |
-| `Account` | All main accounts must be called `MAIN`. Subaccounts can be used (if your exchange supports them) and must be exactly as listed on the exchange. |
-| `Action` | This is one of the [supported actions](#actions) |
-| `Asset` | The asset you are trading.  Must be exactly as the exchange lists it. Hint: Use [ListMarkets](Extras/README.md#listmarkets) to confirm |
-| `USD` / `Base` / `Quote` | Choose only one to set the amount to be purchased/sold: <li>`USD` will only work if the asset has a corresponding USD pair to do a proper base conversion on.</li> <li> `Base` is the asset itself value, ie BTC, ADA, AAVE, so one. A base of 1 for BTC is to purchase 1 BTC.</li> <li>`Quote` is the value of the asset in its quote currency. For example, if you want to purchase BCH/BTC using the price value of BTC, then you specify your amount in the quote currency.</li> |
-| `Leverage` | For binanceusdm and ftx, this sets the leverage amount |
-| `Margin` | For binanceusdm, this sets the margin to `Crossed` or `Isolated`. |
-| `SignalSource` | If this is `TVstrategy`, the buy/sell will be remapped to long/short. |
-
-### Actions
-| Action | Description |
-| :--- | :--- |
-| `Buy` | Purchase an asset. |
-| `Sell` | Sell a portion of asset. If amount is more than balance, the full position will be plosed. |
-| `Close` | Sell all of the asset. |
-| `Long` | (Perpetuals) Opens a long position, and can flip a short to long (if `ReduceOnly` is not included in configuration). |
-| `Short` | (Perpetuals) Opens a short position, and can flip a long to short (if `ReduceOnly` is not included in configuration). |
+Information regarding the order payload can be found [here](/Documentation/README.md).
 
 ## Logging
 
