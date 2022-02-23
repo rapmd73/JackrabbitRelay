@@ -310,7 +310,7 @@ POST http://YOUR.VPS.IP.ADDRESS:12345 [with payload as described below]
 
 ### The Payload
 
-Information regarding the order payload can be found [here](./Documentation/README.md).
+Information regarding the order payload can be found [here](./Documentation/Order.md).
 
 ## Logging
 
