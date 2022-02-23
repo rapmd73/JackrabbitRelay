@@ -217,6 +217,7 @@ files:
 | `RelayLauncher` | This shell script sets the port and launches the server. It is the harness that keeps everything running and is what you place in your CronTab. |
 
 ## Configuration files
+
 ### Location and file names
 This would be placed in a folder called `/home/JackrabbitRelay/Config/` and
 named something like `ftxus.cfg`. This file would be the configuration for the FTX.US exchange.
@@ -309,7 +310,7 @@ POST http://YOUR.VPS.IP.ADDRESS:12345 [with payload as described below]
 
 ### The Payload
 
-Information regarding the order payload can be found [here](/Documentation/README.md).
+Information regarding the order payload can be found [here](./Documentation/README.md).
 
 ## Logging
 
