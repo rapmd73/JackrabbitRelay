@@ -45,7 +45,7 @@ if "Retry" in Active:
 else:
     RetryLimit=10
 
-markets=GetMarkets(exchange,pair,RetryLimit,Notify=false):
+markets=JRRapi.LoadMarkets(exchange,RetryLimit,Notify=False)
 
 done=False
 retry=0
