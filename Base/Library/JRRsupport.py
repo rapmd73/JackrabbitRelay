@@ -64,7 +64,7 @@ class FileWatch:
             except:
                 retry+=1
                 if retry>=RetryLimit:
-                    JRRlog.ErrorLog("MaxAsset","exclusive access request failed")
+                    JRRlog.ErrorLog("FileLock","exclusive access request failed")
             else:
                 done=True
 
@@ -206,6 +206,7 @@ def ReadPCTValueList(exchange,account,pair,pct,close,delete,RetryLimit):
                 jpkt=json.loads(coin[p])
                 bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
                 jpkt['Time']=time.time()
+                jpkt['Amount']=round(((pct/100)*bal)/close,8)
                 amount=jpkt['Amount']
                 coins[p]=json.dumps(jpkt)
                 JRRlog.WriteLog('|- '+p+' added')
