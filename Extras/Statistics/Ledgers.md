@@ -1,7 +1,9 @@
-# JackrabbitRelay Balance Logging System
+# JackrabbitRelay Ledger Charting System
 
-These modules record and chart the balances of all your accounts for
-statistical analysis.
+This module charts all ledger entries on a zero bias graph. Purchases are
+substrated from the balance, while sales are added to the balance. The
+result will either be a capital gain (above zero) or a capital loss
+(below zero).
 
 ## Disclaimer
 
@@ -43,7 +45,7 @@ responsibility. If you lose your account, that's entirely on you.
 
 Past performance is not indicative of future results. Investments involve
 substantial risk. Any past  results provided are intended as examples
-only and are in no way a reflection of what an individual  could have
+only and are in no way a reflection of what an individual could have
 made or lost in the same situation.
 
 ## Installation and Usage
@@ -51,26 +53,20 @@ made or lost in the same situation.
 This is an automated process that runs nightly and automatically. The
 only step required is to install the below line into your crontab.
 
-You can run them more frequently then once a day, but its really not
-beneficial. 
-
-**IMPORTANT**: The order of these lines is significant and need to be as
-listed for proper functionality.
+You can run this more frequently then once a day, but its really not
+beneficial, unless its tracking an aggressive Equilibrium account.
 
 ```crontab
-0 5 * * * /home/JackrabbitRelay/Extras/Statistics/GetExchangeBalances > /dev/null 2>&1
-0 7 * * * /home/JackrabbitRelay/Extras/Statistics/ChartExchangeBalances > /dev/null 2>&1
+0 3 * * *  /home/JackrabbitRelay/Extras/Statistics/ChartExchangeLedgers > /dev/null 2>&1
 ```
 
 ## Testing
 
 Run the below command lines. The output will be very minimal, but the
-results will be in the `/home/JackrabbitRelay/Statistics/Balances` and
-`/home/JackrabbitRelay/Statistics/Charts` folders.
+results will be in the `/home/JackrabbitRelay/Statistics/Charts` folder.
 
 ```bash
-/home/JackrabbitRelay/Extras/Statistics/GetExchangeBalances
-/home/JackrabbitRelay/Extras/Statistics/ChartExchangeBalances
+/home/JackrabbitRelay/Extras/Statistics/ChartExchangeLedgers
 ```
 
 ## Donations

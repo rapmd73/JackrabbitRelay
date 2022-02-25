@@ -58,6 +58,6 @@ for cf in cfiles:
 
             fn=JRRconfig.BalancesDirectory+'/'+en+'.'+ac+'.balances'
             cmd=JRRconfig.StatisticsDirectory+'/Balances '+en+' '+ac+' log '+fn
-            print('Checking ',en,ac)
+            print('Checking',en,ac)
             os.system(cmd)
 
