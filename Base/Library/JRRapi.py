@@ -575,3 +575,23 @@ def GetMarkets(exchange,pair,RetryLimit,Notify=True):
 
     return markets
 
+def LoadMarkets(exchange,RetryLimit,Notify=True):
+    retry=0
+    done=False
+    while not done:
+        try:
+            markets=exchange.load_markets()
+        except Exception as e:
+            if retry>=RetryLimit:
+                JRRlog.ErrorLog("Fetch Markets",e)
+            else:
+                if Notify:
+                    JRRlog.WriteLog('Fetch Markets Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
+        else:
+            done=True
+        retry+=1
+
+    if Notify:
+        JRRlog.WriteLog("Markets loaded")
+
+    return markets
