@@ -45,16 +45,19 @@ if "Retry" in Active:
 else:
     RetryLimit=10
 
+markets=GetMarkets(exchange,pair,RetryLimit,Notify=false):
+
 done=False
+retry=0
 while not done:
     try:
-        markets=exchange.load_markets()
-    except:
-        pass
+        balance = exchange.fetch_balance()
+    except Exception as e:
+        if retry>=RetryLimit:
+           JRRlog.ErrorLog("Fetch Markets",e)
+        retry+=1
     else:
         done=True
-
-balance = exchange.fetch_balance()
 
 if not IsLog:
     coinList=balance['total']
