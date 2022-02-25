@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Jackrabbit Equilibrium
+# Jackrabbit Relay
 # 2021 Copyright © Robert APM Darin
 # All rights reserved unconditionally.
 
@@ -17,7 +17,7 @@ import JRRapi
 import JRRsupport
 
 ###
-### Main code base. Place order on exchange
+### Main code base.
 ###
 
 if len(sys.argv) > 2:
