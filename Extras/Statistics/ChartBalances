@@ -43,12 +43,14 @@ while True:
 
     if asset in Balance:
         bal.append(float(Balance[asset]))
+    else:
+        bal.append(0)
 
-        t=float(Balance['DateTime'])
-        timestamp=datetime.datetime.fromtimestamp(t)
-        dt=timestamp.strftime('%Y-%m-%d')
+    t=float(Balance['DateTime'])
+    timestamp=datetime.datetime.fromtimestamp(t)
+    dt=timestamp.strftime('%Y-%m-%d')
 
-        xps.append(dt)
+    xps.append(dt)
 fh.close()
 
 p=asset.replace(':','').replace('-','').replace('/','')
