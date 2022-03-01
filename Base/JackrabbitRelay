@@ -89,6 +89,24 @@ def ProcessTrade(addr,payload):
         res=res.encode('utf-8')
     return res
 
+def ProcessWebPage(addr,path):
+    ws=JRRconfig.BaseDirectory+'/ServeWebPage'
+    idf=JRRconfig.ConfigDirectory+'/Identity.cfg'
+
+    if os.path.exists(ws) and os.path.exists(idf):
+        transactor= [ ws ]
+        subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+
+        # Web server request is pushed in as STDIN
+
+        subp.stdin.write(path.encode())
+        res=subp.communicate()[0]
+    else:
+        res=JRRconfig.NOhtml
+        WriteLog(addr,f"Transactor not found.")
+
+    return res
+
 class Handler(BaseHTTPRequestHandler):
 
     def log_message(self,format,*args):
@@ -100,6 +118,22 @@ class Handler(BaseHTTPRequestHandler):
         fh=open(LogDirectory+'/JackrabbitRelay.log','a')
         fh.write(s)
         fh.close()
+
+    def do_GET(self):
+        addr=self.client_address[0]
+
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
+        self.wfile.write(bytes('\r\n'.encode()))
+
+        res=ProcessWebPage(addr,self.path)
+
+        if res!=None:
+            if type(res)!=bytes:
+                res=res.encode('utf-8')
+            self.wfile.write(res)
+        return res
 
     def do_POST(self):
         # Send the client a success response
@@ -123,7 +157,7 @@ class Handler(BaseHTTPRequestHandler):
             if type(res)!=bytes:
                 res=res.encode('utf-8')
             self.wfile.write(res)
-        return
+        return res
 
 class ForkingSimpleServer(ForkingMixIn, HTTPServer):
     pass
