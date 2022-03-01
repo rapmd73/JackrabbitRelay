@@ -9,7 +9,7 @@ import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 from datetime import datetime
 
-Version="0.0.0.0.797"
+Version="0.0.0.0.805"
 BaseDirectory='/home/JackrabbitRelay/Base'
 ConfigDirectory='/home/JackrabbitRelay/Config'
 LedgerDirectory="/home/JackrabbitRelay/Ledger"
@@ -17,6 +17,8 @@ LogDirectory="/home/JackrabbitRelay/Logs"
 BalancesDirectory='/home/JackrabbitRelay/Statistics/Balances'
 ChartsDirectory='/home/JackrabbitRelay/Statistics/Charts'
 StatisticsDirectory='/home/JackrabbitRelay/Extras/Statistics'
+
+NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
 
 # This is sorted by market cap. Hopefully it will speed up the conversion
 # process. Coins only with 100 million or more listed.

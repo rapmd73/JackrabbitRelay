@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay/Base/Library')
+import os
+
+import JRRconfig
+import JRRlog
+import JRRapi
+import JRRsupport
+
+ServeWPHeader='ServerWebPage '+JRRconfig.Version
+
+###
+### Main code base. Place order on exchange
+###
+
+def main():
+    # Get payload from STDIN and validate it. Will be IP address and path of web page
+
+    try:
+        payload=JRRsupport.pFilter(sys.stdin.read())
+        path=JRRconfig.ChartsDirectory+'/'+payload[1:].replace('/','.')+'.html'
+
+        if os.path.exists(path):
+            f=open(path,'r')
+            fc=f.read()
+            f.close()
+            print(fc)
+        else:
+            el=[]
+            cfiles=os.listdir(JRRconfig.ChartsDirectory)
+
+            for i in cfiles:
+                f='/'+i
+                l=len(payload)
+                p=f[:l].replace('.','/')
+                if payload!='/':
+                    if p==payload:
+                        x=f[l+1:].split('.')[0]
+                        if x not in el:
+                            el.append(x)
+                else:
+                    if p==payload:
+                        x=f[l:].split('.')[0]
+                        if x not in el:
+                            el.append(x)
+
+            if len(el)>0:
+                el.sort()
+
+                print("<html><head><title>Jackrabbit Relay</title></head>")
+                print("<body>")
+                print(f'<a href="/">Top</a>')
+                p=payload[1:].find('/')
+                if payload!='/' and p>-1:
+                    print(f'<a href="{payload[:p+1]}">{payload[1:p+1]}</a>')
+                print(f'<p>')
+                for i in el:
+                    if payload!='/':
+                        print(f'<a href="{payload}/{i}">{i}</a>')
+                    else:
+                        print(f'<a href="/{i}">{i}</a>')
+                print("</body></html>")
+            else:
+                print(JRRconfig.NOhtml)
+    except:
+        print(JRRconfig.NOhtml)
+
+if __name__ == '__main__':
+    main()
