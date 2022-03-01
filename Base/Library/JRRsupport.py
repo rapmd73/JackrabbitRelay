@@ -203,7 +203,6 @@ def ReadPCTValueList(exchange,account,pair,pct,close,delete,RetryLimit):
 
             if not p in coins and not delete:
                 # Read the existing value
-                jpkt=json.loads(coin[p])
                 bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
                 jpkt['Time']=time.time()
                 jpkt['Amount']=round(((pct/100)*bal)/close,8)
@@ -218,6 +217,13 @@ def ReadPCTValueList(exchange,account,pair,pct,close,delete,RetryLimit):
                             coins.pop(p,None)
                         except:
                             pass
+                    else:
+                        # Return existing amount
+                        jpkt=json.loads(coin[p])
+                        jpkt['Time']=time.time()
+                        amount=jpkt['Amount']
+                        coins[p]=json.dumps(jpkt)
+                        JRRlog.WriteLog('|- '+p+' updated')
         else:
             if not delete:
                 jpkt={}
