@@ -89,8 +89,8 @@ def ProcessTrade(addr,payload):
         res=res.encode('utf-8')
     return res
 
-def ProcessWebPage(addr,path):
-    ws=JRRconfig.BaseDirectory+'/ServeWebPage'
+def ProcessStatistatorium(addr,path):
+    ws=JRRconfig.BaseDirectory+'/Statistatorium'
     idf=JRRconfig.ConfigDirectory+'/Identity.cfg'
 
     if os.path.exists(ws) and os.path.exists(idf):
@@ -127,7 +127,7 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(bytes('\r\n'.encode()))
 
-        res=ProcessWebPage(addr,self.path)
+        res=ProcessStatistatorium(addr,self.path)
 
         if res!=None:
             if type(res)!=bytes:

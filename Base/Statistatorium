@@ -17,12 +17,10 @@ import JRRsupport
 ServeWPHeader='ServerWebPage '+JRRconfig.Version
 
 ###
-### Main code base. Place order on exchange
+### Main code base.
 ###
 
 def main():
-    # Get payload from STDIN and validate it. Will be IP address and path of web page
-
     try:
         payload=JRRsupport.pFilter(sys.stdin.read())
         path=JRRconfig.ChartsDirectory+'/'+payload[1:].replace('/','.')+'.html'
@@ -54,9 +52,9 @@ def main():
             if len(el)>0:
                 el.sort()
 
-                print("<html><head><title>Jackrabbit Relay</title></head>")
-                print("<body>")
-                print(f'<a href="/">Top</a>')
+                print("<html><head><title>Jackrabbit Statistatorium</title></head>")
+                print("<body><h1><center>Jackrabbit Statistatorium</center></h1>")
+                print(f'<p><center><a href="/">Top</a>')
                 p=payload[1:].find('/')
                 if payload!='/' and p>-1:
                     print(f'<a href="{payload[:p+1]}">{payload[1:p+1]}</a>')
@@ -66,11 +64,14 @@ def main():
                         print(f'<a href="{payload}/{i}">{i}</a>')
                     else:
                         print(f'<a href="/{i}">{i}</a>')
-                print("</body></html>")
+                print("</center></body></html>")
             else:
                 print(JRRconfig.NOhtml)
     except:
         print(JRRconfig.NOhtml)
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except:
+        print(JRRconfig.NOhtml)
