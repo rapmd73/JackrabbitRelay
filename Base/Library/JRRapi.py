@@ -271,18 +271,21 @@ def PlaceOrder(exchange, account, pair, market, action, amount, close, RetryLimi
                 JRRlog.WriteLog('Place Order Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
         else:
             done=True
-            if m=='limit':
-                # wait no more then 3 minutes
-                successful=WaitLimitOrder(exchange,order['id'],pair,15)
-                if successful==True:
-                    JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
+            if order['id']!=None:
+                if m=='limit':
+                    # wait no more then 3 minutes
+                    successful=WaitLimitOrder(exchange,order['id'],pair,15)
+                    if successful==True:
+                        JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
+                    else:
+                        JRRlog.ErrorLog("Placing Order","limit order unsuccessful")
                 else:
-                    JRRlog.ErrorLog("Placing Order","limit order unsuccessful")
-            else:
-                JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
+                    JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
 
-            JRRledger.WriteLedger(exchange, account, pair, market, action, amount, close, order, RetryLimit)
-            return order
+                JRRledger.WriteLedger(exchange, account, pair, market, action, amount, close, order, RetryLimit)
+                return order
+            else:
+                JRRlog.ErrorLog("Placing Order","order unsuccessful")
         retry+=1
 
     if retry>=RetryLimit:
