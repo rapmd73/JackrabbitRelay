@@ -218,6 +218,10 @@ def main():
 #                    amount=round(((float(Order['Base'].replace('%',''))/100)*bal)/close,8)
                 else:
                     amount=round(float(Order['Base']),8)
+        # Make sure minimum is enforced.
+        # KuCoin sub accounts do NOT verify or report correctly on this.
+        if amount<minimum:
+            amount=minimum
 
     bal=JRRapi.GetBalance(exchange,base,RetryLimit)
     sbal=f"{float(bal):.8f}"

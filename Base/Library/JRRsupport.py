@@ -168,7 +168,7 @@ def ReadAssetList(exchange,account,pair,mp,delete):
 def WriteAssetList(exchange,account,coins):
     fn=JRRconfig.LogDirectory+'/'+exchange+'.'+account+'.coinlist'
 
-    if coins==[]:
+    if coins=={}:
         try:
             os.remove(fn)
         except:
@@ -203,6 +203,7 @@ def ReadPCTValueList(exchange,account,pair,pct,close,delete,RetryLimit):
 
             if not p in coins and not delete:
                 # Read the existing value
+                jpkt={}
                 bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
                 jpkt['Time']=time.time()
                 jpkt['Amount']=round(((pct/100)*bal)/close,8)
@@ -219,11 +220,12 @@ def ReadPCTValueList(exchange,account,pair,pct,close,delete,RetryLimit):
                             pass
                     else:
                         # Return existing amount
-                        jpkt=json.loads(coin[p])
+                        jpkt=json.loads(coins[p])
                         jpkt['Time']=time.time()
                         amount=jpkt['Amount']
                         coins[p]=json.dumps(jpkt)
                         JRRlog.WriteLog('|- '+p+' updated')
+                        JRRlog.WriteLog('|- Amount: '+str(amount))
         else:
             if not delete:
                 jpkt={}
@@ -258,7 +260,7 @@ def WritePCTValueList(exchange,account,coins):
     en=exchange.name.lower().replace(' ','')
     fn=JRRconfig.LogDirectory+'/'+en+'.'+account+'.pctvalue'
 
-    if coins==[]:
+    if coins=={}:
         try:
             os.remove(fn)
         except:
