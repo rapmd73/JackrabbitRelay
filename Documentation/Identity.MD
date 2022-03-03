@@ -90,15 +90,18 @@ The below command prepares for an **active** identity.
 Before we activate it, you need to take the identity in the Identity.safe
 file and add it to your orders for TradingView or other REST API
 messages. Equilibrium and BlackCrowHunter will automatically pick up the
-identity *as long as it is on the same VPS as the identity file*.
+identity *as long as it is on the same VPS as the identity file*. For
+Equilibriums and BlackCrowHunters not on the same server as Relay, copy
+the Identity.cfg file into the Config folder on any/all secondary
+servers.
 
-Example of the idewntity added to the order payload.
+Example of the identity added to the order payload.
 
 ```json
 { "Exchange":"ftxus","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"AAVE/USD","Identity":"bB]lzXh2=iT&i2o^TNu$rm97GPtA{)TGa3RS0h<3=%4lZiY-Z/wmsZy[]g0JbiP6nUl3aOKP~jKI9fg&ax/i$;y" }
 ```
 
-**AFTER** all TradingView payloaded have the new identity added to them, 
+**AFTER** all TradingView payloads have the new identity added to them, 
 
 ```bash
 cd /home/JackrabbitRelay/Config
