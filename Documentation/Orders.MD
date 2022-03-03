@@ -1,7 +1,5 @@
 # JackrabbitRelay Payloads
 
-**WORKING DRAFT**
-
 This document details the various types of order payloads.
 
 ## Disclaimer
