@@ -8,13 +8,12 @@
 import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 import os
+import json
 
 import JRRconfig
 import JRRlog
 import JRRapi
 import JRRsupport
-
-ServeWPHeader='ServerWebPage '+JRRconfig.Version
 
 ###
 ### Main code base.
@@ -23,6 +22,7 @@ ServeWPHeader='ServerWebPage '+JRRconfig.Version
 def main():
     try:
         payload=JRRsupport.pFilter(sys.stdin.read())
+        depth=payload.count('/')
         path=JRRconfig.ChartsDirectory+'/'+payload[1:].replace('/','.')+'.html'
 
         if os.path.exists(path):
@@ -54,14 +54,21 @@ def main():
 
                 print("<html><head><title>Jackrabbit Statistatorium</title></head>")
                 print("<body><h1><center>Jackrabbit Statistatorium</center></h1>")
-                print(f'<p><center><a href="/">Top</a>')
+                print('<p><h2><center><a href="/">Top</a>')
                 p=payload[1:].find('/')
                 if payload!='/' and p>-1:
                     print(f'<a href="{payload[:p+1]}">{payload[1:p+1]}</a>')
-                print(f'<p>')
+                print('</center></h2><p><center>')
+                if depth==2:
+                    print(f'<a href="{payload}/Ledger">Ledger</a><p>')
+
                 for i in el:
+                    if 'Ledger' in i:
+                        continue
                     if payload!='/':
                         print(f'<a href="{payload}/{i}">{i}</a>')
+                        if depth==2:
+                            print('<br>')
                     else:
                         print(f'<a href="/{i}">{i}</a>')
                 print("</center></body></html>")
