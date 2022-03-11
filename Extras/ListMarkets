@@ -81,7 +81,11 @@ def main():
             marketType=ticker['info']['type']
         else:
             if "type" in exchange.markets[pair]:
-                marketType=exchange.markets[pair]['type']
+                if "type" in exchange.markets[pair]['info']:
+                    if exchange.markets[pair]['info']['type']==exchange.markets[pair]['type']:
+                        marketType=exchange.markets[pair]['type']
+                    else:
+                        marketType=exchange.markets[pair]['info']['type']
             else:
                 if "permissions" in exchange.markets[pair]['info']:
                     marketType=' '.join(exchange.markets[pair]['info']['permissions'])

@@ -37,6 +37,8 @@ def main():
             for i in cfiles:
                 f='/'+i
                 l=len(payload)
+                if l>1 and f[l]!='.':
+                    continue
                 p=f[:l].replace('.','/')
                 if payload!='/':
                     if p==payload:
@@ -68,6 +70,9 @@ def main():
                     if payload!='/':
                         print(f'<a href="{payload}/{i}">{i}</a>')
                         if depth==2:
+                            tf=JRRconfig.ChartsDirectory+'/'+payload[1:].replace('/','.')+'.'+i+'.Transactions.html'
+                            if os.path.exists(tf):
+                                print(f' (<a href="{payload}/{i}/Transactions">$$$</a>)')
                             print('<br>')
                     else:
                         print(f'<a href="/{i}">{i}</a>')

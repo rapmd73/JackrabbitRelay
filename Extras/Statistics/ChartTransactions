@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Jackrabbit BlackCrowHunter
+# Jackrabbit Relay
 # 2021 Copyright © Robert APM Darin
 # All rights reserved unconditionally.
 
@@ -18,22 +18,26 @@ import JRRlog
 import JRRapi
 import JRRsupport
 
-if len(sys.argv) > 2:
+###
+### Main code base. 
+###
+
+if len(sys.argv) > 3:
     en=sys.argv[1]
-    acct=sys.argv[2]
+    sa=sys.argv[2]
+    asset=sys.argv[3].upper()
 else:
-    print("An exchange and account must be provided.")
+    print("An exchange, a (sub)account, and an asset.")
     sys.exit(1)
 
-fn=JRRconfig.LedgerDirectory+'/'+en+'.'+acct+'.ledger'
+fn=JRRconfig.LedgerDirectory+'/'+en+'.'+sa+'.ledger'
 if not os.path.exists(fn):
-    print(fn)
-    print(en,acct,"ledger not found")
+    print("Ledger not found.")
     sys.exit(1)
+
 
 xps=[]
 run=[]
-
 bal=0.0
 counter=0
 
@@ -45,6 +49,15 @@ while True:
         break
 
     data=json.loads(line)
+
+    # Collect only if its the asset we want
+
+    l=len(asset)
+    p=data['Asset'][:l]+'/'
+    a=asset+'/'
+
+    if data['Asset']!=asset and p!=a:
+        continue
 
     dt=data['DateTime']
     direction=data['Action'].lower()
@@ -71,23 +84,23 @@ while True:
         continue
 
     if direction=='buy':
-        bal-=(close)
+        bal-=close
     if direction=='sell':
-        bal+=(close)
+        bal+=close
 
     xps.append(dt)
     run.append(bal)
     counter+=1
-
 fh.close()
 
 if counter==0:
-    print('No data')
-    sys.exit(1)
+    sys.exit(0)
 
-fn=JRRconfig.ChartsDirectory+'/'+en+'.'+acct+'.Ledger.html'
+p=asset.replace(':','').replace('-','').replace('/','')
+fn=JRRconfig.ChartsDirectory+'/'+en+'.'+sa+'.'+p+'.Transactions.html'
+ts=en.upper()+' ('+sa+'): '+asset.lower()+', Transactions'
 fig=px.line(x=xps,y=run)
-fig.update_layout(xaxis_title="Date/Time",yaxis_title="Profit/Loss")
-fig.update_layout(title={"text":en.capitalize()+" "+acct+" Ledger","x":0.5,"xanchor":"center","yanchor":"top"})
+fig.update_layout(xaxis_title="Date",yaxis_title="Profit/Loss")
+fig.update_layout(title={"text":ts,"x":0.5,"xanchor":"center","yanchor":"top"})
 fig.write_html(fn)
 

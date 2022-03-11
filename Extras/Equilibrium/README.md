@@ -112,7 +112,6 @@ However, you will likely benefit from using more than one API key for each excha
 
 JackrabbitRelay will cycle through the entries of each configuration file to make it less likely for your exchange to rate-limit you.
 
-
 | Property Name | Description |
 | --- | --- |
 | `Account` | See [main configuration documentation](../../README.md#file-contents) |
@@ -152,51 +151,51 @@ and slippage will be a consideration otherwise, not to mention security.
 
 ```bash
 cd /home/Equilibrium
-./Launcher       ftxus MAIN trx/usd  2   Bal AUTO PAPER
-```
-
-Or
-
-```bash
-cd /home/Equilibrium
-./Launcher       ftxus MAIN trx/usd  2   1   1.1  PAPER
-```
-
-Or
-
-```bash
-cd /home/Equilibrium
-./Launcher       ftxus MAIN trx/usd  2   1.1 1    PAPER
-```
-
-Or
-
-```bash
-cd /home/Equilibrium
-./Launcher       ftxus MAIN trx/usd  2   1   1    PAPER
+./Launcher TRX.cfg
 ```
 
 Or, for futures trading
 
 ```bash
 cd /home/Equilibrium
-./LauncherFuture ftx   MAIN TRX-PERP 0.5 Bal AUTO Short
+./LauncherFuture TRX.cfg
 ```
 
-This launches Equilibrium. The arguments are as follows:
+This launches Equilibrium. The argument passed to Equilibrium is a file
+of your choosing and can be sored anywhere. The file contents must be
+JSON format:
+
+```json
+{
+    "Exchange":"ftx",
+    "Account":"ftx1",
+    "Asset":"ETH/USD:USD",
+    "Boundary":"1",
+    "BuyLots":"Balance",
+    "SellLots":"BuyLots"
+}
+```
+
+The items that can be used in this file,
 
 | Argument | Example   | Description |
 | --- | --------- | -------------------- |
-| 1 | `ftxus`   | Exchange             |
-| 2 | `MAIN`    | Account or subaccount (Case sensitive) |
-| 3 | `trx/usd` | Asset                |
-| 4 | `2`       | Deviation/Take Profit/Boundary in percent form. (`2` maps to 2%) |
-| 5 | `1` or `Bal` | **Number of lots to buy** <br><br> A lot is the minimum position size. If you wanted a $10 position of an asset that has a minimum position size of $2.50, you would want `4` lots. <br><br> `Bal`: This tells Equilibrium to calculate the number of lots based on the balance of the (sub)account and the boundary. **NOTE**: This also tells Equilibrium to replace the value for the 6th argument. |
-| 6 | `1.1` or `AUTO` | **Number of lots to sell** <br><br> This is the number of lots to sell. It works exactly like the buy lots with one very distinct difference: If you put **`AUTO`** (or if you set `Bal` for the 5th argument), the selling lot size will be 10% more then the buying lot size. <br><br> If your selling lot size is equal to your buying lot size, reverse trading will **NOT** take place. <br><br> If your selling lots size is less then your buying size, you will ACCUMULATE the difference in your account. For example, if your buying lot size is 2 and your selling lot size is 1.9, you will ACCUMULATE 0.1 of the asset with each SELL. |
-| 7 | `Long` or `Short` | **Trade direction, used with futures ONLY.** Not used for SPOT. *(Simply leave this out for spot)* <br><br> Long or Short direction for trading. You can NOT use both in the same (sub)account, doing so WILL cause losses. |
-| 8 | `PAPER` | This activates the paper trading mode. Equilibrium will do everything except actually place orders to the exchange. <br><br> **Even in PAPER mode, you API/Secret and Webhook must be correct as Equilibrium WILL login into your account using your exchange's private API/rate limit values to get the prices.** <br><br> After testing in paper trading mode, you can remove this to enable live trading. |
+| `Exchange` | `ftxus`   | Exchange             |
+| `Account` | `MAIN`    | Account or subaccount (Case sensitive) |
+| `Asset` | `trx/usd` | Asset                |
+| `Boundary` | `1`       | Deviation/Take Profit/Boundary in percent form. (`2` maps to 2%) |
+| `BuyLots` | `1` or `Balance` | **Number of lots to buy** <br><br> A lot is the minimum position size. If you wanted a $10 position of an asset that has a minimum position size of $2.50, you would want `4` lots. <br><br> `Bal`: This tells Equilibrium to calculate the number of lots based on the balance of the (sub)account and the boundary. **NOTE**: This also tells Equilibrium to replace the value for the 6th argument. |
+| `SellLots` | `1.1`, `Dynamic`, `BuyLots` | **Number of lots to sell** <br><br> This is the number of lots to sell. It works exactly like the buy lots with one very distinct difference: If you put **`AUTO`** (or if you set `Bal` for the 5th argument), the selling lot size will be 10% more then the buying lot size. <br><br> If your selling lot size is equal to your buying lot size, reverse trading will **NOT** take place. <br><br> If your selling lots size is less then your buying size, you will ACCUMULATE the difference in your account. For example, if your buying lot size is 2 and your selling lot size is 1.9, you will ACCUMULATE 0.1 of the asset with each SELL. |
+| `OverSell` | `20` | This is the percentage to oversell as a maximum. It is use only when `SellLots` is `Dynamic` |
+| `Direction` | `Long` or `Short` | **Trade direction, used with futures ONLY.** Not used for SPOT. *(Simply leave this out for spot)* <br><br> Long or Short direction for trading. You can NOT use both in the same (sub)account, doing so WILL cause losses. |
+| `BuyStopLow` | price | Purchases will not happen below this price. |
+| `BuyStopHigh` | price | Purchases will not happen above this price. |
+| `SellStopLow` | price | Sells will not happen below this price. |
+| `SellStopHigh` | price | Sells will not happen above this price. |
+| `Paper` | any value | This activates the paper trading mode. Equilibrium will do everything except actually place orders to the exchange. <br><br> **Even in PAPER mode, you API/Secret and Webhook must be correct as Equilibrium WILL login into your account using your exchange's private API/rate limit values to get the prices.** <br><br> After testing in paper trading mode, you can remove this to enable live trading. |
 
 ### Regarding Lot Size
+
 Within Equilibrium, the **lot size** refers to the smallest unit of trading that is possible on a given exchange and a given trading pair. For example, as of the last time this was edited:
 * On KuCoin, the lot size for TRX/USDT is 0.01 TRX.
 * On BinanceUS, the lot size for XLM/USD is 10 USD.
