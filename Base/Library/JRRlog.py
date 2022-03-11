@@ -47,5 +47,5 @@ def SuccessLog(func,e):
     WriteLog(msg)
     ElapsedTime(JRRconfig.StartTime)
     sys.stdout.flush()
-    sys.exit(3)
+    sys.exit(2)
 

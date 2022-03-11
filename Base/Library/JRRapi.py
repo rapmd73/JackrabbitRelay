@@ -36,7 +36,7 @@ def StopHTMLtags(txt):
 
 # Register the exchange
 
-def ExchangeLogin(exchangeName,Active,Notify=True):
+def ExchangeLogin(exchangeName,Active,Notify=True,Sandbox=False):
     if exchangeName in ccxt.exchanges:
         try:
             exchange=getattr(ccxt,exchangeName)( \
@@ -73,13 +73,11 @@ def SetExchangeAPI(exchange,Active,notify=False):
         if exchangeName=="ftxus" and Active['Account']!='MAIN':
             exchange.headers['FTXUS-SUBACCOUNT']=Active['Account']
         else:
-            if exchangeName=="kucoin":
+            if exchangeName=="kucoin" or exchangeName=="kucoin futures":
                 if 'Passphrase' in Active:
                     exchange.password=Active['Passphrase']
                 else:
                     JRRlog.ErrorLog("Connecting to exchange","Kucoin requires a passphrase as well")
-
-    exchange.verbose=False
 
     if "RateLimit" in Active:
         exchange.enableRateLimit=True
@@ -235,11 +233,11 @@ def WaitLimitOrder(exchange,oi,pair,RetryLimit):
     else:
         return True
 
-def PlaceOrder(exchange, account, pair, market, action, amount, close, RetryLimit, ReduceOnly):
+def PlaceOrder(exchange, account, pair, orderType, action, amount, close, RetryLimit, ReduceOnly):
     params = {}
     order=None
 
-    m=market.lower()
+    m=orderType.lower()
     if "createMarketBuyOrderRequiresPrice" in exchange.options and m=='market':
         m='limit'
     if m=='limittaker':
@@ -278,14 +276,14 @@ def PlaceOrder(exchange, account, pair, market, action, amount, close, RetryLimi
                     if successful==True:
                         JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
                     else:
-                        JRRlog.ErrorLog("Placing Order","limit order unsuccessful")
+                        JRRlog.ErrorLog("Placing Order",orderType+" order unsuccessful")
                 else:
                     JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
 
-                JRRledger.WriteLedger(exchange, account, pair, market, action, amount, close, order, RetryLimit)
+                JRRledger.WriteLedger(exchange, account, pair, orderType, action, amount, close, order, RetryLimit)
                 return order
             else:
-                JRRlog.ErrorLog("Placing Order","order unsuccessful")
+                JRRlog.ErrorLog("Placing Order",orderType+" order unsuccessful")
         retry+=1
 
     if retry>=RetryLimit:
@@ -513,7 +511,7 @@ def GetBalance(exchange,base,RetryLimit):
                 # Many exchanges don't report a balance at all if an asset hasn't been traded in
                 # a given timeframe (usually fee based tier resets designate the cycle).
                 bal=0
-        except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError, ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError) as e:
+        except Exception as e:
             if retry>=RetryLimit:
                 JRRlog.ErrorLog("Fetch Balance",e)
             else:
@@ -544,6 +542,16 @@ def GetPosition(exchange,pair,RetryLimit):
         retry+=1
 
     return position
+
+def GetContract(exchange,pair,RetryLimit):
+    position=GetPosition(exchange,pair,RetryLimit)
+    if position is None:
+        bal=0
+    else:
+        bal=position['contracts']
+
+    return bal
+
 
 # Fetch the market list
 

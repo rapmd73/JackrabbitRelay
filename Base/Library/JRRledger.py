@@ -13,6 +13,7 @@ import json
 
 import JRRconfig
 import JRRlog
+import JRRapi
 import JRRsupport
 
 # {
@@ -57,21 +58,24 @@ def WriteLedger(exchange, account, pair, market, action, amount, close, order, R
 
     # Try to pull completed order information
 
-    retry=0
-    done=False
-    fo=None
-    while not done:
-        try:
-            fo=exchange.fetchOrder(oi,symbol=pair)
-        except Exception as e:
-            if retry>=RetryLimit:
-                done=True
-                fo=None
+    if exchange.has['fetchOrder']:
+        retry=0
+        done=False
+        fo=None
+        while not done:
+            try:
+                fo=exchange.fetchOrder(oi,symbol=pair)
+            except Exception as e:
+                if retry>=RetryLimit:
+                    done=True
+                    fo=None
+                else:
+                    JRRlog.WriteLog('Fetch Order Retrying ('+str(retry+1)+'), '+JRRapi.StopHTMLtags(str(e)))
             else:
-                JRRlog.WriteLog('Fetch Order Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
-        else:
-            done=True
-        retry+=1
+                done=True
+            retry+=1
+    else:
+        fo=order
 
     if fo!=None:
         for i in fo:

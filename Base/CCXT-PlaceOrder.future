@@ -115,6 +115,10 @@ def main():
 
     exchange=JRRapi.ExchangeLogin(exchangeName,Active)
 
+    if "Sandbox" in Active:
+        exchange.setSandboxMode(true)
+        SetExchangeAPI(exchange,Active,Notify=False)
+
     if "Retry" in Active:
         RetryLimit=int(Active['Retry'])
         JRRlog.WriteLog("|- API Retry limit set to "+str(RetryLimit)+' times')
@@ -177,18 +181,22 @@ def main():
     ohlcv,ticker=JRRapi.FetchRetry(exchange,pair,"1m",RetryLimit)
 
     if "type" in ticker['info']:
-        marketType=ticker['info']['type']
+        marketType=ticker['info']['type'].lower()
     else:
         if "type" in exchange.markets[pair]:
-            marketType=exchange.markets[pair]['type']
+            if "type" in exchange.markets[pair]['info']:
+                if exchange.markets[pair]['info']['type']==exchange.markets[pair]['type']:
+                    marketType=exchange.markets[pair]['type'].lower()
+                else:
+                    marketType=exchange.markets[pair]['info']['type'].lower()
         else:
             if "permissions" in exchange.markets[pair]['info']:
-                marketType=' '.join(exchange.markets[pair]['info']['permissions'])
+                marketType=' '.join(exchange.markets[pair]['info']['permissions']).lower()
             else:
                 marketType="spot"
 
     if market not in marketType:
-        JRRlog.ErrorLog(exchangeName, "wrong market type: "+marketType)
+        JRRlog.ErrorLog(exchangeName, "wrong market type: "+market+', asset is '+marketType)
 
     if 'limit' in orderType:
         if 'Close' in Order:
@@ -238,11 +246,7 @@ def main():
         if amount<minimum:
             amount=minimum
 
-    position=JRRapi.GetPosition(exchange,pair,RetryLimit)
-    if position is None:
-        bal=0
-    else:
-        bal=position['contracts']
+    bal=JRRapi.GetContract(exchange,pair,RetryLimit)
     sbal=f"{float(bal):.8f}"
     JRRlog.WriteLog("Previous Contracts: "+sbal+" "+pair)
 
@@ -321,11 +325,7 @@ def main():
     if amount>0.0:
         JRRapi.PlaceOrder(exchange,account,pair, orderType, action, amount, close, RetryLimit, ReduceOnly)
 
-        position=JRRapi.GetPosition(exchange,pair,RetryLimit)
-        if position is None:
-            bal=0
-        else:
-            bal=position['contracts']
+        bal=JRRapi.GetContract(exchange,pair,RetryLimit)
         sbal=f"{float(bal):.8f}"
         JRRlog.WriteLog("New Contracts: "+sbal+" "+pair)
 

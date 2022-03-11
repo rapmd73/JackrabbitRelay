@@ -253,6 +253,7 @@ Now for the details:
 | `ReduceOnly` | This tells the exchange NOT to flip a position from long to short or vice-versa. <br> It can have any value as its presence is only required. |
 | `OrderTypeOverride` | This overrides the specified order type. |
 | `Reduction` | The amount to reduce your position to all your exchange to close it. Deprecated... <br> This is a percentage. Do NOT put a percent (%) sign. Use this ONLY if you receive errors closing a position. Finding the amount of the reduction is strictly trial and error. |
+| `Sandbox` | Any value accepted as its presence activates an exchange's testnet or sandbox mode |
 
 Order types (for `OrderType`/`OrderTypeOverride`):
 

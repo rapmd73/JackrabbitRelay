@@ -19,24 +19,9 @@ BaseDir="/home/Equilibrium"
 cd $BaseDir
 
 while true ; do
-    blot=`echo $5 | tr "[:upper:]" "[:lower:]"`
-
-    if [ $blot == "bal" ] ; then
-        lots=`$BaseDir/Balance2Lots $1 $2 $3 $4`
-        slots="AUTO"
-        once="ONCE"
-    else
-        lots=$5
-        slots=$6
-        once=$7
-    fi
-
-    $BaseDir/Equilibrium.spot $1 $2 $3 $4 $lots $slots $once $8 $9
-    $BaseDir/CheckStop $@
-    if [ $? -eq 1 ] ; then
+    $BaseDir/Equilibrium.spot $@
+    if [ $? -eq 2 ] ; then
         exit
     fi
     sleep 60
 done
-
-

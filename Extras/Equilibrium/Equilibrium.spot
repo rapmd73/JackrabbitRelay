@@ -5,10 +5,26 @@
 # 2021 Copyright © Robert APM Darin
 # All rights reserved unconditionally.
 
+"""
+{
+    "Exchange":"kucoin",
+    "Account":"Scavenger",
+    "Asset":"LTC/USDT",
+    "Boundary":"1",         # Percentage boundary
+    "BuyLots":"1",          # Buy size 1 lot
+    "BuyLots":"Balnce",     # Buy size is dynamic based of balance (lots)
+    "SellLots":"1.2",       # Sell size 1.2 lots
+    "SellLots":"Dynamic",   # Sell based upon depth, use OverSell as a percentage value,
+    "OverSell":"2",         # maximum percentage used when SellLots os Dynamic. % of BuyLots
+    "OrderType":"LimitMaker",
+}
+"""
+
 import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 import os
 from datetime import datetime
+import pathlib
 import time
 import requests
 import json
@@ -20,12 +36,12 @@ import JRRsupport
 
 Header='Equilibrium '+JRRconfig.Version
 
-def SendWebhook(Active,exchangeName,account,pair,action,amount):
+def SendWebhook(Active,exchangeName,account,orderType,pair,action,amount,price):
     exc='"Exchange":"'+exchangeName+'", "Market":"Spot"'
-    account='"Account":"'+account+'"'
+    account='"Account":"'+account+'", "OrderType":"'+orderType+'"'
     sym='"Asset":"'+pair+'"'
     direction='"Action":"'+action.lower()+'"'
-    psize='"Base":"'+str(amount)+'"'
+    psize='"Base":"'+str(amount)+'"'+', "Close":"'+str(price)+'"'
 
     if "Identity" in Active:
         idl='"Identity":"'+Active['Identity']+'"'
@@ -33,7 +49,6 @@ def SendWebhook(Active,exchangeName,account,pair,action,amount):
     else:
         cmd='{ '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
 
-    print(cmd)
     headers={'content-type': 'text/plain', 'Connection': 'close'}
 
     resp=None
@@ -113,6 +128,142 @@ def WriteSpotLog(e,a,p,msg):
     print(s.rstrip())
     sys.stdout.flush()
 
+# Convert account balance to lots in steps
+
+def Balance2Lots(exchange,pair,pct,RetryLimit):
+    quote=exchange.markets[pair]['quote']
+    if quote not in JRRconfig.StableCoinUSD:
+        hasQuote=True
+    else:
+        hasQuote=False
+
+# Get exchange required minimums
+
+    minimum,mincost=JRRapi.GetMinimum(exchange,pair,hasQuote,False,RetryLimit)
+
+# Convert balance to number of steps and lots
+
+    bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
+    steps=100/(pct*100)
+    priceStep=bal/steps
+    Lots=priceStep/mincost
+
+    if Lots<1:
+        Lots=1
+
+    return Lots
+
+# Read CFG file
+
+def ReadConfig(fn):
+    Required=[ "Exchange", "Account", "Asset", "Boundary", "BuyLots" ]
+
+    Config={}
+
+    JRRlog.WriteLog("Reading configuration file")
+
+    if os.path.exists(fn):
+        try:
+            raw=pathlib.Path(fn).read_text()
+        except:
+            JRRlog.ErrorLog("ReadConfig",f"Can't read {fn}")
+
+        txt=JRRsupport.pFilter(raw)
+
+        try:
+            Config=json.loads(txt)
+        except:
+            JRRlog.ErrorLog("ReadConfig",f"Damaged JSON: {txt}")
+    else:
+        JRRlog.ErrorLog("ReadConfig",'Config file not found.')
+
+    for i in Config:
+        JRRlog.WriteLog(f"|- {i}: {Config[i]}")
+
+    for i in Required:
+        if i not in Config:
+            JRRlog.ErrorLog("ReadConfig",f"Missing required item: {i}")
+
+    Config['Exchange']=Config['Exchange'].lower()
+    Config['Asset']=Config['Asset'].upper()
+    Config['Boundary']=float(Config['Boundary'])/100
+    if "SellLots" not in Config:
+        Config['SellLots']='Dynamic'
+    if "OverSell" in Config:
+        Config['OverSell']=float(Config['OverSell'])/100
+    else:
+        Config['OverSell']=20/100
+    if "OrderType" not in Config:
+        Config['OrderType']='Market'
+
+    if "BuyStopHigh" in Config:
+        Config['BuyStopHigh']=float(Config['BuyStopHigh'])
+    else:
+        Config['BuyStopHigh']=-1
+    if "BuyStopLow" in Config:
+        Config['BuyStopLow']=float(Config['BuyStopLow'])
+    else:
+        Config['BuyStopLow']=-1
+    if "SellStopHigh" in Config:
+        Config['SellStopHigh']=float(Config['SellStopHigh'])
+    else:
+        Config['SellStopHigh']=-1
+    if "SellStopLow" in Config:
+        Config['SellStopLow']=float(Config['SellStopLow'])
+    else:
+        Config['SellStopLow']=-1
+
+    return(Config)
+
+def TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit):
+    minimum,mincost=JRRapi.GetMinimum(exchange,pair,False,False,RetryLimit)
+
+    if Config['BuyLots'].lower()=='balance':
+        Trade['BuyAmount']=Balance2Lots(exchange,pair,pct,RetryLimit)
+    else:
+        p=float(Config['BuyLots'])
+        if p<1:
+            p=1
+        Trade['BuyAmount']=minimum*p
+
+    return Trade
+
+def TradeSellAmount(Config,Trade,exchange,pair,pct,RetryLimit):
+    minimum,mincost=JRRapi.GetMinimum(exchange,pair,False,False,RetryLimit)
+
+    if Config['SellLots'].lower()=='dynamic':
+        if Trade['Counter']>0:
+            pb=(Config['OverSell']/100)*(Trade['Counter']/(100*pct))*pct
+            ba=float(Trade['BuyAmount'])
+            Trade['SellAmount']=ba+(ba*pb)
+        else:
+            Trade['SellAmount']=float(Trade['BuyAmount'])
+    elif Config['SellLots'].lower()=='buylots':
+        Trade['SellAmount']=float(Trade['BuyAmount'])
+    else:
+        Trade['SellAmount']=minimum*float(Config['SellLots'])
+
+    return Trade
+
+def CheckHighLow(c,l,h):
+    if l==-1 and h==-1:
+        return True
+
+    if c>=l and h==-1:
+        return True
+    else:
+        return False
+
+    if l==-1 and c<=h:
+        return True
+    else:
+        return False
+
+    if c>=l and c<=h:
+        return True
+    else:
+        return False
+
 ###
 ### Main code base. Place order on exchange
 ###
@@ -120,24 +271,26 @@ def WriteSpotLog(e,a,p,msg):
 def main():
     JRRlog.WriteLog(Header)
 
-    if len(sys.argv) > 6:
-        exchangeName=sys.argv[1].lower()
-        account=sys.argv[2]
-        pair=sys.argv[3].upper()
-        pct=float(sys.argv[4])/100
-        buyAMT=float(sys.argv[5])
-        sellAMT=sys.argv[6]
+    # Read CFG file
+    if len(sys.argv) > 1:
+        Config=ReadConfig(sys.argv[1])
     else:
-        print("An exchange, a (sub)account, an asset, % take profit, buy lots, and sell lots must be provided.")
+        print("A valid configuration file must be provided.")
         sys.exit(1)
 
     once=False
-    if len(sys.argv) > 7 and sys.argv[7].lower()=='once':
+    if len(sys.argv) > 2 and sys.argv[2].lower()=='once':
         once=True
 
     paper=False
-    if len(sys.argv) > 7 and sys.argv[7].lower()=='paper':
+    if 'Paper' in Config:
         paper=True
+
+    exchangeName=Config['Exchange']
+    account=Config['Account']
+    pair=Config['Asset']
+    pct=Config['Boundary']
+    orderType=Config['OrderType']
 
     keys=JRRsupport.ReadConfig(exchangeName,account)
     JRRlog.WriteLog("API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
@@ -169,16 +322,9 @@ def main():
     JRRlog.WriteLog("Base currency:  "+base)
     JRRlog.WriteLog("Quote currency: "+quote)
 
-    minimum,mincost=JRRapi.GetMinimum(exchange,pair,False,False,RetryLimit)
-    BuyAmount=minimum*buyAMT
-    if str(sellAMT.lower())=='auto':
-        SellAmount=BuyAmount+(BuyAmount*0.1)
-    else:
-        SellAmount=minimum*float(sellAMT)
-
-    JRRlog.WriteLog(f"Lot size: {buyAMT:.8f}")
-
     Trade=ReadGrid(exchangeName,account,pair)
+    if 'BuyAmount' not in Trade:
+        Trade=TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit)
 
     first=True
 
@@ -205,11 +351,11 @@ def main():
 # Reset the cycle if either Counter is 0 or bal is less than minimum.
 
         if not paper:
-            if bal<BuyAmount:
+            if bal<Trade['BuyAmount']:
                 if Trade['PCTValue']==0:
                     Trade['PCTValue']=round(close*pct,8)
                 Trade['Counter']=0
-                WriteSpotLog(exchangeName,account,pair,f"{pair:10} Balance ({bal:.8f}) < Amount ({BuyAmount:.8f}), Resetting grid")
+                WriteSpotLog(exchangeName,account,pair,f"{pair:10} Balance ({bal:.8f}) < Amount ({Trade['BuyAmount']:.8f}), Resetting grid")
 
         # Rotate the key
 
@@ -217,13 +363,15 @@ def main():
         Active=keys[CurrentKey]
         JRRapi.SetExchangeAPI(exchange,Active)
 
-        if Trade['Counter']==0:
+        if Trade['Counter']==0 and CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
             if not first and once:
                 JRRlog.SuccessLog("Equilibrium","One cycle completed")
             if not first:
                 CheckStopTracer(exchangeName,account,pair)
             if not paper:
-                res=SendWebhook(Active,exchangeName,account,pair,'buy',BuyAmount)
+                Trade=TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit)
+
+                res=SendWebhook(Active,exchangeName,account,orderType,pair,'buy',Trade['BuyAmount'],close)
                 if res.find('Order Confirmation ID')>-1:
                     OrderID=GetOrderID(res)
                     if Trade['PCTValue']==0:
@@ -251,10 +399,9 @@ def main():
 
 # Make a purchase.
 
-        if close<Trade['Buy']:
+        if close<Trade['Buy'] and CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
             if not paper:
-                res=SendWebhook(Active,exchangeName,account,pair,'buy',BuyAmount)
-                JRRsupport.ElasticSleep(1)
+                res=SendWebhook(Active,exchangeName,account,orderType,pair,'buy',Trade['BuyAmount'],Trade['Buy'])
                 if res.find('Order Confirmation ID')>-1:
                     OrderID=GetOrderID(res)
                     Trade['Close']=round(Trade['Buy'],8)
@@ -279,12 +426,13 @@ def main():
 
 # Make a sell only if balance > minimum
 
-        if Trade['Counter']>0 and close>Trade['Sell']:
+        if Trade['Counter']>0 and close>Trade['Sell'] and CheckHighLow(close,Config['SellStopLow'],Config['SellStopHigh']):
             if not paper:
-                SellAMT=SellAmount
+                Trade=TradeSellAmount(Config,Trade,exchange,pair,pct,RetryLimit)
+                SellAMT=Trade['SellAmount']
                 if SellAMT>bal:
                     SellAMT=bal
-                res=SendWebhook(Active,exchangeName,account,pair,'sell',SellAMT)
+                res=SendWebhook(Active,exchangeName,account,orderType,pair,'sell',SellAMT,Trade['Sell'])
                 if res.find('Order Confirmation ID')>-1:
                     OrderID=GetOrderID(res)
                     Trade['Close']=round(Trade['Sell'],8)

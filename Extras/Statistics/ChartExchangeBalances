@@ -46,4 +46,6 @@ for cf in cfiles:
         for asset in cl:
             cmd=JRRconfig.StatisticsDirectory+'/ChartBalances '+en+' '+ac+' "'+asset+'" '+fn
             os.system(cmd)
+            cmd=JRRconfig.StatisticsDirectory+'/ChartTransactions '+en+' '+ac+' "'+asset+'"'
+            os.system(cmd)
 
