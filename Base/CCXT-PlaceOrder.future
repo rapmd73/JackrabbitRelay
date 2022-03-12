@@ -116,8 +116,8 @@ def main():
     exchange=JRRapi.ExchangeLogin(exchangeName,Active)
 
     if "Sandbox" in Active:
-        exchange.setSandboxMode(true)
-        SetExchangeAPI(exchange,Active,Notify=False)
+        exchange.setSandboxMode(True)
+        JRRapi.SetExchangeAPI(exchange,Active)
 
     if "Retry" in Active:
         RetryLimit=int(Active['Retry'])
