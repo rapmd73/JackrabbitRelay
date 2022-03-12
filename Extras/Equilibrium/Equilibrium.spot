@@ -219,7 +219,7 @@ def TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit):
     minimum,mincost=JRRapi.GetMinimum(exchange,pair,False,False,RetryLimit)
 
     if Config['BuyLots'].lower()=='balance':
-        Trade['BuyAmount']=Balance2Lots(exchange,pair,pct,RetryLimit)
+        Trade['BuyAmount']=Balance2Lots(exchange,pair,pct,RetryLimit)*minimum
     else:
         p=float(Config['BuyLots'])
         if p<1:
@@ -318,6 +318,14 @@ def main():
 
     base=exchange.markets[pair]['base']
     quote=exchange.markets[pair]['quote']
+
+    marketType="spot"
+    if "type" in exchange.markets[pair]:
+        if "type" in exchange.markets[pair]['info']:
+            if exchange.markets[pair]['info']['type']==exchange.markets[pair]['type']:
+                marketType=exchange.markets[pair]['type']
+            else:
+                marketType=exchange.markets[pair]['info']['type']
 
     JRRlog.WriteLog("Base currency:  "+base)
     JRRlog.WriteLog("Quote currency: "+quote)
