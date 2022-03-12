@@ -180,6 +180,7 @@ def main():
 
     ohlcv,ticker=JRRapi.FetchRetry(exchange,pair,"1m",RetryLimit)
 
+    marketType="spot"
     if "type" in ticker['info']:
         marketType=ticker['info']['type'].lower()
     else:
@@ -192,8 +193,6 @@ def main():
         else:
             if "permissions" in exchange.markets[pair]['info']:
                 marketType=' '.join(exchange.markets[pair]['info']['permissions']).lower()
-            else:
-                marketType="spot"
 
     if market not in marketType:
         JRRlog.ErrorLog(exchangeName, "wrong market type: "+market+', asset is '+marketType)
@@ -246,7 +245,11 @@ def main():
         if amount<minimum:
             amount=minimum
 
-    bal=JRRapi.GetContract(exchange,pair,RetryLimit)
+    position=JRRapi.GetPosition(exchange,pair,RetryLimit)
+    if position is None:
+        bal=0
+    else:
+        bal=position['contracts']
     sbal=f"{float(bal):.8f}"
     JRRlog.WriteLog("Previous Contracts: "+sbal+" "+pair)
 
