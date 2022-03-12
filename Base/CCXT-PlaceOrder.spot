@@ -165,6 +165,7 @@ def main():
 
 # Market Check
 
+    marketType="spot"
     if "type" in ticker['info']:
         marketType=ticker['info']['type'].lower()
     else:
@@ -177,8 +178,6 @@ def main():
         else:
             if "permissions" in exchange.markets[pair]['info']:
                 marketType=' '.join(exchange.markets[pair]['info']['permissions']).lower()
-            else:
-                marketType="spot"
 
     if market not in marketType:
         JRRlog.ErrorLog(exchangeName, "wrong market type: "+market+', asset is '+marketType)
