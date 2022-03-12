@@ -36,12 +36,12 @@ import JRRsupport
 
 Header='Equilibrium '+JRRconfig.Version
 
-def SendWebhook(Active,exchangeName,account,orderType,pair,action,amount,price):
-    exc='"Exchange":"'+exchangeName+'", "Market":"Spot"'
+def SendWebhook(Active,exchangeName,market,account,orderType,pair,action,amount,price):
+    exc='"Exchange":"'+exchangeName+'", "Market":"'+market+'"'
     account='"Account":"'+account+'", "OrderType":"'+orderType+'"'
     sym='"Asset":"'+pair+'"'
     direction='"Action":"'+action.lower()+'"'
-    psize='"Base":"'+str(amount)+'"'+', "Close":"'+str(price)+'"'
+    psize='"Base":"'+str(amount)+'"'+',"Close":"'+str(price)+'"'
 
     if "Identity" in Active:
         idl='"Identity":"'+Active['Identity']+'"'
@@ -371,7 +371,7 @@ def main():
             if not paper:
                 Trade=TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit)
 
-                res=SendWebhook(Active,exchangeName,account,orderType,pair,'buy',Trade['BuyAmount'],close)
+                res=SendWebhook(Active,exchangeName,marketType,account,orderType,pair,'buy',Trade['BuyAmount'],close)
                 if res.find('Order Confirmation ID')>-1:
                     OrderID=GetOrderID(res)
                     if Trade['PCTValue']==0:
@@ -401,7 +401,7 @@ def main():
 
         if close<Trade['Buy'] and CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
             if not paper:
-                res=SendWebhook(Active,exchangeName,account,orderType,pair,'buy',Trade['BuyAmount'],Trade['Buy'])
+                res=SendWebhook(Active,exchangeName,marketType,account,orderType,pair,'buy',Trade['BuyAmount'],Trade['Buy'])
                 if res.find('Order Confirmation ID')>-1:
                     OrderID=GetOrderID(res)
                     Trade['Close']=round(Trade['Buy'],8)
@@ -432,7 +432,7 @@ def main():
                 SellAMT=Trade['SellAmount']
                 if SellAMT>bal:
                     SellAMT=bal
-                res=SendWebhook(Active,exchangeName,account,orderType,pair,'sell',SellAMT,Trade['Sell'])
+                res=SendWebhook(Active,exchangeName,marketType,account,orderType,pair,'sell',SellAMT,Trade['Sell'])
                 if res.find('Order Confirmation ID')>-1:
                     OrderID=GetOrderID(res)
                     Trade['Close']=round(Trade['Sell'],8)
