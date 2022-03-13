@@ -77,6 +77,7 @@ def main():
         except Exception as e:
             JRRlog.ErrorLog("Fetching Ticker",e)
 
+        marketType="spot"
         if ticker['info']!=None and "type" in ticker['info']:
             marketType=ticker['info']['type']
         else:
@@ -89,8 +90,6 @@ def main():
             else:
                 if "permissions" in exchange.markets[pair]['info']:
                     marketType=' '.join(exchange.markets[pair]['info']['permissions'])
-                else:
-                    marketType="spot"
 
         if market.lower()!='all':
             if marketType!=market:
