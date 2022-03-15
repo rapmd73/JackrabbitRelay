@@ -99,6 +99,7 @@ def ReadGrid(exchangeName,account,Asset):
         Trade['Buy']=0.0
         Trade['Sell']=0.0
         Trade['Counter']=0
+        Trade['Profit']=0.0
 
     return(Trade)
 
@@ -219,7 +220,8 @@ def TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit):
     minimum,mincost=JRRapi.GetMinimum(exchange,pair,False,False,RetryLimit)
 
     if Config['BuyLots'].lower()=='balance':
-        Trade['BuyAmount']=Balance2Lots(exchange,pair,pct,RetryLimit)*minimum
+        Trade['BuyLots']=Balance2Lots(exchange,pair,pct,RetryLimit)
+        Trade['BuyAmount']=Trade['BuyLots']*minimum
     else:
         p=float(Config['BuyLots'])
         if p<1:
@@ -234,7 +236,7 @@ def TradeSellAmount(Config,Trade,exchange,pair,pct,RetryLimit):
     if Config['SellLots'].lower()=='dynamic':
         if Trade['Counter']>0:
             pb=(Config['OverSell']/100)*(Trade['Counter']/(100*pct))*pct
-            ba=float(Trade['BuyAmount'])
+            ba=float(Config['BuyLots'])*minimum
             Trade['SellAmount']=ba+(ba*pb)
         else:
             Trade['SellAmount']=float(Trade['BuyAmount'])
@@ -331,6 +333,8 @@ def main():
     JRRlog.WriteLog("Quote currency: "+quote)
 
     Trade=ReadGrid(exchangeName,account,pair)
+    if 'Profit' not in Trade:
+        Trade['Profit']=0.0
     if 'BuyAmount' not in Trade:
         Trade=TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit)
 
@@ -443,6 +447,7 @@ def main():
                 res=SendWebhook(Active,exchangeName,marketType,account,orderType,pair,'sell',SellAMT,Trade['Sell'])
                 if res.find('Order Confirmation ID')>-1:
                     OrderID=GetOrderID(res)
+                    Trade['Profit']+=round((close-Trade['Close'])*SellAMT,8)
                     Trade['Close']=round(Trade['Sell'],8)
                     Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
                     Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
@@ -457,6 +462,7 @@ def main():
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
+                Trade['Profit']+=round((close-Trade['Close'])*SellAMT,8)
                 Trade['Close']=round(Trade['Sell'],8)
                 Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
                 Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
