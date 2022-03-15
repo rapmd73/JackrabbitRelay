@@ -3,12 +3,33 @@
 
 import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
+import math
+import statistics
 import ccxt
 
 import JRRconfig
 import JRRsupport
 import JRRapi
 import JRRlog
+
+def Volatility(candles,days):
+    # starting candle, ignore last as its incomplete
+    l=len(candles)
+    sc=l-days
+
+    # Get average of days
+
+    dl=[]
+    for i in range(days):
+        c0=candles[sc+i][4]
+        c1=candles[sc+i-1][4]
+        d=(c0/c1-1)*100
+        dl.append(d)
+
+    sd=statistics.stdev(dl) 
+
+    return sd
+
 
 def main():
     if len(sys.argv) > 2:
@@ -114,7 +135,24 @@ def main():
             if mincost<sGT:
                 continue
 
-        print(f"{pair:20} {marketType:15} {minimum:18.6f} {mincost:18.6f}")
+# Get Volatility
+
+        candles1d=JRRapi.FetchCandles(exchange,pair,'1d',1447,RetryLimit)
+        candles=JRRapi.FetchCandles(exchange,pair,'1d',33,RetryLimit)
+
+        v1d=Volatility(candles1d,len(candles)-2)
+        l=len(candles)+2
+        v3=Volatility(candles,3)
+        if l>7:
+            v7=Volatility(candles,7)
+        else:
+            v7=0.0
+        if l>31:
+            v31=Volatility(candles,31)
+        else:
+            v31=0.0
+
+        print(f"{pair:20} {marketType:15} {minimum:18.6f} {mincost:18.6f} {v1d:6.2f}% {v3:6.2f}% {v7:6.2f}% {v31:6.2f}%")
 
 if __name__ == '__main__':
     try:

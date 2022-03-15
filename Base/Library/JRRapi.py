@@ -292,7 +292,7 @@ def PlaceOrder(exchange, account, pair, orderType, action, amount, close, RetryL
 # Customized fetch OHLCV. Fetches an entire page
 
 def FetchCandles(exchange,pair,tf,CandleCount,RetryLimit):
-    exchangeName=exchange.name.lower()
+    exchangeName=exchange.name.lower().replace(' ','')
     ohlcv=[]
     retry429=0
     retry=0
@@ -302,7 +302,7 @@ def FetchCandles(exchange,pair,tf,CandleCount,RetryLimit):
 
     # Save the only rate limit and remap it.
 
-    if exchangeName=='kucoin':
+    if 'kucoin' in exchangeName:
         rleSave=exchange.enableRateLimit
         rlvSave=exchange.rateLimit
         exchange.enableRateLimit=True
@@ -318,7 +318,7 @@ def FetchCandles(exchange,pair,tf,CandleCount,RetryLimit):
             if ohlcv==[]:
                 ohlcv=None
         except Exception as e:
-            if exchangeName=='kucoin':
+            if 'kucoin' in exchangeName:
                 x=str(e)
                 if x.find('429000')>-1:
                     retry429+=1
@@ -334,7 +334,7 @@ def FetchCandles(exchange,pair,tf,CandleCount,RetryLimit):
         else:
             retry+=1
 
-    if exchangeName=='kucoin':
+    if 'kucoin' in exchangeName:
         exchange.enableRateLimit=rleSave
         exchange.rateLimit=rlvSave
 
