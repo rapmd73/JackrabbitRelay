@@ -68,6 +68,10 @@ def main():
     pair=Order['Asset'].upper()
     JRRlog.WriteLog('|- Asset: '+pair)
 
+    ledgerNote=None
+    if 'LedgerNotes' in Order:
+        ledgerNote=Order['LedgerNotes']
+
 # Check for condition size items
 
     if "USD" in Order:
@@ -326,7 +330,7 @@ def main():
         pass
 
     if amount>0.0:
-        JRRapi.PlaceOrder(exchange,account,pair, orderType, action, amount, close, RetryLimit, ReduceOnly)
+        JRRapi.PlaceOrder(exchange,account,pair, orderType, action, amount, close, RetryLimit, ReduceOnly, ledgerNote)
 
         bal=JRRapi.GetContract(exchange,pair,RetryLimit)
         sbal=f"{float(bal):.8f}"

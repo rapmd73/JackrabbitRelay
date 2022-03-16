@@ -233,7 +233,7 @@ def WaitLimitOrder(exchange,oi,pair,RetryLimit):
     else:
         return True
 
-def PlaceOrder(exchange, account, pair, orderType, action, amount, close, RetryLimit, ReduceOnly):
+def PlaceOrder(exchange, account, pair, orderType, action, amount, close, RetryLimit, ReduceOnly, ledgerNote):
     params = {}
     order=None
 
@@ -280,7 +280,7 @@ def PlaceOrder(exchange, account, pair, orderType, action, amount, close, RetryL
                 else:
                     JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
 
-                JRRledger.WriteLedger(exchange, account, pair, orderType, action, amount, close, order, RetryLimit)
+                JRRledger.WriteLedger(exchange, account, pair, orderType, action, amount, close, order, RetryLimit, ledgerNote)
                 return order
             else:
                 JRRlog.ErrorLog("Placing Order",orderType+" order unsuccessful")
