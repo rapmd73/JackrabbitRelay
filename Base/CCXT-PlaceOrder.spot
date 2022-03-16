@@ -59,6 +59,10 @@ def main():
     pair=Order['Asset'].upper()
     JRRlog.WriteLog('|- Asset: '+pair)
 
+    ledgerNote=None
+    if 'LedgerNotes' in Order:
+        ledgerNote=Order['LedgerNotes']
+
 # Check for condition size items
 
     if "USD" in Order:
@@ -283,7 +287,7 @@ def main():
 # In spot markets, ReduceOnly is ALWAYS false
 
     if amount>0.0:
-        JRRapi.PlaceOrder(exchange,account,pair, orderType, action, amount, close, RetryLimit, False)
+        JRRapi.PlaceOrder(exchange,account,pair, orderType, action, amount, close, RetryLimit, False, ledgerNote)
 
         bal=JRRapi.GetBalance(exchange,base,RetryLimit)
         sbal=f"{float(bal):.8f}"

@@ -38,7 +38,7 @@ import JRRsupport
 #         'trades': None
 # }
 
-def WriteLedger(exchange, account, pair, market, action, amount, close, order, RetryLimit):
+def WriteLedger(exchange, account, pair, market, action, amount, close, order, RetryLimit,ledgerNote):
     time=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
 
     en=exchange.name.lower().replace(' ','')
@@ -81,6 +81,8 @@ def WriteLedger(exchange, account, pair, market, action, amount, close, order, R
         for i in fo:
             n=en+i.upper()
             ledger[n]=fo[i]
+
+    ledger['LedgerNote']=ledgerNote
 
     fw=JRRsupport.FileWatch(fn)
     fw.Lock()
