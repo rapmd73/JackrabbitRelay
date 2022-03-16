@@ -82,7 +82,8 @@ def WriteLedger(exchange, account, pair, market, action, amount, close, order, R
             n=en+i.upper()
             ledger[n]=fo[i]
 
-    ledger['LedgerNote']=ledgerNote
+    if ledgerNote!=None:
+        ledger['LedgerNote']=ledgerNote
 
     fw=JRRsupport.FileWatch(fn)
     fw.Lock()
