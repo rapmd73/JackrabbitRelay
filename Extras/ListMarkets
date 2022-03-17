@@ -137,12 +137,19 @@ def main():
 
 # Get Volatility
 
-        candles1d=JRRapi.FetchCandles(exchange,pair,'1d',1447,RetryLimit)
         candles=JRRapi.FetchCandles(exchange,pair,'1d',33,RetryLimit)
 
-        v1d=Volatility(candles1d,len(candles)-2)
+        # 1 day volatility
+        l=len(candles)-1
+        c0=candles[l-1][4]
+        c1=candles[l-2][4]
+        v1d=abs((c0/c1-1)*100)
+
         l=len(candles)+2
-        v3=Volatility(candles,3)
+        if l>3:
+            v3=Volatility(candles,3)
+        else:
+            v3=0.0
         if l>7:
             v7=Volatility(candles,7)
         else:
@@ -152,7 +159,8 @@ def main():
         else:
             v31=0.0
 
-        print(f"{pair:20} {marketType:15} {minimum:18.6f} {mincost:18.6f} {v1d:6.2f}% {v3:6.2f}% {v7:6.2f}% {v31:6.2f}%")
+        spread=ticker['ask']-ticker['bid']
+        print(f"{pair:20} {marketType:8} {minimum:18.6f} {mincost:18.6f} {spread:18.8f} {v1d:6.2f}% {v3:6.2f}% {v7:6.2f}% {v31:6.2f}%")
 
 if __name__ == '__main__':
     try:

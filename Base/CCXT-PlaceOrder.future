@@ -201,6 +201,17 @@ def main():
     if market not in marketType:
         JRRlog.ErrorLog(exchangeName, "wrong market type: "+market+', asset is '+marketType)
 
+    if 'SpreadOverride' in Active:
+        spread=ticker['ask']-ticker['bid']
+        if spread>float(Active['SpreadOverride']):
+            s=f"too large, {spread:.8f} > {Active['SpreadOverride']:.8f}"
+            JRRlog.ErrorLog("Spread", s)
+    if 'Spread' in Order:
+        spread=ticker['ask']-ticker['bid']
+        if spread>float(Order['Spread']):
+            s=f"too large, {spread:.8f} > {Order['Spread']:.8f}"
+            JRRlog.ErrorLog("Spread", s)
+
     if 'limit' in orderType:
         if 'Close' in Order:
             o=Order['Close'].lower()

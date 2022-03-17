@@ -58,24 +58,24 @@ def WriteLedger(exchange, account, pair, market, action, amount, close, order, R
 
     # Try to pull completed order information
 
-    if exchange.has['fetchOrder']:
-        retry=0
-        done=False
-        fo=None
-        while not done:
-            try:
+    retry=0
+    done=False
+    fo=None
+    while not done:
+        try:
+            if exchange.has['fetchOrder']:
                 fo=exchange.fetchOrder(oi,symbol=pair)
-            except Exception as e:
-                if retry>=RetryLimit:
-                    done=True
-                    fo=None
-                else:
-                    JRRlog.WriteLog('Fetch Order Retrying ('+str(retry+1)+'), '+JRRapi.StopHTMLtags(str(e)))
             else:
+                fo=exchange.fetchClosedOrder(oi,symbol=pair)
+        except Exception as e:
+            if retry>=RetryLimit:
                 done=True
-            retry+=1
-    else:
-        fo=order
+                fo=None
+            else:
+                JRRlog.WriteLog('Fetch Order Retrying ('+str(retry+1)+'), '+JRRapi.StopHTMLtags(str(e)))
+        else:
+            done=True
+        retry+=1
 
     if fo!=None:
         for i in fo:
