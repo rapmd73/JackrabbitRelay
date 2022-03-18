@@ -62,6 +62,7 @@ Description of the payload items
 | `Leverage` | For binanceusdm and ftx, this sets the leverage amount |
 | `Margin` | For binanceusdm, this sets the margin to `Crossed` or `Isolated`. |
 | `SignalSource` | If this is `TVstrategy`, the buy/sell will be remapped to long/short. |
+| `Spread` | This evaluate the difference between the bid and ask prices. Trades are only places if the spread is *under this value* |
 
 ### Order Types
 
@@ -165,22 +166,5 @@ must explicitly tell it what tables to check.
 
 ## Donations
 
-If you would like to help support this project financially, please use
-any of the below addresses. Anything donated goes to the costs of
-sustaining Jackrabbit Relay. Thank you.
+Information regarding donations and supporting Jackrabbit Relay can be found [here](./Documentation/Donations.MD).
 
-You can subscribe to the Jackrabbit Relay tier for recurring monthly
-support:
-
-    https://www.patreon.com/RD3277
-
-If you perfer crypto or just a one time donation, please use any of the
-below:
-| | |
-| :--- | :--- |
-| BCH | bitcoincash:qzw5h5ccfz6v7zzh0vf5pl0eqp3zjmp5us07l72nvv|
-| BTC | 3JUbL3Vsj61VBAmyHtQhyiFJcizEfxAvzV |
-| ETH | 0x3c6C06150B2f24b3179a50b618aD3c0f58CF74FD |
-| LINK | 0xd8Fd4fA3b489861ad6Eb95a0617B4DA7c78123F8 |
-| LTC | MHj8nQcRdJWVVNeHUemSQgzBw3cPrZEtRU |
-| USDT | 0xd8Fd4fA3b489861ad6Eb95a0617B4DA7c78123F8 |
