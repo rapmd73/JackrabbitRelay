@@ -106,6 +106,11 @@ def GetAssetMinimum(exchange,pair,diagnostics,RetryLimit):
     ohlcv,ticker=FetchRetry(exchange,pair,"1m",RetryLimit)
 
     close=ohlcv[4]
+    if close==None:
+        if ticker['close']==None:
+            close=float(ticker['ask'])
+        else:
+            close=float(ticker['close'])
 
     minimum1=exchange.markets[pair]['limits']['amount']['min']
     if minimum1==None:

@@ -141,6 +141,8 @@ def main():
 
         # 1 day volatility
         l=len(candles)-1
+        if l==0:
+            continue
         c0=candles[l-1][4]
         c1=candles[l-2][4]
         v1d=abs((c0/c1-1)*100)
@@ -160,7 +162,7 @@ def main():
             v31=0.0
 
         spread=ticker['ask']-ticker['bid']
-        print(f"{pair:20} {marketType:8} {minimum:18.6f} {mincost:18.6f} {spread:18.8f} {v1d:6.2f}% {v3:6.2f}% {v7:6.2f}% {v31:6.2f}%")
+        print(f"{pair:30} {marketType:8} {minimum:18.6f} {mincost:18.6f} {spread:18.8f} {v1d:6.2f}% {v3:6.2f}% {v7:6.2f}% {v31:6.2f}%")
 
 if __name__ == '__main__':
     try:
