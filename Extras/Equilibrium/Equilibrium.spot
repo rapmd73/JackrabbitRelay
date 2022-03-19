@@ -227,7 +227,8 @@ def TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit):
         Trade['BuyLots']=Balance2Lots(exchange,pair,pct,RetryLimit)
         Trade['BuyAmount']=Trade['BuyLots']*minimum
     else:
-        p=float(Config['BuyLots'])
+        Trade['BuyLots']=Config['BuyLots']
+        p=float(Trade['BuyLots'])
         if p<1:
             p=1
         Trade['BuyAmount']=minimum*p
