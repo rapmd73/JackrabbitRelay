@@ -213,6 +213,10 @@ def ReadConfig(fn):
         Config['SellStopLow']=float(Config['SellStopLow'])
     else:
         Config['SellStopLow']=-1
+    if "ExitProfit" in Config:
+        Config['ExitProfit']=float(Config['ExitProfit'])
+    else:
+        Config['ExitProfit']=-1
 
     return(Config)
 
@@ -236,7 +240,7 @@ def TradeSellAmount(Config,Trade,exchange,pair,pct,RetryLimit):
     if Config['SellLots'].lower()=='dynamic':
         if Trade['Counter']>0:
             pb=(Config['OverSell']/100)*(Trade['Counter']/(100*pct))*pct
-            ba=float(Config['BuyLots'])*minimum
+            ba=float(Trade['BuyLots'])*minimum
             Trade['SellAmount']=ba+(ba*pb)
         else:
             Trade['SellAmount']=float(Trade['BuyAmount'])
@@ -378,8 +382,16 @@ def main():
         if Trade['Counter']==0 and CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
             if not first and once:
                 JRRlog.SuccessLog("Equilibrium","One cycle completed")
+
+            print(Config['ExitProfit'],Trade['Profit'])
+
+            if Config['ExitProfit']>0:
+                if Trade['Profit']>=Config['ExitProfit']:
+                    JRRlog.SuccessLog("Equilibrium","Exit profit achieved")
+
             if not first:
                 CheckStopTracer(exchangeName,account,pair)
+
             if not paper:
                 Trade=TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit)
 
