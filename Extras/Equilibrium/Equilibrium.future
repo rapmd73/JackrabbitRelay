@@ -358,7 +358,7 @@ def main():
     Trade=ReadGrid(exchangeName,account,pair)
     if 'Profit' not in Trade:
         Trade['Profit']=0.0
-    if 'BuyAmount' not in Trade:
+    if 'BuyAmount' not in Trade or 'BuyLots' not in Trade:
         Trade=TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit)
 
     first=True
