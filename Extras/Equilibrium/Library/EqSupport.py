@@ -61,11 +61,48 @@ def IncreaseLongTradeTable(Trade,close,pct):
 
     return(Trade)
 
+def IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh):
+    if Trade['PCTValue']==0 or Trade['Counter']==0:
+        Trade['PCTValue']=round(close*pct,8)
+
+    Trade['Close']=round(close,8)
+
+    if direction=='long':
+        Trade['Close']=round(Trade['Buy'],8)
+    else:
+        Trade['Close']=round(Trade['Sell'],8)
+
+    if direction=='short':
+        Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
+    else:
+        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+
+    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+    Trade['Counter']+=1
+
+    return(Trade)
+
 def DecreaseLongTradeTable(Trade,close,SellAMT):
     if SellAMT>0.0:
         Trade['Profit']+=round((close-Trade['Close'])*SellAMT,8)
     Trade['Close']=round(Trade['Sell'],8)
     Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
+    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
+    Trade['Counter']-=1
+
+    return(Trade)
+
+def DecreaseTradeTable(Trade,close,SellAMT,direction,AllTimeHigh):
+    if SellAMT>0.0:
+        Trade['Profit']+=round((close-Trade['Close'])*SellAMT,8)
+    if direction=='long':
+        Trade['Close']=round(Trade['Sell'],8)
+    else:
+        Trade['Close']=round(Trade['Buy'],8)
+    if direction=='short':
+        Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
+    else:
+        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
     Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
     Trade['Counter']-=1
 
