@@ -110,7 +110,7 @@ def ElasticDelay():
 def ReadAssetList(exchange,account,pair,mp,delete):
     JRRlog.WriteLog('Verifying maximum asset allowance of '+str(mp))
     coins={}
-    fn=JRRconfig.LogDirectory+'/'+exchange+'.'+account+'.coinlist'
+    fn=JRRconfig.DataDirectory+'/'+exchange+'.'+account+'.MaxAssets'
 
     p=pair.upper()
 
@@ -166,7 +166,7 @@ def ReadAssetList(exchange,account,pair,mp,delete):
     return coins
 
 def WriteAssetList(exchange,account,coins):
-    fn=JRRconfig.LogDirectory+'/'+exchange+'.'+account+'.coinlist'
+    fn=JRRconfig.LogDirectory+'/'+exchange+'.'+account+'.MaxAssets'
 
     if coins=={}:
         try:
@@ -186,7 +186,7 @@ def ReadPCTValueList(exchange,account,pair,pct,close,delete,RetryLimit):
     amount=0
     en=exchange.name.lower().replace(' ','')
     quote=exchange.markets[pair]['quote']
-    fn=JRRconfig.LogDirectory+'/'+en+'.'+account+'.pctvalue'
+    fn=JRRconfig.DataDirectory+'/'+en+'.'+account+'.PCTvalue'
 
     p=pair.upper()
     JRRlog.WriteLog('Checking amount/percentage for '+p)
@@ -258,7 +258,7 @@ def ReadPCTValueList(exchange,account,pair,pct,close,delete,RetryLimit):
 
 def WritePCTValueList(exchange,account,coins):
     en=exchange.name.lower().replace(' ','')
-    fn=JRRconfig.LogDirectory+'/'+en+'.'+account+'.pctvalue'
+    fn=JRRconfig.DataDirectory+'/'+en+'.'+account+'.PCTvalue'
 
     if coins=={}:
         try:
