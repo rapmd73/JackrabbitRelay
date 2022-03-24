@@ -192,7 +192,7 @@ def main():
                     res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,BuyDir,Trade['BuyAmount'],close)
                     if res.find('Order Confirmation ID')>-1:
                         OrderID=EqSupport.GetOrderID(res)
-                        Trade=IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
+                        Trade=EqSupport.IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
 
                         bal=JRRapi.GetContract(exchange,pair,RetryLimit)
 
@@ -201,12 +201,12 @@ def main():
 
                         EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                     else:
-                        Trade=IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
+                        Trade=EqSupport.IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
                         EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
-                Trade=IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
+                Trade=EqSupport.IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
 
                 vbuy='Buy/'+direction.capitalize()
                 EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
@@ -227,7 +227,7 @@ def main():
                     res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,BuyDir,Trade['BuyAmount'],cv)
                     if res.find('Order Confirmation ID')>-1:
                         OrderID=EqSupport.GetOrderID(res)
-                        Trade=IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
+                        Trade=EqSupport.IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
 
                         bal=JRRapi.GetContract(exchange,pair,RetryLimit)
 
@@ -235,12 +235,12 @@ def main():
                         EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
                         EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                     else:
-                        Trade=IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
+                        Trade=EqSupport.IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
                         EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
-                Trade=IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
+                Trade=EqSupport.IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
 
                 vbuy='Buy/'+BuyDir.capitalize()
                 EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
@@ -265,7 +265,7 @@ def main():
                     res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,SellDir,SellAMT,cv)
                     if res.find('Order Confirmation ID')>-1:
                         OrderID=EqSupport.GetOrderID(res)
-                        Trade=DecreaseTradeTable(Trade,close,SellAMT,direction,AllTimeHigh)
+                        Trade=EqSupport.DecreaseTradeTable(Trade,close,SellAMT,direction,AllTimeHigh)
 
                         bal=JRRapi.GetContract(exchange,pair,RetryLimit)
 
@@ -276,12 +276,12 @@ def main():
                             EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {OrderID} {bal:.8f}")
                         EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                     else:
-                        Trade=DecreaseTradeTable(Trade,close,SellAMT,direction,AllTimeHigh)
+                        Trade=EqSupport.DecreaseTradeTable(Trade,close,SellAMT,direction,AllTimeHigh)
                         EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
-                Trade=DecreaseTradeTable(Trade,close,SellAMT,direction,AllTimeHigh)
+                Trade=EqSupport.DecreaseTradeTable(Trade,close,SellAMT,direction,AllTimeHigh)
 
                 vsell='Sell/'+SellDir.capitalize()
                 if Trade['Counter']>0:
