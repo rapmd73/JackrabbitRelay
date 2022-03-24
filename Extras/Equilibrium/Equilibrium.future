@@ -168,7 +168,7 @@ def main():
             if close>AllTimeHigh:
                 AllTimeHigh=close
 
-        if Trade['Counter']==0 and EqSupport.CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
+        if Trade['Counter']==0:
             if not first and once:
                 JRRlog.SuccessLog("Equilibrium","One cycle completed")
 
@@ -188,38 +188,25 @@ def main():
             if not paper:
                 Trade=EqSupport.TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit)
 
-                res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,BuyDir,Trade['BuyAmount'],close)
-                if res.find('Order Confirmation ID')>-1:
-                    OrderID=EqSupport.GetOrderID(res)
-                    if Trade['PCTValue']==0:
-                        Trade['PCTValue']=round(close*pct,8)
+                if EqSupport.CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
+                    res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,BuyDir,Trade['BuyAmount'],close)
+                    if res.find('Order Confirmation ID')>-1:
+                        OrderID=EqSupport.GetOrderID(res)
+                        Trade=IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
 
-                    Trade['Close']=round(close,8)
+                        bal=JRRapi.GetContract(exchange,pair,RetryLimit)
 
-                    if direction=='short':
-                        Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
+                        vbuy='Buy/'+direction.capitalize()
+                        EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
+
+                        EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                     else:
-                        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
-                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
-                    Trade['Counter']+=1
-
-                    bal=JRRapi.GetContract(exchange,pair,RetryLimit)
-
-                    vbuy='Buy/'+direction.capitalize()
-                    EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
-
-                    EqSupport.WriteGrid(exchangeName,account,Trade,pair)
+                        Trade=IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
+                        EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
-                Trade['PCTValue']=round(close*pct,8)
-                Trade['Close']=round(close,8)
-                if direction=='short':
-                    Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
-                else:
-                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
-                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
-                Trade['Counter']+=1
+                Trade=IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
 
                 vbuy='Buy/'+direction.capitalize()
                 EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
@@ -236,38 +223,24 @@ def main():
 
         if IsBuy and EqSupport.CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
             if not paper:
-                res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,BuyDir,Trade['BuyAmount'],cv)
-                if res.find('Order Confirmation ID')>-1:
-                    OrderID=EqSupport.GetOrderID(res)
-                    if direction=='long':
-                        Trade['Close']=round(Trade['Buy'],8)
-                    else:
-                        Trade['Close']=round(Trade['Sell'],8)
-                    if direction=='short':
-                        Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
-                    else:
-                        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
-                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
-                    Trade['Counter']+=1
+                if EqSupport.CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
+                    res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,BuyDir,Trade['BuyAmount'],cv)
+                    if res.find('Order Confirmation ID')>-1:
+                        OrderID=EqSupport.GetOrderID(res)
+                        Trade=IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
 
-                    bal=JRRapi.GetContract(exchange,pair,RetryLimit)
+                        bal=JRRapi.GetContract(exchange,pair,RetryLimit)
 
-                    vbuy='Buy/'+BuyDir.capitalize()
-                    EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
-                    EqSupport.WriteGrid(exchangeName,account,Trade,pair)
+                        vbuy='Buy/'+BuyDir.capitalize()
+                        EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
+                        EqSupport.WriteGrid(exchangeName,account,Trade,pair)
+                    else:
+                        Trade=IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
+                        EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
-                if direction=='long':
-                    Trade['Close']=round(Trade['Buy'],8)
-                else:
-                    Trade['Close']=round(Trade['Sell'],8)
-                if direction=='short':
-                    Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
-                else:
-                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
-                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
-                Trade['Counter']+=1
+                Trade=IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
 
                 vbuy='Buy/'+BuyDir.capitalize()
                 EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
@@ -288,43 +261,27 @@ def main():
                 SellAMT=Trade['SellAmount']
                 if SellAMT>bal:
                     SellAMT=bal
-                res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,SellDir,SellAMT,cv)
-                if res.find('Order Confirmation ID')>-1:
-                    OrderID=EqSupport.GetOrderID(res)
-                    Trade['Profit']+=round((close-Trade['Close'])*SellAMT,8)
-                    if direction=='long':
-                        Trade['Close']=round(Trade['Sell'],8)
-                    else:
-                        Trade['Close']=round(Trade['Buy'],8)
-                    if direction=='short':
-                        Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
-                    else:
-                        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
-                    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
-                    Trade['Counter']-=1
+                if EqSupport.CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
+                    res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,SellDir,SellAMT,cv)
+                    if res.find('Order Confirmation ID')>-1:
+                        OrderID=EqSupport.GetOrderID(res)
+                        Trade=DecreaseTradeTable(Trade,close,SellAMT,direction,AllTimeHigh)
 
-                    bal=JRRapi.GetContract(exchange,pair,RetryLimit)
+                        bal=JRRapi.GetContract(exchange,pair,RetryLimit)
 
-                    vsell='Sell/'+SellDir.capitalize()
-                    if Trade['Counter']>0:
-                        EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
+                        vsell='Sell/'+SellDir.capitalize()
+                        if Trade['Counter']>0:
+                            EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
+                        else:
+                            EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {OrderID} {bal:.8f}")
+                        EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                     else:
-                        EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {OrderID} {bal:.8f}")
-                    EqSupport.WriteGrid(exchangeName,account,Trade,pair)
+                        Trade=DecreaseTradeTable(Trade,close,SellAMT,direction,AllTimeHigh)
+                        EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
-                Trade['Profit']+=round((close-Trade['Close'])*SellAMT,8)
-                if direction=='long':
-                    Trade['Close']=round(Trade['Sell'],8)
-                else:
-                    Trade['Close']=round(Trade['Buy'],8)
-                if direction=='short':
-                    Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
-                else:
-                    Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
-                Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
-                Trade['Counter']-=1
+                Trade=DecreaseTradeTable(Trade,close,SellAMT,direction,AllTimeHigh)
 
                 vsell='Sell/'+SellDir.capitalize()
                 if Trade['Counter']>0:

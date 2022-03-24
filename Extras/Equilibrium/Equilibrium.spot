@@ -174,7 +174,7 @@ def main():
 
 # Make a purchase.
 
-        if close<Trade['Buy'] and EqSupport.CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
+        if close<Trade['Buy']:
             if not paper:
                 if EqSupport.CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
                     res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,'buy',Trade['BuyAmount'],Trade['Buy'])
