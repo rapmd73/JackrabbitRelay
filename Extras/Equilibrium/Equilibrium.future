@@ -11,254 +11,16 @@
 import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 import os
-from datetime import datetime
-import pathlib
-import time
-import requests
-import json
 
 import JRRconfig
 import JRRlog
 import JRRapi
 import JRRsupport
 
+sys.path.append('/home/Equilibrium/Library')
+import EqSupport
+
 Header='Equilibrium '+JRRconfig.Version
-
-def SendWebhook(Active,exchangeName,market,account,orderType,pair,action,amount,price):
-    exc='"Exchange":"'+exchangeName+'", "Market":"'+market+'"'
-    account='"Account":"'+account+'", "OrderType":"'+orderType+'"'
-    sym='"Asset":"'+pair+'"'
-    direction='"Action":"'+action.lower()+'"'
-    psize='"Base":"'+str(amount)+'"'+',"Close":"'+str(price)+'"'
-
-    if "Identity" in Active:
-        idl='"Identity":"'+Active['Identity']+'"'
-        cmd='{ '+idl+', '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
-    else:
-        cmd='{ '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
-
-    headers={'content-type': 'text/plain', 'Connection': 'close'}
-
-    resp=None
-    res=None
-    try:
-        resp=requests.post(Active['Webhook'],headers=headers,data=cmd)
-        try:
-            r=json.loads(resp.text)
-            try:
-                res=r['message']
-            except:
-                res=json.dumps(r)
-        except:
-            res=resp.text
-    except:
-        res=None
-
-    return res
-
-def GetOrderID(res):
-    s=res.find('ID:')+4
-    for e in range(s,len(res)):
-        if res[e]=='\n':
-            break
-    oid=res[s:e]
-
-    return oid
-
-def CheckStopTracer(exchangeName,account,Asset):
-    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.stop'
-    if os.path.exists(fn):
-        JRRlog.SuccessLog("STOP", "tracer detected")
-
-def ReadGrid(exchangeName,account,Asset):
-    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.grid'
-    if os.path.exists(fn):
-        JRRlog.WriteLog("Reading Grid file")
-        fh=open(fn,'r')
-        for line in fh:
-            Trade={}
-            Trade=json.loads(line.rstrip())
-        fh.close()
-        JRRlog.WriteLog(f"|- {Asset:10} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
-    else:
-        Trade={}
-        Trade['PCTValue']=0.0
-        Trade['Close']=0.0
-        Trade['Buy']=0.0
-        Trade['Sell']=0.0
-        Trade['Counter']=0
-        Trade['Profit']=0.0
-
-    return(Trade)
-
-def WriteGrid(exchangeName,account,Trade,Asset):
-    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.grid'
-
-    if Trade['Counter']>0:
-        fh=open(fn,'w')
-        fh.write(json.dumps(Trade)+"\n")
-        fh.close()
-    else:
-        if os.path.exists(fn):
-            os.remove(fn)
-
-def WriteFutureLog(e,a,p,d,msg):
-    PlaceOrderName=os.path.basename(sys.argv[0])
-    pn=e+'.'+a+'.'+p.replace("-","").replace("/","").replace(':','')
-
-    pid=os.getpid()
-    time=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
-
-    s=f'{time} {pid:7.0f} {msg}\n'
-
-    fh=open(JRRconfig.LogDirectory+'/'+PlaceOrderName+'.'+d+'.'+pn+'.log','a')
-    fh.write(s)
-    fh.close()
-    print(s.rstrip())
-    sys.stdout.flush()
-
-# Convert account balance to lots in steps
-
-def Balance2Lots(exchange,pair,pct,RetryLimit):
-    quote=exchange.markets[pair]['quote']
-    if quote not in JRRconfig.StableCoinUSD:
-        hasQuote=True
-    else:
-        hasQuote=False
-
-# Get exchange required minimums
-
-    minimum,mincost=JRRapi.GetMinimum(exchange,pair,hasQuote,False,RetryLimit)
-
-# Convert balance to number of steps and lots
-
-    bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
-    steps=100/(pct*100)
-    priceStep=bal/steps
-    Lots=priceStep/mincost
-        
-    if Lots<1:
-        Lots=1
-
-    return Lots
-
-# Read CFG file
-
-def ReadConfig(fn):
-    Required=[ "Exchange", "Account", "Asset", "Boundary", "BuyLots","Direction" ]
-
-    Config={}
-
-    JRRlog.WriteLog("Reading configuration file")
-
-    if os.path.exists(fn):
-        try:
-            raw=pathlib.Path(fn).read_text()
-        except:
-            JRRlog.ErrorLog("ReadConfig",f"Can't read {fn}")
-
-        txt=JRRsupport.pFilter(raw)
-
-        try:
-            Config=json.loads(txt)
-        except:
-            JRRlog.ErrorLog("ReadConfig",f"Damaged JSON: {txt}")
-    else:
-        JRRlog.ErrorLog("ReadConfig",'Config file not found.')
-
-    for i in Config:
-        JRRlog.WriteLog(f"|- {i}: {Config[i]}")
-
-    for i in Required:
-        if i not in Config:
-            JRRlog.ErrorLog("ReadConfig",f"Missing required item: {i}")
-
-    Config['Exchange']=Config['Exchange'].lower()
-    Config['Direction']=Config['Direction'].lower()
-    Config['Asset']=Config['Asset'].upper()
-    Config['Boundary']=float(Config['Boundary'])/100
-    if "SellLots" not in Config:
-        Config['SellLots']='Dynamic'
-    if "OverSell" in Config:
-        Config['OverSell']=float(Config['OverSell'])/100
-    else:
-        Config['OverSell']=20/100
-    if "OrderType" not in Config:
-        Config['OrderType']='Market'
-
-    if "BuyStopHigh" in Config:
-        Config['BuyStopHigh']=float(Config['BuyStopHigh'])
-    else:
-        Config['BuyStopHigh']=-1
-    if "BuyStopLow" in Config:
-        Config['BuyStopLow']=float(Config['BuyStopLow'])
-    else:
-        Config['BuyStopLow']=-1
-    if "SellStopHigh" in Config:
-        Config['SellStopHigh']=float(Config['SellStopHigh'])
-    else:
-        Config['SellStopHigh']=-1
-    if "SellStopLow" in Config:
-        Config['SellStopLow']=float(Config['SellStopLow'])
-    else:
-        Config['SellStopLow']=-1
-    if "ExitProfit" in Config:
-        Config['ExitProfit']=float(Config['ExitProfit'])
-    else:
-        Config['ExitProfit']=-1
-
-    return(Config)
-
-def TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit):
-    minimum,mincost=JRRapi.GetMinimum(exchange,pair,False,False,RetryLimit)
-
-    if Config['BuyLots'].lower()=='balance':
-        Trade['BuyLots']=Balance2Lots(exchange,pair,pct,RetryLimit)
-        Trade['BuyAmount']=Trade['BuyLots']*minimum
-    else:
-        Trade['BuyLots']=Config['BuyLots']
-        p=float(Trade['BuyLots'])
-        if p<1:
-            p=1
-        Trade['BuyAmount']=minimum*p
-
-    return Trade
-
-def TradeSellAmount(Config,Trade,exchange,pair,pct,RetryLimit):
-    minimum,mincost=JRRapi.GetMinimum(exchange,pair,False,False,RetryLimit)
-
-    if Config['SellLots'].lower()=='dynamic':
-        if Trade['Counter']>0:
-            pb=(Config['OverSell']/100)*(Trade['Counter']/(100*pct))*pct
-            ba=float(Trade['BuyLots'])*minimum
-            Trade['SellAmount']=ba+(ba*pb)
-        else:
-            Trade['SellAmount']=float(Trade['BuyAmount'])
-    elif Config['SellLots'].lower()=='buylots':
-        Trade['SellAmount']=float(Trade['BuyAmount'])
-    else:
-        Trade['SellAmount']=minimum*float(Config['SellLots'])
-
-    return Trade
-
-def CheckHighLow(c,l,h):
-    if l==-1 and h==-1:
-        return True
-
-    if c>=l and h==-1:
-        return True
-    else:
-        return False
-
-    if l==-1 and c<=h:
-        return True
-    else:
-        return False
-
-    if c>=l and c<=h:
-        return True
-    else:
-        return False
 
 ###
 ### Main code base. Place order on exchange
@@ -269,14 +31,10 @@ def main():
 
     # Read CFG file
     if len(sys.argv) > 1:
-        Config=ReadConfig(sys.argv[1])
+        Config=EqSupport.ReadConfig(sys.argv[1])
     else:
         print("A valid configuration file must be provided.")
         sys.exit(1)
-
-    once=False
-    if len(sys.argv) > 2 and sys.argv[2].lower()=='once':
-        once=True
 
     paper=False
     if 'Paper' in Config:
@@ -287,7 +45,7 @@ def main():
     pair=Config['Asset']
     pct=Config['Boundary']
     orderType=Config['OrderType']
-    direction=Config['Direction']
+    direction=Config['Direction'].lower()
 
 # Figure out the direction of the trade
 
@@ -355,13 +113,12 @@ def main():
     JRRlog.WriteLog("Trade direction: "+direction)
 
     AllTimeHigh=0.0
-    Trade=ReadGrid(exchangeName,account,pair)
+    Trade=EqSupport.ReadGrid(exchangeName,account,pair)
     if 'Profit' not in Trade:
         Trade['Profit']=0.0
     if 'BuyAmount' not in Trade or 'BuyLots' not in Trade:
-        Trade=TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit)
+        Trade=EqSupport.TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit)
 
-    first=True
     while True:
         # Rotate the key
 
@@ -389,7 +146,7 @@ def main():
                 if Trade['PCTValue']==0:
                     Trade['PCTValue']=round(close*pct,8)
                 Trade['Counter']=0
-                WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} Balance ({bal:.8f}) < Amount ({Trade['BuyAmount']:.8f}), Resetting grid")
+                EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} Balance ({bal:.8f}) < Amount ({Trade['BuyAmount']:.8f}), Resetting grid")
 
         # Rotate the key
 
@@ -411,16 +168,14 @@ def main():
             if close>AllTimeHigh:
                 AllTimeHigh=close
 
-        if Trade['Counter']==0 and CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
+        if Trade['Counter']==0 and EqSupport.CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
             if not first and once:
                 JRRlog.SuccessLog("Equilibrium","One cycle completed")
 
             if Config['ExitProfit']>0:
                 if Trade['Profit']>=Config['ExitProfit']:
+                    EqSupport.EraseGrid(exchangeName,account,pair)
                     JRRlog.SuccessLog("Equilibrium","Exit profit achieved")
-
-            if not first:
-                CheckStopTracer(exchangeName,account,pair)
 
             # First purchase sets the direction. MUST be in the direction
             # specified on the command line or in the confguration file.
@@ -431,11 +186,11 @@ def main():
             # to lock the direction of the trade.
 
             if not paper:
-                Trade=TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit)
+                Trade=EqSupport.TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit)
 
-                res=SendWebhook(Active,exchangeName,marketType,account,orderType,pair,BuyDir,Trade['BuyAmount'],close)
+                res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,BuyDir,Trade['BuyAmount'],close)
                 if res.find('Order Confirmation ID')>-1:
-                    OrderID=GetOrderID(res)
+                    OrderID=EqSupport.GetOrderID(res)
                     if Trade['PCTValue']==0:
                         Trade['PCTValue']=round(close*pct,8)
 
@@ -451,9 +206,9 @@ def main():
                     bal=JRRapi.GetContract(exchange,pair,RetryLimit)
 
                     vbuy='Buy/'+direction.capitalize()
-                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
+                    EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
 
-                    WriteGrid(exchangeName,account,Trade,pair)
+                    EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
@@ -467,8 +222,8 @@ def main():
                 Trade['Counter']+=1
 
                 vbuy='Buy/'+direction.capitalize()
-                WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
-                WriteGrid(exchangeName,account,Trade,pair)
+                EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
+                EqSupport.WriteGrid(exchangeName,account,Trade,pair)
 
 # Make a purchase.
 
@@ -479,11 +234,11 @@ def main():
             IsBuy=close>Trade['Sell']
             cv=Trade['Sell']
 
-        if IsBuy and CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
+        if IsBuy and EqSupport.CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
             if not paper:
-                res=SendWebhook(Active,exchangeName,marketType,account,orderType,pair,BuyDir,Trade['BuyAmount'],cv)
+                res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,BuyDir,Trade['BuyAmount'],cv)
                 if res.find('Order Confirmation ID')>-1:
-                    OrderID=GetOrderID(res)
+                    OrderID=EqSupport.GetOrderID(res)
                     if direction=='long':
                         Trade['Close']=round(Trade['Buy'],8)
                     else:
@@ -498,9 +253,8 @@ def main():
                     bal=JRRapi.GetContract(exchange,pair,RetryLimit)
 
                     vbuy='Buy/'+BuyDir.capitalize()
-                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
-
-                    WriteGrid(exchangeName,account,Trade,pair)
+                    EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
+                    EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
@@ -516,8 +270,8 @@ def main():
                 Trade['Counter']+=1
 
                 vbuy='Buy/'+BuyDir.capitalize()
-                WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
-                WriteGrid(exchangeName,account,Trade,pair)
+                EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
+                EqSupport.WriteGrid(exchangeName,account,Trade,pair)
 
 # Make a sell only if balance > minimum
 
@@ -528,15 +282,15 @@ def main():
             IsSell=close<Trade['Buy']
             cv=Trade['Buy']
 
-        if Trade['Counter']>0 and IsSell  and CheckHighLow(close,Config['SellStopLow'],Config['SellStopHigh']):
+        if Trade['Counter']>0 and IsSell  and EqSupport.CheckHighLow(close,Config['SellStopLow'],Config['SellStopHigh']):
             if not paper:
-                Trade=TradeSellAmount(Config,Trade,exchange,pair,pct,RetryLimit)
+                Trade=EqSupport.TradeSellAmount(Config,Trade,exchange,pair,pct,RetryLimit)
                 SellAMT=Trade['SellAmount']
                 if SellAMT>bal:
                     SellAMT=bal
-                res=SendWebhook(Active,exchangeName,marketType,account,orderType,pair,SellDir,SellAMT,cv)
+                res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,SellDir,SellAMT,cv)
                 if res.find('Order Confirmation ID')>-1:
-                    OrderID=GetOrderID(res)
+                    OrderID=EqSupport.GetOrderID(res)
                     Trade['Profit']+=round((close-Trade['Close'])*SellAMT,8)
                     if direction=='long':
                         Trade['Close']=round(Trade['Sell'],8)
@@ -553,10 +307,10 @@ def main():
 
                     vsell='Sell/'+SellDir.capitalize()
                     if Trade['Counter']>0:
-                        WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
+                        EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
                     else:
-                        WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {OrderID} {bal:.8f}")
-                    WriteGrid(exchangeName,account,Trade,pair)
+                        EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {OrderID} {bal:.8f}")
+                    EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                 else:
                     JRRlog.ErrorLog("Equilibrium","Order failed")
             else:
@@ -574,12 +328,11 @@ def main():
 
                 vsell='Sell/'+SellDir.capitalize()
                 if Trade['Counter']>0:
-                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
+                    EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
                 else:
-                    WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f}")
-                WriteGrid(exchangeName,account,Trade,pair)
+                    EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f}")
+                EqSupport.WriteGrid(exchangeName,account,Trade,pair)
 
-        first=True
         JRRsupport.ElasticSleep(1)
 
 if __name__ == '__main__':
