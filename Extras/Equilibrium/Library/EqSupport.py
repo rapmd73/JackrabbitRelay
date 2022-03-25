@@ -122,6 +122,11 @@ def CheckStopTracer(exchangeName,account,Asset):
     if os.path.exists(fn):
         JRRlog.SuccessLog("STOP", "tracer detected")
 
+def CheckHaltTracer(exchangeName,account,Asset):
+    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.halt'
+    if os.path.exists(fn):
+        JRRlog.SuccessLog("HALT", "tracer detected")
+
 def ReadGrid(exchangeName,account,Asset):
     fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.grid'
     if os.path.exists(fn):

@@ -119,7 +119,9 @@ def main():
     if 'BuyAmount' not in Trade or 'BuyLots' not in Trade:
         Trade=EqSupport.TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit)
 
+    first=True
     while True:
+        CheckHaltTracer(exchangeName,account,pair)
         # Rotate the key
 
         CurrentKey=((CurrentKey+1)%len(keys))
@@ -169,8 +171,8 @@ def main():
                 AllTimeHigh=close
 
         if Trade['Counter']==0:
-            if not first and once:
-                JRRlog.SuccessLog("Equilibrium","One cycle completed")
+            if not first:
+                CheckStopTracer(exchangeName,account,pair)
 
             if Config['ExitProfit']>0:
                 if Trade['Profit']>=Config['ExitProfit']:
@@ -221,7 +223,7 @@ def main():
             IsBuy=close>Trade['Sell']
             cv=Trade['Sell']
 
-        if IsBuy and EqSupport.CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
+        if IsBuy
             if not paper:
                 if EqSupport.CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
                     res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,BuyDir,Trade['BuyAmount'],cv)
@@ -255,7 +257,7 @@ def main():
             IsSell=close<Trade['Buy']
             cv=Trade['Buy']
 
-        if Trade['Counter']>0 and IsSell  and EqSupport.CheckHighLow(close,Config['SellStopLow'],Config['SellStopHigh']):
+        if Trade['Counter']>0 and IsSell
             if not paper:
                 Trade=EqSupport.TradeSellAmount(Config,Trade,exchange,pair,pct,RetryLimit)
                 SellAMT=Trade['SellAmount']
@@ -290,6 +292,7 @@ def main():
                     EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f}")
                 EqSupport.WriteGrid(exchangeName,account,Trade,pair)
 
+        first=False
         JRRsupport.ElasticSleep(1)
 
 if __name__ == '__main__':

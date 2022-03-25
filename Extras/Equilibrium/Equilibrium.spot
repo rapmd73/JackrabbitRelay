@@ -107,7 +107,9 @@ def main():
     if 'BuyAmount' not in Trade or 'BuyLots' not in Trade:
         Trade=EqSupport.TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit)
 
+    first=True
     while True:
+        CheckHaltTracer(exchangeName,account,pair)
         # Rotate the key
 
         CurrentKey=((CurrentKey+1)%len(keys))
@@ -143,6 +145,9 @@ def main():
         JRRapi.SetExchangeAPI(exchange,Active)
 
         if Trade['Counter']==0:
+            if not first:
+                CheckStopTracer(exchangeName,account,pair)
+
             if Config['ExitProfit']>0:
                 if Trade['Profit']>=Config['ExitProfit']:
                     EqSupport.EraseGrid(exchangeName,account,pair)
@@ -231,6 +236,7 @@ def main():
                     EqSupport.WriteSpotLog(exchangeName,account,pair,f"{pair:10} Sell {Trade['Counter']:2.0f}")
                 EqSupport.WriteGrid(exchangeName,account,Trade,pair)
 
+        first=False
         JRRsupport.ElasticSleep(1)
 
 if __name__ == '__main__':
