@@ -150,8 +150,16 @@ def main():
 
             if Config['ExitProfit']>0:
                 if Trade['Profit']>=Config['ExitProfit']:
+                    if quote not in JRRconfig.StableCoinUSD:
+                        forceQuote=True
+                    else:
+                        forceQuote=False
+                    minimum,mincost=JRRapi.GetMinimum(exchange,pair,forceQuote,False,RetryLimit)
+                    if bal>minimum and bal<Trade['BuyAmount']:
+                        res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,'close',Trade['BuyAmount'],close)
+
                     EqSupport.EraseGrid(exchangeName,account,pair)
-                    JRRlog.SuccessLog("Equilibrium","Exit profit achieved")
+                    JRRlog.SuccessLog("Equilibrium","Exit profit achieved, "+str(Trade['Profit']))
 
             if not paper:
                 Trade=EqSupport.TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit)
