@@ -109,7 +109,7 @@ def main():
 
     first=True
     while True:
-        CheckHaltTracer(exchangeName,account,pair)
+        EqSupport.CheckHaltTracer(exchangeName,account,pair)
         # Rotate the key
 
         CurrentKey=((CurrentKey+1)%len(keys))
