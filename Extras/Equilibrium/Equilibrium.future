@@ -45,12 +45,16 @@ def main():
     pair=Config['Asset']
     pct=Config['Boundary']
     orderType=Config['OrderType']
-    direction=Config['Direction'].lower()
 
 # Figure out the direction of the trade
 
+    if 'Direction' not in Config:
+        JRRlog.ErrorLog("Equilibrium","A direction of long or short MUST be present")
+
+    direction=Config['Direction'].lower()
     if direction!='long' and direction!='short':
         JRRlog.ErrorLog("Equilibrium","Direction MUST be long or short")
+    direction=Config['Direction'].lower()
 
 # Theory:
 #

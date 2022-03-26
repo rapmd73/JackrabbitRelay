@@ -62,22 +62,25 @@ def IncreaseLongTradeTable(Trade,close,pct):
     return(Trade)
 
 def IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh):
+    # for futures, setup is very different for initial grid.
+
     if Trade['PCTValue']==0 or Trade['Counter']==0:
         Trade['PCTValue']=round(close*pct,8)
-
-    Trade['Close']=round(close,8)
-
-    if direction=='long':
-        Trade['Close']=round(Trade['Buy'],8)
+        Trade['Close']=round(close,8)
+        if direction=='short':
+            Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
+        else:
+            Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
+        Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
     else:
-        Trade['Close']=round(Trade['Sell'],8)
+        if direction=='long':
+            Trade['Close']=round(Trade['Buy'],8)
+            Trade['Buy']=  round(Trade['Close']-Trade['PCTValue'],8)
+        else:
+            Trade['Close']=round(Trade['Sell'],8)
+            Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
+        Trade['Sell']= round(Trade['Close']+Trade['PCTValue'],8)
 
-    if direction=='short':
-        Trade['Buy']= round(Trade['Close']-(AllTimeHigh*(pct*4)),8)
-    else:
-        Trade['Buy']= round(Trade['Close']-Trade['PCTValue'],8)
-
-    Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
     Trade['Counter']+=1
 
     return(Trade)
