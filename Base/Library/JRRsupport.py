@@ -166,7 +166,7 @@ def ReadAssetList(exchange,account,pair,mp,delete):
     return coins
 
 def WriteAssetList(exchange,account,coins):
-    fn=JRRconfig.LogDirectory+'/'+exchange+'.'+account+'.MaxAssets'
+    fn=JRRconfig.DataDirectory+'/'+exchange+'.'+account+'.MaxAssets'
 
     if coins=={}:
         try:
