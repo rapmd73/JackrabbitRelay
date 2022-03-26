@@ -172,7 +172,7 @@ def main():
 
         if Trade['Counter']==0:
             if not first:
-                CheckStopTracer(exchangeName,account,pair)
+                EqSupport.CheckStopTracer(exchangeName,account,pair)
 
             if Config['ExitProfit']>0:
                 if Trade['Profit']>=Config['ExitProfit']:
