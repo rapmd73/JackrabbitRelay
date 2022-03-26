@@ -231,7 +231,7 @@ def main():
             IsBuy=close>Trade['Sell']
             cv=Trade['Sell']
 
-        if IsBuy
+        if IsBuy:
             if not paper:
                 if EqSupport.CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
                     res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,BuyDir,Trade['BuyAmount'],cv)
@@ -265,7 +265,7 @@ def main():
             IsSell=close<Trade['Buy']
             cv=Trade['Buy']
 
-        if Trade['Counter']>0 and IsSell
+        if Trade['Counter']>0 and IsSell:
             if not paper:
                 Trade=EqSupport.TradeSellAmount(Config,Trade,exchange,pair,pct,RetryLimit)
                 SellAMT=Trade['SellAmount']
