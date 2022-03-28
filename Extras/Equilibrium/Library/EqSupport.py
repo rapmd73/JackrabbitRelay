@@ -54,7 +54,9 @@ def SendWebhook(Active,exchangeName,market,account,orderType,pair,action,amount,
 def IncreaseLongTradeTable(Trade,close,pct):
     if Trade['PCTValue']==0 or Trade['Counter']==0:
         Trade['PCTValue']=round(close*pct,8)
-    Trade['Close']=round(close,8)
+        Trade['Close']=round(close,8)
+    else:
+        Trade['Close']=round(Trade['Buy'],8)
     Trade['Buy']=round(Trade['Close']-Trade['PCTValue'],8)
     Trade['Sell']=round(Trade['Close']+Trade['PCTValue'],8)
     Trade['Counter']+=1
