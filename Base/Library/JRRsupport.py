@@ -213,6 +213,10 @@ def ReadPCTValueList(exchange,account,pair,pct,close,delete,RetryLimit):
             else:
                 if p in coins:
                     if delete:
+                        # Even if deleted, amount needs to be returned for consistency
+                        jpkt=json.loads(coins[p])
+                        jpkt['Time']=time.time()
+                        amount=jpkt['Amount']
                         JRRlog.WriteLog('|- '+p+' removed')
                         try:
                             coins.pop(p,None)
