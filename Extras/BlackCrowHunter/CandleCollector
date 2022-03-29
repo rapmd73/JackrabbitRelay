@@ -19,49 +19,6 @@ import JRRlog
 import JRRapi
 import JRRsupport
 
-blank=" "
-
-msec = 1000
-minute = 60 * msec
-hour = 60 * minute
-day = 24 * hour
-hold = 10
-
-def FetchNumberCandles(exchange,pair,tf,days):
-    ct = exchange.milliseconds()-day
-    bt = (days*1440)
-
-    print('Pulling historic data...')
-    candles = []
-    done=False
-    cc=0
-    while not done and cc<bt:
-        try:
-            data = exchange.fetch_ohlcv(pair, tf, ct)
-            l=len(data)
-            if l>0:
-                cc+=l
-                candles+=data
-#                for i in data:
-#                    if i not in candles:
-#                        candles.append(i)
-                first = data[0][0]
-                ct-=(minute*l)
-                print(exchange.iso8601(ct),l,cc)
-            else:
-                done=True
-        except Exception as e:
-            print('Got an error', type(e).__name__, e.args, ', retrying in', hold, 'seconds...')
-            time.sleep(hold)
-
-    print('Removing overlaps...')
-    candleset=set(map(tuple,candles))
-    candles=list(candleset)
-    print('Sorting...')
-    candles.sort()
-
-    return candles
-
 def ReadConfig(fn):
     Required=[ "Timeframe", "TotalDays", "Exchange", "Account", "Asset" ]
 
@@ -115,23 +72,40 @@ def main():
     else:
         RetryLimit=10
 
-    candles=FetchNumberCandles(exchange,Config['Asset'],Config['Timeframe'],Config['TotalDays'])
+    # Get and write OHLCV to file
 
-    # Write OHLCV to file
+    candles=[]
+    done=False
+    ct=exchange.parse8601(Config['DateTime'])
+    now=exchange.milliseconds()
 
-    print('Writing historic data...')
     fn=Config['Exchange']+'.'+Config['Account']+'.'+Config['Asset'].replace("-","").replace("/","").replace(':','')+'.'+Config['Timeframe']+'.history'
     fh=open(fn,'w')
-    for idx in candles:
-        t=idx[0]
-        o=idx[1]
-        h=idx[2]
-        l=idx[3]
-        c=idx[4]
-        v=idx[5]
-        s=f'{t} {o} {h} {l} {c} {v}\n'
-        fh.write(s)
 
+    while ct<now:
+        try:
+            retry=0
+            data = exchange.fetch_ohlcv(Config['Asset'], Config['Timeframe'], ct)
+            l=len(data)
+            print(exchange.iso8601(ct),l,ct)
+            if l>0:
+                ct=data[l-1][0]+1
+
+                for idx in data:
+                    s=f'{idx[0]} {idx[1]} {idx[2]} {idx[3]} {idx[4]} {idx[5]}\n'
+                    fh.write(s)
+            else:
+                print('Fetch Candle, End of data')
+                fh.close()
+                sys.exit(1)
+        except Exception as e:
+            if retry>=RetryLimit:
+                print('Fetch Candle, '+JRRapi.StopHTMLtags(str(e)))
+                fh.close()
+                sys.exit(1)
+            else:
+                JRRsupport.ElasticSleep(5)
+            retry+=1
     fh.close()
 
 if __name__ == '__main__':

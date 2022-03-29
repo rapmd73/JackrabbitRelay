@@ -2,8 +2,6 @@
 
 ***HAVE YOUR BANKRUPTCY PAPERS READY***
 
-**WORKING DRAFT**
-
 In trading, a black crow is 3 consecutive downwards candles.
 BlackCrowHunter takes this concept and extends it to allow the ability to
 search for any number of downward candles.
@@ -75,10 +73,14 @@ The following describes the new configuration layout. This is the **NEW
 STANDARD** moving forward as it is extendable and more robust then the
 commandline. *This MUST be in proper JSON format*.
 
+Data and time must be in the exact format as shown. If your exchange
+returns no data, your date/time selection is out of range. Pick a more
+recent date/timwe combination.
+
 ```json
 {
+    "DateTime":"2019-07-04 00:00:00",
     "Timeframe":"1m",
-    "TotalDays":"30",
     "Exchange":"kucoin",
     "Account":"MAIN",
     "Asset":"ADA/USDT",
@@ -90,8 +92,8 @@ commandline. *This MUST be in proper JSON format*.
 
 | Item             | Value        | Description |
 | ----             | -----        | -------------------- |
+| `"DateTime"`     | `"2019-07-04 00:00:00"` | Date and time to start collecting historic data |
 | `"Timeframe"`    | `"1m"`       | Used in collection, backtesting. Timeframe. Most exchanges support `1m`, `5m`, `15m`, `1h`, `4h`, `1d` for timeframes |
-| `"TotalDays"`    | `"30"`       | Used in collection. The number of days of historical data to collect. |
 | `"Exchange"`     | `"kucoin"`   | Your exchange |
 | `"Account"`      | `"MAIN"`     | Your (sub)account |
 | `"Asset"`        | `"ADA/USDT"` | The asset (pair) you want to trade |

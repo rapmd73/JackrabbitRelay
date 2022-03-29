@@ -48,7 +48,7 @@ while True:
 
     t=float(Balance['DateTime'])
     timestamp=datetime.datetime.fromtimestamp(t)
-    dt=timestamp.strftime('%Y-%m-%d')
+    dt=timestamp.strftime('%Y-%m-%d %H:%M:%S')
 
     xps.append(dt)
 fh.close()

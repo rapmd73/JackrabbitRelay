@@ -65,6 +65,8 @@ def WriteLedger(exchange, account, pair, market, action, amount, close, order, R
 
     s=json.dumps(ledger)+'\n'
 
+    # This section must be kept as small and tight as possible.
+
     fw=JRRsupport.FileWatch(fn)
     fw.Lock()
 
@@ -77,4 +79,3 @@ def WriteLedger(exchange, account, pair, market, action, amount, close, order, R
         JRRlog.ErrorLog("Ledger",str(e))
 
     fw.Unlock()
-
