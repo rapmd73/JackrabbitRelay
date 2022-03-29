@@ -5,7 +5,7 @@ BaseDir="/home/BlackCrowHunter"
 cd $BaseDir
 
 while true ; do
-    $BaseDir/BlackCrowHunter.spot $1
+    $BaseDir/BlackCrowHunter.spot $@
     sleep 60
 done
 

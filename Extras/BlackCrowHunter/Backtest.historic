@@ -19,32 +19,14 @@ import JRRlog
 import JRRapi
 import JRRsupport
 
+import TechnicalAnalysis as ta
+
 blank=" "
 msec = 1000
 minute = 60 * msec
 hour = 60 * minute
 day = 24 * hour
 hold = 10
-
-def IsRedCandle(Previous,Current):
-    po=Previous[1]
-    pc=Previous[4]
-    co=Current[1]
-    cc=Current[4]
-
-    red=co>cc and cc<pc
-
-    return red
-
-def IsGreenCandle(Previous,Current):
-    po=Previous[1]
-    pc=Previous[4]
-    co=Current[1]
-    cc=Current[4]
-
-    green=co<cc and cc>pc
-
-    return green
 
 # Black Crow Algorithm
 #
@@ -60,14 +42,14 @@ def IsBlackCrow(candles,idx,CandleCount):
     offset=1
     for z in range(offset,CandleCount+offset):
         x=idx-z
-        red=IsRedCandle(candles[x-2],candles[x-1])
+        red=ta.IsRedCandle(candles[x-2],candles[x-1])
         if z==offset:
             IsDown=red
         else:
             IsDown=IsDown and red
 
     # Last candle shows up swing, if so, BUY
-    IsUp=IsGreenCandle(candles[idx-1],candles[idx])
+    IsUp=ta.IsGreenCandle(candles[idx-1],candles[idx])
 
     if IsDown and IsUp:
         return True

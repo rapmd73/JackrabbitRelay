@@ -26,3 +26,7 @@ cp -r /home/GitHub/JackrabbitRelay/Extras/* /home/JackrabbitRelay/Extras
 if test -f /home/Equilibrium/install ; then
     /home/GitHub/JackrabbitRelay/Extras/Equilibrium/install
 fi
+
+if test -f /home/BlackCrowHunter/install ; then
+    /home/GitHub/JackrabbitRelay/Extras/BlackCrowHunter/install
+fi
