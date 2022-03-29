@@ -113,24 +113,18 @@ def GetAssetMinimum(exchange,pair,diagnostics,RetryLimit):
             close=float(ticker['close'])
 
     minimum1=exchange.markets[pair]['limits']['amount']['min']
-    if minimum1==None:
-        minimum1=0.0
     minimum2=exchange.markets[pair]['limits']['cost']['min']
-    if minimum2==None:
-        minimum2=0.0
     minimum3=exchange.markets[pair]['limits']['price']['min']
-    if minimum3==None:
-        minimum3=0.0
 
-    if minimum1==0:
+    if minimum1==None or minimum1==0:
         m1=0.0
     else:
         m1=float(minimum1)*close
-    if minimum2==0:
+    if minimum2==None or minimum2==0:
         m2=0.0
     else:
         m2=float(minimum2)/close
-    if minimum3==0:
+    if minimum3==None or minimum3==0:
         m3=0.0
     else:
         m3=float(minimum3)/close
@@ -162,22 +156,18 @@ def GetMinimum(exchange,pair,forceQuote,diagnostics,RetryLimit):
     base=exchange.markets[pair]['base']
     quote=exchange.markets[pair]['quote']
 
+    minimum,mincost=GetAssetMinimum(exchange,pair,diagnostics,RetryLimit)
+
 # Get BASE minimum. This is all that is needed if quote is USD/Stablecoins
 
     if diagnostics:
         JRRlog.WriteLog("Minimum asset analysis")
         JRRlog.WriteLog("|- Base: "+base)
-
-    minimum,mincost=GetAssetMinimum(exchange,pair,diagnostics,RetryLimit)
-
-    if diagnostics:
         JRRlog.WriteLog("| |- Minimum: "+f"{minimum:.8f}")
         JRRlog.WriteLog("| |- Min Cost: "+f"{mincost:.8f}")
-
-# If quote is NOT USD/Stablecoin. NOTE: This is an API penalty for the
-# overhead of pulling quote currency. Quote currency OVERRIDES base ALWAYS.
-
-    if diagnostics:
+        # If quote is NOT USD/Stablecoin. NOTE: This is an API penalty
+        # for the overhead of pulling quote currency. Quote currency
+        # OVERRIDES base ALWAYS.
         JRRlog.WriteLog("|- Quote: "+quote)
 
     if quote not in JRRconfig.StableCoinUSD or forceQuote:
@@ -241,8 +231,12 @@ def WaitLimitOrder(exchange,oi,pair,RetryLimit):
 def PlaceOrder(exchange, account, pair, orderType, action, amount, close, RetryLimit, ReduceOnly, ledgerNote):
     params = {}
     order=None
+    ReturnNow=False
 
     m=orderType.lower()
+    if 'return' in m:
+        ReturnNow=True
+        m=m.replace('return','')
     if "createMarketBuyOrderRequiresPrice" in exchange.options and m=='market':
         m='limit'
     if m=='limittaker':
@@ -275,7 +269,9 @@ def PlaceOrder(exchange, account, pair, orderType, action, amount, close, RetryL
         else:
             done=True
             if order['id']!=None:
-                if m=='limit':
+                # ReturnNow forces an immediate return for limit orders.
+                # thew caller must maanage them for such situations.
+                if m=='limit' and not ReturnNow:
                     # wait no more then 3 minutes
                     successful=WaitLimitOrder(exchange,order['id'],pair,15)
                     if successful==True:
@@ -292,7 +288,7 @@ def PlaceOrder(exchange, account, pair, orderType, action, amount, close, RetryL
         retry+=1
 
     if retry>=RetryLimit:
-        JRRlog.ErrorLog("Placing Order","order unsuccessful")
+        JRRlog.ErrorLog("Placing Order",orderType+" order unsuccessful")
 
 # Customized fetch OHLCV. Fetches an entire page
 
