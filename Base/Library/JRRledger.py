@@ -16,28 +16,6 @@ import JRRlog
 import JRRapi
 import JRRsupport
 
-# {
-#     'id': '620044897ee3b40001827bf9', 
-#     'clientOrderId': 'b693934e-5f91-4b29-97b3-c7e5f775e865', 
-#     'info': 
-#         {'orderId': '620044897ee3b40001827bf9'}, 
-#         'timestamp': 1644184713911, 
-#         'datetime': '2022-02-06T21:58:33.911Z', 
-#         'lastTradeTimestamp': None, 
-#         'symbol': 'SLP/USDT', 
-#         'type': 'market', 
-#         'side': 'buy', 
-#         'price': 0.01258, 
-#         'amount': 0.7949, 
-#         'cost': None, 
-#         'average': None, 
-#         'filled': None, 
-#         'remaining': None, 
-#         'status': None, 
-#         'fee': None, 
-#         'trades': None
-# }
-
 def WriteLedger(exchange, account, pair, market, action, amount, close, order, RetryLimit,ledgerNote):
     time=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
 
@@ -85,10 +63,11 @@ def WriteLedger(exchange, account, pair, market, action, amount, close, order, R
     if ledgerNote!=None:
         ledger['LedgerNote']=ledgerNote
 
+    s=json.dumps(ledger)+'\n'
+
     fw=JRRsupport.FileWatch(fn)
     fw.Lock()
 
-    s=json.dumps(ledger)+'\n'
     try:
         fh=open(fn,'a')
         fh.write(s)
