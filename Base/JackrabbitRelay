@@ -107,6 +107,22 @@ def ProcessStatistatorium(addr,path):
 
     return res
 
+def CheckIPaddress(addr):
+    fn=JRRconfig.ConfigDirectory+'/IPList.cfg'
+    if os.path.exists(fn):
+        cf=open(fn,'rt+')
+        for line in cf.readlines():
+            line=line.strip()
+            if len(line)>0 and line[0]!='#':
+                if line==addr:
+                    cf.close()
+                    return True
+        cf.close()
+        return False
+
+    # if file doesn't exist, revert to previous functionality
+    return True
+
 class Handler(BaseHTTPRequestHandler):
 
     def log_message(self,format,*args):
@@ -136,27 +152,30 @@ class Handler(BaseHTTPRequestHandler):
         return res
 
     def do_POST(self):
+        res=None
         # Send the client a success response
         addr=self.client_address[0]
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(bytes('\r\n'.encode()))
 
-        # Get the length of the post data
-        content_len = int(self.headers.get_all('content-length', 0)[0])
+        if CheckIPaddress(str(addr)):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(bytes('\r\n'.encode()))
 
-        # Read the post data
+            # Get the length of the post data
+            content_len = int(self.headers.get_all('content-length', 0)[0])
 
-        payload = self.rfile.read(content_len)
+            # Read the post data
 
-        # Process Payload
+            payload = self.rfile.read(content_len)
 
-        res=ProcessTrade(addr,payload)
+            # Process Payload
 
-        if res!=None:
-            if type(res)!=bytes:
-                res=res.encode('utf-8')
-            self.wfile.write(res)
+            res=ProcessTrade(addr,payload)
+
+            if res!=None:
+                if type(res)!=bytes:
+                    res=res.encode('utf-8')
+                self.wfile.write(res)
         return res
 
 class ForkingSimpleServer(ForkingMixIn, HTTPServer):

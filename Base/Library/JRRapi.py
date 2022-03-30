@@ -132,7 +132,6 @@ def GetAssetMinimum(exchange,pair,diagnostics,RetryLimit):
     else:
         m3=float(minimum3)/close
 
-    print(minimum1,minimum2,minimum3)
     minimum=max(float(minimum1),m2,m3)
     mincost=max(m1,float(minimum2),float(minimum3))
 
