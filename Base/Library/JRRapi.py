@@ -117,18 +117,22 @@ def GetAssetMinimum(exchange,pair,diagnostics,RetryLimit):
     minimum3=exchange.markets[pair]['limits']['price']['min']
 
     if minimum1==None or minimum1==0:
+        minimum1=0
         m1=0.0
     else:
         m1=float(minimum1)*close
     if minimum2==None or minimum2==0:
+        minimum2=0
         m2=0.0
     else:
         m2=float(minimum2)/close
     if minimum3==None or minimum3==0:
+        minimum3=0
         m3=0.0
     else:
         m3=float(minimum3)/close
 
+    print(minimum1,minimum2,minimum3)
     minimum=max(float(minimum1),m2,m3)
     mincost=max(m1,float(minimum2),float(minimum3))
 
