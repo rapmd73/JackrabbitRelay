@@ -63,6 +63,7 @@ Description of the payload items
 | `Margin` | For binanceusdm, this sets the margin to `Crossed` or `Isolated`. |
 | `SignalSource` | If this is `TVstrategy`, the buy/sell will be remapped to long/short. |
 | `Spread` | This evaluate the difference between the bid and ask prices. Trades are only places if the spread is *under this value* |
+| `OverridePCTtable` | Overrides thew PCT table and forces a balance percentage based upon the immediate current balance of the account |
 
 ### Order Types
 

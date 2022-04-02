@@ -230,9 +230,9 @@ def main():
         if hasUSD:
             if '%' in Order['USD']:
                 delete=(action=='close')
-                pct=float(Order['USD'].replace('%',''))
                 if "OverridePCTtable" not in Active and "OverridePCTtable" not in Order:
-                    amount=JRRsupport.ReadPCTValueList(exchange,account,pair,pct,close,delete,RetryLimit)
+                    pct,PCTtype=JRRsupport.GetPCTtype(Order['USD'])
+                    amount=JRRsupport.ReadPCTValueList(exchange,account,pair,pct,PCTtype,close,delete,RetryLimit)
                 else:
                     bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
                     amount=round(((float(Order['USD'].replace('%',''))/100)*bal)/close,8)
@@ -242,9 +242,9 @@ def main():
             if hasQuote:
                 if '%' in Order['Quote']:
                     delete=(action=='close')
-                    pct=float(Order['Quote'].replace('%',''))
                     if "OverridePCTtable" not in Active and "OverridePCTtable" not in Order:
-                        amount=JRRsupport.ReadPCTValueList(exchange,account,pair,pct,close,delete,RetryLimit)
+                        pct,PCTtype=JRRsupport.GetPCTtype(Order['Quote'])
+                        amount=JRRsupport.ReadPCTValueList(exchange,account,pair,pct,PCTtype,close,delete,RetryLimit)
                     else:
                         bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
                         amount=round(((float(Order['Quote'].replace('%',''))/100)*bal)/close,8)
@@ -253,9 +253,9 @@ def main():
             else:
                 if '%' in Order['Base']:
                     delete=(action=='close')
-                    pct=float(Order['Base'].replace('%',''))
                     if "OverridePCTtable" not in Active and "OverridePCTtable" not in Order:
-                        amount=JRRsupport.ReadPCTValueList(exchange,account,pair,pct,close,delete,RetryLimit)
+                        pct,PCTtype=JRRsupport.GetPCTtype(Order['Base'])
+                        amount=JRRsupport.ReadPCTValueList(exchange,account,pair,pct,PCTtype,close,delete,RetryLimit)
                     else:
                         bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
                         amount=round(((float(Order['Base'].replace('%',''))/100)*bal)/close,8)

@@ -10,6 +10,7 @@ sys.path.append('/home/JackrabbitRelay/Base/Library')
 import os
 import time
 import json
+import requests
 
 import JRRconfig
 import JRRapi
@@ -77,6 +78,41 @@ class FileWatch:
             os.remove(self.filename)
         except:
             pass
+
+# Webhook processing. This unified layer will communicate with Relay for
+# placing the order and return the results.
+
+def SendWebhook(Active,exchangeName,market,account,orderType,pair,action,amount,price):
+    exc='"Exchange":"'+exchangeName+'", "Market":"'+market+'"'
+    account='"Account":"'+account+'", "OrderType":"'+orderType+'"'
+    sym='"Asset":"'+pair+'"'
+    direction='"Action":"'+action.lower()+'"'
+    psize='"Base":"'+str(amount)+'"'+',"Close":"'+str(price)+'"'
+
+    if "Identity" in Active:
+        idl='"Identity":"'+Active['Identity']+'"'
+        cmd='{ '+idl+', '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
+    else:
+        cmd='{ '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
+
+    headers={'content-type': 'text/plain', 'Connection': 'close'}
+
+    resp=None
+    res=None
+    try:
+        resp=requests.post(Active['Webhook'],headers=headers,data=cmd)
+        try:
+            r=json.loads(resp.text)
+            try:
+                res=r['message']
+            except:
+                res=json.dumps(r)
+        except:
+            res=resp.text
+    except:
+        res=None
+
+    return res
 
 # Elastic Delay. This is designed to prevent the VPS from being overloaded
 
@@ -178,10 +214,29 @@ def WriteAssetList(exchange,account,coins):
         fh.write(json.dumps(coins))
         fh.close()
 
+# Figure out the PCT type. Needs to identify %B and B%, %Q and Q%
+# Default is previous functionality
+
+def GetPCTtype(currency):
+    c=currency.lower()
+    if 'b%' in c or '%b' in c:
+        vs=c.replace('b%','').replace('%b','').strip()
+        PCTtype='B'
+        pct=float(vs)
+    elif 'q%' in c or '%q' in c:
+        vs=c.replace('q%','').replace('%q','').strip()
+        PCTtype='Q'
+        pct=float(vs)
+    else:
+        vs=c.replace('%','').strip()
+        PCTtype='B'
+        pct=float(vs)
+    return pct,PCTtype
+
 # This list determines a fixed percentage for a coin per balance for the
 # life of the trade, bot just the individual position
 
-def ReadPCTValueList(exchange,account,pair,pct,close,delete,RetryLimit):
+def ReadPCTValueList(exchange,account,pair,pct,pcttype,close,delete,RetryLimit):
     coins={}
     amount=0
     en=exchange.name.lower().replace(' ','')
@@ -206,18 +261,27 @@ def ReadPCTValueList(exchange,account,pair,pct,close,delete,RetryLimit):
                 jpkt={}
                 bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
                 jpkt['Time']=time.time()
-                jpkt['Amount']=round(((pct/100)*bal)/close,8)
+                jpkt['Volume']=round(((pct/100)*bal),8)
+                jpkt['Amount']=round(jpkt['Volume']/close,8)
                 amount=jpkt['Amount']
                 coins[p]=json.dumps(jpkt)
                 JRRlog.WriteLog('|- '+p+' added')
+                JRRlog.WriteLog('|- Amount: '+str(amount))
+                JRRlog.WriteLog('|- Volume: '+str(jpkt['Volume']))
             else:
                 if p in coins:
                     if delete:
                         # Even if deleted, amount needs to be returned for consistency
                         jpkt=json.loads(coins[p])
                         jpkt['Time']=time.time()
-                        amount=jpkt['Amount']
+                        if pcttype=='B':
+                            amount=jpkt['Amount']
+                        else:
+                            jpkt['Amount']=round(jpkt['Volume']/close,8)
+                            amount=jpkt['Amount']
                         JRRlog.WriteLog('|- '+p+' removed')
+                        JRRlog.WriteLog('|- Amount: '+str(amount))
+                        JRRlog.WriteLog('|- Volume: '+str(jpkt['Volume']))
                         try:
                             coins.pop(p,None)
                         except:
@@ -226,19 +290,27 @@ def ReadPCTValueList(exchange,account,pair,pct,close,delete,RetryLimit):
                         # Return existing amount
                         jpkt=json.loads(coins[p])
                         jpkt['Time']=time.time()
-                        amount=jpkt['Amount']
+                        if pcttype=='B':
+                            amount=jpkt['Amount']
+                        else:
+                            jpkt['Amount']=round(jpkt['Volume']/close,8)
+                            amount=jpkt['Amount']
                         coins[p]=json.dumps(jpkt)
                         JRRlog.WriteLog('|- '+p+' updated')
                         JRRlog.WriteLog('|- Amount: '+str(amount))
+                        JRRlog.WriteLog('|- Volume: '+str(jpkt['Volume']))
         else:
             if not delete:
                 jpkt={}
                 bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
                 jpkt['Time']=time.time()
-                jpkt['Amount']=round(((pct/100)*bal)/close,8)
+                jpkt['Volume']=round(((pct/100)*bal),8)
+                jpkt['Amount']=round(jpkt['Volume']/close,8)
                 amount=jpkt['Amount']
                 coins[p]=json.dumps(jpkt)
                 JRRlog.WriteLog('|- '+p+' added')
+                JRRlog.WriteLog('|- Amount: '+str(amount))
+                JRRlog.WriteLog('|- Volume: '+str(jpkt['Volume']))
 
         # Remove any coin over 7 days
 

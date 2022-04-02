@@ -9,7 +9,6 @@ import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 import os
 import time
-import requests
 import json
 import pathlib
 
@@ -20,43 +19,6 @@ import JRRsupport
 
 blank=" "
 Header='BlackCrowHunter '+JRRconfig.Version
-
-def SendWebhook(Active,exchangeName,account,pair,action,amount):
-    exc='"Exchange":"'+exchangeName+'", "Market":"Spot"'
-    account='"Account":"'+account+'"'
-    sym='"Asset":"'+pair+'"'
-    direction='"Action":"'+action.lower()+'"'
-    psize='"Base":"'+str(amount)+'"'
-
-    if "Identity" in Active:
-        idl='"Identity":"'+Active['Identity']+'"'
-        cmd='{ '+idl+', '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
-    else:
-        cmd='{ '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
-
-    headers={'content-type': 'text/plain', 'Connection': 'close'}
-
-    resp=None
-    res=None
-    try:
-        resp=requests.post(Active['Webhook'],headers=headers,data=cmd)
-        try:
-            r=json.loads(resp.text)
-            try:
-                res=r['message']
-            except:
-                res=json.dumps(r)
-        except:
-            res=resp.text
-    except:
-        res=None
-
-    return res
-
-def CheckStopTracer(exchangeName,account,Asset):
-    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.stop'
-    if os.path.exists(fn):
-        JRRlog.SuccessLog("STOP", "tracer detected")
 
 def ReadData(exchangeName,account,Asset):
     fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.BlackCrow'
@@ -280,7 +242,7 @@ def main():
 
         if Trade['SumCount']>0 and close>Trade['TakeProfit']:
             if not paper:
-                res=SendWebhook(Active,Config['Exchange'],Config['Account'],Config['Asset'],'close',BuyAmount*Trade['Martingale'])
+                res=JRRsupport.SendWebhook(Active,Config['Exchange'],'Spot',Config['Account'],'Market',Config['Asset'],'close',BuyAmount*Trade['Martingale'],close)
                 if res.find('Order Confirmation ID')>-1:
                     WriteData(Config['Exchange'],Config['Account'],None,Config['Asset'])
                     result=close-Trade['Average']
@@ -307,7 +269,7 @@ def main():
             # Martingale
             Trade['Martingale']*=2
             if not paper:
-                res=SendWebhook(Active,Config['Exchange'],Config['Account'],Config['Asset'],'buy',BuyAmount*Trade['Martingale'])
+                res=JRRsupport.SendWebhook(Active,Config['Exchange'],'spot',Config['Account'],'Market',Config['Asset'],'buy',BuyAmount*Trade['Martingale'],close)
                 if res.find('Order Confirmation ID')>-1:
                     Trade['SumCount']+=Trade['Martingale']
                     Trade['Total']+=close*Trade['Martingale']
@@ -336,7 +298,7 @@ def main():
             Trade['CandleCount']=Config['StartCandles']
             Trade['Martingale']=Config['BuyLots']*Multiplier
             if not paper:
-                res=SendWebhook(Active,Config['Exchange'],Config['Account'],Config['Asset'],'buy',BuyAmount)
+                res=JRRsupport.SendWebhook(Active,Config['Exchange'],'spot',Config['Account'],'Market',Config['Asset'],'buy',BuyAmount,close)
                 if res.find('Order Confirmation ID')>-1:
                     Trade['SumCount']=1
                     Trade['Total']=close
