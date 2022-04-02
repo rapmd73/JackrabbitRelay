@@ -48,7 +48,7 @@ cfiles=os.listdir(JRRconfig.ConfigDirectory)
 for cf in cfiles:
     if cf.find('.cfg')>-1:
         # Skip the identity file
-        if cf=='Identity.cfg':
+        if cf=='Identity.cfg' or cf=='IPList.cfg':
             continue
         keys=ReadConfigFile(cf)
 

@@ -203,9 +203,14 @@ The Jackrabbit Relay file structure and folder layout is as follows:
 | Folder | Description |
 | :--- | :--- |
 | `/home/JackrabbitRelay/` | This is the main folder |
-| `/home/JackrabbitRelay/Config/` | This is where all configuration files are stored |
 | `/home/JackrabbitRelay/Base/` | All program files go here |
+| `/home/JackrabbitRelay/Config/` | This is where all configuration files are stored |
+| `/home/JackrabbitRelay/Data/` | This is where all state tracking files are stored |
 | `/home/JackrabbitRelay/Logs/` | All log files go here |
+| `/home/JackrabbitRelay/Ledger/` | All ledger files go here |
+| `/home/JackrabbitRelay/Statistics/Balances` | Location for exchange balance data for Statistatorium |
+| `/home/JackrabbitRelay/Statistics/Charts` | Statistatorium charts |
+| `/home/JackrabbitRelay/Extras/Statistics` | Charting programs |
 
 In the base directory (`/home/JackrabbitRelay/Base/`), there are several
 files:
@@ -254,6 +259,7 @@ Now for the details:
 | `OrderTypeOverride` | This overrides the specified order type. |
 | `Reduction` | The amount to reduce your position to all your exchange to close it. Deprecated... <br> This is a percentage. Do NOT put a percent (%) sign. Use this ONLY if you receive errors closing a position. Finding the amount of the reduction is strictly trial and error. |
 | `Sandbox` | Any value accepted as its presence activates an exchange's testnet or sandbox mode |
+| `OverridePCTtable` | Overrides thew PCT table and forces a balance percentage based upon the immediate current balance of the account for all orders on this exchange. |
 
 Order types (for `OrderType`/`OrderTypeOverride`):
 

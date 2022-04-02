@@ -156,7 +156,7 @@ def main():
                         forceQuote=False
                     minimum,mincost=JRRapi.GetMinimum(exchange,pair,forceQuote,False,RetryLimit)
                     if bal>minimum and bal<Trade['BuyAmount']:
-                        res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,'close',Trade['BuyAmount'],close)
+                        res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,'close',Trade['BuyAmount'],close)
 
                     EqSupport.EraseGrid(exchangeName,account,pair)
                     JRRlog.SuccessLog("Equilibrium","Exit profit achieved, "+str(Trade['Profit']))
@@ -165,7 +165,7 @@ def main():
                 Trade=EqSupport.TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit)
 
                 if EqSupport.CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
-                    res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,'buy',Trade['BuyAmount'],close)
+                    res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,'buy',Trade['BuyAmount'],close)
                     if res.find('Order Confirmation ID')>-1:
                         OrderID=EqSupport.GetOrderID(res)
                         Trade=EqSupport.IncreaseLongTradeTable(Trade,close,pct)
@@ -190,7 +190,7 @@ def main():
         if close<Trade['Buy']:
             if not paper:
                 if EqSupport.CheckHighLow(close,Config['BuyStopLow'],Config['BuyStopHigh']):
-                    res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,'buy',Trade['BuyAmount'],Trade['Buy'])
+                    res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,'buy',Trade['BuyAmount'],Trade['Buy'])
                     if res.find('Order Confirmation ID')>-1:
                         OrderID=EqSupport.GetOrderID(res)
                         Trade=EqSupport.IncreaseLongTradeTable(Trade,close,pct)
@@ -219,7 +219,7 @@ def main():
                 if SellAMT>bal:
                     SellAMT=bal
                 if EqSupport.CheckHighLow(close,Config['SellStopLow'],Config['SellStopHigh']):
-                    res=EqSupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,'sell',SellAMT,Trade['Sell'])
+                    res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,'sell',SellAMT,Trade['Sell'])
                     if res.find('Order Confirmation ID')>-1:
                         OrderID=EqSupport.GetOrderID(res)
                         Trade=EqSupport.DecreaseLongTradeTable(Trade,close,SellAMT)

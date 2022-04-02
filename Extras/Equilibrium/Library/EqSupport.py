@@ -19,38 +19,6 @@ import JRRlog
 import JRRapi
 import JRRsupport
 
-def SendWebhook(Active,exchangeName,market,account,orderType,pair,action,amount,price):
-    exc='"Exchange":"'+exchangeName+'", "Market":"'+market+'"'
-    account='"Account":"'+account+'", "OrderType":"'+orderType+'"'
-    sym='"Asset":"'+pair+'"'
-    direction='"Action":"'+action.lower()+'"'
-    psize='"Base":"'+str(amount)+'"'+',"Close":"'+str(price)+'"'
-
-    if "Identity" in Active:
-        idl='"Identity":"'+Active['Identity']+'"'
-        cmd='{ '+idl+', '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
-    else:
-        cmd='{ '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
-
-    headers={'content-type': 'text/plain', 'Connection': 'close'}
-
-    resp=None
-    res=None
-    try:
-        resp=requests.post(Active['Webhook'],headers=headers,data=cmd)
-        try:
-            r=json.loads(resp.text)
-            try:
-                res=r['message']
-            except:
-                res=json.dumps(r)
-        except:
-            res=resp.text
-    except:
-        res=None
-
-    return res
-
 def IncreaseLongTradeTable(Trade,close,pct):
     if Trade['PCTValue']==0 or Trade['Counter']==0:
         Trade['PCTValue']=round(close*pct,8)
