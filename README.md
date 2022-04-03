@@ -223,64 +223,8 @@ files:
 
 ## Configuration files
 
-### Location and file names
-This would be placed in a folder called `/home/JackrabbitRelay/Config/` and
-named something like `ftxus.cfg`. This file would be the configuration for the FTX.US exchange.
-
-In general, the name of each file is `[exchangename].cfg` where `[exchangename]` is the ccxt lowercase representation of your exchange. See the [Exchanges](#exchanges) section above.
-
-### File contents
-
-The Jackrabbit Relay configuration files contain JSON-based text. Here is an example:
-
-```json
-{ "Account":"MAIN","API":"YourAPI","SECRET":"YourSecret","RateLimit":"200","MaxAssets":"7","Reduction":"0.00001","ReduceOnly":"Yes" }
-```
-
-Note: KuCoin *requires* a passphrase as well. It is case sensitive and must be
-*EXACTLY* as you gave it to KuCoin. Here is an example:
-
-```json
-# ./JackrabbitRelay/Config/kucoin.cfg
-{ "Account":"MAIN","API":"YourAPI","SECRET":"YourSecret","Passphrase":"YourPassphrase","RateLimit":"1000","MaxAssets":"7","Reduction":"0.00001","ReduceOnly":"Yes" }
-```
-
-Now for the details:
-
-| Property Name | Description |
-| :--- | :--- |
-| `Account` | This MUST be `MAIN`, case sensitive, for the main account of every exchange. |
-| `API` | Your API key exactly as your exchange gives it to you. |
-| `SECRET` | Your SECRET key exactly as your exchange gives it to you. |
-| `Passphrase` | This is only required for exchanges that use passphrases, such as KuCoin. |
-| `RateLimit` | This is the amount Relay waits between each exchange API call. <br> ALL EXCHANGES HAVE RATE LIMIT REQUIREMENTS. <br> This value represent milliseconds. 1000 is one second. If you leave this out, chances are you will be banned from your exchange, most likely temporarily. You will have to tweak this number based upon your exchange. |
-| `MaxAssets` | This is the maximum number of assets that can be traded simultaneously. |
-| `ReduceOnly` | This tells the exchange NOT to flip a position from long to short or vice-versa. <br> It can have any value as its presence is only required. |
-| `OrderTypeOverride` | This overrides the specified order type. |
-| `Reduction` | The amount to reduce your position to all your exchange to close it. Deprecated... <br> This is a percentage. Do NOT put a percent (%) sign. Use this ONLY if you receive errors closing a position. Finding the amount of the reduction is strictly trial and error. |
-| `Sandbox` | Any value accepted as its presence activates an exchange's testnet or sandbox mode |
-| `OverridePCTtable` | Overrides thew PCT table and forces a balance percentage based upon the immediate current balance of the account for all orders on this exchange. |
-
-Order types (for `OrderType`/`OrderTypeOverride`):
-
-| Property Name | Description |
-| :--- | :--- |
-| `Market` | Market order. You will pay taker fees |
-| `Limit` | Limit order. Exchange decides what you pay (maker/taker). Unlike market orders, limit order have a high rate of failure. |
-| `LimitTaker` | Limit order. You pay taker fee, This is a fill or kill order |
-| `LimitMaker` | Limit order. You pay maker fee. |
-
-Jackrabbit Relay supports multiple API keys per exchange (sub)account. This is
-accomplished by this format:
-
-```json
-{ "Account":"MAIN","API 1":"YourAPI","SECRET 1":"YourSecret","RateLimit":"200" }
-{ "Account":"MAIN","API 2":"YourAPI","SECRET 2":"YourSecret","RateLimit":"200" }
-```
-
-The above means the your MAIN account has two API/SECRET combinations that
-Relay will rotate between. Each (sub)account can have as many as your
-exchange will allow.
+Information regarding the exchange configuration files can be found
+[here](./Documentation/Config.MD).
 
 ## Reboot startup
 

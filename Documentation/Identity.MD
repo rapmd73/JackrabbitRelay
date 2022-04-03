@@ -1,7 +1,5 @@
 # JackrabbitRelay Identity
 
-**WORKING DRAFT**
-
 This document details setting up an identity. This should only be used if
 you plan to use the Statistatorium or want extremely aggressive
 defensiveness. The Statistatorium will NOT work at all without an
