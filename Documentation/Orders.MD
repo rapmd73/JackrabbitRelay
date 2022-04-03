@@ -57,7 +57,7 @@ Description of the payload items
 | `OrderType` | This is one of the allowed [order types](#Order Types) |
 | `Action` | This is one of the [supported actions](#actions) |
 | `Asset` | The asset you are trading.  Must be exactly as the exchange lists it. Hint: Use [ListMarkets](Extras/README.md#listmarkets) to confirm |
-| `USD` / `Base` / `Quote` | Choose only one to set the amount to be purchased/sold: <li>`USD` will only work if the asset has a corresponding USD pair to do a proper base conversion on.</li> <li> `Base` is the asset itself value, ie BTC, ADA, AAVE, so one. A base of 1 for BTC is to purchase 1 BTC.</li> <li>`Quote` is the value of the asset in its quote currency. For example, if you want to purchase BCH/BTC using the price value of BTC, then you specify your amount in the quote currency.</li> The amount can be expressed in percentage form, which will reflct the percentage ofthe balance of the account. |
+| `USD` / `Base` / `Quote` | Choose only one to set the amount to be purchased/sold:<br><li>`USD` will only work if the asset has a corresponding USD pair to do a proper base conversion on.</li> <li> `Base` is the asset itself value, ie BTC, ADA, AAVE, so one. A base of 1 for BTC is to purchase 1 BTC.</li> <li>`Quote` is the value of the asset in its quote currency. For example, if you want to purchase BCH/BTC using the price value of BTC, then you specify your amount in the quote currency.</li><br>The amount can be expressed in percentage form, which will reflct the percentage ofthe balance of the account.<br><br>Values expressed in percentage form can also denote base or quote currency volumes: <br><li>For base currency volume (`12%b`), the base value is kept consistent throught the trade cycle while the quote currwency volume depreciates.</li> <li>For quote currency volume (`12%q`), the quote currency value is kept consistent while the base currency value appreciates.</li> |
 | `Close` | For limit orders. This value can be `bid`, `ask`, or a value. If this is not present, the current closing price is used. |
 | `Leverage` | For binanceusdm and ftx, this sets the leverage amount |
 | `Margin` | For binanceusdm, this sets the margin to `Crossed` or `Isolated`. |
@@ -167,5 +167,6 @@ must explicitly tell it what tables to check.
 
 ## Donations
 
-Information regarding donations and supporting Jackrabbit Relay can be found [here](./Documentation/Donations.MD).
+Information regarding donations and supporting Jackrabbit Relay can be
+found [here](./Documentation/Donations.MD).
 
