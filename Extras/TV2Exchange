@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay/Base/Library')
+import os
+import ccxt
+import json
+
+import JRRconfig
+
+if len(sys.argv) > 1:
+    exchangeName=sys.argv[1].lower()
+else:
+    print("An exchange must be provided.")
+    sys.exit(1)
+
+if exchangeName in ccxt.exchanges:
+    exchange=getattr(ccxt,exchangeName)()
+else:
+    if exchangeName=="ftxus":
+        exchange=ccxt.ftx({'hostname': 'ftx.us'})
+    else:
+        print("Invalid exchange")
+        sys.exit(1)
+
+done=False
+c=0
+while not done:
+    try:
+        markets=exchange.load_markets()
+        done=True
+    except:
+        if c>4:
+            print("Fetching Market - retries failed")
+            sys.exit(1)
+        c+=1
+        sleep(1)
+        pass
+
+TradingView={}
+for pair in markets:
+    p=markets[pair]
+    tv=p['id'].replace('/','').replace('-','').replace(':','')
+    ns=p['symbol']
+    TradingView[tv]=ns
+
+fn=JRRconfig.DataDirectory+'/'+exchangeName+'.symbolmap'
+fh=open(fn,'w')
+fh.write(json.dumps(TradingView)+"\n")
+fh.close()
+
+print(exchangeName+' symbol map file written')

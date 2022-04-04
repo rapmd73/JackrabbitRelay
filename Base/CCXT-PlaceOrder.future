@@ -158,6 +158,11 @@ def main():
     else:
         ReduceOnly=False
 
+# Check to see if we need to remap a tradingview symbol to The Exchange symbol
+
+    if "RemapSymbol" in Active or "RemapSymbol" in Order:
+        pair=JRRsupport.TradingViewRemap(exchangeName,pair)
+
     markets=JRRapi.GetMarkets(exchange,pair,RetryLimit)
 
 # Get asset information
