@@ -84,6 +84,7 @@ Now for the details:
 | `Reduction` | The amount to reduce your position to all your exchange to close it. Deprecated... <br> This is a percentage. Do NOT put a percent (%) sign. Use this ONLY if you receive errors closing a position. Finding the amount of the reduction is strictly trial and error. |
 | `Sandbox` | Any value accepted as its presence activates an exchange's testnet or sandbox mode |
 | `OverridePCTtable` | Overrides thew PCT table and forces a balance percentage based upon the immediate current balance of the account for all orders on this exchange. |
+| `RemapSymbol` | For use with the TradingView `{{ticker}}` macro. All orders for this account are remapped. |
 
 Order types `OrderTypeOverride`:
 

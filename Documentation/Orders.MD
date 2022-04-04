@@ -55,7 +55,7 @@ Description of the payload items
 | `Market` | This is the market you are trading. <table><tr><td>`Spot`<td><td>Working</td></tr><tr><td>`Future`<td><td>Working</td></tr><tr><td>`Margin`<td><td>In progress</td></tr></table> |
 | `Account` | All main accounts must be called `MAIN`. Subaccounts can be used (if your exchange supports them) and must be exactly as listed on the exchange. |
 | `OrderType` | This is one of the allowed [order types](#Order Types) |
-| `Action` | This is one of the [supported actions](#actions) |
+| `Action` | This is one of the [supported actions](#Actions) |
 | `Asset` | The asset you are trading.  Must be exactly as the exchange lists it. Hint: Use [ListMarkets](Extras/README.md#listmarkets) to confirm |
 | `USD` / `Base` / `Quote` | Choose only one to set the amount to be purchased/sold:<br><li>`USD` will only work if the asset has a corresponding USD pair to do a proper base conversion on.</li> <li> `Base` is the asset itself value, ie BTC, ADA, AAVE, so one. A base of 1 for BTC is to purchase 1 BTC.</li> <li>`Quote` is the value of the asset in its quote currency. For example, if you want to purchase BCH/BTC using the price value of BTC, then you specify your amount in the quote currency.</li><br>The amount can be expressed in percentage form, which will reflct the percentage ofthe balance of the account.<br><br>Values expressed in percentage form can also denote base or quote currency volumes: <br><li>For base currency volume (`12%b`), the base value is kept consistent throught the trade cycle while the quote currwency volume depreciates.</li> <li>For quote currency volume (`12%q`), the quote currency value is kept consistent while the base currency value appreciates.</li> |
 | `Close` | For limit orders. This value can be `bid`, `ask`, or a value. If this is not present, the current closing price is used. |
@@ -64,6 +64,7 @@ Description of the payload items
 | `SignalSource` | If this is `TVstrategy`, the buy/sell will be remapped to long/short. |
 | `Spread` | This evaluate the difference between the bid and ask prices. Trades are only places if the spread is *under this value* |
 | `OverridePCTtable` | Overrides thew PCT table and forces a balance percentage based upon the immediate current balance of the account |
+| `RemapSymbol` | For use with the TradingView `{{ticker}}` macro. Only this order is remapped. |
 
 ### Order Types
 

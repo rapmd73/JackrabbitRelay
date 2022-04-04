@@ -8,6 +8,7 @@
 import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 import os
+import pathlib
 import time
 import json
 import requests
@@ -78,6 +79,26 @@ class FileWatch:
             os.remove(self.filename)
         except:
             pass
+
+# Remap TradingView symbol to the exchange symbol
+
+def TradingViewRemap(en,pair):
+    fn=JRRconfig.DataDirectory+'/'+en+'.symbolmap'
+    if os.path.exists(fn):
+        try:
+            raw=pathlib.Path(fn).read_text()
+        except:
+            JRRlog.ErrorLog("TradingView Remap",f"Can't read symbol map for {en}")
+
+        TVlist=json.loads(raw)
+        if pair in TVlist:
+            np=TVlist[pair]
+        else:
+            np=pair
+    else:
+        np=pair
+
+    return np
 
 # Webhook processing. This unified layer will communicate with Relay for
 # placing the order and return the results.
