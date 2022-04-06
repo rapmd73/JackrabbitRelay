@@ -89,6 +89,12 @@ Description of the payload items
 
 Here are examples of the payload:
 
+This example of a gewneralized payload for TradingView that uses the `{{ticker}}` macro
+
+```json
+{ "Exchange":"binance","Market":"Spot","Account":"MAIN","Action":"Buy","Asset":"{{ticker}}","USD":"30" }
+```
+
 This example purchased $30 of AAVE on the FTX US exchange.
 
 ```json
