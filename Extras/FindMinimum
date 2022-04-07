@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Equilibrium
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay/Base/Library')
+import os
+#from datetime import datetime
+#import pathlib
+#import time
+#import requests
+#import json
+
+import JRRconfig
+import JRRlog
+import JRRapi
+import JRRsupport
+
+sys.path.append('/home/Equilibrium/Library')
+import EqSupport
+
+Header='FindMinimum '+JRRconfig.Version
+
+###
+### Main code base. Place order on exchange
+###
+
+def main():
+    if len(sys.argv) > 3:
+        exchangeName=sys.argv[1].lower()
+        account=sys.argv[2]
+        pair=sys.argv[3].upper()
+    else:
+        print("An exchange, a (sub)account, and an asset must be provided.")
+        sys.exit(1)
+
+    keys=JRRsupport.ReadConfig(exchangeName,account)
+
+    CurrentKey=(os.getpid()%len(keys))
+    Active=keys[CurrentKey]
+
+    exchange=JRRapi.ExchangeLogin(exchangeName,Active)
+
+    if "Retry" in Active:
+        RetryLimit=int(Active['Retry'])
+        JRRlog.WriteLog("|- API Retry limit set to "+str(RetryLimit)+' times')
+    else:
+        RetryLimit=10
+
+    if not "Webhook" in Active:
+        print("Webhook NOT present")
+        sys.exit(1)
+
+    markets=JRRapi.GetMarkets(exchange,pair,RetryLimit)
+
+# This is where a looping method would go if this were to serve a single exchange
+# with multiple pairs.
+
+# Get asset information
+
+    base=exchange.markets[pair]['base']
+    quote=exchange.markets[pair]['quote']
+
+    marketType="spot"
+    if "type" in exchange.markets[pair]:
+        if "type" in exchange.markets[pair]['info']:
+            if exchange.markets[pair]['info']['type']==exchange.markets[pair]['type']:
+                marketType=exchange.markets[pair]['type']
+            else:
+                marketType=exchange.markets[pair]['info']['type']
+
+    if quote.upper()=='USD':
+        hasQuote=False
+    else:
+        hasQuote=True
+
+# Get the minimum value and test each lot size starting at 2.
+# 2 is used to avoid running into issues with the exchange not wanting
+# to accept the minimum value at a price drop.
+
+    counter=0
+    lots=2
+    done=False
+    while not done:
+        minimum,mincost=JRRapi.GetMinimum(exchange,pair,hasQuote,False,RetryLimit)
+        amount=round(minimum*lots,8)
+
+        ohlcv,ticker=JRRapi.FetchRetry(exchange,pair,"1m",RetryLimit)
+        close=round(ohlcv[4],8)
+
+        res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'market',pair,'buy',amount,close)
+        if res.find('Order Confirmation ID')>-1:
+            if counter>0:
+                JRRapi.UpdateMinimum(exchangeName,pair,amount)
+            done=True
+            res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'market',pair,'sell',amount,close)
+        else:
+            counter+=1
+            print(f'FAILED {counter}, lot = {amount:.8f}')
+            lots+=1
+
+    print(f'lot = {amount:.8f}')
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Terminated")
+
