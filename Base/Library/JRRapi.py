@@ -7,7 +7,10 @@
 
 import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
+import os
 import ccxt
+import json
+import pathlib
 from datetime import datetime
 
 import JRRconfig
@@ -102,7 +105,40 @@ def FindMatchingPair(base,markets):
 # Cost in USD/Stablecoins
 # Price in USD/Stablecoins
 
+def LoadMinimum(exchangeName,pair):
+    minlist={}
+    amount=0
+    fn=JRRconfig.DataDirectory+'/'+exchangeName+'.minimum'
+    if os.path.exists(fn):
+        try:
+            raw=pathlib.Path(fn).read_text()
+        except:
+            JRRlog.ErrorLog("Minimum List",f"Can't read minimum list for {exchangeName}")
+
+        minlist=json.loads(raw)
+        if pair in minlist:
+            amount=minlist[pair]
+
+    return amount
+
+def UpdateMinimum(exchangeName,pair,amount):
+    minlist={}
+    fn=JRRconfig.DataDirectory+'/'+exchangeName+'.minimum'
+    if os.path.exists(fn):
+        try:
+            raw=pathlib.Path(fn).read_text()
+        except:
+            JRRlog.ErrorLog("Minimum List",f"Can't read minimum list for {exchangeName}")
+
+        minlist=json.loads(raw)
+
+    minlist[pair]=amount
+    fh=open(fn,'w')
+    fh.write(json.dumps(minlist))
+    fh.close()
+
 def GetAssetMinimum(exchange,pair,diagnostics,RetryLimit):
+    exchangeName=exchange.name.lower().replace(' ','')
     ohlcv,ticker=FetchRetry(exchange,pair,"1m",RetryLimit)
 
     close=ohlcv[4]
@@ -112,44 +148,57 @@ def GetAssetMinimum(exchange,pair,diagnostics,RetryLimit):
         else:
             close=float(ticker['close'])
 
-    minimum1=exchange.markets[pair]['limits']['amount']['min']
-    minimum2=exchange.markets[pair]['limits']['cost']['min']
-    minimum3=exchange.markets[pair]['limits']['price']['min']
+    minimum=LoadMinimum(exchangeName,pair)
+    if minimum>0.0:
+        mincost=round(minimum*close,8)
 
-    if minimum1==None or minimum1==0:
-        minimum1=0
-        m1=0.0
+        if diagnostics:
+            JRRlog.WriteLog(f"| |- Close: {close:.8f}")
+            JRRlog.WriteLog(f"| |- (Table)Minimum Amount: {minimum:.8f}")
+            JRRlog.WriteLog(f"| |- (Table)Minimum Cost:   {mincost:.8f}")
     else:
-        m1=float(minimum1)*close
-    if minimum2==None or minimum2==0:
-        minimum2=0
-        m2=0.0
-    else:
-        m2=float(minimum2)/close
-    if minimum3==None or minimum3==0:
-        minimum3=0
-        m3=0.0
-    else:
-        m3=float(minimum3)/close
+        minimum1=exchange.markets[pair]['limits']['amount']['min']
+        minimum2=exchange.markets[pair]['limits']['cost']['min']
+        minimum3=exchange.markets[pair]['limits']['price']['min']
 
-    minimum=max(float(minimum1),m2,m3)
-    mincost=max(m1,float(minimum2),float(minimum3))
-
-    if minimum==0.0 or mincost==0.0:
-        if exchange.precisionMode==ccxt.TICK_SIZE:
-            minimum=float(exchange.markets[pair]['precision']['amount'])
-            mincost=minimum*close
+        if minimum1==None or minimum1==0:
+            if 'contractSize' in exchange.markets[pair]:
+                minimum1=exchange.markets[pair]['contractSize']
+                m1=float(minimum1)*close
+            else:
+                minimum1=0
+                m1=0.0
         else:
-            z='000000000'
-            factor=max(exchange.precisionMode,ccxt.TICK_SIZE)
-            minimum=float('0.'+str(z[:factor-1])+'1')
-            mincost=minimum*close
+            m1=float(minimum1)*close
+        if minimum2==None or minimum2==0:
+            minimum2=0
+            m2=0.0
+        else:
+            m2=float(minimum2)/close
+        if minimum3==None or minimum3==0:
+            minimum3=0
+            m3=0.0
+        else:
+            m3=float(minimum3)/close
 
-    if diagnostics:
-        JRRlog.WriteLog(f"| |- Close: {close:.8f}")
-        JRRlog.WriteLog(f"| |- Minimum Amount: {minimum1:.8f}, {m1:.8f}")
-        JRRlog.WriteLog(f"| |- Minimum Cost:   {minimum2:.8f}, {m2:.8f}")
-        JRRlog.WriteLog(f"| |- Minimum Price:  {minimum3:.8f}, {m3:.8f}")
+        minimum=max(float(minimum1),m2,m3)
+        mincost=max(m1,float(minimum2),float(minimum3))
+
+        if minimum==0.0 or mincost==0.0:
+            if exchange.precisionMode==ccxt.TICK_SIZE:
+                minimum=float(exchange.markets[pair]['precision']['amount'])
+                mincost=minimum*close
+            else:
+                z='000000000'
+                factor=max(exchange.precisionMode,ccxt.TICK_SIZE)
+                minimum=float('0.'+str(z[:factor-1])+'1')
+                mincost=minimum*close
+
+        if diagnostics:
+            JRRlog.WriteLog(f"| |- Close: {close:.8f}")
+            JRRlog.WriteLog(f"| |- Minimum Amount: {minimum1:.8f}, {m1:.8f}")
+            JRRlog.WriteLog(f"| |- Minimum Cost:   {minimum2:.8f}, {m2:.8f}")
+            JRRlog.WriteLog(f"| |- Minimum Price:  {minimum3:.8f}, {m3:.8f}")
 
     return(minimum, mincost)
 
@@ -183,9 +232,9 @@ def GetMinimum(exchange,pair,forceQuote,diagnostics,RetryLimit):
                 JRRlog.WriteLog("| |- Min Cost: "+f"{mincost:.8f}")
 
     if minimum==0.0:
-        JRRlog.ErrorLog("Asset Analysis","minimum position size returmed as 0")
+        JRRlog.ErrorLog("Asset Analysis","minimum position size returned as 0")
     if mincost==0.0:
-        JRRlog.ErrorLog("Asset Analysis","minimum cost per position returmed as 0")
+        JRRlog.ErrorLog("Asset Analysis","minimum cost per position returned as 0")
 
     return minimum,mincost
 
