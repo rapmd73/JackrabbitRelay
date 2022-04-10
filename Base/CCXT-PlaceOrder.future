@@ -144,6 +144,11 @@ def main():
         orderType=Active['OrderTypeOverride'].lower()
         JRRlog.WriteLog('Order type Override: '+orderType)
 
+# Check to see if we need to remap a tradingview symbol to The Exchange symbol
+
+    if "RemapSymbol" in Active or "RemapSymbol" in Order:
+        pair=JRRsupport.TradingViewRemap(exchangeName,pair)
+
 # Check for maximum allowed assets
 
     if "MaxAssets" in Active:
@@ -157,11 +162,6 @@ def main():
         JRRlog.WriteLog("|- ReduceOnly set ")
     else:
         ReduceOnly=False
-
-# Check to see if we need to remap a tradingview symbol to The Exchange symbol
-
-    if "RemapSymbol" in Active or "RemapSymbol" in Order:
-        pair=JRRsupport.TradingViewRemap(exchangeName,pair)
 
     markets=JRRapi.GetMarkets(exchange,pair,RetryLimit)
 
