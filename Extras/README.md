@@ -141,4 +141,3 @@ This is the pine script program from the above video on testing Jackrabbit Relay
 ## Donations
 
 Information regarding donations and supporting Jackrabbit Relay can be found [here](./Documentation/Donations.MD).
-

@@ -83,6 +83,9 @@ class FileWatch:
 # Remap TradingView symbol to the exchange symbol
 
 def TradingViewRemap(en,pair):
+    np=pair
+    JRRlog.WriteLog('Symbol Remap')
+    JRRlog.WriteLog('|- In: '+pair)
     fn=JRRconfig.DataDirectory+'/'+en+'.symbolmap'
     if os.path.exists(fn):
         try:
@@ -94,10 +97,11 @@ def TradingViewRemap(en,pair):
         if pair in TVlist:
             np=TVlist[pair]
         else:
-            np=pair
+            JRRlog.WriteLog('|- Pair not in symbol file, reverting')
     else:
-        np=pair
+        JRRlog.WriteLog('|- No symbol file, reverting')
 
+    JRRlog.WriteLog('|- Out: '+np)
     return np
 
 # Webhook processing. This unified layer will communicate with Relay for

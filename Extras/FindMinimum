@@ -29,6 +29,8 @@ Header='FindMinimum '+JRRconfig.Version
 ###
 
 def main():
+    JRRlog.WriteLog(Header)
+
     if len(sys.argv) > 3:
         exchangeName=sys.argv[1].lower()
         account=sys.argv[2]
@@ -82,7 +84,7 @@ def main():
 # to accept the minimum value at a price drop.
 
     counter=0
-    lots=2
+    lots=1
     done=False
     while not done:
         minimum,mincost=JRRapi.GetMinimum(exchange,pair,hasQuote,False,RetryLimit)
@@ -91,18 +93,20 @@ def main():
         ohlcv,ticker=JRRapi.FetchRetry(exchange,pair,"1m",RetryLimit)
         close=round(ohlcv[4],8)
 
+        JRRlog.WriteLog(f'Testing #{counter+1}, lot = {amount:.8f}')
         res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'market',pair,'buy',amount,close)
         if res.find('Order Confirmation ID')>-1:
             if counter>0:
                 JRRapi.UpdateMinimum(exchangeName,pair,amount)
+            elif counter==0:
+                JRRlog.WriteLog('Successful first attempt, exchange records accurate')
             done=True
             res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'market',pair,'sell',amount,close)
         else:
             counter+=1
-            print(f'FAILED {counter}, lot = {amount:.8f}')
             lots+=1
 
-    print(f'lot = {amount:.8f}')
+    JRRlog.WriteLog(f'Successful, lot = {amount:.8f}')
 
 if __name__ == '__main__':
     try:
