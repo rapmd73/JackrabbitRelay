@@ -32,14 +32,14 @@ else:
 
 fn=JRRconfig.LedgerDirectory+'/'+en+'.'+sa+'.ledger'
 if not os.path.exists(fn):
-    print("Ledger not found.")
+    print(asset,"Ledger not found.")
     sys.exit(1)
-
 
 xps=[]
 run=[]
 bal=0.0
 counter=0
+tpair=None
 
 fh=open(fn,'r')
 while True:
@@ -58,6 +58,9 @@ while True:
 
     if data['Asset']!=asset and p!=a:
         continue
+
+    if tpair==None:
+        tpair=data['Asset']
 
     dt=data['DateTime']
     direction=data['Action'].lower()
@@ -93,14 +96,17 @@ while True:
     counter+=1
 fh.close()
 
-if counter==0:
-    sys.exit(0)
+if counter>0:
+    p=asset.replace(':','').replace('-','').replace('/','')
+    fn=JRRconfig.ChartsDirectory+'/'+en+'.'+sa+'.'+p+'.Transactions.html'
+    ts=en.upper()+' ('+sa+'): '+asset.lower()+', Transactions'
+    fig=px.line(x=xps,y=run)
+    fig.update_layout(xaxis_title="Date",yaxis_title="Profit/Loss")
+    fig.update_layout(title={"text":ts,"x":0.5,"xanchor":"center","yanchor":"top"})
+    fig.write_html(fn)
 
-p=asset.replace(':','').replace('-','').replace('/','')
-fn=JRRconfig.ChartsDirectory+'/'+en+'.'+sa+'.'+p+'.Transactions.html'
-ts=en.upper()+' ('+sa+'): '+asset.lower()+', Transactions'
-fig=px.line(x=xps,y=run)
-fig.update_layout(xaxis_title="Date",yaxis_title="Profit/Loss")
-fig.update_layout(title={"text":ts,"x":0.5,"xanchor":"center","yanchor":"top"})
-fig.write_html(fn)
+# Chart Volume Weighted Volatility Analysis
 
+if tpair!=None:
+    cmd=JRRconfig.StatisticsDirectory+'/ChartVWVA '+en+' '+sa+' "'+tpair+'"'
+    os.system(cmd)

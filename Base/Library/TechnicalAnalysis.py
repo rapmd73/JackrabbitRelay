@@ -6,11 +6,11 @@
 # All rights reserved unconditionally.
 
 # Bare bones minimalism technical analysis functions
-#
-# signal 3=buy, 5=neutral, 7=sell
 
 import sys
 import os
+import math
+import statistics
 
 # Check for a red candle.
 #
@@ -73,3 +73,42 @@ def IsBlackCrow(candles,CandleCount):
         return True
     return False
 
+def Volatility(candles,days):
+    # starting candle, ignore last as its incomplete
+    l=len(candles)-1
+    sc=l-days
+
+    # Get average of days
+
+    dl=[]
+    for i in range(days):
+        c0=candles[sc+i][4]
+        c1=candles[sc+i-1][4]
+        d=(c0/c1-1)*100
+        dl.append(d)
+
+    sd=statistics.stdev(dl) 
+
+    return sd
+
+def VWAP(candles,days):
+    # starting candle, ignore last as its incomplete
+    l=len(candles)-1
+    sc=l-days
+
+    # Get total volume/VWAP for day range
+
+    tvol=0.0
+    tvwp=0.0
+    for i in range(days):
+        volume=candles[sc+i][5]
+        vwp=0.0
+        for x in range(1,5):
+            vwp+=candles[sc+i][x]
+        vwp=(vwp/4)*volume
+        tvwp+=vwp
+        tvol+=volume
+
+    vwap=tvwp/tvol
+
+    return vwap

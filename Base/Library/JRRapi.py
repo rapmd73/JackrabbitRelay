@@ -415,7 +415,6 @@ def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLi
     done=False
     while from_timestamp < to_timestamp:
         try:
-
             ohlcvs = exchange.fetch_ohlcv(pair,tf,from_timestamp)
             first = ohlcvs[0][0]
             last = ohlcvs[-1][0]
