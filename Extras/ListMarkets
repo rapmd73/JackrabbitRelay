@@ -3,33 +3,14 @@
 
 import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
-import math
-import statistics
 import ccxt
+
+import TechnicalAnalysis as ta
 
 import JRRconfig
 import JRRsupport
 import JRRapi
 import JRRlog
-
-def Volatility(candles,days):
-    # starting candle, ignore last as its incomplete
-    l=len(candles)
-    sc=l-days
-
-    # Get average of days
-
-    dl=[]
-    for i in range(days):
-        c0=candles[sc+i][4]
-        c1=candles[sc+i-1][4]
-        d=(c0/c1-1)*100
-        dl.append(d)
-
-    sd=statistics.stdev(dl) 
-
-    return sd
-
 
 def main():
     if len(sys.argv) > 2:
@@ -140,24 +121,23 @@ def main():
         candles=JRRapi.FetchCandles(exchange,pair,'1d',33,RetryLimit)
 
         # 1 day volatility
-        l=len(candles)-1
-        if l==0:
+        l=len(candles)
+        if l<2:
             continue
         c0=candles[l-1][4]
         c1=candles[l-2][4]
         v1d=abs((c0/c1-1)*100)
 
-        l=len(candles)+2
         if l>3:
-            v3=Volatility(candles,3)
+            v3=ta.Volatility(candles,3)
         else:
             v3=0.0
         if l>7:
-            v7=Volatility(candles,7)
+            v7=ta.Volatility(candles,7)
         else:
             v7=0.0
         if l>31:
-            v31=Volatility(candles,31)
+            v31=ta.Volatility(candles,31)
         else:
             v31=0.0
 

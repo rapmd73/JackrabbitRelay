@@ -72,7 +72,10 @@ def main():
                         if depth==2:
                             tf=JRRconfig.ChartsDirectory+'/'+payload[1:].replace('/','.')+'.'+i+'.Transactions.html'
                             if os.path.exists(tf):
-                                print(f' (<a href="{payload}/{i}/Transactions">$$$</a>)')
+                                print(f' (<a href="{payload}/{i}/Transactions">ROI</a>)')
+                            tf=JRRconfig.ChartsDirectory+'/'+payload[1:].replace('/','.')+'.'+i+'.vwva.html'
+                            if os.path.exists(tf):
+                                print(f' (<a href="{payload}/{i}/vwva">VWVA</a>)')
                             print('<br>')
                     else:
                         print(f'<a href="/{i}">{i}</a>')

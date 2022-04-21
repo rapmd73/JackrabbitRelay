@@ -31,4 +31,3 @@ for cf in cfiles:
 
         cmd=JRRconfig.StatisticsDirectory+'/ChartLedger '+en+' '+ac
         os.system(cmd)
-
