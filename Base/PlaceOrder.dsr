@@ -1,0 +1,267 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay DSR
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay/Base/Library')
+import os
+import json
+import time
+import requests
+
+import JRRconfig
+import JRRlog
+import JRRapi
+import JRRsupport
+
+# Timeout values
+
+DataTTL=7*86400
+
+Base62Digits = '0123456789AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz'
+
+# DSR data validation lists
+
+keyDataList=["Time","Recipe","Action","Exchange","Sub-Exchange","Asset","Price","AvgProfit","LProfit","TCycles","CBuys","MBCycle","TBuys","PSize","Link"]
+numDataList=["Price","AvgProfit","LProfit","TCycles","CBuys","MBCycle","TBuys","PSize"]
+
+keyUserList=["ID","Active","Account","Discord","Sandbox","Platform","Webhook","Advanced","Promotional"]
+keyLogList =['ID','Time','Status','Message']
+
+DSRHeader='DSR '+JRRconfig.Version
+
+### Code base
+
+# Send to Relay
+
+def Relay(userdata,dataTV):
+    cmd=''
+    ident=''
+
+    if 'Identity' in dataTV:
+        ident='"Identity":"'+dataTV['Identity']+'", '
+
+    account='"Account":"'+userdata['Account']+'", "RemapSymbol":"Yes"'
+    if 'Market' in dataTV:
+        exc=ident+'"Exchange":"'+dataTV['Sub-Exchange']+'", "Market":"'+dataTV['Market']+'"'
+    else:
+        exc=ident+'"Exchange":"'+dataTV['Sub-Exchange']+'", "Market":"Spot"'
+    sym='"Asset":"'+dataTV['Asset']+'"'
+    action=dataTV['Action'].lower()
+
+    if (dataTV['PSize'].find('%')>-1):
+        ps=dataTV['PSize'].replace('%','').strip()
+        if float(ps)>0.0:
+            psize=', "USD":"'+dataTV['PSize']+'"'
+        else:
+            psize=""
+    elif (dataTV['PSize'].find('&')>-1):
+        ps=dataTV['PSize'].replace('&','').strip()
+        if float(ps)>0.0:
+            psize=', "Base":"'+ps+'"'
+        else:
+            psize=""
+    else:
+        if float(dataTV['PSize'])>0.0:
+            psize=', "USD":"'+dataTV['PSize']+'"'
+        else:
+            psize=""
+
+    if action=='close':
+        direction='"Action":"close"'
+        cmd='{ '+exc+', '+account+', '+direction+', '+sym+psize+' }'
+
+    if userdata['Advanced'].lower()=='yes':
+        direction='"Action":"'+action+'"'
+        cmd='{ '+exc+', '+account+', '+direction+', '+sym+psize+' }'
+    else:
+        if action=='sell':
+            direction='"Action":"close"'
+            cmd='{ '+exc+', '+account+', '+direction+', '+sym+psize+' }'
+
+        if action=='buy':
+            direction='"Action":"buy"'
+            cmd='{ '+exc+', '+account+', '+direction+', '+sym+psize+' }'
+
+    JRRlog.WriteLog('Command: '+cmd)
+
+    # send webhook
+
+    headers={'content-type': 'text/plain', 'Connection': 'close'}
+
+    resp=None
+    try:
+        resp=requests.post(userdata['Webhook'],headers=headers,data=cmd)
+        try:
+            r=json.loads(resp.text)
+            try:
+                res=r['message']
+            except:
+                res=json.dumps(r)
+        except:
+            res=resp.text
+    except:
+        res=None
+
+    return(res)
+
+# Handle DSR tables
+
+def ReadDSRList(exchangeName,account,key,value):
+    coins={}
+    en=exchangeName.lower().replace(' ','')
+    fn=JRRconfig.DataDirectory+'/'+en+'.'+account+'.dsr'
+    duplicate=False
+
+    fw=JRRsupport.FileWatch(fn)
+    fw.Lock()
+
+    try:
+        if os.path.exists(fn):
+            cf=open(fn,'rt+')
+            buffer=cf.read()
+            cf.close()
+            coins=json.loads(buffer)
+
+            if not key in coins:
+                # Read the existing value
+                jpkt={}
+                jpkt['Time']=time.time()
+                jpkt['Value']=value
+                coins[key]=json.dumps(jpkt)
+            else:
+                duplicate=True
+        else:
+            jpkt={}
+            jpkt['Time']=time.time()
+            jpkt['Value']=value
+            coins[key]=json.dumps(jpkt)
+
+        # Remove any coin over 7 days
+
+        for c in coins:
+            jpkt=json.loads(coins[c])
+            t=(time.time()-jpkt['Time'])
+            if t>DataTTL:
+                try:
+                    coins.pop(c,None)
+                except:
+                    pass
+
+        WriteDSRList(exchangeName,account,coins)
+    except:
+        pass
+
+    fw.Unlock()
+
+    return duplicate
+
+def WriteDSRList(exchangeName,account,coins):
+    en=exchangeName.lower().replace(' ','')
+    fn=JRRconfig.DataDirectory+'/'+en+'.'+account+'.dsr'
+
+    if coins=={}:
+        try:
+            os.remove(fn)
+        except:
+            pass
+    else:
+        fh=open(fn,'w')
+        fh.write(json.dumps(coins))
+        fh.close()
+
+# Validation 
+
+def keyValidate(jdata,keyList):
+    for i in keyList:
+        if i in jdata==False:
+            return False
+
+    return True
+
+def DSRProcessJSON(payload,keyList):
+    try:
+        data=json.loads(payload,strict=False)
+    except json.decoder.JSONDecodeError:
+        data=None
+
+    if data!=None:
+        isvalid=keyValidate(data,keyList)
+
+        if not isvalid:
+            data=None
+
+    return data
+
+def VerifyDataPayload(dataTV):
+    for i in numDataList:
+        if type(dataTV[i]) is not str:
+            dataTV[i]=str(dataTV[i])
+
+    if JRRsupport.verifyInt(dataTV['TCycles'])!=True or JRRsupport.verifyInt(dataTV['CBuys'])!=True or \
+        JRRsupport.verifyInt(dataTV['MBCycle'])!=True or JRRsupport.verifyInt(dataTV['TBuys'])!=True:
+        return(None)
+    return(dataTV)
+
+def main():
+# We need to escape newline in json payload.
+    payload=JRRsupport.pFilter(sys.stdin.read())
+
+    dataTV=DSRProcessJSON(payload,keyDataList) # test string numbers
+    if dataTV==None:
+        JRRlog.ErrorLog("DSR",'Invalid Payload: '+payload)
+
+    JRRlog.WriteLog(payload)
+
+# Work on account information.
+
+    exchangeName=dataTV['Sub-Exchange']
+    account=dataTV['Account']
+
+    keys=JRRsupport.ReadConfig(exchangeName,account)
+    CurrentKey=(os.getpid()%len(keys))
+    userdata=keys[CurrentKey]
+
+    if not "Webhook" in userdata:
+        JRRlog.ErrorLog("DSR","Webhook NOT present")
+
+#
+# Begin validation sequence
+#
+# Make sure payload numbers are strings
+
+    dataTV=VerifyDataPayload(dataTV)
+
+    if dataTV is None:
+        JRRlog.ErrorLog("DSR",'Payload failed verification')
+
+    keyData=dataTV['Recipe'].replace(" ","")+dataTV['Exchange']+dataTV['Asset']+dataTV['TCycles']+dataTV['TBuys']
+    accum=dataTV['TCycles']+'/'+dataTV['TBuys']
+    JRRlog.WriteLog('Key: '+keyData)
+    JRRlog.WriteLog('Accumulators: '+accum)
+
+# Work on signal information
+# keyData is the recipe
+
+    Duplicate=ReadDSRList(exchangeName,account,keyData,json.dumps(dataTV))
+
+# Send trading commands. Everything needed is now in userdata
+# At this point, userdata contains all the bot info
+# and dataTV contains all the signal information from TradingView
+
+    if Duplicate==False:
+        if dataTV['Action'].lower().find("adv-")>-1:
+            userdata['Advanced']="Yes"
+            dataTV['Action']=dataTV['Action'][4:]
+        else:
+            userdata['Advanced']="No"
+
+        connResult=Relay(userdata,dataTV)
+    else:
+        JRRlog.WriteLog('Duplicate Payload')
+
+if __name__ == '__main__':
+    main()
