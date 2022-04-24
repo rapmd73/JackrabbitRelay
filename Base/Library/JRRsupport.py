@@ -384,8 +384,6 @@ def pFilter(s):
 # Read the exchange config file and load API/SECRET for a given (sub)account.
 # MAIN is reserved for the main account
 
-# { "Indentity":"F}!2F[PI=-{e:7hM0Q4/642!m8;TL>S5LVfIb%)QzwP%9!@CWKwv#};e:3bPLcmEv/dnjC+NhY1D-rvb~037mOv(0J/9zmB-UD2ig1_I78b3=yK}N]xb4.}g^mLY@mctZ" }
-
 def ReadConfig(echg,account):
     keys=[]
 
@@ -448,3 +446,41 @@ def ProcessJSON(payload):
 
     return data
 
+# Verify number is an integer from JSON payload
+
+def verifyInt(s):
+    if s.lower()=="null" or s==None:
+        return(False)
+    f=float(s)
+    i=int(s)
+
+    return(f==i)
+
+# Base 64 math
+
+def int2base(n, b):
+    if n < 0:
+        raise ValueError("no negative numbers")
+    if n < b:
+        return dsrConfig.Base62Digits[n]
+    res = []
+    q = n
+    while q:
+        q, r = divmod(q, b)
+        res.append(dsrConfig.Base62Digits[r])
+    return ''.join(reversed(res))
+
+def base2int(s, base):
+    if not (2 <= base <= len(dsrConfig.Base62Digits)):
+        raise ValueError("base must be >= 2 and <= %d" % len(Base62Digits))
+    res = 0
+    for i, v in enumerate(reversed(s)):
+        digit = digits.index(v)
+        res += digit * (base ** i)
+    return res
+
+def base62(s):
+    n=0
+    for i in range(len(s)):
+        n+=ord(s[i])*i
+    return(int2base(n,62))

@@ -9,7 +9,7 @@ import sys
 sys.path.append('/home/JackrabbitRelay/Base/Library')
 from datetime import datetime
 
-Version="0.0.0.0.1020"
+Version="0.0.0.0.1030"
 BaseDirectory='/home/JackrabbitRelay/Base'
 ConfigDirectory='/home/JackrabbitRelay/Config'
 DataDirectory="/home/JackrabbitRelay/Data"
@@ -31,4 +31,5 @@ StableCoinUSD=['USDT','USDC','BUSD','UST','DAI','FRAX','TUSD','USDP','LUSD', \
 # Needs to be global and above all code
 
 StartTime=datetime.now()
+
 
