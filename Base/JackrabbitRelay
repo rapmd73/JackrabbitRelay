@@ -50,19 +50,20 @@ def ProcessSingleTrade(trades):
         exchange=trades['Exchange'].lower()
         market=trades['Market'].lower()
         fn=ts+exchange+'.'+market
+    elif "Exchange" in trades:
+        exchange=trades['Exchange'].lower()
+        fn=ts+exchange
 
-        if os.path.exists(fn):
-            transactor= [ fn ]
-            subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-            data=json.dumps(trades)
+    if os.path.exists(fn):
+        transactor= [ fn ]
+        subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        data=json.dumps(trades)
 
-            subp.stdin.write(data.encode())
-            res=subp.communicate()[0]
-            code=subp.poll()
-        else:
-            WriteLog(addr,f"Transactor not found for {exchange}/{market}")
+        subp.stdin.write(data.encode())
+        res=subp.communicate()[0]
+        code=subp.poll()
     else:
-        WriteLog(addr,"Exchange/Market not listed in payload")
+        WriteLog(addr,"Transactor not found for exchange and/or market")
 
     return res
 
