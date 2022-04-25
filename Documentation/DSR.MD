@@ -10,7 +10,7 @@ The DSR works to help solve that issue. While no system is 100% full
 proof, the DSR has had a year of testing and operational fortitude to
 prove it goes a long way of protect your investments from misfires.
 
-The DSR was specifically built for Jackrabbit TV DCA and analyzier
+The DSR was specifically built for Jackrabbit TV DCA and analyzer
 modules.
 
 Below is an example of the TradingView alert message.
