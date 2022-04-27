@@ -262,7 +262,7 @@ def TradeBuyAmount(Config,Trade,exchange,pair,pct,RetryLimit):
     minimum,mincost=JRRapi.GetMinimum(exchange,pair,False,False,RetryLimit)
 
     if Config['BuyLots'].lower()=='balance':
-        Trade['BuyLots'],Trade['Volume']=round(Balance2Lots(exchange,pair,pct,RetryLimit),8)
+        Trade['BuyLots']=round(Balance2Lots(exchange,pair,pct,RetryLimit),8)
         Trade['BuyAmount']=round(Trade['BuyLots']*minimum,8)
     else:
         Trade['BuyLots']=Config['BuyLots']
