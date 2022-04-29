@@ -69,7 +69,7 @@ def main():
             print(pair+" is not active on this exchange")
             sys.exit(1)
 
-    candles=JRRapi.FetchCandles(exchange,pair,'1d',398,RetryLimit)
+    candles=JRRapi.FetchCandles(exchange,pair,'1d',396,RetryLimit)
 
     # Must havwe 1 year and 31 days of data for a valid analysis
 

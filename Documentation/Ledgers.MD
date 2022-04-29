@@ -72,4 +72,3 @@ results will be in the `/home/JackrabbitRelay/Statistics/Charts` folder.
 ## Donations
 
 Information regarding donations and supporting Jackrabbit Relay can be found [here](./Documentation/Donations.MD).
-

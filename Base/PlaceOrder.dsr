@@ -206,6 +206,10 @@ def VerifyDataPayload(dataTV):
         return(None)
     return(dataTV)
 
+###
+### Main code
+###
+
 def main():
 # We need to escape newline in json payload.
     payload=JRRsupport.pFilter(sys.stdin.read())
