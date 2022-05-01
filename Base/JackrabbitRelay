@@ -40,22 +40,26 @@ def WriteLog(addr,msg):
 
 # Process the trade and send it to the correct transactor
 
-def ProcessSingleTrade(trades):
+def ProcessSingleTrade(addr,trades):
     res=""
 
     exchange=None
+    fn=None
     ts=BaseDirectory+'/PlaceOrder.'
 
     if "Exchange" in trades and "Market" in trades:
         exchange=trades['Exchange'].lower()
         market=trades['Market'].lower()
         fn=ts+exchange+'.'+market
+        if not os.path.exists(fn):
+            exchange=trades['Exchange'].lower()
+            fn=ts+exchange
     elif "Exchange" in trades:
         exchange=trades['Exchange'].lower()
         fn=ts+exchange
 
     if os.path.exists(fn):
-        transactor= [ fn ]
+        transactor=[ fn ]
         subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
         data=json.dumps(trades)
 
@@ -63,7 +67,7 @@ def ProcessSingleTrade(trades):
         res=subp.communicate()[0]
         code=subp.poll()
     else:
-        WriteLog(addr,"Transactor not found for exchange and/or market")
+        WriteLog(addr,"Transactor not found for exchange and/or market: "+fn)
 
     return res
 
@@ -81,10 +85,10 @@ def ProcessTrade(addr,payload):
 
     if trades!=None:
         if type(trades)==dict:
-            res=ProcessSingleTrade(trades)
+            res=ProcessSingleTrade(addr,trades)
         else:
             for trade in trades:
-                res+=str(ProcessSingleTrade(trade))
+                res+=str(ProcessSingleTrade(addr,trade))
 
     if type(res)!=bytes:
         res=res.encode('utf-8')
