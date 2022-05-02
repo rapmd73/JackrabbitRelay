@@ -48,6 +48,7 @@ def ProcessSingleTrade(addr,trades):
     ts=BaseDirectory+'/PlaceOrder.'
 
     if "Exchange" in trades and "Market" in trades:
+        WriteLog(addr,"Exchange: "+trades['Exchange'])
         exchange=trades['Exchange'].lower()
         market=trades['Market'].lower()
         fn=ts+exchange+'.'+market

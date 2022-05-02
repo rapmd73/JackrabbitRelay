@@ -222,7 +222,8 @@ def main():
 
 # Work on account information.
 
-    exchangeName=dataTV['Sub-Exchange']
+    dataTV['Exchange']=dataTV['Sub-Exchange']
+    exchangeName=dataTV['Exchange']
     account=dataTV['Account']
 
     keys=JRRsupport.ReadConfig(exchangeName,account)
