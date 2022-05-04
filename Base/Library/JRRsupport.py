@@ -107,8 +107,12 @@ def TradingViewRemap(en,pair):
 # Webhook processing. This unified layer will communicate with Relay for
 # placing the order and return the results.
 
-def SendWebhook(Active,exchangeName,market,account,orderType,pair,action,amount,price):
-    exc='"Exchange":"'+exchangeName+'", "Market":"'+market+'"'
+def SendWebhook(Active,exchangeName,market,account,orderType,pair,action,amount,price,OverrideMaxAssets=False):
+    if OverrideMaxAssets==True:
+        exc='"OverrideMaxAssets":"Yes", "Exchange":"'+exchangeName+'", "Market":"'+market+'"'
+    else:
+        exc='"Exchange":"'+exchangeName+'", "Market":"'+market+'"'
+
     account='"Account":"'+account+'", "OrderType":"'+orderType+'"'
     sym='"Asset":"'+pair+'"'
     direction='"Action":"'+action.lower()+'"'
