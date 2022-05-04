@@ -40,7 +40,7 @@ else:
     print("a webhook, an exchange, a market, order type, a (sub)account, a direction, and an asset must be provided.")
     sys.exit(1)
 
-exc='"Exchange":"'+exchangeName+'", "Market":"'+market+'", "OrderType":"'+orderType+'"'
+exc='"OverrideMaxAssets":"Yes", "Exchange":"'+exchangeName+'", "Market":"'+market+'", "OrderType":"'+orderType+'"'
 account='"Account":"'+account+'"'
 sym='"Asset":"'+pair+'"'
 direction='"Action":"'+action.lower()+'"'

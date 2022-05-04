@@ -94,14 +94,14 @@ def main():
         close=round(ohlcv[4],8)
 
         JRRlog.WriteLog(f'Testing #{counter+1}, lot = {amount:.8f}')
-        res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'market',pair,'buy',amount,close)
+        res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'market',pair,'buy',amount,close,OverrideMaxAssets=True)
         if res.find('Order Confirmation ID')>-1:
             if counter>0:
                 JRRapi.UpdateMinimum(exchangeName,pair,amount)
             elif counter==0:
                 JRRlog.WriteLog('Successful first attempt, exchange records accurate')
             done=True
-            res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'market',pair,'sell',amount,close)
+            res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'market',pair,'sell',amount,close,OverrideMaxAssets=True)
         else:
             counter+=1
             lots+=1

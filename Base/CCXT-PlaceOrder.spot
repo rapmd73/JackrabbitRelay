@@ -142,9 +142,10 @@ def main():
 
 # Check for maximum allowed assets
 
-    if "MaxAssets" in Active:
-        delete=(action=='close')
-        JRRsupport.ReadAssetList(exchangeName,account,pair,Active['MaxAssets'],delete)
+    if not "OverrideMaxAssets" in Order:
+        if "MaxAssets" in Active:
+            delete=(action=='close')
+            JRRsupport.ReadAssetList(exchangeName,account,pair,Active['MaxAssets'],delete)
 
     markets=JRRapi.GetMarkets(exchange,pair,RetryLimit)
 
