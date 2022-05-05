@@ -110,6 +110,36 @@ def Relay(userdata,dataTV):
 
 # Handle DSR tables
 
+def DSRHouseKeeping(exchangeName,account):
+    coins={}
+    en=exchangeName.lower().replace(' ','')
+    fn=JRRconfig.DataDirectory+'/'+en+'.'+account+'.dsr'
+
+    fw=JRRsupport.FileWatch(fn)
+    isLock=fw.TestLock()
+    if isLock:
+        try:
+            if os.path.exists(fn):
+                cf=open(fn,'rt+')
+                buffer=cf.read()
+                cf.close()
+                coins=json.loads(buffer)
+
+                # Remove any coin over 7 days
+
+                for c in coins:
+                    jpkt=json.loads(coins[c])
+                    t=(time.time()-jpkt['Time'])
+                    if t>DataTTL:
+                        try:
+                            coins.pop(c,None)
+                        except:
+                            pass
+                WriteDSRList(exchangeName,account,coins)
+        except:
+            pass
+        fw.Unlock()
+
 def ReadDSRList(exchangeName,account,key,value):
     coins={}
     en=exchangeName.lower().replace(' ','')
@@ -127,7 +157,7 @@ def ReadDSRList(exchangeName,account,key,value):
             coins=json.loads(buffer)
 
             if not key in coins:
-                # Read the existing value
+                # Add this entry
                 jpkt={}
                 jpkt['Time']=time.time()
                 jpkt['Value']=value
@@ -139,17 +169,6 @@ def ReadDSRList(exchangeName,account,key,value):
             jpkt['Time']=time.time()
             jpkt['Value']=value
             coins[key]=json.dumps(jpkt)
-
-        # Remove any coin over 7 days
-
-        for c in coins:
-            jpkt=json.loads(coins[c])
-            t=(time.time()-jpkt['Time'])
-            if t>DataTTL:
-                try:
-                    coins.pop(c,None)
-                except:
-                    pass
 
         WriteDSRList(exchangeName,account,coins)
     except:
@@ -265,6 +284,10 @@ def main():
         connResult=Relay(userdata,dataTV)
     else:
         JRRlog.WriteLog('Duplicate Payload')
+
+    # Housekeeping, non critical
+    # if file can't be locked, skip as another is managing the house keeping.
+    DSRHouseKeeping(exchangeName,account)
 
 if __name__ == '__main__':
     main()
