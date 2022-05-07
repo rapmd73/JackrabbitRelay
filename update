@@ -1,5 +1,6 @@
 #!/bin/bash
 pip3=`which pip3`
+OFS=`stat --printf="%s" update`
 
 cd /home/GitHub/JackrabbitRelay
 
@@ -23,10 +24,22 @@ mkdir -p /home/JackrabbitRelay/Statistics/Charts > /dev/null 2>&1
 cp -r /home/GitHub/JackrabbitRelay/Base/* /home/JackrabbitRelay/Base
 cp -r /home/GitHub/JackrabbitRelay/Extras/* /home/JackrabbitRelay/Extras
 
+for i in /home/JackrabbitRelay/Data/*.symbolmap ; do 
+    N=`echo $i | cut -d/ -f5 | cut -d. -f1`
+    /home/JackrabbitRelay/Extras/TV2Exchange $N
+done
+
 if test -f /home/Equilibrium/install ; then
     /home/GitHub/JackrabbitRelay/Extras/Equilibrium/install
 fi
 
 if test -f /home/BlackCrowHunter/install ; then
     /home/GitHub/JackrabbitRelay/Extras/BlackCrowHunter/install
+fi
+
+NFS=`stat --printf="%s" update`
+
+if [ "$NFS" != "$OFS" ] ; then
+    echo Running update again...
+    /home/GitHub/JackrabbitRelay/update nopull
 fi

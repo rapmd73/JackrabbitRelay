@@ -230,7 +230,7 @@ def VerifyDataPayload(dataTV):
 ###
 
 def main():
-# We need to escape newline in json payload.
+    JRRlog.WriteLog(DSRHeader)
     payload=JRRsupport.pFilter(sys.stdin.read())
 
     dataTV=DSRProcessJSON(payload,keyDataList) # test string numbers
@@ -288,6 +288,10 @@ def main():
     # Housekeeping, non critical
     # if file can't be locked, skip as another is managing the house keeping.
     DSRHouseKeeping(exchangeName,account)
+
+# Finish with elapsed time
+
+    JRRlog.ElapsedTime(JRRconfig.StartTime)
 
 if __name__ == '__main__':
     main()
