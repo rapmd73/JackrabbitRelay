@@ -37,7 +37,7 @@ def main():
             for i in cfiles:
                 f='/'+i
                 l=len(payload)
-                if l>1 and f[l]!='.':
+                if l>len(f) or (l>1 and f[l]!='.'):
                     continue
                 p=f[:l].replace('.','/')
                 if payload!='/':

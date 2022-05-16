@@ -187,7 +187,7 @@ def main():
                     minimum,mincost=JRRapi.GetMinimum(exchange,pair,forceQuote,False,RetryLimit)
                     if bal>minimum and bal<Trade['BuyAmount']:
                         res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,'close',Trade['BuyAmount'],close)
-                        EqSupport.EraseGrid(exchangeName,account,pair)
+#                        EqSupport.EraseGrid(exchangeName,account,pair)
                         JRRlog.SuccessLog("Equilibrium","Exit profit achieved, "+str(Trade['Profit']))
 
             # First purchase sets the direction. MUST be in the direction
