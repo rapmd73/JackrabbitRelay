@@ -8,6 +8,12 @@ if [ x$1 != 'xnopull' ] ; then
     for i in `cat requirements.txt` ; do
         $pip3 install -U $i
     done
+
+    for i in /home/JackrabbitRelay/Data/*.symbolmap ; do 
+        N=`echo $i | cut -d/ -f5 | cut -d. -f1`
+        /home/JackrabbitRelay/Extras/TV2Exchange $N
+    done
+
 fi
 
 git pull https://github.com/rapmd73/JackrabbitRelay
@@ -23,11 +29,6 @@ mkdir -p /home/JackrabbitRelay/Statistics/Charts > /dev/null 2>&1
 
 cp -r /home/GitHub/JackrabbitRelay/Base/* /home/JackrabbitRelay/Base
 cp -r /home/GitHub/JackrabbitRelay/Extras/* /home/JackrabbitRelay/Extras
-
-for i in /home/JackrabbitRelay/Data/*.symbolmap ; do 
-    N=`echo $i | cut -d/ -f5 | cut -d. -f1`
-    /home/JackrabbitRelay/Extras/TV2Exchange $N
-done
 
 if test -f /home/Equilibrium/install ; then
     /home/GitHub/JackrabbitRelay/Extras/Equilibrium/install
