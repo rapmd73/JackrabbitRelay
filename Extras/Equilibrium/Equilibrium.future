@@ -174,6 +174,23 @@ def main():
             if close>AllTimeHigh:
                 AllTimeHigh=close
 
+        if Config['TakeProfit']>0:
+            if Trade['Profit']>=Config['TakeProfit']:
+                if 'ProfitSell' in Config:
+                    res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'Market',Config['ProfitSell'],'Sell',Trade['Profit'],close)
+                    if res.find('Order Confirmation ID')>-1:
+                        OrderID=EqSupport.GetOrderID(res)
+                        EqSupport.WriteSpotLog(exchangeName,account,pair,f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitSell']}, {OrderID}")
+                        Trade['Profit']=0
+                        EqSupport.WriteGrid(exchangeName,account,Trade,pair)
+                elif 'ProfitBuy' in Config:
+                    res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'Market',Config['ProfitBuy'],'Buy',Trade['Profit'],close)
+                    if res.find('Order Confirmation ID')>-1:
+                        OrderID=EqSupport.GetOrderID(res)
+                        EqSupport.WriteSpotLog(exchangeName,account,pair,f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitBuy']}, {OrderID}")
+                        Trade['Profit']=0
+                        EqSupport.WriteGrid(exchangeName,account,Trade,pair)
+
         if Trade['Counter']==0:
             if not first:
                 EqSupport.CheckStopTracer(exchangeName,account,pair)
@@ -187,7 +204,6 @@ def main():
                     minimum,mincost=JRRapi.GetMinimum(exchange,pair,forceQuote,False,RetryLimit)
                     if bal>minimum and bal<Trade['BuyAmount']:
                         res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,orderType,pair,'close',Trade['BuyAmount'],close)
-#                        EqSupport.EraseGrid(exchangeName,account,pair)
                         JRRlog.SuccessLog("Equilibrium","Exit profit achieved, "+str(Trade['Profit']))
 
             # First purchase sets the direction. MUST be in the direction

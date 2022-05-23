@@ -51,12 +51,12 @@ Here is a breakdown of the above payload. All elements are required.
 | `Market` | `Spot` or `Future` |
 | `Asset` | `{{ticker}}` as TradingView will fill it in |
 | `Price` | `{{close}}`, the current closing price at the time of the alert |
-| `AvgProfit`| `{{plot_0}}`, These **MUST** be the exact TV macro used here. They will be filled in at the time of the alert |
-| `LProfit` | `{{plot_1}}` |
-| `TCycles` | `{{plot_2}}` |
-| `CBuys` | `{{plot_3}}` |
-| `MBCycle` | `{{plot_4}}` |
-| `TBuys` | `{{plot_5}}` |
+| `AvgProfit`| `{{plot_0}}`, Average Profits. These **MUST** be the exact TV macro used here. They will be filled in at the time of the alert |
+| `LProfit` | `{{plot_1}}` | Last Profit |
+| `TCycles` | `{{plot_2}}` | Completed trade cycles or sells |
+| `CBuys` | `{{plot_3}}` |  Current number of buys for this trade cycle |
+| `MBCycle` | `{{plot_4}}` | Maximum number of buys encountered **SO FAR** |
+| `TBuys` | `{{plot_5}}` | Total buys |
 | `PSize` | The position size. Can be a number or perecentage |
 | `Link` | The TradingView link to the chart |
 | `Identity` | You identity for Relay, if you set one up |

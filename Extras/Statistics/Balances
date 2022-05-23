@@ -40,6 +40,10 @@ Active=keys[CurrentKey]
 
 exchange=JRRapi.ExchangeLogin(exchangeName,Active,Notify=False)
 
+if "Sandbox" in Active:
+    exchange.setSandboxMode(True)
+    JRRapi.SetExchangeAPI(exchange,Active)
+
 if "Retry" in Active:
     RetryLimit=int(Active['Retry'])
 else:
