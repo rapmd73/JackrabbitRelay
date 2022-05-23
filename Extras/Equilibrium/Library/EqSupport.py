@@ -226,10 +226,12 @@ def ReadConfig(fn):
 
     if "SellLots" not in Config:
         Config['SellLots']='Dynamic'
+
     if "OverSell" in Config:
         Config['OverSell']=float(Config['OverSell'])/100
     else:
         Config['OverSell']=20/100
+
     if "OrderType" not in Config:
         Config['OrderType']='Market'
 
@@ -255,6 +257,11 @@ def ReadConfig(fn):
         Config['ExitProfit']=float(Config['ExitProfit'])
     else:
         Config['ExitProfit']=-1
+
+    if "TakeProfit" in Config:
+        Config['TakeProfit']=float(Config['TakeProfit'])
+    else:
+        Config['TakeProfit']=-1
 
     return(Config)
 

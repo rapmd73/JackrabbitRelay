@@ -25,7 +25,8 @@ Base62Digits = '0123456789AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz'
 
 # DSR data validation lists
 
-keyDataList=["Time","Recipe","Action","Exchange","Sub-Exchange","Asset","Price","AvgProfit","LProfit","TCycles","CBuys","MBCycle","TBuys","PSize","Link"]
+#keyDataList=["Time","Recipe","Action","Exchange","Sub-Exchange","Asset","Price","AvgProfit","LProfit","TCycles","CBuys","MBCycle","TBuys","PSize","Link"]
+keyDataList=["Time","Recipe","Action","Exchange","Sub-Exchange","Asset","Price","TCycles","TBuys","PSize"3]
 numDataList=["Price","AvgProfit","LProfit","TCycles","CBuys","MBCycle","TBuys","PSize"]
 
 keyUserList=["ID","Active","Account","Discord","Sandbox","Platform","Webhook","Advanced","Promotional"]
@@ -220,8 +221,7 @@ def VerifyDataPayload(dataTV):
         if type(dataTV[i]) is not str:
             dataTV[i]=str(dataTV[i])
 
-    if JRRsupport.verifyInt(dataTV['TCycles'])!=True or JRRsupport.verifyInt(dataTV['CBuys'])!=True or \
-        JRRsupport.verifyInt(dataTV['MBCycle'])!=True or JRRsupport.verifyInt(dataTV['TBuys'])!=True:
+    if JRRsupport.verifyInt(dataTV['TCycles'])!=True or JRRsupport.verifyInt(dataTV['TBuys'])!=True
         return(None)
     return(dataTV)
 
