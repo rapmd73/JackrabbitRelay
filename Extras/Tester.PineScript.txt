@@ -1,25 +1,123 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
-
 // © RobertD7723
 
-
-
 // This script generates signals to test Jackrabbit Relay. 
-
 // DO NOT USE IT FOR LIVE TRADING. 
-
 // YOU WILL LOOSE ALL YOUR MONEY IF YOU DO.
 
+//@version=5
+indicator('Tester', overlay=true)
 
+// Functrions
 
-//@version=4
-study("Tester",overlay=true)
+var label lblStats = na
 
-BuySignal=open>close
-SellSignal=close>open
+fprint(labl, _txt, _y, _color, _offsetLabels) => 
+    label _lbl = labl
+    _t = int(time + (time - time[1]) * _offsetLabels)
+    if barstate.islast
+        if na(_lbl)
+            // Only create label once.
+            _lbl := label.new(_t, _y, _txt, xloc.bar_time, yloc.price, #00000000, label.style_none, _color, size.normal,textalign=text.align_left)
+            // Fudge return type of `if` block so compiler doesn't complain (thx midtownsk8rguy for the trick).
+            _lbl
+        else
+            // Rather than delete and recreate the label on every realtime bar update, update the label's information; it's more efficient.
+            label.set_xy(_lbl, _t, _y)
+            label.set_text(_lbl, _txt)
+            label.set_textcolor(_lbl, _color)
+            label.set_textalign(_lbl,text.align_left)
+            _lbl
 
-alertcondition(BuySignal, "BUY ASSET", "Below buy zone")
-alertcondition(SellSignal,"SELL ASSET","Above sell zone")
+// Do we want to test DCA functionality
 
-plotshape(BuySignal,style=shape.triangleup,location=location.bottom,color=#000000,size=size.tiny,title="Buy")
-plotshape(SellSignal,style=shape.triangledown,location=location.top,color=#000000,size=size.tiny,title="Sell")
+testDCA=input.string(defval="No",options=["Yes","No"],title="Test DCA")
+TakeProfit=input.float(defval=1.0,minval=0.0,title="Take Profit")/100
+colStats=input.color(defval=#0000ff,title="Stats Color")
+
+// Define nweeded data points/variables from the chart. 
+// This is done to prevent updates during the analysis section.
+
+so=open
+sc=close
+
+// For keeping track of the average for DCA analysis
+
+var sum=0.0
+var count=0
+
+// For DSR testing. Total buys (tb) and trade cycles/total sells (tc)
+
+var lp=0.0
+var tb=0
+var tc=0
+
+// Analysis section
+
+BuySignal = so > sc
+SellSignal = sc > so
+
+// The DCA logic as follows:
+//  First purchase of Trade Cycle, last price = closng price
+//  Rest of trade cycle rewquires price to be less then last purchase
+
+if BuySignal
+    tb+=1
+    if testDCA=="Yes"
+        if count==0
+            lp:=sc
+            sum+=sc
+            count+=1
+        else
+            if sc<lp
+                lp:=sc
+                sum+=sc
+                count+=1
+            else
+                BuySignal:=false
+
+// Figure out average and take profit
+
+average=sum/count
+tp=average+(average*TakeProfit)
+
+if SellSignal
+    if testDCA=="Yes" and count>0
+        if sc>tp
+            tc+=1
+            sum:=0.0
+            count:=0
+        else
+            SellSignal:=false
+    else
+        tc+=1
+        sum:=0.0
+        count:=0
+
+// Display statistics
+
+firstBarTime = ta.valuewhen(bar_index == 1, time, 0)
+lastBarTime = timenow
+timeStart = firstBarTime
+timeEnd = lastBarTime
+timeElapsedDays = (timeEnd - timeStart) / 86400000
+
+txt="Time elapsed: " + str.tostring(timeElapsedDays,"0.00") + " days" 
+
+if testDCA=="Yes"
+    txt:=txt+"\nTrade Cycles: "+str.tostring(tc)
+     +"\nTotal Buys: "+str.tostring(tb)
+else
+    txt:=txt+"\nTotal Sells: "+str.tostring(tc)
+     +"\nTotal Buys: "+str.tostring(tb)
+
+ls=fprint(lblStats,txt,sc,colStats,0)
+lblStats:=ls
+
+// Handle alerts and display markers
+
+alertcondition(BuySignal, 'BUY ASSET', 'Below buy zone')
+alertcondition(SellSignal, 'SELL ASSET', 'Above sell zone')
+
+plotshape(BuySignal, style=shape.triangleup, location=location.bottom, color=color.new(#000000, 0), size=size.tiny, title='Buy')
+plotshape(SellSignal, style=shape.triangledown, location=location.top, color=color.new(#000000, 0), size=size.tiny, title='Sell')
