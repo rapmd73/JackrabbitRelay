@@ -34,6 +34,10 @@ if test -f /home/Equilibrium/install ; then
     /home/GitHub/JackrabbitRelay/Extras/Equilibrium/install
 fi
 
+if test -f /home/Procurator/install ; then
+    /home/GitHub/JackrabbitRelay/Extras/Procurator/install
+fi
+
 if test -f /home/BlackCrowHunter/install ; then
     /home/GitHub/JackrabbitRelay/Extras/BlackCrowHunter/install
 fi

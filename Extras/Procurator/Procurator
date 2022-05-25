@@ -1,0 +1,234 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Procurator
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay/Base/Library')
+import os
+from datetime import datetime
+import pathlib
+import time
+import requests
+import json
+
+import JRRconfig
+import JRRlog
+import JRRapi
+import JRRsupport
+
+sys.path.append('/home/Equilibrium/Library')
+import EqSupport
+
+Header='Procurator '+JRRconfig.Version
+
+def ReadConfig(fn):
+    Required=[ "Exchange", "Account", "Asset", "Steps", "Top", "Bottom", "PositionSize" ]
+
+    Config={}
+
+    JRRlog.WriteLog("Reading configuration file")
+
+    if os.path.exists(fn):
+        try:
+            raw=pathlib.Path(fn).read_text()
+        except:
+            JRRlog.ErrorLog("ReadConfig",f"Can't read {fn}")
+
+        txt=JRRsupport.pFilter(raw)
+
+        try:
+            Config=json.loads(txt)
+        except:
+            JRRlog.ErrorLog("ReadConfig",f"Damaged JSON: {txt}")
+    else:
+        JRRlog.ErrorLog("ReadConfig",'Config file not found.')
+
+    for i in Config:
+        JRRlog.WriteLog(f"|- {i}: {Config[i]}")
+
+    for i in Required:
+        if i not in Config:
+            JRRlog.ErrorLog("ReadConfig",f"Missing required item: {i}")
+
+    Config['Exchange']=Config['Exchange'].lower()
+    Config['Asset']=Config['Asset'].upper()
+    Config['Steps']=int(Config['Steps'])
+    Config['Top']=float(Config['Top'])
+    Config['Bottom']=float(Config['Bottom'])
+
+    return(Config)
+
+
+###
+### Main code base. Place order on exchange
+###
+
+def main():
+    JRRlog.WriteLog(Header)
+
+    # Read CFG file
+    if len(sys.argv) > 1:
+        Config=ReadConfig(sys.argv[1])
+    else:
+        print("A valid configuration file must be provided.")
+        sys.exit(1)
+
+    paper=False
+    if 'Paper' in Config:
+        paper=True
+
+    exchangeName=Config['Exchange']
+    account=Config['Account']
+    pair=Config['Asset']
+    steps=int(Config['Steps'])
+    topValue=float(Config['Top'])
+    bottomValue=float(Config['Bottom'])
+    psize=float(Config['PositionSize'])
+
+    keys=JRRsupport.ReadConfig(exchangeName,account)
+    JRRlog.WriteLog("API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
+
+    CurrentKey=(os.getpid()%len(keys))
+    Active=keys[CurrentKey]
+
+    exchange=JRRapi.ExchangeLogin(exchangeName,Active)
+
+    if "Retry" in Active:
+        RetryLimit=int(Active['Retry'])
+        JRRlog.WriteLog("|- API Retry limit set to "+str(RetryLimit)+' times')
+    else:
+        RetryLimit=10
+
+    if not "Webhook" in Active:
+        JRRlog.ErrorLog("Procurator","Webhook NOT present")
+
+    markets=JRRapi.GetMarkets(exchange,pair,RetryLimit)
+
+# This is where a looping method would go if this were to serve a single exchange
+# with multiple pairs.
+
+# Get asset information
+
+    base=exchange.markets[pair]['base']
+    quote=exchange.markets[pair]['quote']
+
+    marketType="spot"
+    if "type" in exchange.markets[pair]:
+        if "type" in exchange.markets[pair]['info']:
+            if exchange.markets[pair]['info']['type']==exchange.markets[pair]['type']:
+                marketType=exchange.markets[pair]['type']
+            else:
+                marketType=exchange.markets[pair]['info']['type']
+
+    JRRlog.WriteLog("Base currency:  "+base)
+    JRRlog.WriteLog("Quote currency: "+quote)
+
+    plevel=round((topValue-bottomValue)/steps,8)
+
+    JRRlog.WriteLog(f"Price step level: {plevel:.8f}")
+
+    done=False
+    while not done:
+        try:
+            ticker = exchange.fetch_ticker(pair)
+        except Exception as e:
+            JRRlog.WriteLog(f"Fetch ticker retry: {e}")
+            JRRsupport.ElasticSleep(1)
+        else:
+            done=True
+
+    OrderList=[]
+
+    # Set up sell orders
+
+    c=1
+    v=topValue-plevel
+    while v>ticker['bid']:
+        CurrentKey=((CurrentKey+1)%len(keys))
+        Active=keys[CurrentKey]
+        JRRapi.SetExchangeAPI(exchange,Active)
+
+        # Create orders
+
+        done=False
+        while not done:
+            try:
+                order=exchange.create_order(pair, 'limit', 'buy', psize, v)
+            except Exception as e:
+                JRRlog.WriteLog(f"Grid level retry {v}: {e}")
+                JRRsupport.ElasticSleep(1)
+            else:
+                done=True
+
+        OrderList.append(order)
+        JRRlog.WriteLog(f"Placing order at: {c:.0f}/{v:.8f}")
+        c+=1
+        v-=plevel
+
+    # Set up buy orders
+
+    c=1
+    v=bottomValue
+    while v+plevel<ticker['bid']:
+        CurrentKey=((CurrentKey+1)%len(keys))
+        Active=keys[CurrentKey]
+        JRRapi.SetExchangeAPI(exchange,Active)
+
+        # Create orders
+
+        done=False
+        while not done:
+            try:
+                order=exchange.create_order(pair, 'limit', 'buy', psize, v)
+            except Exception as e:
+                JRRlog.WriteLog(f"Grid level retry {v}: {e}")
+                JRRsupport.ElasticSleep(1)
+            else:
+                done=True
+
+        OrderList.append(order)
+        JRRlog.WriteLog(f"Placing order at: {c:.0f}/{v:.8f}")
+        c+=1
+        v+=plevel
+
+###
+### Main Loop
+###
+
+    while True:
+        CurrentKey=((CurrentKey+1)%len(keys))
+        Active=keys[CurrentKey]
+        JRRapi.SetExchangeAPI(exchange,Active)
+
+        for order in range(len(OrderList)):
+            co=exchange.fetch_order(OrderList[order]['id'])
+
+            if co['status'].lower()=='closed' and co['side'].lower()=='buy':
+                sv=co['price']+plevel
+                try:
+                    OrderList[order]=exchange.create_order(pair, 'limit', 'sell', psize, sv)
+                except Exception as e:
+                    JRRlog.WriteLog(f"Sell {sv:.4f} retry: {e}")
+                JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'buy', psize, co['price'], OrderList[order], RetryLimit, "Procurator")
+                JRRlog.WriteLog(f"Sell placed at {sv:.8f}")
+
+            if co['status'].lower()=='closed' and co['side'].lower()=='sell':
+                bv=co['price']-plevel
+                try:
+                    OrderList[order]=exchange.create_order(pair, 'limit', 'buy', psize, bv)
+                except Exception as e:
+                    JRRlog.WriteLog(f"Buy {bv:.4f} retry: {e}")
+                JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'sell', psize, co['price'], OrderList[order], RetryLimit, "Procurator")
+                JRRlog.WriteLog(f"Buy placed at {bv:.8f}")
+
+            JRRsupport.ElasticSleep(1)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Terminated")
+
