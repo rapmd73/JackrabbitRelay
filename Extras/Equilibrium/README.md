@@ -193,6 +193,9 @@ The items that can be used in this file,
 | `SellStopLow` | price | Sells will not happen below this price. |
 | `SellStopHigh` | price | Sells will not happen above this price. |
 | `Paper` | any value | This activates the paper trading mode. Equilibrium will do everything except actually place orders to the exchange. <br><br> **Even in PAPER mode, you API/Secret and Webhook must be correct as Equilibrium WILL login into your account using your exchange's private API/rate limit values to get the prices.** <br><br> After testing in paper trading mode, you can remove this to enable live trading. |
+| `TakeProfit` | `0.20` | This is the minimum profit you want removed from your bot |
+| `ProfitBuy` | `USDC/USDT` | This is the asset you want purchased for your profit store |
+| `ProfitSell` | `USDT/USD` | This is for converting crypto to fiat. `USDT` is YOUR quote qurrency of the asset. `USD` is YOUR fiat |
 
 ### Regarding Lot Size
 

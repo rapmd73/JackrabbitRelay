@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay/Base/Library')
+import os
+from datetime import datetime
+import pathlib
+import time
+import requests
+import json
+
+import JRRconfig
+import JRRlog
+import JRRapi
+import JRRsupport
+
+if len(sys.argv) > 3:
+    exchangeName=sys.argv[1].lower()
+    account=sys.argv[2]
+    pair=sys.argv[3].upper()
+else:
+    print("An exchange, a (sub)account, and an asset.")
+    sys.exit(1)
+
+keys=JRRsupport.ReadConfig(exchangeName,account)
+
+CurrentKey=(os.getpid()%len(keys))
+Active=keys[CurrentKey]
+
+exchange=JRRapi.ExchangeLogin(exchangeName,Active,Notify=False)
+
+if "Retry" in Active:
+    RetryLimit=int(Active['Retry'])
+else:
+    RetryLimit=10
+
+markets=JRRapi.GetMarkets(exchange,pair,RetryLimit,Notify=False)
+
+oo=exchange.fetchOpenOrders(pair)
+
+for o in oo:
+    print(f"{o['symbol']:10} {o['id']} {o['side']:4} {o['status']:7} {o['amount']:16.8f} {o['price']:16.8f}")
+
