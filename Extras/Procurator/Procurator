@@ -62,6 +62,47 @@ def ReadConfig(fn):
 
     return(Config)
 
+def GetTicker(exchange,pair):
+    c=1
+    done=False
+    while not done:
+        try:
+            ticker=exchange.fetch_ticker(pair)
+        except Exception as e:
+            JRRlog.WriteLog(f"GetTicker retry #{c:.0f}: {e}")
+            c+=1
+            JRRsupport.ElasticSleep(1)
+        else:
+            done=True
+    return ticker
+
+def MakeOrder(exchange,pair,direction,amount,price):
+    c=1
+    done=False
+    while not done:
+        try:
+            order=exchange.create_order(pair, 'limit', direction, amount, price)
+        except Exception as e:
+            JRRlog.WriteLog(f"MakeOrder retry #{c:.0f} at {price:0.8f}: {e}")
+            c+=1
+            JRRsupport.ElasticSleep(1)
+        else:
+            done=True
+    return order
+
+def GetOrder(exchange,pid):
+    c=1
+    done=False
+    while not done:
+        try:
+            order=exchange.fetch_order(pid)
+        except Exception as e:
+            JRRlog.WriteLog(f"GetOrder retry #{c:.0f}/{pid}: {e}")
+            c+=1
+            JRRsupport.ElasticSleep(1)
+        else:
+            done=True
+    return order
 
 ###
 ### Main code base. Place order on exchange
@@ -131,15 +172,7 @@ def main():
 
     JRRlog.WriteLog(f"Price step level: {plevel:.8f}")
 
-    done=False
-    while not done:
-        try:
-            ticker = exchange.fetch_ticker(pair)
-        except Exception as e:
-            JRRlog.WriteLog(f"Fetch ticker retry: {e}")
-            JRRsupport.ElasticSleep(1)
-        else:
-            done=True
+    ticker=GetTicker(exchange,pair)
 
     OrderList=[]
 
@@ -152,20 +185,10 @@ def main():
         Active=keys[CurrentKey]
         JRRapi.SetExchangeAPI(exchange,Active)
 
-        # Create orders
-
-        done=False
-        while not done:
-            try:
-                order=exchange.create_order(pair, 'limit', 'buy', psize, v)
-            except Exception as e:
-                JRRlog.WriteLog(f"Grid level retry {v}: {e}")
-                JRRsupport.ElasticSleep(1)
-            else:
-                done=True
+        order=MakeOrder(exchange,pair,'buy',psize,v)
 
         OrderList.append(order)
-        JRRlog.WriteLog(f"Placing order at: {c:.0f}/{v:.8f}")
+        JRRlog.WriteLog(f"Placed order at: {c:.0f}/{v:.8f}")
         c+=1
         v-=plevel
 
@@ -178,20 +201,10 @@ def main():
         Active=keys[CurrentKey]
         JRRapi.SetExchangeAPI(exchange,Active)
 
-        # Create orders
-
-        done=False
-        while not done:
-            try:
-                order=exchange.create_order(pair, 'limit', 'buy', psize, v)
-            except Exception as e:
-                JRRlog.WriteLog(f"Grid level retry {v}: {e}")
-                JRRsupport.ElasticSleep(1)
-            else:
-                done=True
+        order=MakeOrder(exchange,pair,'buy',psize,v)
 
         OrderList.append(order)
-        JRRlog.WriteLog(f"Placing order at: {c:.0f}/{v:.8f}")
+        JRRlog.WriteLog(f"Placed order at: {c:.0f}/{v:.8f}")
         c+=1
         v+=plevel
 
@@ -205,24 +218,19 @@ def main():
         JRRapi.SetExchangeAPI(exchange,Active)
 
         for order in range(len(OrderList)):
-            co=exchange.fetch_order(OrderList[order]['id'])
+            prev=OrderList[order]
+            co=GetOrder(exchange,prev['id'])
 
             if co['status'].lower()=='closed' and co['side'].lower()=='buy':
-                JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'buy', psize, co['price'], OrderList[order], RetryLimit, "Procurator")
+                JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'buy', psize, co['price'], prev, RetryLimit, "Procurator")
                 sv=co['price']+plevel
-                try:
-                    OrderList[order]=exchange.create_order(pair, 'limit', 'sell', psize, sv)
-                except Exception as e:
-                    JRRlog.WriteLog(f"Sell {sv:.4f} retry: {e}")
+                OrderList[order]=MakeOrder(exchange,pair,'sell',psize,sv)
                 JRRlog.WriteLog(f"Sell placed at {sv:.8f}")
 
             if co['status'].lower()=='closed' and co['side'].lower()=='sell':
-                JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'sell', psize, co['price'], OrderList[order], RetryLimit, "Procurator")
+                JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'sell', psize, co['price'], prev, RetryLimit, "Procurator")
                 bv=co['price']-plevel
-                try:
-                    OrderList[order]=exchange.create_order(pair, 'limit', 'buy', psize, bv)
-                except Exception as e:
-                    JRRlog.WriteLog(f"Buy {bv:.4f} retry: {e}")
+                OrderList[order]=MakeOrder(exchange,pair,'buy',psize,bv)
                 JRRlog.WriteLog(f"Buy placed at {bv:.8f}")
 
             JRRsupport.ElasticSleep(1)
