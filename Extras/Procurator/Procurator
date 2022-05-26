@@ -207,21 +207,21 @@ def main():
             co=exchange.fetch_order(OrderList[order]['id'])
 
             if co['status'].lower()=='closed' and co['side'].lower()=='buy':
+                JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'buy', psize, co['price'], OrderList[order], RetryLimit, "Procurator")
                 sv=co['price']+plevel
                 try:
                     OrderList[order]=exchange.create_order(pair, 'limit', 'sell', psize, sv)
                 except Exception as e:
                     JRRlog.WriteLog(f"Sell {sv:.4f} retry: {e}")
-                JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'buy', psize, co['price'], OrderList[order], RetryLimit, "Procurator")
                 JRRlog.WriteLog(f"Sell placed at {sv:.8f}")
 
             if co['status'].lower()=='closed' and co['side'].lower()=='sell':
+                JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'sell', psize, co['price'], OrderList[order], RetryLimit, "Procurator")
                 bv=co['price']-plevel
                 try:
                     OrderList[order]=exchange.create_order(pair, 'limit', 'buy', psize, bv)
                 except Exception as e:
                     JRRlog.WriteLog(f"Buy {bv:.4f} retry: {e}")
-                JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'sell', psize, co['price'], OrderList[order], RetryLimit, "Procurator")
                 JRRlog.WriteLog(f"Buy placed at {bv:.8f}")
 
             JRRsupport.ElasticSleep(1)
