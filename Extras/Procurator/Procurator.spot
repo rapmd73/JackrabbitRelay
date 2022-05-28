@@ -26,7 +26,7 @@ import EqSupport
 Header='Procurator '+JRRconfig.Version
 
 def ReadConfig(fn):
-    Required=[ "Exchange", "Account", "Asset", "Steps", "Top", "Bottom", "PositionSize" ]
+    Required=[ "Exchange", "Account", "Asset", "Top", "Bottom", "PositionSize" ]
 
     Config={}
 
@@ -56,9 +56,15 @@ def ReadConfig(fn):
 
     Config['Exchange']=Config['Exchange'].lower()
     Config['Asset']=Config['Asset'].upper()
-    Config['Steps']=int(Config['Steps'])
     Config['Top']=float(Config['Top'])
     Config['Bottom']=float(Config['Bottom'])
+
+    if "Steps" in Config:
+        Config['Steps']=int(Config['Steps'])
+    elif "Pips" in Config:
+        Config['Pips']=float(Config['Pips'])
+    else:
+        JRRlog.ErrorLog("ReadConfig","Either Steps or Pips MUST be present")
 
     return(Config)
 
@@ -128,10 +134,10 @@ def main():
     exchangeName=Config['Exchange']
     account=Config['Account']
     pair=Config['Asset']
-    steps=int(Config['Steps'])
     topValue=float(Config['Top'])
     bottomValue=float(Config['Bottom'])
     psize=float(Config['PositionSize'])
+
 
     keys=JRRsupport.ReadConfig(exchangeName,account)
     JRRlog.WriteLog("API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
@@ -171,7 +177,12 @@ def main():
     JRRlog.WriteLog("Base currency:  "+base)
     JRRlog.WriteLog("Quote currency: "+quote)
 
-    plevel=round((topValue-bottomValue)/steps,8)
+    if "Steps" in Config:
+        plevel=round((topValue-bottomValue)/Config['Steps'],8)
+    elif "Pips" in Config:
+        plevel=Config['Pips']
+        if plevel<=0.0001:
+            plevel=0.0001
 
     JRRlog.WriteLog(f"Price step level: {plevel:.8f}")
 
@@ -188,9 +199,12 @@ def main():
         Active=keys[CurrentKey]
         JRRapi.SetExchangeAPI(exchange,Active)
 
+        co=[]
         order=MakeOrder(exchange,pair,'buy',psize,v)
+        co.append(v)
+        co.append(order)
 
-        OrderList.append(order)
+        OrderList.append(co)
         JRRlog.WriteLog(f"Placed order at: {c:.0f}/{v:.8f}")
         c+=1
         v-=plevel
@@ -204,9 +218,12 @@ def main():
         Active=keys[CurrentKey]
         JRRapi.SetExchangeAPI(exchange,Active)
 
+        co=[]
         order=MakeOrder(exchange,pair,'buy',psize,v)
+        co.append(v)
+        co.append(order)
 
-        OrderList.append(order)
+        OrderList.append(co)
         JRRlog.WriteLog(f"Placed order at: {c:.0f}/{v:.8f}")
         c+=1
         v+=plevel
@@ -219,20 +236,24 @@ def main():
         JRRapi.SetExchangeAPI(exchange,Active)
 
         for order in range(len(OrderList)):
-            prev=OrderList[order]
-            co=GetOrder(exchange,prev['id'])
+            co=GetOrder(exchange,OrderList[order][1]['id'])
 
             if co['status'].lower()=='closed' and co['side'].lower()=='buy':
-                JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'buy', psize, co['price'], prev, RetryLimit, "Procurator")
-                sv=co['price']+plevel
-                OrderList[order]=MakeOrder(exchange,pair,'sell',psize,sv)
-                JRRlog.WriteLog(f"Sell placed at {sv:.8f}")
-
-            if co['status'].lower()=='closed' and co['side'].lower()=='sell':
-                JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'sell', psize, co['price'], prev, RetryLimit, "Procurator")
-                bv=co['price']-plevel
-                OrderList[order]=MakeOrder(exchange,pair,'buy',psize,bv)
-                JRRlog.WriteLog(f"Buy placed at {bv:.8f}")
+                JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'buy', psize, OrderList[order][0], OrderList[order][1], RetryLimit, "Procurator")
+                ov=OrderList[order][0]
+                sv=ov+plevel
+                OrderList[order][0]=sv
+                OrderList[order][1]=MakeOrder(exchange,pair,'sell',psize,sv)
+                JRRlog.WriteLog(f"Close Buy at {ov:.8f}, Open Sell placed at {sv:.8f}")
+            elif co['status'].lower()=='closed' and co[1]['side'].lower()=='sell':
+                JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'sell', psize, OrderList[order][0], OrderList[order][1], RetryLimit, "Procurator")
+                ov=OrderList[order][0]
+                bv=ov-plevel
+                OrderList[order][0]=bv
+                OrderList[order][1]=MakeOrder(exchange,pair,'buy',psize,bv)
+                JRRlog.WriteLog(f"Close Sell at {ov:.8f}, Open Buy placed at {bv:.8f}")
+            elif co['status'].lower()!='open':
+                JRRlog.WriteLog(f"Order #{co['id']}, Unreconized status: {co['status']}")
 
             JRRsupport.ElasticSleep(1)
 
