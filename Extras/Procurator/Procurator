@@ -69,7 +69,8 @@ def GetTicker(exchange,pair):
         try:
             ticker=exchange.fetch_ticker(pair)
         except Exception as e:
-            JRRlog.WriteLog(f"GetTicker retry #{c:.0f}: {e}")
+            er=JRRapi.StopHTMLtags(str(e))
+            JRRlog.WriteLog(f"GetTicker retry #{c:.0f}: {er}")
             c+=1
             JRRsupport.ElasticSleep(1)
         else:
@@ -83,7 +84,8 @@ def MakeOrder(exchange,pair,direction,amount,price):
         try:
             order=exchange.create_order(pair, 'limit', direction, amount, price)
         except Exception as e:
-            JRRlog.WriteLog(f"MakeOrder retry #{c:.0f} at {price:0.8f}: {e}")
+            er=JRRapi.StopHTMLtags(str(e))
+            JRRlog.WriteLog(f"MakeOrder retry #{c:.0f} at {price:0.8f}: {er}")
             c+=1
             JRRsupport.ElasticSleep(1)
         else:
@@ -97,7 +99,8 @@ def GetOrder(exchange,pid):
         try:
             order=exchange.fetch_order(pid)
         except Exception as e:
-            JRRlog.WriteLog(f"GetOrder retry #{c:.0f}/{pid}: {e}")
+            er=JRRapi.StopHTMLtags(str(e))
+            JRRlog.WriteLog(f"GetOrder retry #{c:.0f}/{pid}: {er}")
             c+=1
             JRRsupport.ElasticSleep(1)
         else:
@@ -196,7 +199,7 @@ def main():
 
     c=1
     v=bottomValue
-    while v+plevel<ticker['bid']:
+    while v<ticker['bid']:
         CurrentKey=((CurrentKey+1)%len(keys))
         Active=keys[CurrentKey]
         JRRapi.SetExchangeAPI(exchange,Active)
@@ -208,9 +211,7 @@ def main():
         c+=1
         v+=plevel
 
-###
 ### Main Loop
-###
 
     while True:
         CurrentKey=((CurrentKey+1)%len(keys))
@@ -241,3 +242,21 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print("Terminated")
 
+"""
+        if Config['TakeProfit']>0:
+            if Trade['Profit']>=Config['TakeProfit']:
+                if 'ProfitSell' in Config:
+                    res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'Market',Config['ProfitSell'],'Sell',Trade['Profit'],close)
+                    if res.find('Order Confirmation ID')>-1:
+                        OrderID=EqSupport.GetOrderID(res)
+                        EqSupport.WriteSpotLog(exchangeName,account,pair,f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitSell']}, {OrderID}")
+                        Trade['Profit']=0
+                        EqSupport.WriteGrid(exchangeName,account,Trade,pair)
+                elif 'ProfitBuy' in Config:
+                    res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'Market',Config['ProfitBuy'],'Buy',Trade['Profit'],close)
+                    if res.find('Order Confirmation ID')>-1:
+                        OrderID=EqSupport.GetOrderID(res)
+                        EqSupport.WriteSpotLog(exchangeName,account,pair,f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitBuy']}, {OrderID}")
+                        Trade['Profit']=0
+                        EqSupport.WriteGrid(exchangeName,account,Trade,pair)
+"""
