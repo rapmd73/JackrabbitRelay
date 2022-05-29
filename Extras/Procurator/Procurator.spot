@@ -245,7 +245,7 @@ def main():
                 OrderList[order][0]=sv
                 OrderList[order][1]=MakeOrder(exchange,pair,'sell',psize,sv)
                 JRRlog.WriteLog(f"Close Buy at {ov:.8f}, Open Sell placed at {sv:.8f}")
-            elif co['status'].lower()=='closed' and co[1]['side'].lower()=='sell':
+            elif co['status'].lower()=='closed' and co['side'].lower()=='sell':
                 JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'sell', psize, OrderList[order][0], OrderList[order][1], RetryLimit, "Procurator")
                 ov=OrderList[order][0]
                 bv=ov-plevel
