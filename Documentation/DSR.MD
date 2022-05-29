@@ -44,7 +44,7 @@ Here is a breakdown of the above payload. All elements are required.
 | :--- | :--- |
 | `Time` | The date/time of this trade. Should be `{{time}}` |
 | `Recipe` | This can be anything, buy should accurately represent the recipe you are using. It will be a key reference point for watching for duplicates |
-| `Action` | Should be `buy`, `sell`, `close`, or `{{strategy.order.acrion}}` |
+| `Action` | Should be `buy`, `sell`, `close`, or `{{strategy.order.action}}` |
 | `Exchange` | Must be `DSR` to use the DSR framework |
 | `Sub-Exchange` | This is the actual exchange this order will be placed on |
 | `Account` | The account to use from the exchange configuration file |
