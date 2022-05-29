@@ -66,6 +66,16 @@ def ReadConfig(fn):
     else:
         JRRlog.ErrorLog("ReadConfig","Either Steps or Pips MUST be present")
 
+    if "ExitProfit" in Config:
+        Config['ExitProfit']=float(Config['ExitProfit'])
+    else:
+        Config['ExitProfit']=-1
+
+    if "TakeProfit" in Config:
+        Config['TakeProfit']=float(Config['TakeProfit'])
+    else:
+        Config['TakeProfit']=-1
+
     return(Config)
 
 def GetTicker(exchange,pair):
@@ -113,6 +123,30 @@ def GetOrder(exchange,pid):
             done=True
     return order
 
+def ReadGrid(exchangeName,account,Asset):
+    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.orderlist'
+    if os.path.exists(fn):
+        JRRlog.WriteLog("Reading Grid file")
+        fh=open(fn,'r')
+        for line in fh:
+            Trade={}
+            Trade=json.loads(line.rstrip())
+        fh.close()
+        JRRlog.WriteLog(f"|- {Asset:10} {len(Trade['OrderList'])} orders loaded")
+    else:
+        Trade={}
+        Trade['Profit']=0.0
+        Trade['OrderList']=[]
+
+    return(Trade)
+
+def WriteGrid(exchangeName,account,Trade,Asset):
+    fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.orderlist'
+
+    fh=open(fn,'w')
+    fh.write(json.dumps(Trade)+"\n")
+    fh.close()
+
 ###
 ### Main code base. Place order on exchange
 ###
@@ -137,7 +171,6 @@ def main():
     topValue=float(Config['Top'])
     bottomValue=float(Config['Bottom'])
     psize=float(Config['PositionSize'])
-
 
     keys=JRRsupport.ReadConfig(exchangeName,account)
     JRRlog.WriteLog("API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
@@ -181,52 +214,53 @@ def main():
         plevel=round((topValue-bottomValue)/Config['Steps'],8)
     elif "Pips" in Config:
         plevel=Config['Pips']
-        if plevel<=0.0001:
-            plevel=0.0001
+
+    if plevel<=0.0001:
+        plevel=0.0001
 
     JRRlog.WriteLog(f"Price step level: {plevel:.8f}")
 
     ticker=GetTicker(exchange,pair)
 
-    OrderList=[]
+    Trade=ReadGrid(exchangeName,account,pair)
+    if len(Trade['OrderList'])==0:
+        # Set up sell orders
+        c=1
+        v=topValue-plevel
+        while v>ticker['bid']:
+            CurrentKey=((CurrentKey+1)%len(keys))
+            Active=keys[CurrentKey]
+            JRRapi.SetExchangeAPI(exchange,Active)
 
-    # Set up sell orders
+            co=[]
+            order=MakeOrder(exchange,pair,'buy',psize,v)
+            co.append(v)
+            co.append(order)
 
-    c=1
-    v=topValue-plevel
-    while v>ticker['bid']:
-        CurrentKey=((CurrentKey+1)%len(keys))
-        Active=keys[CurrentKey]
-        JRRapi.SetExchangeAPI(exchange,Active)
+            Trade['OrderList'].append(co)
+            JRRlog.WriteLog(f"Placed order at: {c:.0f}/{v:.8f}")
+            c+=1
+            v-=plevel
 
-        co=[]
-        order=MakeOrder(exchange,pair,'buy',psize,v)
-        co.append(v)
-        co.append(order)
+        # Set up buy orders
+        c=1
+        v=bottomValue
+        while v<ticker['bid']:
+            CurrentKey=((CurrentKey+1)%len(keys))
+            Active=keys[CurrentKey]
+            JRRapi.SetExchangeAPI(exchange,Active)
 
-        OrderList.append(co)
-        JRRlog.WriteLog(f"Placed order at: {c:.0f}/{v:.8f}")
-        c+=1
-        v-=plevel
+            co=[]
+            order=MakeOrder(exchange,pair,'buy',psize,v)
+            co.append(v)
+            co.append(order)
 
-    # Set up buy orders
+            Trade['OrderList'].append(co)
+            JRRlog.WriteLog(f"Placed order at: {c:.0f}/{v:.8f}")
+            c+=1
+            v+=plevel
 
-    c=1
-    v=bottomValue
-    while v<ticker['bid']:
-        CurrentKey=((CurrentKey+1)%len(keys))
-        Active=keys[CurrentKey]
-        JRRapi.SetExchangeAPI(exchange,Active)
-
-        co=[]
-        order=MakeOrder(exchange,pair,'buy',psize,v)
-        co.append(v)
-        co.append(order)
-
-        OrderList.append(co)
-        JRRlog.WriteLog(f"Placed order at: {c:.0f}/{v:.8f}")
-        c+=1
-        v+=plevel
+        WriteGrid(exchangeName,account,Trade,pair)
 
 ### Main Loop
 
@@ -235,25 +269,47 @@ def main():
         Active=keys[CurrentKey]
         JRRapi.SetExchangeAPI(exchange,Active)
 
-        for order in range(len(OrderList)):
-            co=GetOrder(exchange,OrderList[order][1]['id'])
+        if Config['TakeProfit']>0:
+            if Trade['Profit']>=Config['TakeProfit']:
+                if 'ProfitSell' in Config:
+                    res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'Market',Config['ProfitSell'],'Sell',Trade['Profit'],close)
+                    if res.find('Order Confirmation ID')>-1:
+                        OrderID=EqSupport.GetOrderID(res)
+                        JRRlog.WriteLog(f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitSell']}, {OrderID}")
+                        Trade['Profit']=0
+                        WriteGrid(exchangeName,account,Trade,pair)
+                elif 'ProfitBuy' in Config:
+                    res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'Market',Config['ProfitBuy'],'Buy',Trade['Profit'],close)
+                    if res.find('Order Confirmation ID')>-1:
+                        OrderID=EqSupport.GetOrderID(res)
+                        JRRlog.WriteLog(f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitBuy']}, {OrderID}")
+                        Trade['Profit']=0
+                        WriteGrid(exchangeName,account,Trade,pair)
 
-            if co['status'].lower()=='closed' and co['side'].lower()=='buy':
-                JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'buy', psize, OrderList[order][0], OrderList[order][1], RetryLimit, "Procurator")
-                ov=OrderList[order][0]
-                sv=ov+plevel
-                OrderList[order][0]=sv
-                OrderList[order][1]=MakeOrder(exchange,pair,'sell',psize,sv)
-                JRRlog.WriteLog(f"Close Buy at {ov:.8f}, Open Sell placed at {sv:.8f}")
-            elif co['status'].lower()=='closed' and co['side'].lower()=='sell':
-                JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'sell', psize, OrderList[order][0], OrderList[order][1], RetryLimit, "Procurator")
-                ov=OrderList[order][0]
-                bv=ov-plevel
-                OrderList[order][0]=bv
-                OrderList[order][1]=MakeOrder(exchange,pair,'buy',psize,bv)
-                JRRlog.WriteLog(f"Close Sell at {ov:.8f}, Open Buy placed at {bv:.8f}")
+        for order in range(len(Trade['OrderList'])):
+            co=GetOrder(exchange,Trade['OrderList'][order][1]['id'])
+            status=co['status'].lower()
+
+            if status=='closed':
+                side=co['side'].lower()
+                if side=='buy':
+                    JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'buy', psize, Trade['OrderList'][order][0], Trade['OrderList'][order][1], RetryLimit, "Procurator")
+                    ov=Trade['OrderList'][order][0]
+                    sv=ov+plevel
+                    Trade['OrderList'][order][0]=sv
+                    Trade['OrderList'][order][1]=MakeOrder(exchange,pair,'sell',psize,sv)
+                    JRRlog.WriteLog(f"Close Buy at {ov:.8f}, Open Sell at {sv:.8f}")
+                    WriteGrid(exchangeName,account,Trade,pair)
+                elif side=='sell':
+                    JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'sell', psize, Trade['OrderList'][order][0], Trade['OrderList'][order][1], RetryLimit, "Procurator")
+                    ov=Trade['OrderList'][order][0]
+                    bv=ov-plevel
+                    Trade['OrderList'][order][0]=bv
+                    Trade['OrderList'][order][1]=MakeOrder(exchange,pair,'buy',psize,bv)
+                    JRRlog.WriteLog(f"Close Sell at {ov:.8f}, Open Buy at {bv:.8f}")
+                    WriteGrid(exchangeName,account,Trade,pair)
             elif co['status'].lower()!='open':
-                JRRlog.WriteLog(f"Order #{co['id']}, Unreconized status: {co['status']}")
+                JRRlog.WriteLog(f"Order #{co['id']}, Unreconized status: {status}")
 
             JRRsupport.ElasticSleep(1)
 
@@ -263,21 +319,3 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print("Terminated")
 
-"""
-        if Config['TakeProfit']>0:
-            if Trade['Profit']>=Config['TakeProfit']:
-                if 'ProfitSell' in Config:
-                    res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'Market',Config['ProfitSell'],'Sell',Trade['Profit'],close)
-                    if res.find('Order Confirmation ID')>-1:
-                        OrderID=EqSupport.GetOrderID(res)
-                        EqSupport.WriteSpotLog(exchangeName,account,pair,f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitSell']}, {OrderID}")
-                        Trade['Profit']=0
-                        EqSupport.WriteGrid(exchangeName,account,Trade,pair)
-                elif 'ProfitBuy' in Config:
-                    res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'Market',Config['ProfitBuy'],'Buy',Trade['Profit'],close)
-                    if res.find('Order Confirmation ID')>-1:
-                        OrderID=EqSupport.GetOrderID(res)
-                        EqSupport.WriteSpotLog(exchangeName,account,pair,f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitBuy']}, {OrderID}")
-                        Trade['Profit']=0
-                        EqSupport.WriteGrid(exchangeName,account,Trade,pair)
-"""
