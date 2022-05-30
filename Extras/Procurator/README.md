@@ -88,6 +88,8 @@ JSON format:
 
 ```json
 {
+    "TakeProfit":"0.20",
+    "ProfitBuy":"USDC/USD",
     "Exchange":"ftx",
     "Account":"MAIN",
     "Asset":"USDT/USD",
@@ -108,23 +110,10 @@ The items that can be used in this file,
 | `Top` | `1.002` | the highest level of the grid |
 | `Bottom` | `0.997` | The lowest level of the grid |
 | `Steps` | `1`       | This is the number of grid levwls you want. Should be greater or equal to 1 pip (0.0001) |
-| `PositionSize` | `2` | Number of lots. **IMPORTANT** Most exchanges requires at least 2 lots |
-
-### Regarding Lot Size
-
-Within Procurator, the **lot size** refers to the smallest unit of
-trading that is possible on a given exchange and a given trading pair.
-For example, as of the last time this was edited:
-
-* On KuCoin, the lot size for TRX/USDT is 0.01 TRX.
-* On BinanceUS, the lot size for XLM/USD is 10 USD.
-
-Note that for the BinanceUS example, the lot size is 10 USD is
-denominated in USD, not in XLM. So, if only 1 lot is used for buy/sell
-and if the market is moving quickly, it is possible for an order to fail.
-This is because Equilibrium calculates amounts in terms of quote
-currency, not the base currency. So you may want to select a buy/sell lot
-size that is greater than 1 - say 1.01 or 1.1.
+| `PositionSize` | `2` | Amount according to **BASE** currency |
+| `TakeProfit` | `0.20` | This is the minimum profit you want removed from your bot |
+| `ProfitBuy` | `USDC/USDT` | This is the asset you want purchased for your profit store |
+| `ProfitSell` | `USDT/USD` | This is for converting crypto to fiat. `USDT` is YOUR quote qurrency of the asset. `USD` is YOUR fiat |
 
 ## Donations
 
