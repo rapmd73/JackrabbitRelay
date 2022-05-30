@@ -276,14 +276,14 @@ def main():
                     if res.find('Order Confirmation ID')>-1:
                         OrderID=EqSupport.GetOrderID(res)
                         JRRlog.WriteLog(f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitSell']}, {OrderID}")
-                        Trade['Profit']=0
+                        Trade['Profit']=0.0
                         WriteGrid(exchangeName,account,Trade,pair)
                 elif 'ProfitBuy' in Config:
                     res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'Market',Config['ProfitBuy'],'Buy',Trade['Profit'],close)
                     if res.find('Order Confirmation ID')>-1:
                         OrderID=EqSupport.GetOrderID(res)
                         JRRlog.WriteLog(f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitBuy']}, {OrderID}")
-                        Trade['Profit']=0
+                        Trade['Profit']=0.0
                         WriteGrid(exchangeName,account,Trade,pair)
 
         for order in range(len(Trade['OrderList'])):
@@ -302,6 +302,7 @@ def main():
                     WriteGrid(exchangeName,account,Trade,pair)
                 elif side=='sell':
                     JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'sell', psize, Trade['OrderList'][order][0], Trade['OrderList'][order][1], RetryLimit, "Procurator")
+                    Trade['Profit']+=round(plevel*psize,8)
                     ov=Trade['OrderList'][order][0]
                     bv=ov-plevel
                     Trade['OrderList'][order][0]=bv
