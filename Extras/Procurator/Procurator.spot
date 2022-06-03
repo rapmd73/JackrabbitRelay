@@ -62,7 +62,7 @@ def ReadConfig(fn):
     if "Steps" in Config:
         Config['Steps']=int(Config['Steps'])
     elif "Pips" in Config:
-        Config['Pips']=float(Config['Pips'])
+        Config['Pips']=round(float(Config['Pips']),4)
     else:
         JRRlog.ErrorLog("ReadConfig","Either Steps or Pips MUST be present")
 
@@ -213,7 +213,7 @@ def main():
     if "Steps" in Config:
         plevel=round((topValue-bottomValue)/Config['Steps'],8)
     elif "Pips" in Config:
-        plevel=Config['Pips']
+        plevel=round(Config['Pips'],4)
 
     if plevel<=0.0001:
         plevel=0.0001
@@ -286,6 +286,7 @@ def main():
                         Trade['Profit']=0.0
                         WriteGrid(exchangeName,account,Trade,pair)
 
+        StartTime=datetime.now()
         for order in range(len(Trade['OrderList'])):
             co=GetOrder(exchange,Trade['OrderList'][order][1]['id'])
             status=co['status'].lower()
@@ -312,7 +313,11 @@ def main():
             elif co['status'].lower()!='open':
                 JRRlog.WriteLog(f"Order #{co['id']}, Unreconized status: {status}")
 
-            JRRsupport.ElasticSleep(1)
+        EndTime=datetime.now()
+        Elapsed=(EndTime-StartTime)
+        JRRlog.WriteLog("Orderlist Sweep Completed: "+str(Elapsed)+" seconds")
+
+        JRRsupport.ElasticSleep(1)
 
 if __name__ == '__main__':
     try:
