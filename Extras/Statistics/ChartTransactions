@@ -65,26 +65,18 @@ while True:
     dt=data['DateTime']
     direction=data['Action'].lower()
 
-    # General reference for all binance exchange ids
-    if en.find('binance')>-1:
-        cs=data['Exchange']+'COST'
-        if data[cs]==None:
-            continue
-        close=float(data[cs])
-    elif en=='kucoin':
-        if data['kucoinCOST']==None:
-            continue
-        close=float(data['kucoinCOST'])
-    elif en=='ftx':
-        if data['ftxCOST']==None:
-            continue
-        close=float(data['ftxCOST'])
-    else:
-        print(en+' unsupported.')
-        sys.exit(1)
+    st=data['Exchange'].lower()+'STATUS'
+    status=data[st].lower()
+    if status!='closed':
+        continue
 
     if direction!='buy' and direction!='sell':
         continue
+
+    cs=data['Exchange'].lower()+'COST'
+    if data[cs]==None:
+        continue
+    close=float(data[cs])
 
     if direction=='buy':
         bal-=close
