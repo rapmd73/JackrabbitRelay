@@ -109,7 +109,8 @@ The items that can be used in this file,
 | `Asset` | `trx/usd` | Asset |
 | `Top` | `1.002` | the highest level of the grid |
 | `Bottom` | `0.997` | The lowest level of the grid |
-| `Steps` | `1`       | This is the number of grid levwls you want. Should be greater or equal to 1 pip (0.0001) |
+| `Steps` | `1`       | This is the number of grid levwls you want. |
+| `Pips` | `0.001`       | This is the number of pips per levwl you want. Should be greater or equal to 1 pip (0.0001) |
 | `PositionSize` | `2` | Amount according to **BASE** currency |
 | `TakeProfit` | `0.20` | This is the minimum profit you want removed from your bot |
 | `ProfitBuy` | `USDC/USDT` | This is the asset you want purchased for your profit store |
