@@ -66,13 +66,29 @@ cd /home/GitHub/JackrabbitRelay/Extras/Procurator
 ./install
 ```
 
-## Manual usage
+## Reboot startup
 
-Use a command such as the following command.
+For Procurator to auto start after a reboot, a line such as the following
+needs to be added to your crontab. 
+
+```crontab
+@reboot ( /home/Procurator/Launcher /home/Procurator/Config/ftxus.MAIN.TRX.cfg & ) > /dev/null 2>&1
+```
+
+Please be aware that the exchange, coin, and other parameters **MUST**
+match the configuration as described [below](#configuration-files). The
+cronjob will only work properly when it is aligned with a tested working
+coin.
+
+You should extensively test your coin first with a virtual console
+**before** setting up a cronjob.
+
+## Manual startup
+
+Use the command line such as the following:
 
 ```bash
-cd /home/Procurator
-./Procurator USDT.cfg
+( /home/Procurator/Launcher /home/Procurator/Config/ftxus.MAIN.TRX.cfg & ) > /dev/null 2>&1
 ```
 
 ## Additional programs

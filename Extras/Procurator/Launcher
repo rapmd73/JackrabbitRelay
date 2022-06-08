@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Crontab entry ( without hash mark #)
+# @reboot ( /home/JackrabbitRelay/Base/RelayLauncher & ) > /dev/null 2>&1
+# echo "BalAnce" | tr "[:upper:]" "[:lower:]"
+
+BaseDir="/home/Procurator"
+
+cd $BaseDir
+
+while true ; do
+    $BaseDir/Procurator.spot $@
+    if [ $? -eq 2 ] ; then
+        exit
+    fi
+    sleep 60
+done
