@@ -136,6 +136,17 @@ def TradingViewRemap(en,pair):
     JRRlog.WriteLog('|- Out: '+np)
     return np
 
+# Get the order ID from the result provided
+
+def GetOrderID(res):
+    s=res.find('ID:')+4
+    for e in range(s,len(res)):
+        if res[e]=='\n':
+            break
+    oid=res[s:e]
+
+    return oid
+
 # Webhook processing. This unified layer will communicate with Relay for
 # placing the order and return the results.
 

@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Procurator
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay/Base/Library')
+import os
+
+u=float(sys.argv[1])
+l=float(sys.argv[2])
+
+a=(u+l)/2
+
+p=((u-l)/a)*100
+
+print(f"{p:.8f}%")
