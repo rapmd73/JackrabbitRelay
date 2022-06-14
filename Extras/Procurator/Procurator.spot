@@ -30,25 +30,20 @@ def ReadConfig(fn):
 
     Config={}
 
-    JRRlog.WriteLog("Reading configuration file")
-
     if os.path.exists(fn):
         try:
             raw=pathlib.Path(fn).read_text()
         except:
-            JRRlog.ErrorLog("ReadConfig",f"Can't read {fn}")
+            JRRlog.ErrorLog("Procurator ReadConfig",f"Can't read {fn}")
 
         txt=JRRsupport.pFilter(raw)
 
         try:
             Config=json.loads(txt)
         except:
-            JRRlog.ErrorLog("ReadConfig",f"Damaged JSON: {txt}")
+            JRRlog.ErrorLog("Procurator ReadConfig",f"Damaged JSON: {txt}")
     else:
-        JRRlog.ErrorLog("ReadConfig",'Config file not found.')
-
-    for i in Config:
-        JRRlog.WriteLog(f"|- {i}: {Config[i]}")
+        JRRlog.ErrorLog("Procurator ReadConfig",'Config file not found.')
 
     for i in Required:
         if i not in Config:
@@ -64,7 +59,7 @@ def ReadConfig(fn):
     elif "Pips" in Config:
         Config['Pips']=round(float(Config['Pips']),4)
     else:
-        JRRlog.ErrorLog("ReadConfig","Either Steps or Pips MUST be present")
+        JRRlog.ErrorLog("Procurator ReadConfig","Either Steps or Pips MUST be present")
 
     if "ExitProfit" in Config:
         Config['ExitProfit']=float(Config['ExitProfit'])
@@ -76,9 +71,14 @@ def ReadConfig(fn):
     else:
         Config['TakeProfit']=-1
 
+    JRRlog.WriteSpotLog(Config['Exchange'],Config['Account'],Config['Asset'],Header)
+
+    for i in Config:
+        JRRlog.WriteSpotLog(Config['Exchange'],Config['Account'],Config['Asset'],f"|- {i}: {Config[i]}")
+
     return(Config)
 
-def GetTicker(exchange,pair):
+def GetTicker(exchange,account,pair):
     c=1
     done=False
     while not done:
@@ -86,14 +86,14 @@ def GetTicker(exchange,pair):
             ticker=exchange.fetch_ticker(pair)
         except Exception as e:
             er=JRRapi.StopHTMLtags(str(e))
-            JRRlog.WriteLog(f"GetTicker retry #{c:.0f}: {er}")
+            JRRlog.WriteSpotLog(exchangeName,account,pair,f"GetTicker retry #{c:.0f}: {er}")
             c+=1
             JRRsupport.ElasticSleep(1)
         else:
             done=True
     return ticker
 
-def MakeOrder(exchange,pair,direction,amount,price):
+def MakeOrder(exchange,account,pair,direction,amount,price):
     c=1
     done=False
     while not done:
@@ -101,14 +101,14 @@ def MakeOrder(exchange,pair,direction,amount,price):
             order=exchange.create_order(pair, 'limit', direction, amount, price)
         except Exception as e:
             er=JRRapi.StopHTMLtags(str(e))
-            JRRlog.WriteLog(f"MakeOrder retry #{c:.0f} at {price:0.8f}: {er}")
+            JRRlog.WriteSpotLog(exchangeName,account,pair,f"MakeOrder retry #{c:.0f} at {price:0.8f}: {er}")
             c+=1
             JRRsupport.ElasticSleep(1)
         else:
             done=True
     return order
 
-def GetOrder(exchange,pid):
+def GetOrder(exchange,account,pair,pid):
     c=1
     done=False
     while not done:
@@ -116,7 +116,7 @@ def GetOrder(exchange,pid):
             order=exchange.fetch_order(pid)
         except Exception as e:
             er=JRRapi.StopHTMLtags(str(e))
-            JRRlog.WriteLog(f"GetOrder retry #{c:.0f}/{pid}: {er}")
+            JRRlog.WriteSpotLog(exchangeName,account,pair,f"GetOrder retry #{c:.0f}/{pid}: {er}")
             c+=1
             JRRsupport.ElasticSleep(1)
         else:
@@ -126,13 +126,13 @@ def GetOrder(exchange,pid):
 def ReadGrid(exchangeName,account,Asset):
     fn=exchangeName+'.'+account+'.'+Asset.replace("-","").replace("/","").replace(':','')+'.orderlist'
     if os.path.exists(fn):
-        JRRlog.WriteLog("Reading Grid file")
+        JRRlog.WriteSpotLog(exchangeName,account,Asset,"Reading Grid file")
         fh=open(fn,'r')
         for line in fh:
             Trade={}
             Trade=json.loads(line.rstrip())
         fh.close()
-        JRRlog.WriteLog(f"|- {Asset:10} {len(Trade['OrderList'])} orders loaded")
+        JRRlog.WriteSpotLog(exchangeName,account,Asset,f"|- {Asset:10} {len(Trade['OrderList'])} orders loaded")
     else:
         Trade={}
         Trade['Profit']=0.0
@@ -152,8 +152,6 @@ def WriteGrid(exchangeName,account,Trade,Asset):
 ###
 
 def main():
-    JRRlog.WriteLog(Header)
-
     # Read CFG file
     if len(sys.argv) > 1:
         Config=ReadConfig(sys.argv[1])
@@ -173,23 +171,24 @@ def main():
     psize=float(Config['PositionSize'])
 
     keys=JRRsupport.ReadConfig(exchangeName,account)
-    JRRlog.WriteLog("API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
+
+    JRRlog.WriteSpotLog(exchangeName,account,pair,"API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
 
     CurrentKey=(os.getpid()%len(keys))
     Active=keys[CurrentKey]
 
-    exchange=JRRapi.ExchangeLogin(exchangeName,Active)
+    exchange=JRRapi.ExchangeLogin(exchangeName,Active,Notify=False)
 
     if "Retry" in Active:
         RetryLimit=int(Active['Retry'])
-        JRRlog.WriteLog("|- API Retry limit set to "+str(RetryLimit)+' times')
+        JRRlog.WriteSpotLog(exchangeName,account,pair,"|- API Retry limit set to "+str(RetryLimit)+' times')
     else:
         RetryLimit=10
 
     if not "Webhook" in Active:
         JRRlog.ErrorLog("Procurator","Webhook NOT present")
 
-    markets=JRRapi.GetMarkets(exchange,pair,RetryLimit)
+    markets=JRRapi.GetMarkets(exchange,pair,RetryLimit,Notify=False)
 
 # This is where a looping method would go if this were to serve a single exchange
 # with multiple pairs.
@@ -207,8 +206,8 @@ def main():
             else:
                 marketType=exchange.markets[pair]['info']['type']
 
-    JRRlog.WriteLog("Base currency:  "+base)
-    JRRlog.WriteLog("Quote currency: "+quote)
+    JRRlog.WriteSpotLog(exchangeName,account,pair,"Base currency:  "+base)
+    JRRlog.WriteSpotLog(exchangeName,account,pair,"Quote currency: "+quote)
 
     if "Steps" in Config:
         plevel=round((topValue-bottomValue)/Config['Steps'],8)
@@ -218,9 +217,9 @@ def main():
     if plevel<=0.0001:
         plevel=0.0001
 
-    JRRlog.WriteLog(f"Price step level: {plevel:.8f}")
+    JRRlog.WriteSpotLog(exchangeName,account,pair,f"Price step level: {plevel:.8f}")
 
-    ticker=GetTicker(exchange,pair)
+    ticker=GetTicker(exchange,account,pair)
 
     Trade=ReadGrid(exchangeName,account,pair)
     if len(Trade['OrderList'])==0:
@@ -233,12 +232,12 @@ def main():
             JRRapi.SetExchangeAPI(exchange,Active)
 
             co=[]
-            order=MakeOrder(exchange,pair,'buy',psize,v)
+            order=MakeOrder(exchange,account,pair,'buy',psize,v)
             co.append(v)
             co.append(order)
 
             Trade['OrderList'].append(co)
-            JRRlog.WriteLog(f"Placed order at: {c:.0f}/{v:.8f}")
+            JRRlog.WriteSpotLog(exchangeName,account,pair,f"Placed order at: {c:.0f}/{v:.8f}")
             c+=1
             v-=plevel
 
@@ -251,12 +250,12 @@ def main():
             JRRapi.SetExchangeAPI(exchange,Active)
 
             co=[]
-            order=MakeOrder(exchange,pair,'buy',psize,v)
+            order=MakeOrder(exchange,account,pair,'buy',psize,v)
             co.append(v)
             co.append(order)
 
             Trade['OrderList'].append(co)
-            JRRlog.WriteLog(f"Placed order at: {c:.0f}/{v:.8f}")
+            JRRlog.WriteSpotLog(exchangeName,account,pair,f"Placed order at: {c:.0f}/{v:.8f}")
             c+=1
             v+=plevel
 
@@ -272,23 +271,23 @@ def main():
         if Config['TakeProfit']>0:
             if Trade['Profit']>=Config['TakeProfit']:
                 if 'ProfitSell' in Config:
-                    res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'Market',Config['ProfitSell'],'Sell',Trade['Profit'],close)
+                    res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'Market',Config['ProfitSell'],'Sell',Trade['Profit'],0)
                     if res.find('Order Confirmation ID')>-1:
                         OrderID=EqSupport.GetOrderID(res)
-                        JRRlog.WriteLog(f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitSell']}, {OrderID}")
+                        JRRlog.WriteSpotLog(exchangeName,account,pair,f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitSell']}, {OrderID}")
                         Trade['Profit']=0.0
                         WriteGrid(exchangeName,account,Trade,pair)
                 elif 'ProfitBuy' in Config:
-                    res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'Market',Config['ProfitBuy'],'Buy',Trade['Profit'],close)
+                    res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'Market',Config['ProfitBuy'],'Buy',Trade['Profit'],0)
                     if res.find('Order Confirmation ID')>-1:
                         OrderID=EqSupport.GetOrderID(res)
-                        JRRlog.WriteLog(f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitBuy']}, {OrderID}")
+                        JRRlog.WriteSpotLog(exchangeName,account,pair,f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitBuy']}, {OrderID}")
                         Trade['Profit']=0.0
                         WriteGrid(exchangeName,account,Trade,pair)
 
         StartTime=datetime.now()
         for order in range(len(Trade['OrderList'])):
-            co=GetOrder(exchange,Trade['OrderList'][order][1]['id'])
+            co=GetOrder(exchange,account,pair,Trade['OrderList'][order][1]['id'])
             status=co['status'].lower()
 
             if status=='closed':
@@ -298,8 +297,8 @@ def main():
                     ov=Trade['OrderList'][order][0]
                     sv=ov+plevel
                     Trade['OrderList'][order][0]=sv
-                    Trade['OrderList'][order][1]=MakeOrder(exchange,pair,'sell',psize,sv)
-                    JRRlog.WriteLog(f"Close Buy at {ov:.8f}, Open Sell at {sv:.8f}")
+                    Trade['OrderList'][order][1]=MakeOrder(exchange,account,pair,'sell',psize,sv)
+                    JRRlog.WriteSpotLog(exchangeName,account,pair,f"Close Buy at {ov:.8f}, Open Sell at {sv:.8f}")
                     WriteGrid(exchangeName,account,Trade,pair)
                 elif side=='sell':
                     JRRledger.WriteLedger(exchange, account, pair, 'Limit', 'sell', psize, Trade['OrderList'][order][0], Trade['OrderList'][order][1], RetryLimit, "Procurator")
@@ -307,15 +306,15 @@ def main():
                     ov=Trade['OrderList'][order][0]
                     bv=ov-plevel
                     Trade['OrderList'][order][0]=bv
-                    Trade['OrderList'][order][1]=MakeOrder(exchange,pair,'buy',psize,bv)
-                    JRRlog.WriteLog(f"Close Sell at {ov:.8f}, Open Buy at {bv:.8f}")
+                    Trade['OrderList'][order][1]=MakeOrder(exchange,account,pair,'buy',psize,bv)
+                    JRRlog.WriteSpotLog(exchangeName,account,pair,f"Close Sell at {ov:.8f}, Open Buy at {bv:.8f}")
                     WriteGrid(exchangeName,account,Trade,pair)
             elif co['status'].lower()!='open':
-                JRRlog.WriteLog(f"Order #{co['id']}, Unreconized status: {status}")
+                JRRlog.WriteSpotLog(exchangeName,account,pair,f"Order #{co['id']}, Unreconized status: {status}")
 
-        EndTime=datetime.now()
-        Elapsed=(EndTime-StartTime)
-        JRRlog.WriteLog("Orderlist Sweep Completed: "+str(Elapsed)+" seconds")
+#        EndTime=datetime.now()
+#        Elapsed=(EndTime-StartTime)
+#        JRRlog.WriteSpotLog(exchangeName,account,pair,"Orderlist Sweep Completed: "+str(Elapsed)+" seconds")
 
         JRRsupport.ElasticSleep(1)
 

@@ -27,8 +27,6 @@ Header='Equilibrium '+JRRconfig.Version
 ###
 
 def main():
-    JRRlog.WriteLog(Header)
-
     # Read CFG file
     if len(sys.argv) > 1:
         Config=EqSupport.ReadConfig(sys.argv[1])
@@ -77,8 +75,10 @@ def main():
         SellDir='long'
         AllTimeHigh=0.0
 
+    JRRlog.WriteFutureLog(exchangeName,account,pair,direction,Header)
+
     keys=JRRsupport.ReadConfig(exchangeName,account)
-    JRRlog.WriteLog("API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
+    JRRlog.WriteFutureLog(exchangeName,account,pair,direction,"API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
 
     CurrentKey=(os.getpid()%len(keys))
     Active=keys[CurrentKey]
@@ -87,7 +87,7 @@ def main():
 
     if "Retry" in Active:
         RetryLimit=int(Active['Retry'])
-        JRRlog.WriteLog("|- API Retry limit set to "+str(RetryLimit)+' times')
+        JRRlog.WriteFutureLog(exchangeName,account,pair,direction,"|- API Retry limit set to "+str(RetryLimit)+' times')
     else:
         RetryLimit=10
 
@@ -112,9 +112,9 @@ def main():
             else:
                 marketType=exchange.markets[pair]['info']['type']
 
-    JRRlog.WriteLog("Base currency:  "+base)
-    JRRlog.WriteLog("Quote currency: "+quote)
-    JRRlog.WriteLog("Trade direction: "+direction)
+    JRRlog.WriteFutureLog(exchangeName,account,pair,direction,"Base currency:  "+base)
+    JRRlog.WriteFutureLog(exchangeName,account,pair,direction,"Quote currency: "+quote)
+    JRRlog.WriteFutureLog(exchangeName,account,pair,direction,"Trade direction: "+direction)
 
     AllTimeHigh=0.0
     Trade=EqSupport.ReadGrid(exchangeName,account,pair)
@@ -152,7 +152,7 @@ def main():
                 if Trade['PCTValue']==0:
                     Trade['PCTValue']=round(close*pct,8)
                 Trade['Counter']=0
-                EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} Balance ({bal:.8f}) < Amount ({Trade['BuyAmount']:.8f}), Resetting grid")
+                JRRlog.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} Balance ({bal:.8f}) < Amount ({Trade['BuyAmount']:.8f}), Resetting grid")
 
         # Rotate the key
 
@@ -180,14 +180,14 @@ def main():
                     res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'Market',Config['ProfitSell'],'Sell',Trade['Profit'],close)
                     if res.find('Order Confirmation ID')>-1:
                         OrderID=EqSupport.GetOrderID(res)
-                        EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitSell']}, {OrderID}")
+                        JRRlog.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitSell']}, {OrderID}")
                         Trade['Profit']=0
                         EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                 elif 'ProfitBuy' in Config:
                     res=JRRsupport.SendWebhook(Active,exchangeName,marketType,account,'Market',Config['ProfitBuy'],'Buy',Trade['Profit'],close)
                     if res.find('Order Confirmation ID')>-1:
                         OrderID=EqSupport.GetOrderID(res)
-                        EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitBuy']}, {OrderID}")
+                        JRRlog.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} XFER {Trade['Profit']:.8f} -> {Config['ProfitBuy']}, {OrderID}")
                         Trade['Profit']=0
                         EqSupport.WriteGrid(exchangeName,account,Trade,pair)
 
@@ -226,7 +226,7 @@ def main():
                         bal=JRRapi.GetContract(exchange,pair,RetryLimit)
 
                         vbuy='Buy/'+direction.capitalize()
-                        EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
+                        JRRlog.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
 
                         EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                     else:
@@ -238,7 +238,7 @@ def main():
                 Trade=EqSupport.IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
 
                 vbuy='Buy/'+direction.capitalize()
-                EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
+                JRRlog.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
                 EqSupport.WriteGrid(exchangeName,account,Trade,pair)
 
 # Make a purchase.
@@ -261,7 +261,7 @@ def main():
                         bal=JRRapi.GetContract(exchange,pair,RetryLimit)
 
                         vbuy='Buy/'+BuyDir.capitalize()
-                        EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
+                        JRRlog.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
                         EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                     else:
                         Trade=EqSupport.IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
@@ -272,7 +272,7 @@ def main():
                 Trade=EqSupport.IncreaseTradeTable(Trade,close,pct,direction,AllTimeHigh)
 
                 vbuy='Buy/'+BuyDir.capitalize()
-                EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
+                JRRlog.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vbuy:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
                 EqSupport.WriteGrid(exchangeName,account,Trade,pair)
 
 # Make a sell only if balance > minimum
@@ -300,9 +300,9 @@ def main():
 
                         vsell='Sell/'+SellDir.capitalize()
                         if Trade['Counter']>0:
-                            EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
+                            JRRlog.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f} {OrderID} {bal:.8f}")
                         else:
-                            EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {OrderID} {bal:.8f}")
+                            JRRlog.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {OrderID} {bal:.8f}")
                         EqSupport.WriteGrid(exchangeName,account,Trade,pair)
                     else:
                         Trade=EqSupport.DecreaseTradeTable(Trade,close,SellAMT,direction,AllTimeHigh)
@@ -314,9 +314,9 @@ def main():
 
                 vsell='Sell/'+SellDir.capitalize()
                 if Trade['Counter']>0:
-                    EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
+                    JRRlog.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f} {Trade['Buy']:.8f} {Trade['Close']:.8f} {Trade['Sell']:.8f}")
                 else:
-                    EqSupport.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f}")
+                    JRRlog.WriteFutureLog(exchangeName,account,pair,direction,f"{pair:10} {vsell:10} {Trade['Counter']:2.0f}")
                 EqSupport.WriteGrid(exchangeName,account,Trade,pair)
 
         first=False
