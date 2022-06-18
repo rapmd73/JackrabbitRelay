@@ -29,7 +29,7 @@ Header='Equilibrium '+JRRconfig.Version
 def main():
     # Read CFG file
     if len(sys.argv) > 1:
-        Config=EqSupport.ReadConfig(sys.argv[1])
+        Config=EqSupport.ReadConfig(sys.argv[1],Header)
     else:
         print("A valid configuration file must be provided.")
         sys.exit(1)
@@ -75,15 +75,13 @@ def main():
         SellDir='long'
         AllTimeHigh=0.0
 
-    JRRlog.WriteFutureLog(exchangeName,account,pair,direction,Header)
-
-    keys=JRRsupport.ReadConfig(exchangeName,account)
+    keys=JRRsupport.ReadConfig(exchangeName,account,Notify=False)
     JRRlog.WriteFutureLog(exchangeName,account,pair,direction,"API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
 
     CurrentKey=(os.getpid()%len(keys))
     Active=keys[CurrentKey]
 
-    exchange=JRRapi.ExchangeLogin(exchangeName,Active)
+    exchange=JRRapi.ExchangeLogin(exchangeName,Active,Notify=False)
 
     if "Retry" in Active:
         RetryLimit=int(Active['Retry'])
