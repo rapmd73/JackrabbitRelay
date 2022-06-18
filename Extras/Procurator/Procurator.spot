@@ -94,6 +94,7 @@ def GetTicker(exchange,account,pair):
     return ticker
 
 def MakeOrder(exchange,account,pair,direction,amount,price):
+    exchangeName=exchange.name.lower().strip(' ')
     c=1
     done=False
     while not done:
@@ -109,6 +110,7 @@ def MakeOrder(exchange,account,pair,direction,amount,price):
     return order
 
 def GetOrder(exchange,account,pair,pid):
+    exchangeName=exchange.name.lower().strip(' ')
     c=1
     done=False
     while not done:

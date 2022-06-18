@@ -46,7 +46,7 @@ Header='Equilibrium '+JRRconfig.Version
 def main():
     # Read CFG file
     if len(sys.argv) > 1:
-        Config=EqSupport.ReadConfig(sys.argv[1])
+        Config=EqSupport.ReadConfig(sys.argv[1],Header)
     else:
         print("A valid configuration file must be provided.")
         sys.exit(1)
@@ -54,8 +54,6 @@ def main():
     paper=False
     if 'Paper' in Config:
         paper=True
-
-    JRRlog.WriteSpotLog(exchangeName,account,pair,Header)
 
     exchangeName=Config['Exchange']
     account=Config['Account']
@@ -69,7 +67,7 @@ def main():
     CurrentKey=(os.getpid()%len(keys))
     Active=keys[CurrentKey]
 
-    exchange=JRRapi.ExchangeLogin(exchangeName,Active)
+    exchange=JRRapi.ExchangeLogin(exchangeName,Active,Notify=False)
 
     if "Retry" in Active:
         RetryLimit=int(Active['Retry'])
@@ -80,7 +78,7 @@ def main():
     if not "Webhook" in Active:
         JRRlog.ErrorLog("Equilibrium","Webhook NOT present")
 
-    markets=JRRapi.GetMarkets(exchange,pair,RetryLimit)
+    markets=JRRapi.GetMarkets(exchange,pair,RetryLimit,Notify=False)
 
 # This is where a looping method would go if this were to serve a single exchange
 # with multiple pairs.

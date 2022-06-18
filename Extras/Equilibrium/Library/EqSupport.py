@@ -191,7 +191,7 @@ def Balance2Lots(exchange,pair,pct,RetryLimit):
 
 # Read CFG file
 
-def ReadConfig(fn):
+def ReadConfig(fn,Header):
     Required=[ "Exchange", "Account", "Asset", "Boundary", "BuyLots" ]
 
     Config={}
@@ -212,9 +212,6 @@ def ReadConfig(fn):
             JRRlog.ErrorLog("ReadConfig",f"Damaged JSON: {txt}")
     else:
         JRRlog.ErrorLog("ReadConfig",'Config file not found.')
-
-    for i in Config:
-        JRRlog.WriteLog(f"|- {i}: {Config[i]}")
 
     for i in Required:
         if i not in Config:
@@ -262,6 +259,16 @@ def ReadConfig(fn):
         Config['TakeProfit']=float(Config['TakeProfit'])
     else:
         Config['TakeProfit']=-1
+
+    if 'Direction' not in Config:
+        JRRlog.WriteSpotLog(Config['Exchange'],Config['Account'],Config['Asset'],Header)
+        for i in Config:
+            JRRlog.WriteSpotLog(Config['Exchange'],Config['Account'],Config['Asset'],f"|- {i}: {Config[i]}")
+    else:
+        direction=Config['Direction'].lower()
+        JRRlog.WriteFutureLog(Config['Exchange'],Config['Account'],Config['Asset'],direction,Header)
+        for i in Config:
+            JRRlog.WriteFutureLog(Config['Exchange'],Config['Account'],Config['Asset'],direction,f"|- {i}: {Config[i]}")
 
     return(Config)
 
