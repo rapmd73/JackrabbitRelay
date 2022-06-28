@@ -22,6 +22,9 @@ cp $GitHubBase"/"$fnSpot $BaseDir"/"$snSpot
 echo Updating / replacing PlaceOrder future
 cp $GitHubBase"/"$fnFuture $BaseDir"/"$fnFuture
 
+echo Updating / replacing PlaceOrder Sandbox
+cp $GitHubBase"/Sandbox*" $BaseDir"/Sandbox*"
+
 for i in $@ ; do
     exchange=$1
     echo Updating / replacing PlaceOrder.$exchange spot/future
