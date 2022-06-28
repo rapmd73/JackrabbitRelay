@@ -27,6 +27,9 @@ else:
     print("An exchange and a (sub)account must be provided.")
     sys.exit(1)
 
+if exchangeName=='sandbox':
+    sys.exit(0)
+
 IsLog=False
 if len(sys.argv) > 3:
     if sys.argv[3].lower()=='log':

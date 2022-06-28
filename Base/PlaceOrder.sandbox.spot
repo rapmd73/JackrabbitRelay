@@ -1,0 +1,330 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+#
+# Balance must be simulated
+# Place Order must be simulated.
+
+import sys
+sys.path.append('/home/JackrabbitRelay/Base/Library')
+import os
+import ccxt
+
+import JRRconfig
+import JRRlog
+import JRRapi
+import JRRsupport
+
+PlaceOrderHeader='SandBox SPOT '+JRRconfig.Version
+
+###
+### Main code base. Place order on exchange
+###
+
+def main():
+    JRRlog.WriteLog(PlaceOrderHeader)
+
+    hasUSD=False
+    hasBase=False
+    hasQuote=False
+
+# Get payload from STDIN and validate it
+
+    payload=JRRsupport.pFilter(sys.stdin.read())
+
+    Order=JRRsupport.ProcessJSON(payload)
+    if Order==None:
+        JRRlog.ErrorLog("Process Order","Damaged payload")
+
+    # This governs price data pulls
+
+    JRRlog.WriteLog('Order Parsed')
+    exchangeName=Order['DataExchange'].lower()
+    JRRlog.WriteLog('|- Data Exchange: '+exchangeName)
+
+    market=Order['Market'].lower()
+    JRRlog.WriteLog('|- Target Market: '+market)
+
+    if 'OrderType' in Order:
+        orderType=Order['OrderType'].lower()
+        JRRlog.WriteLog('|- Order Type: '+orderType)
+    else:
+        orderType='market'
+        JRRlog.WriteLog('|- Order Type: '+orderType)
+
+    account=Order['Account']
+    JRRlog.WriteLog('|- Account reference: '+account)
+
+    action=Order['Action'].lower()
+    JRRlog.WriteLog('|- Trade Action: '+action)
+
+    pair=Order['Asset'].upper()
+    JRRlog.WriteLog('|- Asset: '+pair)
+
+    ledgerNote=None
+    if 'LedgerNotes' in Order:
+        ledgerNote="Sandbox: "+Order['LedgerNotes']
+
+# Check for condition size items
+
+    if "USD" in Order:
+        hasUSD=True
+
+    if "Base" in Order:
+        hasBase=True
+
+    if "Quote" in Order:
+        hasQuote=True
+
+    if (hasUSD and hasBase) or (hasUSD and hasQuote) or (hasQuote and hasBase):
+        JRRlog.ErrorLog("Quote validation","USD, Base, or Quote can be present, NOT a combination of two or more.")
+    else:
+        if hasUSD and '%' in Order['USD']:
+            JRRlog.WriteLog('|- Using USD %')
+        else:
+            if hasUSD and float(Order['USD'])>0.0:
+                JRRlog.WriteLog('|- Using USD')
+            else:
+                if hasQuote and '%' in Order['Quote']:
+                    JRRlog.WriteLog('|- Using Quote %')
+                else:
+                    if hasQuote and float(Order['Quote'])>0.0:
+                        JRRlog.WriteLog('|- Using Quote')
+                    else:
+                        if hasBase and float(Order['Base'])>0.0:
+                            JRRlog.WriteLog('|- Using Base')
+
+    isMinimum=False
+    if (not hasUSD and not hasBase and not hasQuote):
+        isMinimum=True
+        JRRlog.WriteLog('|- Using minimum position size')
+
+# Load the API/Secret information
+
+    keys=JRRsupport.ReadConfig(exchangeName,account)
+    JRRlog.WriteLog("API/Secret loaded for "+exchangeName+", (sub)account: "+account)
+
+    CurrentKey=(os.getpid()%len(keys))
+    Active=keys[CurrentKey]
+
+    if len(keys)>1:
+        JRRlog.WriteLog("|- Using rotating key set "+str(CurrentKey+1))
+
+    exchange=JRRapi.ExchangeLogin(exchangeName,Active)
+
+    if "Sandbox" in Active:
+        exchange.setSandboxMode(True)
+        JRRapi.SetExchangeAPI(exchange,Active)
+
+    if "Retry" in Active:
+        RetryLimit=int(Active['Retry'])
+        JRRlog.WriteLog("|- API Retry limit set to "+str(RetryLimit)+' times')
+    else:
+        RetryLimit=1
+
+    if "Identity" in Active:
+        if "Identity" in Order:
+            if Order['Identity']==Active['Identity']:
+                JRRlog.WriteLog('Identity verification: PASSED')
+            else:
+                JRRlog.ErrorLog("Identity verification","FAILED: Identity does not match")
+        else:
+            JRRlog.ErrorLog("Identity verification","FAILED: Identity not in payload")
+
+# Check for order type override
+
+    if "OrderTypeOverride" in Active:
+        orderType=Active['OrderTypeOverride'].lower()
+        JRRlog.WriteLog('Order type Override: '+orderType)
+
+# Check to see if we need to remap a tradingview symbol to The Exchange symbol
+
+    if "RemapSymbol" in Active or "RemapSymbol" in Order:
+        pair=JRRsupport.TradingViewRemap(exchangeName,pair)
+
+# Check for maximum allowed assets
+
+    if not "OverrideMaxAssets" in Order:
+        if "MaxAssets" in Active:
+            delete=(action=='close')
+            JRRsupport.ReadAssetList(exchangeName,account,pair,Active['MaxAssets'],delete)
+
+    markets=JRRapi.GetMarkets(exchange,pair,RetryLimit)
+
+# Get asset information
+
+    base=exchange.markets[pair]['base']
+    quote=exchange.markets[pair]['quote']
+
+    JRRlog.WriteLog("Base currency:  "+base)
+    JRRlog.WriteLog("Quote currency: "+quote)
+
+# Sanity check
+
+    if quote.upper()=='USD' and hasQuote:
+        hasQuote=False
+        hasUSD=True
+
+# Get exchange required minimums
+
+    minimum,mincost=JRRapi.GetMinimum(exchange,pair,hasQuote,True,RetryLimit)
+    amount=minimum
+    JRRlog.WriteLog("Getting market: "+pair)
+    JRRlog.WriteLog("|- Minimum: "+f'{minimum:.8f}')
+    JRRlog.WriteLog("|- Amount: "+f'{amount:.8f}')
+
+    ohlcv,ticker=JRRapi.FetchRetry(exchange,pair,"1m",RetryLimit)
+
+# Market Check
+
+    marketType="spot"
+    if "type" in ticker['info']:
+        marketType=ticker['info']['type'].lower()
+    else:
+        if "type" in exchange.markets[pair]:
+            if "type" in exchange.markets[pair]['info']:
+                if exchange.markets[pair]['info']['type']==exchange.markets[pair]['type']:
+                    marketType=exchange.markets[pair]['type'].lower()
+                else:
+                    marketType=exchange.markets[pair]['info']['type'].lower()
+        else:
+            if "permissions" in exchange.markets[pair]['info']:
+                marketType=' '.join(exchange.markets[pair]['info']['permissions']).lower()
+
+    if market not in marketType:
+        JRRlog.ErrorLog(exchangeName, "wrong market type: "+market+', asset is '+marketType)
+
+    if 'SpreadOverride' in Active:
+        spread=ticker['ask']-ticker['bid']
+        if spread>float(Active['SpreadOverride']):
+            s=f"too large, {spread:.8f} > {Active['SpreadOverride']:.8f}"
+            JRRlog.ErrorLog("Spread", s)
+    if 'Spread' in Order:
+        spread=ticker['ask']-ticker['bid']
+        if spread>float(Order['Spread']):
+            s=f"too large, {spread:.8f} > {Order['Spread']:.8f}"
+            JRRlog.ErrorLog("Spread", s)
+
+    if 'limit' in orderType:
+        if 'Close' in Order:
+            o=Order['Close'].lower()
+            if o=='bid':
+                close=round(float(ticker['bid']),8)
+            elif o=='ask':
+                close=round(float(ticker['ask']),8)
+            else:
+                close=round(float(Order['Close']),8)
+        else:
+            close=round(ohlcv[4],8)
+    else:
+        close=round(ohlcv[4],8)
+
+    if not isMinimum:
+        if hasUSD:
+            if '%' in Order['USD']:
+                delete=(action=='close')
+                if "OverridePCTtable" not in Active and "OverridePCTtable" not in Order:
+                    pct,PCTtype=JRRsupport.GetPCTtype(Order['USD'])
+                    amount=JRRsupport.ReadPCTValueList(exchange,account,pair,pct,PCTtype,close,delete,RetryLimit)
+                else:
+                    bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
+                    amount=round(((float(Order['USD'].replace('%',''))/100)*bal)/close,8)
+            else:
+                amount=round(float(Order['USD'])/close,8)
+        else:
+            if hasQuote:
+                if '%' in Order['Quote']:
+                    delete=(action=='close')
+                    if "OverridePCTtable" not in Active and "OverridePCTtable" not in Order:
+                        pct,PCTtype=JRRsupport.GetPCTtype(Order['Quote'])
+                        amount=JRRsupport.ReadPCTValueList(exchange,account,pair,pct,PCTtype,close,delete,RetryLimit)
+                    else:
+                        bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
+                        amount=round(((float(Order['Quote'].replace('%',''))/100)*bal)/close,8)
+                else:
+                    amount=round(float(Order['Quote'])/close,8)
+            else:
+                if '%' in Order['Base']:
+                    delete=(action=='close')
+                    if "OverridePCTtable" not in Active and "OverridePCTtable" not in Order:
+                        pct,PCTtype=JRRsupport.GetPCTtype(Order['Base'])
+                        amount=JRRsupport.ReadPCTValueList(exchange,account,pair,pct,PCTtype,close,delete,RetryLimit)
+                    else:
+                        bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
+                        amount=round(((float(Order['Base'].replace('%',''))/100)*bal)/close,8)
+                else:
+                    amount=round(float(Order['Base']),8)
+        # Make sure minimum is enforced.
+        # KuCoin sub accounts do NOT verify or report correctly on this.
+        if amount<minimum:
+            amount=minimum
+
+    bal=JRRapi.GetBalance(exchange,base,RetryLimit)
+    sbal=f"{float(bal):.8f}"
+    JRRlog.WriteLog("Previous Balance: "+sbal+" "+base)
+
+# If the amount is less then the minimum and action is to sell/close
+
+    if bal<minimum and (action=='close' or action=='sell'):
+        JRRlog.ErrorLog(exchangeName, "not enough to sell/close position")
+
+# Test to see if amount is more than balance and correct in needed
+
+    if ((action=='close' or action=='sell') and (amount>bal and bal>0)) or (action=='close'):
+        JRRlog.WriteLog("|- Forcing balance")
+        amount=bal
+
+# Time to make a purchase
+
+    if amount<minimum and action=='buy':
+        JRRlog.WriteLog("|- Forcing minimum")
+        amount=minimum
+
+# Determine trade action and carry it out
+
+    price=round(amount*close,8)
+    JRRlog.WriteLog("Placing Order")
+    JRRlog.WriteLog("|- Pair: "+pair)
+    JRRlog.WriteLog("|- Action: "+action)
+    JRRlog.WriteLog("|- Amount: "+f'{amount:.8f}')
+    JRRlog.WriteLog("|- Close: "+f'{close:.8f}')
+    JRRlog.WriteLog("|- Price: "+f'{price:.8f}')
+
+    try: # Isolated or Crossed
+        if "set_margin_mode" in exchange and "Margin" in Order:
+            exchange.set_margin_mode(pair,Order['Margin'].upper())
+            JRRlog.WriteLog("|- Margin: "+Order['Margin'])
+    except:
+        pass
+
+    try:
+        if "Reduction" in Active and action!="buy" and amount>=bal:
+            pct=Active['Reduction']
+            r=(amount*pct)
+            JRRlog.WriteLog("|- Reduction: "+str(r))
+            amount=amount-r
+    except:
+        pass
+
+    if action=='close':
+        action='sell'
+
+# In spot markets, ReduceOnly is ALWAYS false
+# In Sandbox, this must be simulated
+
+    if amount>0.0:
+#        JRRapi.PlaceOrder(exchange,account,pair, orderType, action, amount, close, RetryLimit, False, ledgerNote)
+
+        bal=JRRapi.GetBalance(exchange,base,RetryLimit)
+        sbal=f"{float(bal):.8f}"
+        JRRlog.WriteLog("New Balance: "+sbal+" "+base)
+
+# Finish with elapsed time
+
+    JRRlog.ElapsedTime(JRRconfig.StartTime)
+
+if __name__ == '__main__':
+    main()

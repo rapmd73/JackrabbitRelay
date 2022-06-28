@@ -11,6 +11,7 @@ mkdir -p /home/JackrabbitRelay > /dev/null 2>&1
 mkdir -p /home/JackrabbitRelay/Base > /dev/null 2>&1
 mkdir -p /home/JackrabbitRelay/Config > /dev/null 2>&1
 mkdir -p /home/JackrabbitRelay/Data > /dev/null 2>&1
+mkdir -p /home/JackrabbitRelay/Data/Sandbox > /dev/null 2>&1
 mkdir -p /home/JackrabbitRelay/Logs > /dev/null 2>&1
 mkdir -p /home/JackrabbitRelay/Ledger > /dev/null 2>&1
 mkdir -p /home/JackrabbitRelay/Statistics/Balances > /dev/null 2>&1
