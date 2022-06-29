@@ -75,7 +75,7 @@ def main():
         SellDir='long'
         AllTimeHigh=0.0
 
-    keys=JRRsupport.ReadConfig(exchangeName,account,Notify=False)
+    keys=JRRsupport.ReadConfig(exchangeName,account)
     JRRlog.WriteFutureLog(exchangeName,account,pair,direction,"API(s)/Secret(s) loaded for "+exchangeName+", (sub)account: "+account)
 
     CurrentKey=(os.getpid()%len(keys))
