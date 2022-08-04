@@ -56,6 +56,9 @@ def ExchangeLogin(exchangeName,Active,Notify=True,Sandbox=False):
         else:
             JRRlog.ErrorLog(exchangeName,"Exchange not supported")
 
+    if "Sandbox" in Active:
+        exchange.setSandboxMode(True)
+
     SetExchangeAPI(exchange,Active,Notify)
 
     return(exchange)
@@ -551,47 +554,24 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
 # Fetch the balance of a given BASE of a pair
 
 def GetBalance(exchange,base,RetryLimit):
-    retry=0
-    done=False
-    while not done:
-        try:
-            balance=exchange.fetch_balance()
-            if base in balance['total']:
-                bal=float(balance['total'][base])
-            else:
-                # This is an absolute horrible way to handle this, but unfortunately the only way.
-                # Many exchanges don't report a balance at all if an asset hasn't been traded in
-                # a given timeframe (usually fee based tier resets designate the cycle).
-                bal=0
-        except Exception as e:
-            if retry>=RetryLimit:
-                JRRlog.ErrorLog("Fetch Balance",e)
-            else:
-                JRRlog.WriteLog('Fetch Balance Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
-        else:
-            done=True
-        retry+=1
+    balance = ccxtAPI("fetch_balance",exchange,RetryLimit)
+    if base in balance['total']:
+        bal=float(balance['total'][base])
+    else:
+        # This is an absolute horrible way to handle this, but unfortunately the only way.
+        # Many exchanges don't report a balance at all if an asset hasn't been traded in
+        # a given timeframe (usually fee based tier resets designate the cycle).
+        bal=0
 
     return bal
 
 # Fetch the position of a given of a pair
+# CCXT only
 
 def GetPosition(exchange,pair,RetryLimit):
-    retry=0
-    done=False
-    while not done:
-        try:
-            positions = exchange.fetch_positions()
-            positions_by_symbol = exchange.index_by(positions, 'symbol')
-            position = exchange.safe_value(positions_by_symbol, pair)
-        except Exception as e:
-            if retry>=RetryLimit:
-                JRRlog.ErrorLog("Fetch Position",e)
-            else:
-                JRRlog.WriteLog('Fetch Position Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
-        else:
-            done=True
-        retry+=1
+    positins==ccxtAPI("fetch_positions",exchange,RetryLimit)
+    positions_by_symbol = exchange.index_by(positions, 'symbol')
+    position = exchange.safe_value(positions_by_symbol, pair)
 
     return position
 
@@ -604,24 +584,14 @@ def GetContract(exchange,pair,RetryLimit):
 
     return bal
 
-
 # Fetch the market list
 
-def GetMarkets(exchange,pair,RetryLimit,Notify=True):
-    retry=0
-    done=False
-    while not done:
-        try:
-            markets=exchange.load_markets()
-        except Exception as e:
-            if retry>=RetryLimit:
-                JRRlog.ErrorLog("Fetch Markets",e)
-            else:
-                if Notify:
-                    JRRlog.WriteLog('Fetch Markets Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
-        else:
-            done=True
-        retry+=1
+def GetMarkets(framework,exchange,pair,RetryLimit,Notify=True):
+    if framework.lower()=='ccxt':
+        markets=ccxtAPI("load_markets",exchange,RetryLimit)
+    else:
+        print(f"Unrecognizd framework: {framework}")
+        sys.exit(1)
 
     if Notify:
         JRRlog.WriteLog("Markets loaded")
@@ -658,3 +628,61 @@ def LoadMarkets(exchange,RetryLimit,Notify=True):
         JRRlog.WriteLog("Markets loaded")
 
     return markets
+
+# This function is used to access ALL ccxt modules with a retry
+# functionality built in.
+#
+# examples:
+# markets=ccxtAPI("load_markets",exchange,RetryLimit)
+# balance = ccxtAPI("fetch_balance",exchange,RetryLimit)
+
+def ccxtAPI(function,exchange,RetryLimit,**args):
+    exchangeName=exchange.name.lower()
+    ohlcv=[]
+    retry429=0
+    retry=0
+
+    # Convert function to a CCXT module
+    callCCXT=getattr(exchange,function)
+
+    # For kucoin only, 429000 errors are a mess. Not the best way to
+    # manage them, but the onle way I know of currently to prevent losses.
+
+    # Save the only rate limit and remap it.
+
+    if exchangeName=='kucoin':
+        rleSave=exchange.enableRateLimit
+        rlvSave=exchange.rateLimit
+        exchange.enableRateLimit=True
+        exchange.rateLimit=372+JRRsupport.ElasticDelay()
+
+    done=False
+    while not done:
+        try:
+            #ohlcv=exchange.fetch_ohlcv(symbol=pair,timeframe=tf,limit=1)
+            result=callCCXT(**args)
+        except Exception as e:
+            if exchangeName=='kucoin':
+                x=str(e)
+                if x.find('429000')>-1:
+                    retry429+=1
+            if retry>=RetryLimit:
+                JRRlog.ErrorLog("Fetching OHLCV",StopHTMLtags(e))
+            else:
+                if not KuCoinSuppress429:
+                    JRRlog.WriteLog('Fetch OHLCV Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
+        else:
+            done=True
+
+        if exchangeName=='kucoin':
+            if retry429>=(RetryLimit*7):
+                retry429=0
+                retry+=1
+        else:
+            retry+=1
+
+    if exchangeName=='kucoin':
+        exchange.enableRateLimit=rleSave
+        exchange.rateLimit=rlvSave
+
+    return result
