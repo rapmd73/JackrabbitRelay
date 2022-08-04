@@ -3,6 +3,9 @@
 Jackrabbit Relay is an API endpoint for stock, forex and cryptocurrency
 exchanges that accept REST webhooks.
 
+**Be sure NOT to use the alpha-1 branch**
+The stable-1 branch is a fully functional framework as backup for the main branch.
+
 ## Disclaimer
 
 Please note RAPMD Crypto, LLC ("the Company"), does not provide financial
