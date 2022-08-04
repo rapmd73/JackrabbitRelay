@@ -18,7 +18,8 @@ import JRRapi
 import JRRlog
 
 # Reusable file locks, using atomic operations
-# NOT suitable for distributed systems.
+# NOT suitable for distributed systems or 
+# Windows. Linux ONLY
 #
 # fw=FileWatch(filename)
 # fw.Lock()
@@ -26,9 +27,7 @@ import JRRlog
 # fw.Unlock()
 
 class FileWatch:
-
     # Initialize the file name
-
     def __init__(self,filename):
         self.filename=filename+'.lock'
         self.RetryLimit=37
@@ -111,6 +110,252 @@ class FileWatch:
             os.remove(self.filename)
         except:
             pass
+
+# Doubly lisked list with sentinel for bidirectional intertion
+#
+# Comparison example
+#def compare(node1,d2):
+#    d1=node1.GetData()
+#
+#    if int(d2)<int(d1):
+#        return 1
+#    elif int(d2)>int(d1):
+#        return -1
+#    else: #if int(d2)==int(d1):
+#        return 0
+#
+# Driver example
+#
+#if __name__=='__main__':
+#    dlist=DList()
+#    x=1000
+#    l=10000 #random.randrange(1000,9999)
+#    for i in range(l):
+#        x+=1 #=random.randrange(1000,9999)
+#        dlist.insert(x,compare)
+#
+#    dlist.list()
+#    print(dlist.len())
+#    print("")
+#
+#    for i in range(5):
+#        x=random.randrange(1,dlist.Length()-1)
+#        c=dlist.GetHead()
+#        while x>0:
+#            x-=1
+#            if c!=None:
+#                c=c.GetNext()
+#        dlist.dump(dlist.find(c.GetData(),compare))
+#    print("")
+#
+#    for i in range(2000):
+#        x=random.randrange(1,dlist.Length()-1)
+#        c=dlist.GetHead()
+#        while x>0:
+#            x-=1
+#            if c!=None:
+#                c=c.GetNext()
+#        if c!=None:
+#            dlist.delete(c.GetData(),compare)
+#    print("")
+#    dlist.list()
+#    print(dlist.len())
+#    print("")
+
+class DListNode:
+    def __init__(self,data=None,parent=None,prev=None,next=None,left=None,right=None):
+        self.data=data
+        self.prev=prev
+        self.next=next
+
+    def GetData(self):
+        return self.data
+
+    def SetData(self,data):
+        self.data=data
+
+    def GetPrev(self):
+        return self.prev
+
+    def SetPrev(self,prev):
+        self.prev=prev
+
+    def GetNext(self):
+        return self.next
+
+    def SetNext(self,next):
+        self.next=next
+
+class DList:
+    def __init__(self):
+        self.head=None
+        self.tail=None
+        self.sentinel=None
+        self.size=0
+
+    def GetHead(self):
+        return self.head
+
+    def SetHead(self,head):
+        self.head=head
+
+    def GetTail(self):
+        return self.tail
+
+    def SetTail(self,tail):
+        self.tail=tail
+
+    def Length(self):
+        return self.size
+
+    def find(self,data,compare=None):
+        if self.head:
+            if compare(self.head,data)==0:
+                return self.head
+            elif compare(self.tail,data)==0:
+                return self.tail
+            else:
+                if self.sentinel==None:
+                    self.sentinel=self.head
+                res=compare(self.sentinel,data)
+                if res>0:
+                    while self.sentinel.GetNext()!=None and compare(self.sentinel,data)>0:
+                        self.sentinel=self.sentinel.GetNext()
+                    if compare(self.sentinel,data)==0:
+                        return self.sentinel
+                    else:
+                        return None
+                elif res<0:
+                    while self.sentinel.GetPrev()!=None and compare(self.sentinel,data)<0:
+                        self.sentinel=self.sentinel.GetPrev()
+                    if compare(self.sentinel,data)==0:
+                        return self.sentinel
+                    else:
+                        return None
+                else: # res==0
+                    return self.sentinel
+        else:
+            return None
+
+    def insert(self,data,compare=None):
+        if self.head:
+            # Initialize sentinel ptr. This will move according to direction of
+            # comparisons. Will befaster then always starting at head of list.
+
+            # New head of list test
+            if compare(self.head,data)<0:
+                newNode=DListNode(data)
+                newNode.SetNext(self.head)
+                newNode.GetNext().SetPrev(newNode)
+                self.head=newNode
+                self.size+=1
+                return
+            # New tail of list test
+            elif compare(self.tail,data)>0:
+                newNode=DListNode(data)
+                newNode.SetPrev(self.tail)
+                newNode.GetPrev().SetNext(newNode)
+                self.tail=newNode
+                self.size+=1
+                return
+            # Add to the middle based on sentinel for locating
+            else:
+                if self.sentinel==None:
+                    self.sentinel=self.head
+                res=compare(self.sentinel,data)
+                if res>0:
+                    while self.sentinel.GetNext()!=None and compare(self.sentinel.GetNext(),data)>0:
+                        self.sentinel=self.sentinel.GetNext()
+                    newNode=DListNode(data)
+                    newNode.SetNext(self.sentinel.GetNext())
+                    if self.sentinel.GetNext()!=None:
+                        newNode.GetNext().SetPrev(newNode)
+                    self.sentinel.SetNext(newNode)
+                    newNode.SetPrev(self.sentinel)
+                    self.size+=1
+                    return
+                elif res<0:
+                    while self.sentinel.GetPrev()!=None and compare(self.sentinel.GetPrev(),data)<0:
+                        self.sentinel=self.sentinel.GetPrev()
+                    newNode=DListNode(data)
+                    newNode.SetPrev(self.sentinel.GetPrev())
+                    if self.sentinel.GetPrev()!=None:
+                        newNode.GetPrev().SetNext(newNode)
+                    self.sentinel.SetPrev(newNode)
+                    newNode.SetNext(self.sentinel)
+                    self.size+=1
+                    return
+        else:
+            # Create list with new node
+            newNode=DListNode(data)
+            self.head=newNode
+            self.tail=newNode
+            self.sintinel=self.head
+            self.size+=1
+            return
+
+    def delete(self,data,compare=None):
+        if self.head:
+            node=self.find(data,compare)
+            # Not in list
+            if node==None:
+                return
+
+            if node==self.head:
+                n=self.head.GetNext()
+                n.SetPrev(None)
+                self.head=n
+                self.size-=1
+                return
+            elif node==self.tail:
+                p=self.tail.GetPrev()
+                p.SetNext(None)
+                self.tail=p
+                self.size-=1
+                return
+            else:
+                p=node.GetPrev()
+                n=node.GetNext()
+                p.SetNext(n)
+                n.SetPrev(p)
+                self.size-=1
+                return
+        else:
+            return
+
+    def dump(self,current):
+        if current==None:
+            return
+
+        if self.head!=None:
+            h=self.head.GetData()
+        else:
+            h="None"
+        if self.tail!=None:
+            t=self.tail.GetData()
+        else:
+            t="None"
+        if current.GetPrev()!=None:
+            p=str(current.GetPrev().GetData())
+        else:
+            p="None"
+        if current!=None:
+            c=str(current.GetData())
+        else:
+            c="None"
+        if current.GetNext()!=None:
+            n=str(current.GetNext().GetData())
+        else:
+            n="None"
+        print(f"H: {h} P: {p} C: {c} N: {n} T: {t}")
+
+    def list(self):
+        if self.head:
+            current=self.head
+            while current:
+                self.dump(current)
+                current=current.GetNext()
+
 
 # Remap TradingView symbol to the exchange symbol
 
