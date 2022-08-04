@@ -254,7 +254,7 @@ def FetchExchangeOrderHistory(exchange, oi, pair, RetryLimit):
     fo=None
     while not done:
         try:
-            fo=exchange.fetchOrder(oi,symbol=pair)
+            fo=ccxtAPI("fetchOrder",exchange,RetryLimit,oi,symbol=pair)
         except Exception as e:
             if retry>=RetryLimit:
                 done=True
@@ -277,7 +277,7 @@ def WaitLimitOrder(exchange,oi,pair,RetryLimit):
     # cancel the order
     if ohist==False:
         try:
-            ct=exchange.cancel_order(oi,pair)
+            ct=ccxtAPI("cancel_order",exchange,RetryLimit,oi,pair)
         except:
             pass
     else:
@@ -301,49 +301,34 @@ def PlaceOrder(exchange, account, pair, orderType, action, amount, close, RetryL
         m='limit'
         params['postOnly']=True
 
-    retry=0
-    done=False
-    while not done:
-        try:
-            if ReduceOnly==True:
-                if exchange.id=='binanceusdm':
-                    params['reduceOnly']='true'
-                else:
-                    params['reduce_only']=ReduceOnly
-                order=exchange.create_order(pair, m, action, amount, close, params)
-            else:
-                if m=='limit':
-                    order=exchange.create_order(pair, m, action, amount, close, params)
-                else:
-                    order=exchange.create_order(pair, m, action, amount, close)
-        except Exception as e:
-            if retry>=RetryLimit:
-                JRRlog.ErrorLog("Placing Order",e)
-            else:
-                JRRlog.WriteLog('Place Order Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
+    if ReduceOnly==True:
+        if exchange.id=='binanceusdm':
+            params['reduceOnly']='true'
         else:
-            done=True
-            if order['id']!=None:
-                # ReturnNow forces an immediate return for limit orders.
-                # thew caller must maanage them for such situations.
-                if m=='limit' and not ReturnNow:
-                    # wait no more then 3 minutes
-                    successful=WaitLimitOrder(exchange,order['id'],pair,15)
-                    if successful==True:
-                        JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
-                    else:
-                        JRRlog.ErrorLog("Placing Order",orderType+" order unsuccessful")
-                else:
-                    JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
+            params['reduce_only']=ReduceOnly
+        order=ccxtAPI("create_order",exchange,RetryLimit,pair, m, action, amount, close, params)
+    else:
+        if m=='limit':
+            order=ccxtAPI("create_order",exchange,RetryLimit,pair, m, action, amount, close, params)
+        else:
+            order=ccxtAPI("create_order",exchange,RetryLimit,pair, m, action, amount, close)
 
-                JRRledger.WriteLedger(exchange, account, pair, orderType, action, amount, close, order, RetryLimit, ledgerNote)
-                return order
+    if order['id']!=None:
+        # ReturnNow forces an immediate return for limit orders.
+        # thew caller must maanage them for such situations.
+        if m=='limit' and not ReturnNow:
+            # wait no more then 3 minutes
+            successful=WaitLimitOrder(exchange,order['id'],pair,15)
+            if successful==True:
+                JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
             else:
                 JRRlog.ErrorLog("Placing Order",orderType+" order unsuccessful")
-        retry+=1
+        else:
+            JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
 
-    if retry>=RetryLimit:
-        JRRlog.ErrorLog("Placing Order",orderType+" order unsuccessful")
+        JRRledger.WriteLedger(exchange, account, pair, orderType, action, amount, close, order, RetryLimit, ledgerNote)
+        return order
+    return None
 
 # Customized fetch OHLCV. Fetches an entire page
 
@@ -368,9 +353,9 @@ def FetchCandles(exchange,pair,tf,CandleCount,RetryLimit):
     while not done:
         try:
             if CandleCount>0:
-                ohlcv=exchange.fetch_ohlcv(symbol=pair,timeframe=tf,limit=CandleCount)
+                ohlcv=ccxtAPI("fetch_ohlcv",exchange,RetryLimit,symbol=pair,timeframe=tf,limit=CandleCount)
             else:
-                ohlcv=exchange.fetch_ohlcv(symbol=pair,timeframe=tf)
+                ohlcv=ccxtAPI("fetch_ohlcv",exchange,RetryLimit,symbol=pair,timeframe=tf)
             if ohlcv==[]:
                 ohlcv=None
         except Exception as e:
@@ -397,11 +382,6 @@ def FetchCandles(exchange,pair,tf,CandleCount,RetryLimit):
     return ohlcv
 
 def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLimit):
-    exchangeName=exchange.name.lower()
-    ohlcv=[]
-    data=[]
-    retry429=0
-    retry=0
     from_timestamp = exchange.parse8601(start_date_time)
     to_timestamp = exchange.parse8601(end_date_time)
 
@@ -418,7 +398,7 @@ def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLi
     done=False
     while from_timestamp < to_timestamp:
         try:
-            ohlcvs = exchange.fetch_ohlcv(pair,tf,from_timestamp)
+            ohlcvs=ccxtAPI("fetch_ohlcv",exchange,RetryLimit,pair,tf,from_timestamp)
             first = ohlcvs[0][0]
             last = ohlcvs[-1][0]
             if tf == "1m":
@@ -430,11 +410,8 @@ def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLi
             if tf == "1h":
                 from_timestamp += len(ohlcvs) * hour
             if tf == "1d":
-                from_timestamp += len(ohlcvs) * day                 
-
-
+                from_timestamp += len(ohlcvs) * day
             data += ohlcvs
-
         except Exception as e:
             if exchangeName=='kucoin':
                 x=str(e)
@@ -462,74 +439,8 @@ def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLi
 # if open is None, use low.
 
 def FetchRetry(exchange,pair,tf,RetryLimit):
-    exchangeName=exchange.name.lower()
-    ohlcv=[]
-    retry429=0
-    retry=0
-
-    # For kucoin only, 429000 errors are a mess. Not the best way to
-    # manage them, but the onle way I know of currently to prevent losses.
-
-    # Save the only rate limit and remap it.
-
-    if exchangeName=='kucoin':
-        rleSave=exchange.enableRateLimit
-        rlvSave=exchange.rateLimit
-        exchange.enableRateLimit=True
-        exchange.rateLimit=372+JRRsupport.ElasticDelay()
-
-    done=False
-    while not done:
-        try:
-            ohlcv=exchange.fetch_ohlcv(symbol=pair,timeframe=tf,limit=1)
-            if ohlcv==[]:
-                ohlcv=None
-        except Exception as e:
-            if exchangeName=='kucoin':
-                x=str(e)
-                if x.find('429000')>-1:
-                    retry429+=1
-            if retry>=RetryLimit:
-                JRRlog.ErrorLog("Fetching OHLCV",StopHTMLtags(e))
-            else:
-                if not KuCoinSuppress429:
-                    JRRlog.WriteLog('Fetch OHLCV Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
-        else:
-            done=True
-
-        if exchangeName=='kucoin':
-            if retry429>=(RetryLimit*7):
-                retry429=0
-                retry+=1
-        else:
-            retry+=1
-
-    ticker=None
-    retry=0
-    retry429=0
-    done=False
-    while not done:
-        try:
-            ticker=exchange.fetch_ticker(pair)
-        except Exception as e:
-            if exchangeName=='kucoin':
-                x=str(e)
-                if x.find('429000')>-1:
-                    retry429+=1
-            if retry>=RetryLimit:
-                JRRlog.ErrorLog("Fetching Ticker",StopHTMLtags(e))
-            else:
-                if not KuCoinSuppress429:
-                    JRRlog.WriteLog('Fetch Ticker Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
-        else:
-            done=True
-
-        if exchangeName=='kucoin':
-            if retry429>=(RetryLimit*7):
-                retry429=0
-                retry+=1
-        else:
-            retry+=1
+    ohlcv=ccxtAPI("fetch_ohlcv",exchange,RetryLimit,symbol=pair,timeframe=tf,limit=1)
+    ticker=ccxtAPI("fetch_ticker",exchange,RetryLimit,pair)
 
     ohlc=[]
     if ohlcv==None:
@@ -544,10 +455,6 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
     else:
         for i in range(6):
             ohlc.append(ohlcv[0][i])
-
-    if exchangeName=='kucoin':
-        exchange.enableRateLimit=rleSave
-        exchange.rateLimit=rlvSave
 
     return ohlc, ticker
 
@@ -587,10 +494,7 @@ def GetContract(exchange,pair,RetryLimit):
 # Fetch the market list
 
 def GetMarkets(exchange,pair,RetryLimit,Notify=True):
-    markets=ccxtAPI("load_markets",exchange,RetryLimit)
-
-    if Notify:
-        JRRlog.WriteLog("Markets loaded")
+    markets=LoadMarkets(exchange,RetryLimit,Notify)
 
     if pair[0]=='.' or pair.find(".d")>-1:
         JRRlog.ErrorLog('Get Markets',pair+" is not tradable on this exchange")
@@ -605,20 +509,7 @@ def GetMarkets(exchange,pair,RetryLimit,Notify=True):
     return markets
 
 def LoadMarkets(exchange,RetryLimit,Notify=True):
-    retry=0
-    done=False
-    while not done:
-        try:
-            markets=exchange.load_markets()
-        except Exception as e:
-            if retry>=RetryLimit:
-                JRRlog.ErrorLog("Fetch Markets",e)
-            else:
-                if Notify:
-                    JRRlog.WriteLog('Fetch Markets Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
-        else:
-            done=True
-        retry+=1
+    markets=ccxtAPI("load_markets",exchange,RetryLimit)
 
     if Notify:
         JRRlog.WriteLog("Markets loaded")
@@ -663,10 +554,10 @@ def ccxtAPI(function,exchange,RetryLimit,**args):
                 if x.find('429000')>-1:
                     retry429+=1
             if retry>=RetryLimit:
-                JRRlog.ErrorLog("Fetching OHLCV",StopHTMLtags(e))
+                JRRlog.ErrorLog(function,StopHTMLtags(e))
             else:
                 if not KuCoinSuppress429:
-                    JRRlog.WriteLog('Fetch OHLCV Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
+                    JRRlog.WriteLog(function+' Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
         else:
             done=True
 
