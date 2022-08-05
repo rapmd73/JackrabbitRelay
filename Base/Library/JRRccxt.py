@@ -20,23 +20,6 @@ import JRRsupport
 
 KuCoinSuppress429=True
 
-msec = 1000
-minute = 60 * msec
-hour = 60 * minute
-day = 24 * hour
-hold = 30
-
-# Dirty support function to block HTML exchange payloads
-
-def StopHTMLtags(txt):
-    try:
-        p=txt.find('<')
-        if p>-1:
-            return txt[:p]
-    except:
-        pass
-    return txt
-
 # Register the exchange
 
 def ExchangeLogin(exchangeName,Active,Notify=True,Sandbox=False):
@@ -554,10 +537,10 @@ def ccxtAPI(function,exchange,RetryLimit,**args):
                 if x.find('429000')>-1:
                     retry429+=1
             if retry>=RetryLimit:
-                JRRlog.ErrorLog(function,StopHTMLtags(e))
+                JRRlog.ErrorLog(function,JRRsupport.StopHTMLtags(e))
             else:
                 if not KuCoinSuppress429:
-                    JRRlog.WriteLog(function+' Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
+                    JRRlog.WriteLog(function+' Retrying ('+str(retry+1)+'), '+JRRsupport.StopHTMLtags(str(e)))
         else:
             done=True
 

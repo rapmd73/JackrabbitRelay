@@ -357,6 +357,17 @@ class DList:
                 current=current.GetNext()
 
 
+# Dirty support function to block HTML exchange payloads
+
+def StopHTMLtags(txt):
+    try:
+        p=txt.find('<')
+        if p>-1:
+            return txt[:p]
+    except:
+        pass
+    return txt
+
 # Remap TradingView symbol to the exchange symbol
 
 def TradingViewRemap(en,pair):

@@ -18,6 +18,10 @@ import JRRlog
 import JRRledger
 import JRRsupport
 
+# Framework imports
+# import JRRccxt
+
+
 KuCoinSuppress429=True
 
 msec = 1000
@@ -27,15 +31,6 @@ day = 24 * hour
 hold = 30
 
 # Dirty support function to block HTML exchange payloads
-
-def StopHTMLtags(txt):
-    try:
-        p=txt.find('<')
-        if p>-1:
-            return txt[:p]
-    except:
-        pass
-    return txt
 
 # Register the exchange
 
@@ -320,7 +315,7 @@ def PlaceOrder(exchange, account, pair, orderType, action, amount, close, RetryL
             if retry>=RetryLimit:
                 JRRlog.ErrorLog("Placing Order",e)
             else:
-                JRRlog.WriteLog('Place Order Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
+                JRRlog.WriteLog('Place Order Retrying ('+str(retry+1)+'), '+JRRsupport.StopHTMLtags(str(e)))
         else:
             done=True
             if order['id']!=None:
@@ -490,10 +485,10 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
                 if x.find('429000')>-1:
                     retry429+=1
             if retry>=RetryLimit:
-                JRRlog.ErrorLog("Fetching OHLCV",StopHTMLtags(e))
+                JRRlog.ErrorLog("Fetching OHLCV",JRRsupport.StopHTMLtags(e))
             else:
                 if not KuCoinSuppress429:
-                    JRRlog.WriteLog('Fetch OHLCV Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
+                    JRRlog.WriteLog('Fetch OHLCV Retrying ('+str(retry+1)+'), '+JRRsupport.StopHTMLtags(str(e)))
         else:
             done=True
 
@@ -517,10 +512,10 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
                 if x.find('429000')>-1:
                     retry429+=1
             if retry>=RetryLimit:
-                JRRlog.ErrorLog("Fetching Ticker",StopHTMLtags(e))
+                JRRlog.ErrorLog("Fetching Ticker",JRRsupport.StopHTMLtags(e))
             else:
                 if not KuCoinSuppress429:
-                    JRRlog.WriteLog('Fetch Ticker Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
+                    JRRlog.WriteLog('Fetch Ticker Retrying ('+str(retry+1)+'), '+JRRsupport.JRRsupport.StopHTMLtags(str(e)))
         else:
             done=True
 
@@ -615,7 +610,7 @@ def LoadMarkets(exchange,RetryLimit,Notify=True):
                 JRRlog.ErrorLog("Fetch Markets",e)
             else:
                 if Notify:
-                    JRRlog.WriteLog('Fetch Markets Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
+                    JRRlog.WriteLog('Fetch Markets Retrying ('+str(retry+1)+'), '+JRRsupport.StopHTMLtags(str(e)))
         else:
             done=True
         retry+=1
@@ -663,10 +658,10 @@ def ccxtAPI(function,exchange,RetryLimit,**args):
                 if x.find('429000')>-1:
                     retry429+=1
             if retry>=RetryLimit:
-                JRRlog.ErrorLog("Fetching OHLCV",StopHTMLtags(e))
+                JRRlog.ErrorLog("Fetching OHLCV",JRRsupport.StopHTMLtags(e))
             else:
                 if not KuCoinSuppress429:
-                    JRRlog.WriteLog('Fetch OHLCV Retrying ('+str(retry+1)+'), '+StopHTMLtags(str(e)))
+                    JRRlog.WriteLog('Fetch OHLCV Retrying ('+str(retry+1)+'), '+JRRsupport.StopHTMLtags(str(e)))
         else:
             done=True
 
