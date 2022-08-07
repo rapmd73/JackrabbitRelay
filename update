@@ -16,7 +16,7 @@ if [ x$1 != 'xnopull' ] ; then
 
 fi
 
-git pull https://github.com/rapmd73/JackrabbitRelay
+#git pull https://github.com/rapmd73/JackrabbitRelay
 
 mkdir -p /home/JackrabbitRelay > /dev/null 2>&1
 mkdir -p /home/JackrabbitRelay/Base > /dev/null 2>&1

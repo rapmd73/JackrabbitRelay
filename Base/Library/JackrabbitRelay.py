@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Jackrabbit Relay bas class and functionality
+# Jackrabbit Relay base class and functionality
 # 2021 Copyright © Robert APM Darin
 # All rights reserved unconditionally.
 
@@ -13,6 +13,9 @@ import time
 import json
 import requests
 from datetime import datetime
+
+# Framework APIs
+import JRRccxt
 
 # This is the logging class
 #
@@ -72,7 +75,7 @@ class JackrabbitLog:
 class JackrabbitRelay:
     def __init__(self,framework=None,payload=None):
         # All the default locations
-        self.Version="0.0.0.0.1120"
+        self.Version="0.0.0.1.0"
         self.BaseDirectory='/home/JackrabbitRelay/Base'
         self.ConfigDirectory='/home/JackrabbitRelay/Config'
         self.DataDirectory="/home/JackrabbitRelay/Data"
@@ -84,8 +87,11 @@ class JackrabbitRelay:
         self.NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
 
         self.JRLog=JackrabbitLog(None)
-        # the raw payload
+        # the raw payload, or command line
         self.Payload=payload
+        # Command line arguments
+        self.args=None
+        self.argslen=0
         # This is the main exchange configuration structure, including APIs.
         self.Config=[]
         # Convience for uniformity
@@ -98,13 +104,32 @@ class JackrabbitRelay:
         self.CurrentKey=0
         # The current order being processed
         self.Order=None
+        # Result from last operation
+        self.Result=None
         # this is the framework that defines the low level API, 
         # ie CCXT, OANDA, ROBINHOOD, FTXSTOCKS
         self.Framework=framework.lower()
+        # Whether or not to rotate keys after every API call
+        self.ForceRotateKeys=False
 
-        # Process the payload
-        self.ProcessPayload()
+        # Process the payload and configuration at initialization of structure
+        self.ProcessCommandLine()
+        if self.argslen==1:
+            self.ProcessPayload()
         self.ProcessConfig()
+        self.Login()
+
+    def GetExchange(self):
+        return self.Exchange
+
+    def GetAccount(self):
+        return self.Account
+
+    def SetRotateKeys(self,rk):
+        self.ForceRotateKeys=rk
+
+    def GetRotateKeys(self):
+        return self.ForceRotateKeys
 
     def SetFramework(self,framework):
         self.Framework=framework
@@ -131,7 +156,6 @@ class JackrabbitRelay:
         try:
             self.Order=json.loads(self.Payload,strict=False)
         except json.decoder.JSONDecodeError as err:
-            self.Order=None
             self.JRLog.Error('Processing Payload','Payload damaged')
 
         if "Exchange" not in self.Order:
@@ -149,15 +173,26 @@ class JackrabbitRelay:
         if "Asset" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing asset identifier')
 
-    def RotateKeys(self):
-        self.CurrentKey=(os.getpid()%len(self.keys))
-        self.Active=self.Keys[self.CurrentKey]
-
     # Read the exchange config file and load API/SECRET for a given (sub)account.
     # MAIN is reserved for the main account
 
     def ProcessConfig(self):
+        logProcess={}
+        logProcess['JRLog']=self.JRLog
         keys=[]
+
+        if self.argslen>=2:
+            self.Exchange=self.args[1].lower()
+        if self.argslen>=3:
+            self.Account=self.args[2]
+        if self.argslen>=4:
+            self.Asset=self.args[3]
+
+        # Stop processing here if we don't want to proceed with private
+        # API, but want to use only public API.
+
+        if self.Account==None or self.Account.lower()=="none":
+            return
 
         idl=None
         idf=self.ConfigDirectory+'/Identity.cfg'
@@ -182,7 +217,7 @@ class JackrabbitRelay:
                     if key['Account']==self.Account:
                         # Add identity to account reference
                         if idl!=None:
-                            key= { **idl, **key }
+                            key={ **idl, **key, **logProcess }
                         self.Keys.append(key)
                 cf.close()
 
@@ -193,180 +228,89 @@ class JackrabbitRelay:
         else:
             self.JRLog.Error("Reading Configuration",echg+'.cfg not found in config directory')
 
-    def LogIn():
-        if self.framework=='ccxt':
-            import JRRccxt
-            self.ccxt=JRRccxt.ExchangeLogin(self.Exchange,self.Active)
+    def ProcessCommandLine(self):
+        self.args=sys.argv
+        self.argslen=len(sys.argv)
+
+    def GetArgsLen(self):
+        return self.argslen
+
+    def GetArgs(self,x):
+        return self.args[x]
+
+    # This if where things get messy. The basic API must have calls to
+    # each framework buy uniform to the Relay core.
+
+    # Rotate API key/Secret
+
+    def RotateKeys(self):
+        self.CurrentKey=(os.getpid()%len(self.keys))
+        self.Active=self.Keys[self.CurrentKey]
+
+        if self.Framework=='ccxt':
+            self.ccxt=JRRccxt.SetExchangeAPI(self.ccxt,self.Active,Notify=False)
+
+    # Login to a given exchange
+
+    def Login(self):
+        if self.Framework=='ccxt':
+            self.ccxt=JRRccxt.ExchangeLogin(self.Exchange,self.Config,self.Active)
+
+    # Get the market list from the exchange
+
+    def GetMarkets(self):
+        if self.Framework=='ccxt':
+            self.Result=JRRccxt.ccxtAPI("load_markets",self.ccxt,self.Active)
+            return self.Result
+
+    # Get the exchange balances. Spot or base market
+
+    def GetBalances(self):
+        if self.Framework=='ccxt':
+            self.Result=JRRccxt.ccxtAPI("fetch_balance",self.ccxt,self.Active)
+            return self.Result
+
+    def GetBalance(self,asset):
+        if self.Framework=='ccxt':
+            self.Result=JRRccxt.ccxtAPI("fetch_balance",self.ccxt,self.Active)
+            self.Result=JRRccxt.GetBalance(self.Result,asset)
+            return self.Result
+
+    # Get the exchange positions. For and non-spot market
+
+    def GetPositions(self):
+        if self.Framework=='ccxt':
+            self.Result=JRRccxt.ccxtAPI("fetch_positions",self.ccxt,self.Active)
+            return self.Result
+
+    def GetPosition(self,Asset):
+        if self.Framework=='ccxt':
+            self.Result=JRRccxt.ccxtAPI("fetch_positions",self.ccxt,self.Active)
+            self.Result=JRRccxt.GetPosition(self.Result,Asset)
+            return self.Result
+
+    def GetContracts(self,Asset):
+        if self.Framework=='ccxt':
+            self.Result=JRRccxt.ccxtAPI("fetch_positions",self.ccxt,self.Active)
+            self.Result=JRRccxt.GetContracts(self.Result,Asset)
+            return self.Result
+
+    # Get the order that was processed
+
+    def GetOrder(self,**args):
+        if self.Framework=='ccxt':
+            self.Result=JRRccxt.ccxtAPI("fetch_Order",self.ccxt,self.Active,**args)
+            return self.Result
 
 """
-class DList:
-    def __init__(self):
-        self.head=None
-        self.tail=None
-        self.sentinel=None
-        self.size=0
 
-    def GetHead(self):
-        return self.head
+Needs support for these functions as unified base.
+Exchange response goes in self.Order['Result']
 
-    def SetHead(self,head):
-        self.head=head
-
-    def GetTail(self):
-        return self.tail
-
-    def SetTail(self,tail):
-        self.tail=tail
-
-    def Length(self):
-        return self.size
-
-    def find(self,data,compare=None):
-        if self.head:
-            if compare(self.head,data)==0:
-                return self.head
-            elif compare(self.tail,data)==0:
-                return self.tail
-            else:
-                if self.sentinel==None:
-                    self.sentinel=self.head
-                res=compare(self.sentinel,data)
-                if res>0:
-                    while self.sentinel.GetNext()!=None and compare(self.sentinel,data)>0:
-                        self.sentinel=self.sentinel.GetNext()
-                    if compare(self.sentinel,data)==0:
-                        return self.sentinel
-                    else:
-                        return None
-                elif res<0:
-                    while self.sentinel.GetPrev()!=None and compare(self.sentinel,data)<0:
-                        self.sentinel=self.sentinel.GetPrev()
-                    if compare(self.sentinel,data)==0:
-                        return self.sentinel
-                    else:
-                        return None
-                else: # res==0
-                    return self.sentinel
-        else:
-            return None
-
-    def insert(self,data,compare=None):
-        if self.head:
-            # Initialize sentinel ptr. This will move according to direction of
-            # comparisons. Will befaster then always starting at head of list.
-
-            # New head of list test
-            if compare(self.head,data)<0:
-                newNode=DListNode(data)
-                newNode.SetNext(self.head)
-                newNode.GetNext().SetPrev(newNode)
-                self.head=newNode
-                self.size+=1
-                return
-            # New tail of list test
-            elif compare(self.tail,data)>0:
-                newNode=DListNode(data)
-                newNode.SetPrev(self.tail)
-                newNode.GetPrev().SetNext(newNode)
-                self.tail=newNode
-                self.size+=1
-                return
-            # Add to the middle based on sentinel for locating
-            else:
-                if self.sentinel==None:
-                    self.sentinel=self.head
-                res=compare(self.sentinel,data)
-                if res>0:
-                    while self.sentinel.GetNext()!=None and compare(self.sentinel.GetNext(),data)>0:
-                        self.sentinel=self.sentinel.GetNext()
-                    newNode=DListNode(data)
-                    newNode.SetNext(self.sentinel.GetNext())
-                    if self.sentinel.GetNext()!=None:
-                        newNode.GetNext().SetPrev(newNode)
-                    self.sentinel.SetNext(newNode)
-                    newNode.SetPrev(self.sentinel)
-                    self.size+=1
-                    return
-                elif res<0:
-                    while self.sentinel.GetPrev()!=None and compare(self.sentinel.GetPrev(),data)<0:
-                        self.sentinel=self.sentinel.GetPrev()
-                    newNode=DListNode(data)
-                    newNode.SetPrev(self.sentinel.GetPrev())
-                    if self.sentinel.GetPrev()!=None:
-                        newNode.GetPrev().SetNext(newNode)
-                    self.sentinel.SetPrev(newNode)
-                    newNode.SetNext(self.sentinel)
-                    self.size+=1
-                    return
-        else:
-            # Create list with new node
-            newNode=DListNode(data)
-            self.head=newNode
-            self.tail=newNode
-            self.sintinel=self.head
-            self.size+=1
-            return
-
-    def delete(self,data,compare=None):
-        if self.head:
-            node=self.find(data,compare)
-            # Not in list
-            if node==None:
-                return
-
-            if node==self.head:
-                n=self.head.GetNext()
-                n.SetPrev(None)
-                self.head=n
-                self.size-=1
-                return
-            elif node==self.tail:
-                p=self.tail.GetPrev()
-                p.SetNext(None)
-                self.tail=p
-                self.size-=1
-                return
-            else:
-                p=node.GetPrev()
-                n=node.GetNext()
-                p.SetNext(n)
-                n.SetPrev(p)
-                self.size-=1
-                return
-        else:
-            return
-
-    def dump(self,current):
-        if current==None:
-            return
-
-        if self.head!=None:
-            h=self.head.GetData()
-        else:
-            h="None"
-        if self.tail!=None:
-            t=self.tail.GetData()
-        else:
-            t="None"
-        if current.GetPrev()!=None:
-            p=str(current.GetPrev().GetData())
-        else:
-            p="None"
-        if current!=None:
-            c=str(current.GetData())
-        else:
-            c="None"
-        if current.GetNext()!=None:
-            n=str(current.GetNext().GetData())
-        else:
-            n="None"
-        print(f"H: {h} P: {p} C: {c} N: {n} T: {t}")
-
-    def list(self):
-        if self.head:
-            current=self.head
-            while current:
-                self.dump(current)
-                current=current.GetNext()
+ccxt.fetchOrder         self.Order['Result']=GetOrder
+ccxt.cancel_order       CancelOrder
+ccxt.create_order       CreateOrder
+ccxt.fetch_ohlcv        GetOHLCV
+ccxt.fetch_ticker       GetTicker
 """
 
