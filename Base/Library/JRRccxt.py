@@ -20,64 +20,6 @@ import JRRsupport
 
 KuCoinSuppress429=True
 
-# Register the exchange
-
-def ExchangeLogin(exchangeName,Active,Notify=True,Sandbox=False):
-    if exchangeName in ccxt.exchanges:
-        try:
-            exchange=getattr(ccxt,exchangeName)( \
-                { 'apiKey': Active['API'],'secret': Active['SECRET'] })
-        except Exception as e:
-            JRRlog.ErrorLog("Connecting to exchange",e)
-    else:
-        if exchangeName=="ftxus":
-            try:
-                exchange=ccxt.ftx({ 'hostname': 'ftx.us', \
-                    'apiKey': Active['API'],'secret': Active['SECRET'] })
-            except Exception as e:
-                JRRlog.ErrorLog("Connecting to exchange",e)
-        else:
-            JRRlog.ErrorLog(exchangeName,"Exchange not supported")
-
-    if "Sandbox" in Active:
-        exchange.setSandboxMode(True)
-
-    SetExchangeAPI(exchange,Active,Notify)
-
-    return(exchange)
-
-def SetExchangeAPI(exchange,Active,notify=False):
-    exchangeName=exchange.name.lower()
-
-    # Set API/Secret for every exchange
-
-    exchange.apiKey=Active['API']
-    exchange.secret=Active['SECRET']
-
-    # Set special setting for specific exchange.
-
-    if exchangeName=="ftx" and Active['Account']!='MAIN':
-        exchange.headers['FTX-SUBACCOUNT']=Active['Account']
-    else:
-        if exchangeName=="ftxus" and Active['Account']!='MAIN':
-            exchange.headers['FTXUS-SUBACCOUNT']=Active['Account']
-        else:
-            if exchangeName=="kucoin" or exchangeName=="kucoin futures":
-                if 'Passphrase' in Active:
-                    exchange.password=Active['Passphrase']
-                else:
-                    JRRlog.ErrorLog("Connecting to exchange","Kucoin requires a passphrase as well")
-
-    if "RateLimit" in Active:
-        exchange.enableRateLimit=True
-        exchange.rateLimit=int(Active['RateLimit'])+JRRsupport.ElasticDelay()
-        if notify:
-            JRRlog.WriteLog("|- Rate limit set to "+str(exchange.rateLimit)+' ms')
-    else:
-        exchange.enableRateLimit=False
-
-    return(exchange)
-
 def FindMatchingPair(base,markets):
     for quote in JRRconfig.StableCoinUSD:
         pair=base+'/'+quote
@@ -441,36 +383,108 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
 
     return ohlc, ticker
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Rewritten for single retry loop and JRR class
+
+# Register the exchange
+
+def ExchangeLogin(exchangeName,Config,Active,Notify=True,Sandbox=False):
+    if exchangeName in ccxt.exchanges:
+        try:
+            exchange=getattr(ccxt,exchangeName)()
+        except Exception as e:
+            JRRlog.ErrorLog("Connecting to exchange",e)
+    else:
+        if exchangeName=="ftxus":
+            try:
+                exchange=ccxt.ftx({ 'hostname': 'ftx.us', })
+            except Exception as e:
+                JRRlog.ErrorLog("Connecting to exchange",e)
+        else:
+            JRRlog.ErrorLog(exchangeName,"Exchange not supported")
+
+    # If Active is empty, then use only PUBLIC API
+    if Active!=[]:
+        SetExchangeAPI(exchange,Active,Notify)
+
+    return(exchange)
+
+def SetExchangeAPI(exchange,Active,notify=False):
+    exchangeName=exchange.name.lower()
+
+    if "Sandbox" in Active:
+        exchange.setSandboxMode(True)
+
+    # Set API/Secret for every exchange
+
+    exchange.apiKey=Active['API']
+    exchange.secret=Active['SECRET']
+
+    # Set special setting for specific exchange.
+
+    if exchangeName=="ftx" and Active['Account']!='MAIN':
+        exchange.headers['FTX-SUBACCOUNT']=Active['Account']
+    else:
+        if exchangeName=="ftxus" and Active['Account']!='MAIN':
+            exchange.headers['FTXUS-SUBACCOUNT']=Active['Account']
+        else:
+            if exchangeName=="kucoin" or exchangeName=="kucoin futures":
+                if 'Passphrase' in Active:
+                    exchange.password=Active['Passphrase']
+                else:
+                    JRRlog.ErrorLog("Connecting to exchange","Kucoin requires a passphrase as well")
+
+    if "RateLimit" in Active:
+        exchange.enableRateLimit=True
+        exchange.rateLimit=int(Active['RateLimit'])+JRRsupport.ElasticDelay()
+        if notify:
+            JRRlog.WriteLog("|- Rate limit set to "+str(exchange.rateLimit)+' ms')
+    else:
+        exchange.enableRateLimit=False
+
+    return(exchange)
+
+# Fetch the position of a given of a pair
+# CCXT only
+
+def GetPosition(Positions,Asset):
+    for pos in Positions:
+        if pos['symbol']==Asset:
+            return pos
+    return None
+
+def GetContracts(Positions,Asset):
+    position=GetPosition(Positions,Asset)
+    if position is None:
+        bal=0
+    else:
+        bal=position['contracts']
+
+    return bal
+
 # Fetch the balance of a given BASE of a pair
 
-def GetBalance(exchange,base,RetryLimit):
-    balance = ccxtAPI("fetch_balance",exchange,RetryLimit)
-    if base in balance['total']:
-        bal=float(balance['total'][base])
+def GetBalance(balances,base):
+    if base in balances['total']:
+        bal=float(balances['total'][base])
     else:
         # This is an absolute horrible way to handle this, but unfortunately the only way.
         # Many exchanges don't report a balance at all if an asset hasn't been traded in
         # a given timeframe (usually fee based tier resets designate the cycle).
         bal=0
-
-    return bal
-
-# Fetch the position of a given of a pair
-# CCXT only
-
-def GetPosition(exchange,pair,RetryLimit):
-    positins==ccxtAPI("fetch_positions",exchange,RetryLimit)
-    positions_by_symbol = exchange.index_by(positions, 'symbol')
-    position = exchange.safe_value(positions_by_symbol, pair)
-
-    return position
-
-def GetContract(exchange,pair,RetryLimit):
-    position=GetPosition(exchange,pair,RetryLimit)
-    if position is None:
-        bal=0
-    else:
-        bal=position['contracts']
 
     return bal
 
@@ -504,16 +518,29 @@ def LoadMarkets(exchange,RetryLimit,Notify=True):
 #
 # examples:
 # markets=ccxtAPI("load_markets",exchange,RetryLimit)
-# balance = ccxtAPI("fetch_balance",exchange,RetryLimit)
+# balance=ccxtAPI("fetch_balance",exchange,RetryLimit)
 
-def ccxtAPI(function,exchange,RetryLimit,**args):
+def ccxtAPI(function,exchange,Active,**args):
     exchangeName=exchange.name.lower()
     ohlcv=[]
     retry429=0
     retry=0
 
+    # Sanity check
+    if 'Retry' in Active:
+        RetryLimit=int(Active['Retry'])
+    else:
+        RetryLimit=3
+
     # Convert function to a CCXT module
-    callCCXT=getattr(exchange,function)
+    try:
+        callCCXT=getattr(exchange,function)
+    except Exception as e:
+        x=str(e)
+        # Kucoin don not support this, but don't break program
+        if function=='fetch_positions' and exchangeName=='kucoin':
+            return None
+        Active['JRLog'].Error(function,JRRsupport.StopHTMLtags(x))
 
     # For kucoin only, 429000 errors are a mess. Not the best way to
     # manage them, but the onle way I know of currently to prevent losses.
