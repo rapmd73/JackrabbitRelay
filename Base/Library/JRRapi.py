@@ -564,7 +564,7 @@ def GetBalance(exchange,base,RetryLimit):
 # CCXT only
 
 def GetPosition(exchange,pair,RetryLimit):
-    positins==ccxtAPI("fetch_positions",exchange,RetryLimit)
+    positions=ccxtAPI("fetch_positions",exchange,RetryLimit)
     positions_by_symbol = exchange.index_by(positions, 'symbol')
     position = exchange.safe_value(positions_by_symbol, pair)
 
