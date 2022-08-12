@@ -16,6 +16,7 @@ from datetime import datetime
 
 # Framework APIs
 import JRRccxt
+import JRRoanda
 
 # This is the logging class
 #
@@ -108,7 +109,11 @@ class JackrabbitRelay:
         self.Result=None
         # this is the framework that defines the low level API, 
         # ie CCXT, OANDA, ROBINHOOD, FTXSTOCKS
-        self.Framework=framework.lower()
+        # Framework can be provided by config file
+        if framework!=None:
+            self.Framework=framework.lower()
+        else:
+            self.Framework=None
         # Whether or not to rotate keys after every API call
         self.ForceRotateKeys=False
 
@@ -181,6 +186,8 @@ class JackrabbitRelay:
         logProcess['JRLog']=self.JRLog
         keys=[]
 
+        if self.argslen>=1:
+            self.Basename=self.args[0]
         if self.argslen>=2:
             self.Exchange=self.args[1].lower()
         if self.argslen>=3:
@@ -253,14 +260,25 @@ class JackrabbitRelay:
     # Login to a given exchange
 
     def Login(self):
+        if self.Framework==None:
+            if 'Framework' in self.Active:
+                self.Framework=self.Active['Framework']
+            else:
+                self.JRLog.Error("Login",self.exchsnge+' framework not given')
+
         if self.Framework=='ccxt':
             self.ccxt=JRRccxt.ExchangeLogin(self.Exchange,self.Config,self.Active)
+        elif self.Framework=='oanda':
+            self.oanda=JRRoanda.ExchangeLogin(self.Exchange,self.Config,self.Active)
 
     # Get the market list from the exchange
 
     def GetMarkets(self):
         if self.Framework=='ccxt':
             self.Result=JRRccxt.ccxtAPI("load_markets",self.ccxt,self.Active)
+            return self.Result
+        elif self.Framework=='oanda':
+            self.Result=JRRoanda.GetMarkets(self.oanda,self.Active)
             return self.Result
 
     # Get the exchange balances. Spot or base market
