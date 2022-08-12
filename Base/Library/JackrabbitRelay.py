@@ -287,6 +287,9 @@ class JackrabbitRelay:
         if self.Framework=='ccxt':
             self.Result=JRRccxt.ccxtAPI("fetch_balance",self.ccxt,self.Active)
             return self.Result
+        elif self.Framework=='oanda':
+            self.Result=JRRoanda.GetBalances(self.oanda,self.Active)
+            return self.Result
 
     def GetBalance(self,asset):
         if self.Framework=='ccxt':
@@ -299,6 +302,9 @@ class JackrabbitRelay:
     def GetPositions(self):
         if self.Framework=='ccxt':
             self.Result=JRRccxt.ccxtAPI("fetch_positions",self.ccxt,self.Active)
+            return self.Result
+        elif self.Framework=='oanda':
+            self.Result=JRRoanda.GetPositions(self.oanda,self.Active)
             return self.Result
 
     def GetPosition(self,Asset):

@@ -37,11 +37,35 @@ def ExchangeLogin(exchangeName,Config,Active,Notify=True,Sandbox=False):
 
 def GetMarkets(exchange,Active):
     try:
+        markets={}
         res=v20Accounts.AccountInstruments(accountID=Active['AccountID'])
         results=exchange.request(res)
-        return results
+        for cur in results['instruments']:
+            asset=cur['name'].upper().replace('_','')
+            markets[asset]=cur
+        return markets
     except Exception as e:
         Active['JRLog'].Error("GetMarkets",JRRsupport.StopHTMLtags(str(e)))
+
+    return None
+
+def GetBalances(exchange,Active):
+    try:
+        res=v20Accounts.AccountSummary(accountID=Active['AccountID'])
+        results=exchange.request(res)
+        return results['account']
+    except Exception as e:
+        Active['JRLog'].Error("GetBalances",JRRsupport.StopHTMLtags(str(e)))
+
+    return None
+
+def GetPositions(exchange,Active):
+    try:
+        res=v20Positions.OpenPositions(accountID=Active['AccountID'])
+        results=exchange.request(res)
+        return results['positions']
+    except Exception as e:
+        Active['JRLog'].Error("GetPositions",JRRsupport.StopHTMLtags(str(e)))
 
     return None
 
