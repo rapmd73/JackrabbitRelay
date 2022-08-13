@@ -69,6 +69,39 @@ def GetPositions(exchange,Active):
 
     return None
 
+#   Tme Epoch MS   Open      High      Low       Close     Volume
+# [[1660416600000, 0.554891, 0.554891, 0.554516, 0.554573, 10010.83555758]]
+
+# {'instrument': 'EUR_USD', 'granularity': 'M5', 
+#'candles': [{'complete':True, 'volume': 297, 'time': '2022-08-12T20:55:00.000000000Z', 
+# 'mid':{'o': '1.02566', 'h': '1.02616', 'l': '1.02558', 'c': '1.02590'}}]}
+
+def GetOHLCV(exchange,Active,**kwargs):
+    symbol=kwargs.get('symbol').replace('/','_')
+    timeframe=kwargs.get('timeframe')
+    limit=str(kwargs.get('limit'))
+    params={"granularity":timeframe.upper(), "count":limit }
+    candles=[]
+
+    try:
+        res=v20Instruments.InstrumentsCandles(instrument=symbol,params=params)
+        results=exchange.request(res)
+        for cur in results['candles']:
+            candle=[]
+            candle.append(int(datetime.strptime(cur['time'],'%Y-%m-%dT%H:%M:%S.000000000Z').timestamp())*1000)
+            candle.append(float(cur['mid']['o']))
+            candle.append(float(cur['mid']['h']))
+            candle.append(float(cur['mid']['l']))
+            candle.append(float(cur['mid']['c']))
+            candle.append(float(cur['volume']))
+            candles.append(candle)
+        return candles
+    except Exception as e:
+        Active['JRLog'].Error("GetOHLCV",JRRsupport.StopHTMLtags(str(e)))
+
+    return None
+
+
 """
 # Fetch the position of a given of a pair
 # CCXT only

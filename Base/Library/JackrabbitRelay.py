@@ -98,6 +98,7 @@ class JackrabbitRelay:
         # Convience for uniformity
         self.Exchange=None
         self.Account=None
+        self.Asset=None
         # API/Secret for a specific account
         self.Keys=[]
         # This is the Active API set for rotation and rotation count
@@ -129,6 +130,9 @@ class JackrabbitRelay:
 
     def GetAccount(self):
         return self.Account
+
+    def GetAsset(self):
+        return self.Asset
 
     def SetRotateKeys(self,rk):
         self.ForceRotateKeys=rk
@@ -307,6 +311,16 @@ class JackrabbitRelay:
             self.Result=JRRoanda.GetPositions(self.oanda,self.Active)
             return self.Result
 
+    # Get OHLCV data from exchange
+
+    def GetOHLCV(self,*args,**kwargs):
+        if self.Framework=='ccxt':
+            self.Result=JRRccxt.ccxtAPI("fetch_ohlcv",self.ccxt,self.Active,**kwargs)
+            return self.Result
+        elif self.Framework=='oanda':
+            self.Result=JRRoanda.GetOHLCV(self.oanda,self.Active,**kwargs)
+            return self.Result
+
     def GetPosition(self,Asset):
         if self.Framework=='ccxt':
             self.Result=JRRccxt.ccxtAPI("fetch_positions",self.ccxt,self.Active)
@@ -321,10 +335,10 @@ class JackrabbitRelay:
 
     # Get the order that was processed
 
-    def GetOrder(self,**args):
-        if self.Framework=='ccxt':
-            self.Result=JRRccxt.ccxtAPI("fetch_Order",self.ccxt,self.Active,**args)
-            return self.Result
+#    def GetOrder(self,**args):
+#        if self.Framework=='ccxt':
+#            self.Result=JRRccxt.ccxtAPI("fetch_Order",self.ccxt,self.Active,**args)
+#            return self.Result
 
 """
 
