@@ -36,45 +36,23 @@ def ExchangeLogin(exchangeName,Config,Active,Notify=True,Sandbox=False):
     return(exchange)
 
 def GetMarkets(exchange,Active):
-    try:
-        markets={}
-        res=v20Accounts.AccountInstruments(accountID=Active['AccountID'])
-        results=exchange.request(res)
-        for cur in results['instruments']:
-            asset=cur['name'].upper().replace('_','')
-            markets[asset]=cur
-        return markets
-    except Exception as e:
-        Active['JRLog'].Error("GetMarkets",JRRsupport.StopHTMLtags(str(e)))
-
-    return None
+    markets={}
+    res=v20Accounts.AccountInstruments(accountID=Active['AccountID'])
+    results=oandaAPI("GetMarkets",exchange,Active,request=res)
+    for cur in results['instruments']:
+        asset=cur['name'].upper().replace('_','')
+        markets[asset]=cur
+    return markets
 
 def GetBalances(exchange,Active):
-    try:
-        res=v20Accounts.AccountSummary(accountID=Active['AccountID'])
-        results=exchange.request(res)
-        return results['account']
-    except Exception as e:
-        Active['JRLog'].Error("GetBalances",JRRsupport.StopHTMLtags(str(e)))
-
-    return None
+    res=v20Accounts.AccountSummary(accountID=Active['AccountID'])
+    results=oandaAPI("GetBalances",exchange,Active,request=res)
+    return results['account']
 
 def GetPositions(exchange,Active):
-    try:
-        res=v20Positions.OpenPositions(accountID=Active['AccountID'])
-        results=exchange.request(res)
-        return results['positions']
-    except Exception as e:
-        Active['JRLog'].Error("GetPositions",JRRsupport.StopHTMLtags(str(e)))
-
-    return None
-
-#   Tme Epoch MS   Open      High      Low       Close     Volume
-# [[1660416600000, 0.554891, 0.554891, 0.554516, 0.554573, 10010.83555758]]
-
-# {'instrument': 'EUR_USD', 'granularity': 'M5', 
-#'candles': [{'complete':True, 'volume': 297, 'time': '2022-08-12T20:55:00.000000000Z', 
-# 'mid':{'o': '1.02566', 'h': '1.02616', 'l': '1.02558', 'c': '1.02590'}}]}
+    res=v20Positions.OpenPositions(accountID=Active['AccountID'])
+    results=oandaAPI("GetPositions",exchange,Active,request=res)
+    return results['positions']
 
 def GetOHLCV(exchange,Active,**kwargs):
     symbol=kwargs.get('symbol').replace('/','_')
@@ -83,24 +61,51 @@ def GetOHLCV(exchange,Active,**kwargs):
     params={"granularity":timeframe.upper(), "count":limit }
     candles=[]
 
-    try:
-        res=v20Instruments.InstrumentsCandles(instrument=symbol,params=params)
-        results=exchange.request(res)
-        for cur in results['candles']:
-            candle=[]
-            candle.append(int(datetime.strptime(cur['time'],'%Y-%m-%dT%H:%M:%S.000000000Z').timestamp())*1000)
-            candle.append(float(cur['mid']['o']))
-            candle.append(float(cur['mid']['h']))
-            candle.append(float(cur['mid']['l']))
-            candle.append(float(cur['mid']['c']))
-            candle.append(float(cur['volume']))
-            candles.append(candle)
-        return candles
-    except Exception as e:
-        Active['JRLog'].Error("GetOHLCV",JRRsupport.StopHTMLtags(str(e)))
+    res=v20Instruments.InstrumentsCandles(instrument=symbol,params=params)
+    results=oandaAPI("GetOHLCV",exchange,Active,request=res)
+    for cur in results['candles']:
+        candle=[]
+        candle.append(int(datetime.strptime(cur['time'],'%Y-%m-%dT%H:%M:%S.000000000Z').timestamp())*1000)
+        candle.append(float(cur['mid']['o']))
+        candle.append(float(cur['mid']['h']))
+        candle.append(float(cur['mid']['l']))
+        candle.append(float(cur['mid']['c']))
+        candle.append(float(cur['volume']))
+        candles.append(candle)
+    return candles
 
-    return None
+def GetTicker(exchange,Active,**kwargs):
+    symbol=kwargs.get('symbol').replace('/','_')
+    params={"instruments":symbol }
 
+    res=v20Pricing.PricingInfo(accountID=Active['AccountID'],params=params)
+    results=oandaAPI("GetTicker",exchange,Active,request=res)
+    return results
+
+def oandaAPI(function,exchange,Active,**kwargs):
+    req=kwargs.get('request')
+    retry=0
+
+    # Sanity check
+    if 'Retry' in Active:
+        RetryLimit=int(Active['Retry'])
+    else:
+        RetryLimit=3
+
+    done=False
+    while not done:
+        try:
+            result=exchange.request(req)
+        except Exception as e:
+            if retry<RetryLimit:
+                Active['JRLog'].Error(function,JRRsupport.StopHTMLtags(str(e)))
+            else:
+                Active['JRLog'].Write(function+' Retrying ('+str(retry+1)+'), '+JRRsupport.StopHTMLtags(str(e)))
+        else:
+            done=True
+        retry+=1
+
+    return result
 
 """
 # Fetch the position of a given of a pair

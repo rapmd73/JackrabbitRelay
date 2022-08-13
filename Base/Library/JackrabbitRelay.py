@@ -37,7 +37,7 @@ class JackrabbitLog:
         else:
             self.logfile=self.basename+'.'+filename
 
-    def write(self,text):
+    def Write(self,text):
         pid=os.getpid()
         time=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
 
@@ -52,17 +52,17 @@ class JackrabbitLog:
     def Elapsed(self):
         EndTime=datetime.now()
         Elapsed=(EndTime-self.StartTime)
-        self.write("Processing Completed: "+str(Elapsed)+" seconds")
+        self.Write("Processing Completed: "+str(Elapsed)+" seconds")
 
     def Error(self,f,s):
         msg=f+' failed with: '+s
-        self.write(msg)
+        self.Write(msg)
         self.Elapsed()
         sys.exit(3)
 
     def Success(self,f,s):
         msg=f+' successful with: '+s
-        self.write(msg)
+        self.Write(msg)
         self.Elapsed()
         sys.exit(0)
 
@@ -319,6 +319,16 @@ class JackrabbitRelay:
             return self.Result
         elif self.Framework=='oanda':
             self.Result=JRRoanda.GetOHLCV(self.oanda,self.Active,**kwargs)
+            return self.Result
+
+    # Get ticker data from exchange
+
+    def GetTicker(self,*args,**kwargs):
+        if self.Framework=='ccxt':
+            self.Result=JRRccxt.ccxtAPI("fetch_ticker",self.ccxt,self.Active,**kwargs)
+            return self.Result
+        elif self.Framework=='oanda':
+            self.Result=JRRoanda.GetTicker(self.oanda,self.Active,**kwargs)
             return self.Result
 
     def GetPosition(self,Asset):
