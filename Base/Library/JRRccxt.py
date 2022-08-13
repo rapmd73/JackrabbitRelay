@@ -360,28 +360,6 @@ def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLi
 
     return data 
 
-# If fetch_ohlcv fails, revert to fetch_ticker and parse it manually
-# if open is None, use low.
-
-def FetchRetry(exchange,pair,tf,RetryLimit):
-    ohlcv=ccxtAPI("fetch_ohlcv",exchange,RetryLimit,symbol=pair,timeframe=tf,limit=1)
-    ticker=ccxtAPI("fetch_ticker",exchange,RetryLimit,pair)
-
-    ohlc=[]
-    if ohlcv==None:
-        ohlc.append(ticker['timestamp'])
-        if ticker['open']==None:
-            ohlc.append(ticker['low'])
-        else:
-            ohlc.append(ticker['open'])
-        ohlc.append(ticker['high'])
-        ohlc.append(ticker['low'])
-        ohlc.append(ticker['close'])
-    else:
-        for i in range(6):
-            ohlc.append(ohlcv[0][i])
-
-    return ohlc, ticker
 
 
 
@@ -398,6 +376,55 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
 
 
 ### Rewritten for single retry loop and JRR class
+
+# If fetch_ohlcv fails, revert to fetch_ticker and parse it manually
+# if open is None, use low.
+
+def FetchRetry(exchange,pair,tf,RetryLimit):
+    ohlcv=GetOHLCV(exchange,pair,tf,RetryLimit)
+    ticker=GetTicker(exchange,pair,RetryLimit)
+
+    ohlc=[]
+    if ohlcv==None:
+        ohlc.append(ticker['timestamp'])
+        if ticker['open']==None:
+            ohlc.append(ticker['low'])
+        else:
+            ohlc.append(ticker['open'])
+        ohlc.append(ticker['high'])
+        ohlc.append(ticker['low'])
+        ohlc.append(ticker['close'])
+    else:
+        for i in range(6):
+            ohlc.append(ohlcv[0][i])
+
+    return ohlc,ticker
+
+def GetOHLCV(exchange,Active,*args,**kwargs):
+    ohlcv=ccxtAPI("fetch_ohlcv",exchange,Active,**kwargs)
+    print(ohlcv)
+
+    ohlc=[]
+    if ohlcv==None:
+        ohlc.append(ticker['timestamp'])
+        if ticker['open']==None:
+            ohlc.append(ticker['low'])
+        else:
+            ohlc.append(ticker['open'])
+        ohlc.append(ticker['high'])
+        ohlc.append(ticker['low'])
+        ohlc.append(ticker['close'])
+
+    return ohlc
+
+def GetTicker(exchange,Active,*args,**kwargs):
+    ticker=ccxtAPI("fetch_ticker",exchange,Active,**kwargs)
+
+    ohlc=[]
+    for i in range(6):
+        ohlc.append(ohlcv[0][i])
+
+    return ticker
 
 # Register the exchange
 
@@ -520,7 +547,7 @@ def LoadMarkets(exchange,RetryLimit,Notify=True):
 # markets=ccxtAPI("load_markets",exchange,RetryLimit)
 # balance=ccxtAPI("fetch_balance",exchange,RetryLimit)
 
-def ccxtAPI(function,exchange,Active,**args):
+def ccxtAPI(function,exchange,Active,**kwargs):
     exchangeName=exchange.name.lower()
     ohlcv=[]
     retry429=0
@@ -557,7 +584,7 @@ def ccxtAPI(function,exchange,Active,**args):
     while not done:
         try:
             #ohlcv=exchange.fetch_ohlcv(symbol=pair,timeframe=tf,limit=1)
-            result=callCCXT(**args)
+            result=callCCXT(**kwargs)
         except Exception as e:
             if exchangeName=='kucoin':
                 x=str(e)
