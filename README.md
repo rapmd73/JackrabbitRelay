@@ -48,6 +48,15 @@ made or lost in the same situation.
 
 ## Notes
 
+The **alpha-1** branch is the current active branch. **IT IS NOT STABLE TO USE**. 
+
+Rebuilding of the CCXT interface and adding the OANDA API are currently ongoing. 
+The FIX protocol is slated to be assed as well
+
+The **stable-1** branch is a frozen copy of version 1 of Jackrabbit Relay.
+
+The **main** branch is currently frozen.
+
 **Special Thanks** to the following people for providing me with testing
 accounts.
 
