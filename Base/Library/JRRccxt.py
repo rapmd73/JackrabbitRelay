@@ -472,13 +472,13 @@ def SetExchangeAPI(exchange,Active,notify=False):
                 if 'Passphrase' in Active:
                     exchange.password=Active['Passphrase']
                 else:
-                    JRRlog.ErrorLog("Connecting to exchange","Kucoin requires a passphrase as well")
+                    Active['JRLog'].Error("Connecting to exchange","Kucoin requires a passphrase as well")
 
     if "RateLimit" in Active:
         exchange.enableRateLimit=True
         exchange.rateLimit=int(Active['RateLimit'])+JRRsupport.ElasticDelay()
         if notify:
-            JRRlog.WriteLog("|- Rate limit set to "+str(exchange.rateLimit)+' ms')
+            Active['JRLog'].Write("|- Rate limit set to "+str(exchange.rateLimit)+' ms')
     else:
         exchange.enableRateLimit=False
 
@@ -521,14 +521,14 @@ def GetMarkets(exchange,pair,RetryLimit,Notify=True):
     markets=LoadMarkets(exchange,RetryLimit,Notify)
 
     if pair[0]=='.' or pair.find(".d")>-1:
-        JRRlog.ErrorLog('Get Markets',pair+" is not tradable on this exchange")
+        Active['JRLog'].Error('Get Markets',pair+" is not tradable on this exchange")
 
     if pair not in exchange.markets:
-        JRRlog.ErrorLog('Get Markets',pair+" is not traded on this exchange")
+        Active['JRLog'].Error('Get Markets',pair+" is not traded on this exchange")
 
     if 'active' in exchange.markets[pair]:
         if exchange.markets[pair]['active']==False:
-            JRRlog.ErrorLog('Get Markets',pair+" is not active on this exchange")
+            Active['JRLog'].Error('Get Markets',pair+" is not active on this exchange")
 
     return markets
 
@@ -536,7 +536,7 @@ def LoadMarkets(exchange,RetryLimit,Notify=True):
     markets=ccxtAPI("load_markets",exchange,RetryLimit)
 
     if Notify:
-        JRRlog.WriteLog("Markets loaded")
+        Active['JRLog'].Write("Markets loaded")
 
     return markets
 
@@ -591,10 +591,10 @@ def ccxtAPI(function,exchange,Active,**kwargs):
                 if x.find('429000')>-1:
                     retry429+=1
             if retry>=RetryLimit:
-                JRRlog.ErrorLog(function,JRRsupport.StopHTMLtags(e))
+                Active['JRLog'].Error(function,JRRsupport.StopHTMLtags(e))
             else:
                 if not KuCoinSuppress429:
-                    JRRlog.WriteLog(function+' Retrying ('+str(retry+1)+'), '+JRRsupport.StopHTMLtags(str(e)))
+                    Active['JRLog'].Write(function+' Retrying ('+str(retry+1)+'), '+JRRsupport.StopHTMLtags(str(e)))
         else:
             done=True
 
