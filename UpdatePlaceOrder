@@ -3,7 +3,7 @@
 # Crontab entry ( without has mark #
 # @reboot ( /home/JackrabbitRelay/Base/RelayLauncher & ) > /dev/null 2>&1
 
-BaseDir="/home/JackrabbitRelay/Base"
+BaseDir="/home/JackrabbitRelay2/Base"
 GitHubBase="/home/GitHub/JackrabbitRelay/Base"
 
 if [ -z $1 ] ; then
