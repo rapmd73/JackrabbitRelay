@@ -54,6 +54,21 @@ def GetPositions(exchange,Active):
     results=oandaAPI("GetPositions",exchange,Active,request=res)
     return results['positions']
 
+# Shorts are negative
+
+def GetPosition(positions,Asset):
+    position=0.0
+    if positions!=None:
+        for pos in positions:
+            asset=pos['instrument'].replace('_','/')
+            if Asset.upper()==asset:
+                if 'averagePrice' in pos['long']:
+                    position=float(pos['long']['averagePrice'])
+                else:
+                    position=-(float(pos['short']['averagePrice']))
+            return position
+    return None
+
 def GetOHLCV(exchange,Active,**kwargs):
     symbol=kwargs.get('symbol').replace('/','_')
     timeframe=kwargs.get('timeframe')

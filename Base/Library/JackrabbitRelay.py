@@ -312,6 +312,17 @@ class JackrabbitRelay:
             self.Result=JRRoanda.GetPositions(self.oanda,self.Active)
             return self.Result
 
+    # Get a single positions. For and non-spot market
+
+    def GetPosition(self,Asset):
+        self.Result=self.GetPositions()
+        if self.Framework=='ccxt':
+            self.Result=JRRccxt.GetContracts(self.Result,Asset)
+            return self.Result
+        elif self.Framework=='oanda':
+            self.Result=JRRoanda.GetPosition(self.Result,Asset)
+            return self.Result
+
     # Get OHLCV data from exchange
 
     def GetOHLCV(self,*args,**kwargs):
@@ -330,18 +341,6 @@ class JackrabbitRelay:
             return self.Result
         elif self.Framework=='oanda':
             self.Result=JRRoanda.GetTicker(self.oanda,self.Active,**kwargs)
-            return self.Result
-
-    def GetPosition(self,Asset):
-        if self.Framework=='ccxt':
-            self.Result=JRRccxt.ccxtAPI("fetch_positions",self.ccxt,self.Active)
-            self.Result=JRRccxt.GetPosition(self.Result,Asset)
-            return self.Result
-
-    def GetContracts(self,Asset):
-        if self.Framework=='ccxt':
-            self.Result=JRRccxt.ccxtAPI("fetch_positions",self.ccxt,self.Active)
-            self.Result=JRRccxt.GetContracts(self.Result,Asset)
             return self.Result
 
     # Get the order that was processed

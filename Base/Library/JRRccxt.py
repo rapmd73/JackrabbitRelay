@@ -41,7 +41,7 @@ def LoadMinimum(exchangeName,pair):
         try:
             raw=pathlib.Path(fn).read_text()
         except:
-            JRRlog.ErrorLog("Minimum List",f"Can't read minimum list for {exchangeName}")
+            Active['JRLog'].Error("Minimum List",f"Can't read minimum list for {exchangeName}")
 
         minlist=json.loads(raw)
         if pair in minlist:
@@ -56,7 +56,7 @@ def UpdateMinimum(exchangeName,pair,amount):
         try:
             raw=pathlib.Path(fn).read_text()
         except:
-            JRRlog.ErrorLog("Minimum List",f"Can't read minimum list for {exchangeName}")
+            Active['JRLog'].Error("Minimum List",f"Can't read minimum list for {exchangeName}")
 
         minlist=json.loads(raw)
 
@@ -81,9 +81,9 @@ def GetAssetMinimum(exchange,pair,diagnostics,RetryLimit):
         mincost=round(minimum*close,8)
 
         if diagnostics:
-            JRRlog.WriteLog(f"| |- Close: {close:.8f}")
-            JRRlog.WriteLog(f"| |- (Table)Minimum Amount: {minimum:.8f}")
-            JRRlog.WriteLog(f"| |- (Table)Minimum Cost:   {mincost:.8f}")
+            Active['JRLog'].Write(f"| |- Close: {close:.8f}")
+            Active['JRLog'].Write(f"| |- (Table)Minimum Amount: {minimum:.8f}")
+            Active['JRLog'].Write(f"| |- (Table)Minimum Cost:   {mincost:.8f}")
     else:
         minimum1=exchange.markets[pair]['limits']['amount']['min']
         minimum2=exchange.markets[pair]['limits']['cost']['min']
@@ -123,10 +123,10 @@ def GetAssetMinimum(exchange,pair,diagnostics,RetryLimit):
                 mincost=minimum*close
 
         if diagnostics:
-            JRRlog.WriteLog(f"| |- Close: {close:.8f}")
-            JRRlog.WriteLog(f"| |- Minimum Amount: {minimum1:.8f}, {m1:.8f}")
-            JRRlog.WriteLog(f"| |- Minimum Cost:   {minimum2:.8f}, {m2:.8f}")
-            JRRlog.WriteLog(f"| |- Minimum Price:  {minimum3:.8f}, {m3:.8f}")
+            Active['JRLog'].Write(f"| |- Close: {close:.8f}")
+            Active['JRLog'].Write(f"| |- Minimum Amount: {minimum1:.8f}, {m1:.8f}")
+            Active['JRLog'].Write(f"| |- Minimum Cost:   {minimum2:.8f}, {m2:.8f}")
+            Active['JRLog'].Write(f"| |- Minimum Price:  {minimum3:.8f}, {m3:.8f}")
 
     return(minimum, mincost)
 
@@ -141,14 +141,14 @@ def GetMinimum(exchange,pair,forceQuote,diagnostics,RetryLimit):
 # Get BASE minimum. This is all that is needed if quote is USD/Stablecoins
 
     if diagnostics:
-        JRRlog.WriteLog("Minimum asset analysis")
-        JRRlog.WriteLog("|- Base: "+base)
-        JRRlog.WriteLog("| |- Minimum: "+f"{minimum:.8f}")
-        JRRlog.WriteLog("| |- Min Cost: "+f"{mincost:.8f}")
+        Active['JRLog'].Write("Minimum asset analysis")
+        Active['JRLog'].Write("|- Base: "+base)
+        Active['JRLog'].Write("| |- Minimum: "+f"{minimum:.8f}")
+        Active['JRLog'].Write("| |- Min Cost: "+f"{mincost:.8f}")
         # If quote is NOT USD/Stablecoin. NOTE: This is an API penalty
         # for the overhead of pulling quote currency. Quote currency
         # OVERRIDES base ALWAYS.
-        JRRlog.WriteLog("|- Quote: "+quote)
+        Active['JRLog'].Write("|- Quote: "+quote)
 
     if quote not in JRRconfig.StableCoinUSD or forceQuote:
         bpair=FindMatchingPair(quote,exchange.markets)
@@ -156,13 +156,13 @@ def GetMinimum(exchange,pair,forceQuote,diagnostics,RetryLimit):
             minimum,mincost=GetAssetMinimum(exchange,bpair,diagnostics,RetryLimit)
 
             if diagnostics:
-                JRRlog.WriteLog("| |- Minimum: "+f"{minimum:.8f}")
-                JRRlog.WriteLog("| |- Min Cost: "+f"{mincost:.8f}")
+                Active['JRLog'].Write("| |- Minimum: "+f"{minimum:.8f}")
+                Active['JRLog'].Write("| |- Min Cost: "+f"{mincost:.8f}")
 
     if minimum==0.0:
-        JRRlog.ErrorLog("Asset Analysis","minimum position size returned as 0")
+        Active['JRLog'].Error("Asset Analysis","minimum position size returned as 0")
     if mincost==0.0:
-        JRRlog.ErrorLog("Asset Analysis","minimum cost per position returned as 0")
+        Active['JRLog'].Error("Asset Analysis","minimum cost per position returned as 0")
 
     return minimum,mincost
 
@@ -196,7 +196,7 @@ def FetchExchangeOrderHistory(exchange, oi, pair, RetryLimit):
     return False
 
 def WaitLimitOrder(exchange,oi,pair,RetryLimit):
-    JRRlog.WriteLog("|- Waiting for limit order")
+    Active['JRLog'].Write("|- Waiting for limit order")
     ohist=FetchExchangeOrderHistory(exchange,oi,pair,RetryLimit)
 
     # cancel the order
@@ -245,11 +245,11 @@ def PlaceOrder(exchange, account, pair, orderType, action, amount, close, RetryL
             # wait no more then 3 minutes
             successful=WaitLimitOrder(exchange,order['id'],pair,15)
             if successful==True:
-                JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
+                Active['JRLog'].Write("|- Order Confirmation ID: "+order['id'])
             else:
-                JRRlog.ErrorLog("Placing Order",orderType+" order unsuccessful")
+                Active['JRLog'].Error("Placing Order",orderType+" order unsuccessful")
         else:
-            JRRlog.WriteLog("|- Order Confirmation ID: "+order['id'])
+            Active['JRLog'].Write("|- Order Confirmation ID: "+order['id'])
 
         JRRledger.WriteLedger(exchange, account, pair, orderType, action, amount, close, order, RetryLimit, ledgerNote)
         return order
@@ -289,7 +289,7 @@ def FetchCandles(exchange,pair,tf,CandleCount,RetryLimit):
                 if x.find('429000')>-1:
                     retry429+=1
             if retry>=RetryLimit:
-                JRRlog.ErrorLog("Fetching OHLCV",e)
+                Active['JRLog'].Error("Fetching OHLCV",e)
         else:
             done=True
 
@@ -343,7 +343,7 @@ def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLi
                 if x.find('429000')>-1:
                     retry429+=1
             if retry>=RetryLimit:
-                JRRlog.ErrorLog("Fetching OHLCV",e)
+                Active['JRLog'].Error("Fetching OHLCV",e)
         else:
             done=True
 
@@ -433,15 +433,15 @@ def ExchangeLogin(exchangeName,Config,Active,Notify=True,Sandbox=False):
         try:
             exchange=getattr(ccxt,exchangeName)()
         except Exception as e:
-            JRRlog.ErrorLog("Connecting to exchange",e)
+            Active['JRLog'].Error("Connecting to exchange",e)
     else:
         if exchangeName=="ftxus":
             try:
                 exchange=ccxt.ftx({ 'hostname': 'ftx.us', })
             except Exception as e:
-                JRRlog.ErrorLog("Connecting to exchange",e)
+                Active['JRLog'].Error("Connecting to exchange",e)
         else:
-            JRRlog.ErrorLog(exchangeName,"Exchange not supported")
+            Active['JRLog'].Error(exchangeName,"Exchange not supported")
 
     # If Active is empty, then use only PUBLIC API
     if Active!=[]:
@@ -499,6 +499,8 @@ def GetContracts(Positions,Asset):
         bal=0
     else:
         bal=position['contracts']
+        if position['side']=='short':
+            bal=-bal
 
     return bal
 
