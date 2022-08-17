@@ -181,6 +181,7 @@ class JackrabbitRelay:
             self.JRLog.Error('Processing Payload','Missing action (buy/sell/close) identifier')
         if "Asset" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing asset identifier')
+        self.Order['Asset']=self.Order['Asset'].upper()
 
     # Read the exchange config file and load API/SECRET for a given (sub)account.
     # MAIN is reserved for the main account
@@ -197,7 +198,7 @@ class JackrabbitRelay:
         if self.argslen>=3:
             self.Account=self.args[2]
         if self.argslen>=4:
-            self.Asset=self.args[3]
+            self.Asset=self.args[3].upper()
 
         # Stop processing here if we don't want to proceed with private
         # API, but want to use only public API.
