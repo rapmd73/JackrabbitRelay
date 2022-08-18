@@ -6,7 +6,7 @@
 # All rights reserved unconditionally.
 
 import sys
-sys.path.append('/home/JackrabbitRelay/Base/Library')
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
 from socketserver import ForkingMixIn
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -16,8 +16,8 @@ import json
 
 import JRRconfig
 
-LogDirectory="/home/JackrabbitRelay/Logs"
-BaseDirectory='/home/JackrabbitRelay/Base'
+LogDirectory="/home/JackrabbitRelay2/Logs"
+BaseDirectory='/home/JackrabbitRelay2/Base'
 
 # Write pid in port file
 

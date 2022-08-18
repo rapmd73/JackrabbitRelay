@@ -26,7 +26,7 @@ import JRRoanda
 
 class JackrabbitLog:
     def __init__(self,filename=None):
-        self.LogDirectory="/home/JackrabbitRelay/Logs"
+        self.LogDirectory="/home/JackrabbitRelay2/Logs"
         self.StartTime=datetime.now()
         self.basename=os.path.basename(sys.argv[0])
         self.SetLogName(filename)
@@ -77,13 +77,13 @@ class JackrabbitRelay:
     def __init__(self,framework=None,payload=None):
         # All the default locations
         self.Version="0.0.0.1.0"
-        self.BaseDirectory='/home/JackrabbitRelay/Base'
-        self.ConfigDirectory='/home/JackrabbitRelay/Config'
-        self.DataDirectory="/home/JackrabbitRelay/Data"
-        self.BalancesDirectory='/home/JackrabbitRelay/Statistics/Balances'
-        self.ChartsDirectory='/home/JackrabbitRelay/Statistics/Charts'
-        self.LedgerDirectory="/home/JackrabbitRelay/Ledger"
-        self.StatisticsDirectory='/home/JackrabbitRelay/Extras/Statistics'
+        self.BaseDirectory='/home/JackrabbitRelay2/Base'
+        self.ConfigDirectory='/home/JackrabbitRelay2/Config'
+        self.DataDirectory="/home/JackrabbitRelay2/Data"
+        self.BalancesDirectory='/home/JackrabbitRelay2/Statistics/Balances'
+        self.ChartsDirectory='/home/JackrabbitRelay2/Statistics/Charts'
+        self.LedgerDirectory="/home/JackrabbitRelay2/Ledger"
+        self.StatisticsDirectory='/home/JackrabbitRelay2/Extras/Statistics'
 
         self.NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
 

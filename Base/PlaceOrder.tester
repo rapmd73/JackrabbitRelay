@@ -9,9 +9,9 @@ import os
 import sys
 from datetime import datetime
 
-LogDirectory="/home/JackrabbitRelay/Logs"
-BaseDirectory='/home/JackrabbitRelay/Base'
-ConfigDirectory='/home/JackrabbitRelay/Config'
+LogDirectory="/home/JackrabbitRelay2/Logs"
+BaseDirectory='/home/JackrabbitRelay2/Base'
+ConfigDirectory='/home/JackrabbitRelay2/Config'
 
 # Write log entry
 

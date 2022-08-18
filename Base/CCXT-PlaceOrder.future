@@ -6,7 +6,7 @@
 # All rights reserved unconditionally.
 
 import sys
-sys.path.append('/home/JackrabbitRelay/Base/Library')
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
 
 import JRRconfig

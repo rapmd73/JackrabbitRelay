@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BaseDir="/home/JackrabbitRelay/Base"
+BaseDir="/home/JackrabbitRelay2/Base"
 Port=$1
 
 if [ -z $Port ] ; then
