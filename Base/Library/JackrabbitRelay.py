@@ -279,6 +279,7 @@ class JackrabbitRelay:
     # Get the market list from the exchange
 
     def GetMarkets(self):
+        self.RotateKeys()
         if self.Framework=='ccxt':
             self.Result=JRRccxt.ccxtAPI("load_markets",self.ccxt,self.Active)
             return self.Result
@@ -289,6 +290,7 @@ class JackrabbitRelay:
     # Get the exchange balances. Spot or base market
 
     def GetBalances(self):
+        self.RotateKeys()
         if self.Framework=='ccxt':
             self.Result=JRRccxt.ccxtAPI("fetch_balance",self.ccxt,self.Active)
             return self.Result
@@ -297,6 +299,7 @@ class JackrabbitRelay:
             return self.Result
 
     def GetBalance(self,asset):
+        self.RotateKeys()
         if self.Framework=='ccxt':
             self.Result=JRRccxt.ccxtAPI("fetch_balance",self.ccxt,self.Active)
             self.Result=JRRccxt.GetBalance(self.Result,asset)
@@ -305,6 +308,7 @@ class JackrabbitRelay:
     # Get the exchange positions. For and non-spot market
 
     def GetPositions(self):
+        self.RotateKeys()
         if self.Framework=='ccxt':
             self.Result=JRRccxt.ccxtAPI("fetch_positions",self.ccxt,self.Active)
             return self.Result
@@ -315,6 +319,7 @@ class JackrabbitRelay:
     # Get a single positions. For and non-spot market
 
     def GetPosition(self,Asset):
+        self.RotateKeys()
         self.Result=self.GetPositions()
         if self.Framework=='ccxt':
             self.Result=JRRccxt.GetContracts(self.Result,Asset)
@@ -326,6 +331,7 @@ class JackrabbitRelay:
     # Get OHLCV data from exchange
 
     def GetOHLCV(self,*args,**kwargs):
+        self.RotateKeys()
         if self.Framework=='ccxt':
             self.Result=JRRccxt.ccxtAPI("fetch_ohlcv",self.ccxt,self.Active,**kwargs)
             return self.Result
@@ -336,6 +342,7 @@ class JackrabbitRelay:
     # Get ticker data from exchange
 
     def GetTicker(self,*args,**kwargs):
+        self.RotateKeys()
         if self.Framework=='ccxt':
             self.Result=JRRccxt.ccxtAPI("fetch_ticker",self.ccxt,self.Active,**kwargs)
             return self.Result
@@ -358,7 +365,5 @@ Exchange response goes in self.Order['Result']
 ccxt.fetchOrder         self.Order['Result']=GetOrder
 ccxt.cancel_order       CancelOrder
 ccxt.create_order       CreateOrder
-ccxt.fetch_ohlcv        GetOHLCV
-ccxt.fetch_ticker       GetTicker
 """
 
