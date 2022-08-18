@@ -1,14 +1,11 @@
 #!/bin/bash
 pip3=`which pip3`
-OFS=`stat --printf="%s" update`
+OFS=`stat --printf="%s" install`
 
 BaseDir="/home/JackrabbitRelay2"
 
 cd /home/GitHub/JackrabbitRelay
 
-for i in `cat requirements.txt` ; do
-    $pip3 install -U $i
-done
 mkdir -p $BaseDir > /dev/null 2>&1
 for d in Base Config Data Logs Ledger Statistics/Balances Statistics/Charts ; do
     mkdir -p $BaseDir/$d > /dev/null 2>&1
@@ -25,7 +22,6 @@ if [ x$1 != 'xnopull' ] ; then
         N=`echo $i | cut -d/ -f5 | cut -d. -f1`
         $BaseDir/Extras/TV2Exchange $N
     done
-
 fi
 
 git pull https://github.com/rapmd73/JackrabbitRelay
@@ -42,7 +38,7 @@ git pull https://github.com/rapmd73/JackrabbitRelay
 #    /home/GitHub/JackrabbitRelay/Extras/BlackCrowHunter/install
 #fi
 
-NFS=`stat --printf="%s" update`
+NFS=`stat --printf="%s" install`
 
 if [ "$NFS" != "$OFS" ] ; then
     echo Running update again...

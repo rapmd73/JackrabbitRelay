@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Crontab entry ( without has mark #
-# @reboot ( /home/JackrabbitRelay/Base/RelayLauncher & ) > /dev/null 2>&1
+# @reboot ( /home/JackrabbitRelay2/Base/RelayLauncher & ) > /dev/null 2>&1
 
-BaseDir="/home/JackrabbitRelay/Base"
+BaseDir="/home/JackrabbitRelay2/Base"
 
 Port=$1
 
