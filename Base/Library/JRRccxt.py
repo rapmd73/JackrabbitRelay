@@ -255,57 +255,6 @@ def PlaceOrder(exchange, account, pair, orderType, action, amount, close, RetryL
         return order
     return None
 
-# Customized fetch OHLCV. Fetches an entire page
-
-def FetchCandles(exchange,pair,tf,CandleCount,RetryLimit):
-    exchangeName=exchange.name.lower().replace(' ','')
-    ohlcv=[]
-    retry429=0
-    retry=0
-
-    # For kucoin only, 429000 errors are a mess. Not the best way to
-    # manage them, but the onle way I know of currently to prevent losses.
-
-    # Save the only rate limit and remap it.
-
-    if 'kucoin' in exchangeName:
-        rleSave=exchange.enableRateLimit
-        rlvSave=exchange.rateLimit
-        exchange.enableRateLimit=True
-        exchange.rateLimit=372+JRRsupport.ElasticDelay()
-
-    done=False
-    while not done:
-        try:
-            if CandleCount>0:
-                ohlcv=ccxtAPI("fetch_ohlcv",exchange,RetryLimit,symbol=pair,timeframe=tf,limit=CandleCount)
-            else:
-                ohlcv=ccxtAPI("fetch_ohlcv",exchange,RetryLimit,symbol=pair,timeframe=tf)
-            if ohlcv==[]:
-                ohlcv=None
-        except Exception as e:
-            if 'kucoin' in exchangeName:
-                x=str(e)
-                if x.find('429000')>-1:
-                    retry429+=1
-            if retry>=RetryLimit:
-                Active['JRLog'].Error("Fetching OHLCV",e)
-        else:
-            done=True
-
-        if exchangeName=='kucoin':
-            if retry429>=(RetryLimit*7):
-                retry429=0
-                retry+=1
-        else:
-            retry+=1
-
-    if 'kucoin' in exchangeName:
-        exchange.enableRateLimit=rleSave
-        exchange.rateLimit=rlvSave
-
-    return ohlcv
-
 def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLimit):
     from_timestamp = exchange.parse8601(start_date_time)
     to_timestamp = exchange.parse8601(end_date_time)
@@ -374,8 +323,35 @@ def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLi
 
 
 
-
+###
 ### Rewritten for single retry loop and JRR class
+###
+
+# Customized fetch OHLCV. Fetches an entire page
+
+def FetchCandles(exchange,pair,tf,CandleCount,RetryLimit):
+    exchangeName=exchange.name.lower().replace(' ','')
+    ohlcv=[]
+    retry=0
+
+    done=False
+    while not done:
+        try:
+            if CandleCount>0:
+                ohlcv=ccxtAPI("fetch_ohlcv",exchange,RetryLimit,symbol=pair,timeframe=tf,limit=CandleCount)
+            else:
+                ohlcv=ccxtAPI("fetch_ohlcv",exchange,RetryLimit,symbol=pair,timeframe=tf)
+            if ohlcv==[]:
+                ohlcv=None
+        except Exception as e:
+            if retry>=RetryLimit:
+                Active['JRLog'].Error("Fetching OHLCV",e)
+        else:
+            done=True
+
+        retry+=1
+
+    return ohlcv
 
 # If fetch_ohlcv fails, revert to fetch_ticker and parse it manually
 # if open is None, use low.
