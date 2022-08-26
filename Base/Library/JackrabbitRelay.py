@@ -330,7 +330,7 @@ class JackrabbitRelay:
 
     # Get OHLCV data from exchange
 
-    def GetOHLCV(self,*args,**kwargs):
+    def GetOHLCV(self,**kwargs):
         self.RotateKeys()
         if self.Framework=='ccxt':
             self.Result=JRRccxt.ccxtAPI("fetch_ohlcv",self.ccxt,self.Active,**kwargs)
@@ -341,7 +341,7 @@ class JackrabbitRelay:
 
     # Get ticker data from exchange
 
-    def GetTicker(self,*args,**kwargs):
+    def GetTicker(self,**kwargs):
         self.RotateKeys()
         if self.Framework=='ccxt':
             self.Result=JRRccxt.ccxtAPI("fetch_ticker",self.ccxt,self.Active,**kwargs)
@@ -350,11 +350,31 @@ class JackrabbitRelay:
             self.Result=JRRoanda.GetTicker(self.oanda,self.Active,**kwargs)
             return self.Result
 
+    # Place Order to exchange. Needs to handle buy, sell, close
+    # exchange
+    # Active, retry limit is in this structure
+    # ADA/USD or USD/JPY
+    # market or limit
+    # 1 or 0.001 ...
+    # buy, sell or close
+    # 63000
+    # Reduce only, true/false
+    # Ledger note, if any
+
+    def PlaceOrder(self,**kwargs):
+        self.RotateKeys()
+        if self.Framework=='ccxt':
+            self.Result=JRRccxt.PlaceOrder(self.ccxt,self.Active,**kwargs)
+            return self.Result
+        elif self.Framework=='oanda':
+            self.Result=JRRoanda.PlaceOrder(self.oanda,self.Active,**kwargs)
+            return self.Result
+
     # Get the order that was processed
 
-#    def GetOrder(self,**args):
+#    def GetOrder(self,**kwargs):
 #        if self.Framework=='ccxt':
-#            self.Result=JRRccxt.ccxtAPI("fetch_Order",self.ccxt,self.Active,**args)
+#            self.Result=JRRccxt.ccxtAPI("fetch_Order",self.ccxt,self.Active,**kwargs)
 #            return self.Result
 
 """

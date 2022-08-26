@@ -208,53 +208,6 @@ def WaitLimitOrder(exchange,oi,pair,RetryLimit):
     else:
         return True
 
-def PlaceOrder(exchange, account, pair, orderType, action, amount, close, RetryLimit, ReduceOnly, ledgerNote):
-    params = {}
-    order=None
-    ReturnNow=False
-
-    m=orderType.lower()
-    if 'return' in m:
-        ReturnNow=True
-        m=m.replace('return','')
-    if "createMarketBuyOrderRequiresPrice" in exchange.options and m=='market':
-        m='limit'
-    if m=='limittaker':
-        m='limit'
-        params['timeInForce']='fok'
-    if m=='limitmaker':
-        m='limit'
-        params['postOnly']=True
-
-    if ReduceOnly==True:
-        if exchange.id=='binanceusdm':
-            params['reduceOnly']='true'
-        else:
-            params['reduce_only']=ReduceOnly
-        order=ccxtAPI("create_order",exchange,RetryLimit,pair, m, action, amount, close, params)
-    else:
-        if m=='limit':
-            order=ccxtAPI("create_order",exchange,RetryLimit,pair, m, action, amount, close, params)
-        else:
-            order=ccxtAPI("create_order",exchange,RetryLimit,pair, m, action, amount, close)
-
-    if order['id']!=None:
-        # ReturnNow forces an immediate return for limit orders.
-        # thew caller must maanage them for such situations.
-        if m=='limit' and not ReturnNow:
-            # wait no more then 3 minutes
-            successful=WaitLimitOrder(exchange,order['id'],pair,15)
-            if successful==True:
-                Active['JRLog'].Write("|- Order Confirmation ID: "+order['id'])
-            else:
-                Active['JRLog'].Error("Placing Order",orderType+" order unsuccessful")
-        else:
-            Active['JRLog'].Write("|- Order Confirmation ID: "+order['id'])
-
-        JRRledger.WriteLedger(exchange, account, pair, orderType, action, amount, close, order, RetryLimit, ledgerNote)
-        return order
-    return None
-
 def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLimit):
     from_timestamp = exchange.parse8601(start_date_time)
     to_timestamp = exchange.parse8601(end_date_time)
@@ -307,7 +260,7 @@ def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLi
         exchange.enableRateLimit=rleSave
         exchange.rateLimit=rlvSave
 
-    return data 
+    return data
 
 
 
@@ -326,32 +279,6 @@ def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLi
 ###
 ### Rewritten for single retry loop and JRR class
 ###
-
-# Customized fetch OHLCV. Fetches an entire page
-
-def FetchCandles(exchange,pair,tf,CandleCount,RetryLimit):
-    exchangeName=exchange.name.lower().replace(' ','')
-    ohlcv=[]
-    retry=0
-
-    done=False
-    while not done:
-        try:
-            if CandleCount>0:
-                ohlcv=ccxtAPI("fetch_ohlcv",exchange,RetryLimit,symbol=pair,timeframe=tf,limit=CandleCount)
-            else:
-                ohlcv=ccxtAPI("fetch_ohlcv",exchange,RetryLimit,symbol=pair,timeframe=tf)
-            if ohlcv==[]:
-                ohlcv=None
-        except Exception as e:
-            if retry>=RetryLimit:
-                Active['JRLog'].Error("Fetching OHLCV",e)
-        else:
-            done=True
-
-        retry+=1
-
-    return ohlcv
 
 # If fetch_ohlcv fails, revert to fetch_ticker and parse it manually
 # if open is None, use low.
@@ -376,7 +303,7 @@ def FetchRetry(exchange,pair,tf,RetryLimit):
 
     return ohlc,ticker
 
-def GetOHLCV(exchange,Active,*args,**kwargs):
+def GetOHLCV(exchange,Active,**kwargs):
     ohlcv=ccxtAPI("fetch_ohlcv",exchange,Active,**kwargs)
     print(ohlcv)
 
@@ -393,7 +320,7 @@ def GetOHLCV(exchange,Active,*args,**kwargs):
 
     return ohlc
 
-def GetTicker(exchange,Active,*args,**kwargs):
+def GetTicker(exchange,Active,**kwargs):
     ticker=ccxtAPI("fetch_ticker",exchange,Active,**kwargs)
 
     ohlc=[]
@@ -517,6 +444,54 @@ def LoadMarkets(exchange,RetryLimit,Notify=True):
         Active['JRLog'].Write("Markets loaded")
 
     return markets
+
+# Place order. Return order ID and DON'T wait on limit orders. That needs
+# to be a separate functionality.
+#
+# Arg sequence:
+#   symbol, type, side (action), amount, price, params
+#
+# PlaceOrder(exchange, Active, pair=pair, orderType=orderType, action=action, amount=amount, 
+#   close=close, ReduceOnly=ReduceOnly, LedgerNote=ledgerNote)
+
+def PlaceOrder(exchange,Active,**kwargs):
+    params = {}
+    order=None
+    pair=kwargs.get('pair')
+    m=kwargs.get('orderType').lower()
+    action=kwargs.get('action')
+    amount=kwargs.get('amount')
+    price=kwargs.get('price')
+    ro=kwargs.get('ReduceOnly')
+    ln=kwargs.get('LedgerNote')
+
+    if "createMarketBuyOrderRequiresPrice" in exchange.options and m=='market':
+        m='limit'
+    if m=='limittaker':
+        m='limit'
+        params['timeInForce']='fok'
+    if m=='limitmaker':
+        m='limit'
+        params['postOnly']=True
+
+    if kwargs.get('ReduceOnly')==True:
+        if exchange.id=='binanceusdm':
+            params['reduceOnly']='true'
+        else:
+            params['reduce_only']=ReduceOnly
+
+    if params!={}:
+        order=ccxtAPI("create_order",exchange, pair, m, action, amount, price, params)
+    else:
+        order=ccxtAPI("create_order",exchange, pair, m, action, amount, price)
+
+    if order['id']!=None:
+        Active['JRLog'].Write("|- Order Confirmation ID: "+order['id'])
+
+        JRRledger.WriteLedger(exchange, Active, pair, m, action, amount, price, order, ln)
+        return order
+
+    return None
 
 # This function is used to access ALL ccxt modules with a retry
 # functionality built in.
