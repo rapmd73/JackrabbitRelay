@@ -19,6 +19,7 @@ import oandapyV20.endpoints.instruments as v20Instruments
 import oandapyV20.endpoints.pricing as v20Pricing
 import oandapyV20.endpoints.orders as v20Orders
 import oandapyV20.endpoints.positions as v20Positions
+import oandapyV20.contrib.requests as v20Requests
 
 import JRRconfig
 import JRRlog
@@ -96,6 +97,14 @@ def GetTicker(exchange,Active,**kwargs):
     res=v20Pricing.PricingInfo(accountID=Active['AccountID'],params=params)
     results=oandaAPI("GetTicker",exchange,Active,request=res)
     return results
+
+# Place order. Return order ID and DON'T wait on limit orders. That needs
+# to be a separate functionality.
+# PlaceOrder(exchange, Active, pair=pair, orderType=orderType, action=action, amount=amount, 
+#   close=close, ReduceOnly=ReduceOnly, LedgerNote=ledgerNote)
+
+def PlaceOrder(exchange,Active,**kwargs):
+    return None
 
 def oandaAPI(function,exchange,Active,**kwargs):
     req=kwargs.get('request')
