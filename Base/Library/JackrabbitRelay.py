@@ -256,11 +256,11 @@ class JackrabbitRelay:
     # Rotate API key/Secret
 
     def RotateKeys(self):
-        self.CurrentKey=(os.getpid()%len(self.keys))
+        self.CurrentKey=(os.getpid()%len(self.Keys))
         self.Active=self.Keys[self.CurrentKey]
 
         if self.Framework=='ccxt':
-            self.ccxt=JRRccxt.SetExchangeAPI(self.ccxt,self.Active,Notify=False)
+            self.ccxt=JRRccxt.SetExchangeAPI(self.ccxt,self.Active,notify=False)
 
     # Login to a given exchange
 
