@@ -280,55 +280,6 @@ def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLi
 ### Rewritten for single retry loop and JRR class
 ###
 
-# If fetch_ohlcv fails, revert to fetch_ticker and parse it manually
-# if open is None, use low.
-
-def FetchRetry(exchange,pair,tf,RetryLimit):
-    ohlcv=GetOHLCV(exchange,pair,tf,RetryLimit)
-    ticker=GetTicker(exchange,pair,RetryLimit)
-
-    ohlc=[]
-    if ohlcv==None:
-        ohlc.append(ticker['timestamp'])
-        if ticker['open']==None:
-            ohlc.append(ticker['low'])
-        else:
-            ohlc.append(ticker['open'])
-        ohlc.append(ticker['high'])
-        ohlc.append(ticker['low'])
-        ohlc.append(ticker['close'])
-    else:
-        for i in range(6):
-            ohlc.append(ohlcv[0][i])
-
-    return ohlc,ticker
-
-def GetOHLCV(exchange,Active,**kwargs):
-    ohlcv=ccxtAPI("fetch_ohlcv",exchange,Active,**kwargs)
-    print(ohlcv)
-
-    ohlc=[]
-    if ohlcv==None:
-        ohlc.append(ticker['timestamp'])
-        if ticker['open']==None:
-            ohlc.append(ticker['low'])
-        else:
-            ohlc.append(ticker['open'])
-        ohlc.append(ticker['high'])
-        ohlc.append(ticker['low'])
-        ohlc.append(ticker['close'])
-
-    return ohlc
-
-def GetTicker(exchange,Active,**kwargs):
-    ticker=ccxtAPI("fetch_ticker",exchange,Active,**kwargs)
-
-    ohlc=[]
-    for i in range(6):
-        ohlc.append(ohlcv[0][i])
-
-    return ticker
-
 # Register the exchange
 
 def ExchangeLogin(exchangeName,Config,Active,Notify=True,Sandbox=False):
@@ -386,6 +337,55 @@ def SetExchangeAPI(exchange,Active,notify=False):
         exchange.enableRateLimit=False
 
     return(exchange)
+
+# If fetch_ohlcv fails, revert to fetch_ticker and parse it manually
+# if open is None, use low.
+
+def FetchRetry(exchange,pair,tf,RetryLimit):
+    ohlcv=GetOHLCV(exchange,pair,tf,RetryLimit)
+    ticker=GetTicker(exchange,pair,RetryLimit)
+
+    ohlc=[]
+    if ohlcv==None:
+        ohlc.append(ticker['timestamp'])
+        if ticker['open']==None:
+            ohlc.append(ticker['low'])
+        else:
+            ohlc.append(ticker['open'])
+        ohlc.append(ticker['high'])
+        ohlc.append(ticker['low'])
+        ohlc.append(ticker['close'])
+    else:
+        for i in range(6):
+            ohlc.append(ohlcv[0][i])
+
+    return ohlc,ticker
+
+def GetOHLCV(exchange,Active,**kwargs):
+    ohlcv=ccxtAPI("fetch_ohlcv",exchange,Active,**kwargs)
+    print(ohlcv)
+
+    ohlc=[]
+    if ohlcv==None:
+        ohlc.append(ticker['timestamp'])
+        if ticker['open']==None:
+            ohlc.append(ticker['low'])
+        else:
+            ohlc.append(ticker['open'])
+        ohlc.append(ticker['high'])
+        ohlc.append(ticker['low'])
+        ohlc.append(ticker['close'])
+
+    return ohlc
+
+def GetTicker(exchange,Active,**kwargs):
+    ticker=ccxtAPI("fetch_ticker",exchange,Active,**kwargs)
+
+    ohlc=[]
+    for i in range(6):
+        ohlc.append(ohlcv[0][i])
+
+    return ticker
 
 # Fetch the position of a given of a pair
 # CCXT only
@@ -481,14 +481,14 @@ def PlaceOrder(exchange,Active,**kwargs):
             params['reduce_only']=ReduceOnly
 
     if params!={}:
-        order=ccxtAPI("create_order",exchange, pair, m, action, amount, price, params)
+        order=ccxtAPI("create_order",exchange, Active, symbol=pair, type=m, side=action, amount=amount, price=price, params=params)
     else:
-        order=ccxtAPI("create_order",exchange, pair, m, action, amount, price)
+        order=ccxtAPI("create_order",exchange, Active, symbol=pair, type=m, side=action, amount=amount, price=price)
 
     if order['id']!=None:
         Active['JRLog'].Write("|- Order Confirmation ID: "+order['id'])
 
-        JRRledger.WriteLedger(exchange, Active, pair, m, action, amount, price, order, ln)
+        #JRRledger.WriteLedger(exchange, Active, pair, m, action, amount, price, order, ln)
         return order
 
     return None
@@ -497,8 +497,8 @@ def PlaceOrder(exchange,Active,**kwargs):
 # functionality built in.
 #
 # examples:
-# markets=ccxtAPI("load_markets",exchange,RetryLimit)
-# balance=ccxtAPI("fetch_balance",exchange,RetryLimit)
+# markets=ccxtAPI("load_markets",exchange)
+# balance=ccxtAPI("fetch_balance",exchange)
 
 def ccxtAPI(function,exchange,Active,**kwargs):
     exchangeName=exchange.name.lower()
@@ -536,7 +536,6 @@ def ccxtAPI(function,exchange,Active,**kwargs):
     done=False
     while not done:
         try:
-            #ohlcv=exchange.fetch_ohlcv(symbol=pair,timeframe=tf,limit=1)
             result=callCCXT(**kwargs)
         except Exception as e:
             if exchangeName=='kucoin':
