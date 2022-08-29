@@ -459,7 +459,7 @@ def PlaceOrder(exchange,Active,**kwargs):
     order=None
     pair=kwargs.get('pair')
     m=kwargs.get('orderType').lower()
-    action=kwargs.get('action')
+    action=kwargs.get('action').lower()
     amount=kwargs.get('amount')
     price=kwargs.get('price')
     ro=kwargs.get('ReduceOnly')
