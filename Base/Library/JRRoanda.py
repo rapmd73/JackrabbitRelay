@@ -100,11 +100,41 @@ def GetTicker(exchange,Active,**kwargs):
 
 # Place order. Return order ID and DON'T wait on limit orders. That needs
 # to be a separate functionality.
+#
+# Arg sequence:
+#   symbol, type, side (action), amount, price, params
+#
 # PlaceOrder(exchange, Active, pair=pair, orderType=orderType, action=action, amount=amount, 
 #   close=close, ReduceOnly=ReduceOnly, LedgerNote=ledgerNote)
+#
+# IMPORTANT: buy and sell are TWO DIFFERENT END POINTS
 
 def PlaceOrder(exchange,Active,**kwargs):
-    return None
+    pair=kwargs.get('pair')
+    m=kwargs.get('orderType').upper()
+    action=kwargs.get('action').lower()
+    amount=kwargs.get('amount')
+    price=kwargs.get('price')
+    ro=kwargs.get('ReduceOnly')
+    ln=kwargs.get('LedgerNote')
+
+    if(action=='buy'):
+        order={}
+        order['price']=str(price)
+        order['timeInForce']='GTC'
+        order['instrument']=pair.replace('/','_')
+        order['units']=str(amount)
+        order['type']=m
+        order['positionFill']='DEFAULT'
+        params={}
+        params['order']=order
+        data=json.dumps(params)
+        print(json.dumps(params,indent=2))
+
+        res=v20Orders.OrderCreate(accountID=Active['AccountID'],data=data)
+        results=oandaAPI("OrderCreate",exchange,Active,request=res)
+
+    return results
 
 def oandaAPI(function,exchange,Active,**kwargs):
     req=kwargs.get('request')
