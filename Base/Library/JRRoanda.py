@@ -110,7 +110,7 @@ def GetTicker(exchange,Active,**kwargs):
 # IMPORTANT: buy and sell are TWO DIFFERENT END POINTS
 
 def PlaceOrder(exchange,Active,**kwargs):
-    pair=kwargs.get('pair')
+    pair=kwargs.get('pair').replace('/','_')
     m=kwargs.get('orderType').upper()
     action=kwargs.get('action').lower()
     amount=kwargs.get('amount')
@@ -120,19 +120,29 @@ def PlaceOrder(exchange,Active,**kwargs):
 
     if(action=='buy'):
         order={}
-        order['price']=str(price)
-        order['timeInForce']='GTC'
-        order['instrument']=pair.replace('/','_')
+        if m=='LIMIT':
+            order['price']=str(price)
         order['units']=str(amount)
+        order['instrument']=pair
+        order['timeInForce']='GTC'
         order['type']=m
         order['positionFill']='DEFAULT'
         params={}
         params['order']=order
-        data=json.dumps(params)
-        print(json.dumps(params,indent=2))
 
-        res=v20Orders.OrderCreate(accountID=Active['AccountID'],data=data)
+        res=v20Orders.OrderCreate(accountID=Active['AccountID'],data=params)
         results=oandaAPI("OrderCreate",exchange,Active,request=res)
+    elif (action=='sell'):
+        params={}
+        if amount.upper()!='ALL':
+            # amount is STR, need float for abs()
+            params['longUnits']=str(abs(float(amount)))
+        else:
+            params['longUnits']=amount
+        res=v20Positions.PositionClose(accountID=Active['AccountID'],instrument=pair,data=params)
+        results=oandaAPI("PositionClose",exchange,Active,request=res)
+    else:
+        Active['JRLog'].Error("PlaceOrder","Action is neither BUY nor SELL")
 
     return results
 
