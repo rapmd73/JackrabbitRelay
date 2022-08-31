@@ -108,6 +108,8 @@ def GetTicker(exchange,Active,**kwargs):
 #   close=close, ReduceOnly=ReduceOnly, LedgerNote=ledgerNote)
 #
 # IMPORTANT: buy and sell are TWO DIFFERENT END POINTS
+#
+# Market orders are fill or kill (FOK) for timeInForce by default. GTC will NOT work.
 
 def PlaceOrder(exchange,Active,**kwargs):
     pair=kwargs.get('pair').replace('/','_')
@@ -122,9 +124,9 @@ def PlaceOrder(exchange,Active,**kwargs):
         order={}
         if m=='LIMIT':
             order['price']=str(price)
+            order['timeInForce']='GTC'
         order['units']=str(amount)
         order['instrument']=pair
-        order['timeInForce']='GTC'
         order['type']=m
         order['positionFill']='DEFAULT'
         params={}
