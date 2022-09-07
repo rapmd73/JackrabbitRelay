@@ -304,6 +304,9 @@ class JackrabbitRelay:
             self.Result=JRRccxt.ccxtAPI("fetch_balance",self.ccxt,self.Active)
             self.Result=JRRccxt.GetBalance(self.Result,asset)
             return self.Result
+        elif self.Framework=='oanda':
+            self.Result=JRRoanda.GetBalance(self.oanda,self.Active)
+            return self.Result
 
     # Get the exchange positions. For and non-spot market
 
@@ -325,7 +328,7 @@ class JackrabbitRelay:
             self.Result=JRRccxt.GetContracts(self.Result,Asset)
             return self.Result
         elif self.Framework=='oanda':
-            self.Result=JRRoanda.GetPosition(self.Result,Asset)
+            self.Result=JRRoanda.GetPosition(self.oanda,self.Active,Asset)
             return self.Result
 
     # Get OHLCV data from exchange
