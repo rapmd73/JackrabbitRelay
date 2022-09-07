@@ -45,10 +45,10 @@ def GetMarkets(exchange,Active):
         markets[asset]=cur
     return markets
 
-def GetBalances(exchange,Active):
+def GetBalance(exchange,Active):
     res=v20Accounts.AccountSummary(accountID=Active['AccountID'])
     results=oandaAPI("GetBalances",exchange,Active,request=res)
-    return results['account']
+    return float(results['account']['balance'])
 
 def GetPositions(exchange,Active):
     res=v20Positions.OpenPositions(accountID=Active['AccountID'])
@@ -57,16 +57,17 @@ def GetPositions(exchange,Active):
 
 # Shorts are negative
 
-def GetPosition(positions,Asset):
+def GetPosition(exchange,Active,Asset):
+    positions=GetPositions(exchange,Active)
     position=0.0
     if positions!=None:
         for pos in positions:
             asset=pos['instrument'].replace('_','/')
             if Asset.upper()==asset:
                 if 'averagePrice' in pos['long']:
-                    position=float(pos['long']['averagePrice'])
+                    position=float(pos['long']['averagePrice'])*float(pos['long']['units'])
                 else:
-                    position=-(float(pos['short']['averagePrice']))
+                    position=-(float(pos['short']['averagePrice']))*float(pos['short']['units'])
             return position
     return None
 
