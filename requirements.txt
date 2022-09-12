@@ -1,3 +1,4 @@
 ccxt
 oandapyV20
-
+plotly
+pandas
