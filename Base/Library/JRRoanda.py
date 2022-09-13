@@ -10,10 +10,12 @@ sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
 import json
 import pathlib
+import math
 from datetime import datetime
 
 import oandapyV20
 import oandapyV20.endpoints
+import oandapyV20.contrib
 import oandapyV20.endpoints.accounts as v20Accounts
 import oandapyV20.endpoints.instruments as v20Instruments
 import oandapyV20.endpoints.pricing as v20Pricing
@@ -137,11 +139,11 @@ def PlaceOrder(exchange,Active,**kwargs):
         results=oandaAPI("OrderCreate",exchange,Active,request=res)
     elif (action=='sell'):
         params={}
-        if amount.upper()!='ALL':
+        if str(amount).upper()!='ALL':
             # amount is STR, need float for abs()
-            params['longUnits']=str(abs(float(amount)))
+            params['longUnits']='"'+str(math.floor(abs(amount)))+'"'
         else:
-            params['longUnits']=amount
+            params['longUnits']="ALL"
         res=v20Positions.PositionClose(accountID=Active['AccountID'],instrument=pair,data=params)
         results=oandaAPI("PositionClose",exchange,Active,request=res)
     else:
@@ -173,4 +175,3 @@ def oandaAPI(function,exchange,Active,**kwargs):
         retry+=1
 
     return result
-
