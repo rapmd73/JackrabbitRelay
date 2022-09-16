@@ -101,6 +101,13 @@ def GetTicker(exchange,Active,**kwargs):
     results=oandaAPI("GetTicker",exchange,Active,request=res)
     return results
 
+def GetOrderBook(exchange,Active,**kwargs):
+    symbol=kwargs.get('symbol').replace('/','_')
+
+    req=v20Instruments.InstrumentsOrderBook(instrument=symbol,params={})
+    results=oandaAPI("GetOrderBook",exchange,Active,request=req)
+    return results['orderBook']['buckets']
+
 # Place order. Return order ID and DON'T wait on limit orders. That needs
 # to be a separate functionality.
 #
