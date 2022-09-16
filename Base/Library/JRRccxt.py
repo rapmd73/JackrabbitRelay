@@ -387,6 +387,9 @@ def GetTicker(exchange,Active,**kwargs):
 
     return ticker
 
+def GetOrderBook(exchange,Active,**kwargs):
+    return ccxtAPI("fetch_order_book",exchange,Active,**kwargs)
+
 # Fetch the position of a given of a pair
 # CCXT only
 

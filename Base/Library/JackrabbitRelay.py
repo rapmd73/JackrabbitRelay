@@ -116,7 +116,7 @@ class JackrabbitRelay:
         else:
             self.Framework=None
         # Whether or not to rotate keys after every API call
-        self.ForceRotateKeys=False
+        self.ForceRotateKeys=True
 
         # Process the payload and configuration at initialization of structure
         self.ProcessCommandLine()
@@ -269,7 +269,7 @@ class JackrabbitRelay:
             if 'Framework' in self.Active:
                 self.Framework=self.Active['Framework']
             else:
-                self.JRLog.Error("Login",self.exchsnge+' framework not given')
+                self.JRLog.Error("Login",self.Exchange+' framework not given')
 
         if self.Framework=='ccxt':
             self.ccxt=JRRccxt.ExchangeLogin(self.Exchange,self.Config,self.Active)
@@ -351,6 +351,17 @@ class JackrabbitRelay:
             return self.Result
         elif self.Framework=='oanda':
             self.Result=JRRoanda.GetTicker(self.oanda,self.Active,**kwargs)
+            return self.Result
+
+    # Get orderbook data from exchange
+
+    def GetOrderBook(self,**kwargs):
+        self.RotateKeys()
+        if self.Framework=='ccxt':
+            self.Result=JRRccxt.GetOrderBook(self.ccxt,self.Active,**kwargs)
+            return self.Result
+        elif self.Framework=='oanda':
+            self.Result=JRRoanda.GetOrderBook(self.oanda,self.Active,**kwargs)
             return self.Result
 
     # Place Order to exchange. Needs to handle buy, sell, close
