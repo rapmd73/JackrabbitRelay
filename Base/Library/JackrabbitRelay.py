@@ -364,6 +364,17 @@ class JackrabbitRelay:
             self.Result=JRRoanda.GetOrderBook(self.oanda,self.Active,**kwargs)
             return self.Result
 
+    # Get open orders
+
+    def GetOpenOrders(self,**kwargs):
+        self.RotateKeys()
+        if self.Framework=='ccxt':
+            self.Result=JRRccxt.GetOpenOrders(self.ccxt,self.Active,**kwargs)
+            return self.Result
+        elif self.Framework=='oanda':
+            self.Result=JRRoanda.GetOpenOrders(self.oanda,self.Active,**kwargs)
+            return self.Result
+
     # Place Order to exchange. Needs to handle buy, sell, close
     # exchange
     # Active, retry limit is in this structure
