@@ -390,6 +390,9 @@ def GetTicker(exchange,Active,**kwargs):
 def GetOrderBook(exchange,Active,**kwargs):
     return ccxtAPI("fetch_order_book",exchange,Active,**kwargs)
 
+def GetOpenOrders(exchange,Active,**kwargs):
+    return ccxtAPI("fetch_open_orders",exchange,Active,**kwargs)
+
 # Fetch the position of a given of a pair
 # CCXT only
 
@@ -557,11 +560,10 @@ def ccxtAPI(function,exchange,Active,**kwargs):
             if retry429>=(RetryLimit*7):
                 retry429=0
                 retry+=1
-        else:
-            retry+=1
+            else:
+                retry+=1
 
     if exchangeName=='kucoin':
         exchange.enableRateLimit=rleSave
         exchange.rateLimit=rlvSave
-
     return result

@@ -21,6 +21,7 @@ import oandapyV20.endpoints.instruments as v20Instruments
 import oandapyV20.endpoints.pricing as v20Pricing
 import oandapyV20.endpoints.orders as v20Orders
 import oandapyV20.endpoints.positions as v20Positions
+import oandapyV20.endpoints.trades as v20Trades
 import oandapyV20.contrib.requests as v20Requests
 
 import JRRconfig
@@ -105,8 +106,16 @@ def GetOrderBook(exchange,Active,**kwargs):
     symbol=kwargs.get('symbol').replace('/','_')
 
     req=v20Instruments.InstrumentsOrderBook(instrument=symbol,params={})
-    results=oandaAPI("GetOrderBook",exchange,Active,request=req)
+    results=oandaAPI("GetOpenOrders",exchange,Active,request=req)
     return results['orderBook']['buckets']
+
+def GetOpenOrders(exchange,Active,**kwargs):
+    symbol=kwargs.get('symbol').replace('/','_')
+    params={"instruments":symbol }
+
+    req=v20Trades.TradesList(accountID=Active['AccountID'],params=params)
+    results=oandaAPI("GetOrderBook",exchange,Active,request=req)
+    return results['trades']
 
 # Place order. Return order ID and DON'T wait on limit orders. That needs
 # to be a separate functionality.
