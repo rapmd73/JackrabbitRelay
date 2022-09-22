@@ -100,7 +100,15 @@ def GetTicker(exchange,Active,**kwargs):
 
     res=v20Pricing.PricingInfo(accountID=Active['AccountID'],params=params)
     results=oandaAPI("GetTicker",exchange,Active,request=res)
-    return results
+
+    # Build the forex pair dictionary
+
+    ForexPair={}
+    ForexPair['Ask']=round(float(results['prices'][0]['asks'][0]['price']),5)
+    ForexPair['Bid']=round(float(results['prices'][0]['bids'][0]['price']),5)
+    ForexPair['Spread']=round(ForexPair['Ask']-ForexPair['Bid'],5)
+
+    return ForexPair
 
 def GetOrderBook(exchange,Active,**kwargs):
     symbol=kwargs.get('symbol').replace('/','_')

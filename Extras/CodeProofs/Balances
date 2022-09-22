@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+
+import JackrabbitRelay as JRR
+
+###
+### Main code base. Place order on exchange
+###
+
+relay=JRR.JackrabbitRelay()
+if relay.GetArgsLen() > 2:
+    exchangeName=relay.GetExchange()
+    account=relay.GetAccount()
+else:
+    print("An exchange and a (sub)account must be provided.")
+    sys.exit(1)
+
+markets=relay.GetMarkets()
+
+
+if relay.GetFramework()=='ccxt':
+    balances=relay.GetBalances()
+    if balances!=None:
+        coinList=balances['total']
+        for coin in coinList:
+            bal=float(balances['total'][coin])
+
+            if bal>0.0:
+                print(f"{coin:12} {bal:12.8f}")
+
+        positions=relay.GetPositions()
+        if positions!=None:
+            for pos in positions:
+                print(pos)
+                bal=float(pos['contracts'])
+                if bal>0.0:
+                    print(f"{pos['symbol']:12} {bal:12.8f} {pos['side']:5}")
+elif relay.GetFramework()=='oanda':
+    balance=relay.GetBalance(None)
+    if balance!=None:
+        print(f"{'Balance':12} {balance:16.8f}")
+
+        positions=relay.GetPositions()
+        if positions!=None:
+            for pos in positions:
+                asset=pos['instrument'].replace('_','/')
+                bal=relay.GetPosition(asset)
+                print(f"{asset:12} {bal:12.8f}")
+
+#print()
+#print(relay.GetBalance("USD"))
+#print(relay.GetContracts("STEP/USD:USD"))

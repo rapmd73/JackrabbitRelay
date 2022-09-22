@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+
+import JackrabbitRelay as JRR
+
+###
+### Main code base. Place order on exchange
+###
+
+relay=JRR.JackrabbitRelay()
+if relay.GetArgsLen() > 4:
+    exchangeName=relay.GetExchange()
+    account=relay.GetAccount()
+    asset=relay.GetAsset()
+    tf=relay.GetArgs(4)
+else:
+    print("An exchange, (sub)account, an asset, and a timeframe must be provided.")
+    sys.exit(1)
+
+if relay.GetArgsLen() > 5:
+    count=int(relay.GetArgs(5))
+else:
+    count=1
+
+markets=relay.GetMarkets()
+
+ohlcv=relay.GetOHLCV(symbol=asset,timeframe=tf,limit=count)
+
+for slice in ohlcv:
+    print(slice)
+
