@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+
+import JackrabbitRelay as JRR
+
+###
+### Main code base. Place order on exchange
+###
+
+relay=JRR.JackrabbitRelay()
+if relay.GetArgsLen() > 2:
+    exchangeName=relay.GetExchange()
+    account=relay.GetAccount()
+else:
+    print("An exchange and a (sub)account must be provided.")
+    sys.exit(1)
+
+markets=relay.GetMarkets()
+
+if relay.GetFramework()=='oanda':
+    for cur in markets:
+        asset=markets[cur]['displayName']
+        print(f'{asset:12}')
+elif relay.GetFramework()=='ccxt':
+    for cur in markets:
+        asset=markets[cur]['symbol']
+        print(f'{asset:12}')
+
+
