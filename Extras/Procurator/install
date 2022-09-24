@@ -1,9 +1,0 @@
-#!/bin/bash
-
-cd /home/GitHub/JackrabbitRelay/Extras/Procurator
-
-echo Installing/Updating Procurator
-
-mkdir -p /home/Procurator/ > /dev/null 2>&1
-cp -r * /home/Procurator/
-

@@ -14,10 +14,21 @@ from datetime import datetime
 import subprocess
 import json
 
-import JRRconfig
-
-LogDirectory="/home/JackrabbitRelay2/Logs"
+Version="0.0.0.1.0"
 BaseDirectory='/home/JackrabbitRelay2/Base'
+ConfigDirectory='/home/JackrabbitRelay2/Config'
+LogDirectory="/home/JackrabbitRelay2/Logs"
+NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
+
+# Filter end of line and hard spaces
+
+def pFilter(s):
+    d=s.replace("\\n","").replace("\\t","").replace("\\r","")
+
+    for c in '\t\r\n \u00A0':
+        d=d.replace(c,'')
+
+    return(d)
 
 # Write pid in port file
 
@@ -78,25 +89,28 @@ def ProcessTrade(addr,payload):
     # or multiple JSON messages
 
     try:
-        trades=json.loads(payload,strict=False)
+        trades=json.loads(pFilter(payload),strict=False)
     except:
         trades=None
-        WriteLog(addr,"Damaged payload:"+str(payload))
+        WriteLog(addr,"Damaged payload: "+str(payload))
 
     if trades!=None:
         if type(trades)==dict:
             res=ProcessSingleTrade(addr,trades)
-        else:
+        elif type(trades)==list:
             for trade in trades:
                 res+=str(ProcessSingleTrade(addr,trade))
+        else:
+            trades=None
+            WriteLog(addr,"Unreconized payload type: "+str(payload))
 
     if type(res)!=bytes:
         res=res.encode('utf-8')
     return res
 
 def ProcessStatistatorium(addr,path):
-    ws=JRRconfig.BaseDirectory+'/Statistatorium'
-    idf=JRRconfig.ConfigDirectory+'/Identity.cfg'
+    ws=BaseDirectory+'/Statistatorium'
+    idf=ConfigDirectory+'/Identity.cfg'
 
     if os.path.exists(ws) and os.path.exists(idf):
         transactor= [ ws ]
@@ -107,15 +121,15 @@ def ProcessStatistatorium(addr,path):
         subp.stdin.write(path.encode())
         res=subp.communicate()[0]
     else:
-        res=JRRconfig.NOhtml
+        res=NOhtml
         WriteLog(addr,f"Transactor not found.")
 
     return res
 
 def CheckIPaddress(addr):
-    fn=JRRconfig.ConfigDirectory+'/IPList.cfg'
+    fn=ConfigDirectory+'/IPList.cfg'
     if os.path.exists(fn):
-        cf=open(fn,'rt+')
+        cf=open(fn,'rt')
         for line in cf.readlines():
             line=line.strip()
             if len(line)>0 and line[0]!='#':
@@ -193,8 +207,18 @@ def main():
         print("Port number not given, exiting...")
         sys.exit(2)
 
+    # Sanity check: Identity.cfg REQUIRED!
+    if os.path.exists(ConfigDirectory+'/Identity.cfg'):
+        print("Identity.cfg is now REQUIRED, but not found.")
+        sys.exit(2)
+
+    # Sanity check: IPList.cfg REQUIRED!
+    if os.path.exists(ConfigDirectory+'/IPList.cfg'):
+        print("IPList.cfg is now REQUIRED, but not found.")
+        sys.exit(2)
+
     WritePID(port)
-    WriteLog(JRRconfig.Version,"Jackrabbit Relay")
+    WriteLog(Version,"Jackrabbit Relay")
 
     try:
         server = ForkingSimpleServer(('', port), Handler)
@@ -204,7 +228,7 @@ def main():
             print('Another program is using this port: '+str(port))
         else:
             print(x)
-        WriteLog(JRRconfig.Version,x)
+        WriteLog(Version,x)
         sys.exit(1)
 
     addr, port = server.server_address

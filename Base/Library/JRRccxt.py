@@ -428,6 +428,14 @@ def GetBalance(balances,base):
 
 # Fetch the market list
 
+def LoadMarkets(exchange,RetryLimit,Notify=True):
+    markets=ccxtAPI("load_markets",exchange,RetryLimit)
+
+    if Notify:
+        Active['JRLog'].Write("Markets loaded")
+
+    return markets
+
 def GetMarkets(exchange,pair,RetryLimit,Notify=True):
     markets=LoadMarkets(exchange,RetryLimit,Notify)
 
@@ -440,14 +448,6 @@ def GetMarkets(exchange,pair,RetryLimit,Notify=True):
     if 'active' in exchange.markets[pair]:
         if exchange.markets[pair]['active']==False:
             Active['JRLog'].Error('Get Markets',pair+" is not active on this exchange")
-
-    return markets
-
-def LoadMarkets(exchange,RetryLimit,Notify=True):
-    markets=ccxtAPI("load_markets",exchange,RetryLimit)
-
-    if Notify:
-        Active['JRLog'].Write("Markets loaded")
 
     return markets
 
