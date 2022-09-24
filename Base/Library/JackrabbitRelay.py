@@ -35,7 +35,7 @@ class JackrabbitLog:
         if filename==None:
             self.logfile=self.basename
         else:
-            self.logfile=self.basename+'.'+filename
+            self.logfile=self.basename+'.'+filename.replace('/','')
 
     def Write(self,text):
         pid=os.getpid()
@@ -43,7 +43,8 @@ class JackrabbitLog:
 
         s=f'{time} {pid:7.0f} {text}\n'
 
-        fh=open(self.LogDirectory+'/'+self.logfile+'.log','a')
+        fn=self.LogDirectory+'/'+self.logfile+'.log'
+        fh=open(fn,'a+')
         fh.write(s)
         fh.close()
         print(s.rstrip())
@@ -119,10 +120,17 @@ class JackrabbitRelay:
         self.ForceRotateKeys=True
 
         # Process the payload and configuration at initialization of structure
+        # Must be first function called
         self.ProcessCommandLine()
+
+        # if no command line, check for stabdard input
         if self.argslen==1:
             self.ProcessPayload()
+
+        # Process config file
         self.ProcessConfig()
+
+        # Login to exchange/Broker
         self.Login()
 
     def GetExchange(self):
@@ -183,6 +191,12 @@ class JackrabbitRelay:
             self.JRLog.Error('Processing Payload','Missing asset identifier')
         self.Order['Asset']=self.Order['Asset'].upper()
 
+        # Set up logging data
+
+        if self.Exchange!=None and self.Account!=None and self.Asset!=None:
+            lname=f"{self.Exchange}.{self.Account}.{self.Asset}"
+            self.JRLog.SetLogName(lname.replace('/',''))
+
     # Read the exchange config file and load API/SECRET for a given (sub)account.
     # MAIN is reserved for the main account
 
@@ -190,15 +204,6 @@ class JackrabbitRelay:
         logProcess={}
         logProcess['JRLog']=self.JRLog
         keys=[]
-
-        if self.argslen>=1:
-            self.Basename=self.args[0]
-        if self.argslen>=2:
-            self.Exchange=self.args[1].lower()
-        if self.argslen>=3:
-            self.Account=self.args[2]
-        if self.argslen>=4:
-            self.Asset=self.args[3].upper()
 
         # Stop processing here if we don't want to proceed with private
         # API, but want to use only public API.
@@ -243,6 +248,26 @@ class JackrabbitRelay:
     def ProcessCommandLine(self):
         self.args=sys.argv
         self.argslen=len(sys.argv)
+
+        # Set up exchange, account and asset
+        if self.argslen>=1:
+            self.Basename=self.args[0]
+        if self.argslen>=2:
+            self.Exchange=self.args[1].lower()
+        if self.argslen>=3:
+            self.Account=self.args[2]
+        if self.argslen>=4:
+            self.Asset=self.args[3].upper()
+
+        # Set up logging file to reference exchange, account, and asset
+        if self.Exchange!=None and self.Account!=None and self.Asset!=None:
+            lname=f"{self.Exchange}.{self.Account}.{self.Asset}"
+        elif self.Exchange!=None and self.Account!=None:
+            lname=f"{self.Exchange}.{self.Account}"
+        elif self.Exchange!=None:
+            lname=f"{self.Exchange}"
+
+        self.JRLog.SetLogName(lname.replace('/',''))
 
     def GetArgsLen(self):
         return self.argslen
@@ -394,13 +419,6 @@ class JackrabbitRelay:
         elif self.Framework=='oanda':
             self.Result=JRRoanda.PlaceOrder(self.oanda,self.Active,**kwargs)
             return self.Result
-
-    # Get the order that was processed
-
-#    def GetOrder(self,**kwargs):
-#        if self.Framework=='ccxt':
-#            self.Result=JRRccxt.ccxtAPI("fetch_Order",self.ccxt,self.Active,**kwargs)
-#            return self.Result
 
 """
 

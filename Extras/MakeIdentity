@@ -6,7 +6,7 @@ letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&
 llen=len(letters)
 
 def main():
-    l=random.randrange(67,257)
+    l=random.randrange(1024,2047)
 
     pw=""
     oc=""
