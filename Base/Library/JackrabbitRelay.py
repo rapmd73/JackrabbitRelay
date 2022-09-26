@@ -35,7 +35,7 @@ class JackrabbitLog:
         if filename==None:
             self.logfile=self.basename
         else:
-            self.logfile=self.basename+'.'+filename.replace('/','')
+            self.logfile=self.basename+'.'+filename.replace('/','').replace(':','')
 
     def Write(self,text):
         pid=os.getpid()
@@ -195,7 +195,7 @@ class JackrabbitRelay:
 
         if self.Exchange!=None and self.Account!=None and self.Asset!=None:
             lname=f"{self.Exchange}.{self.Account}.{self.Asset}"
-            self.JRLog.SetLogName(lname.replace('/',''))
+            self.JRLog.SetLogName(lname.replace('/','').replace(':',''))
 
     # Read the exchange config file and load API/SECRET for a given (sub)account.
     # MAIN is reserved for the main account

@@ -165,7 +165,11 @@ def PlaceOrder(exchange,Active,**kwargs):
         params={}
         if str(amount).upper()!='ALL':
             # amount is STR, need float for abs()
-            params['longUnits']='"'+str(math.floor(abs(amount)))+'"'
+            amount=float(amount)
+            if float(amount)>=0:
+                params['longUnits']='"'+str(math.floor(abs(amount)))+'"'
+            else:
+                params['shortUnits']='"'+str(math.floor(abs(amount)))+'"'
         else:
             params['longUnits']="ALL"
         res=v20Positions.PositionClose(accountID=Active['AccountID'],instrument=pair,data=params)
