@@ -4,14 +4,14 @@ Jackrabbit Relay is an API endpoint for stock, forex and cryptocurrency
 exchanges that accept REST webhooks.
 
 **Be sure NOT to use the alpha-1 branch**
-The stable-1 branch is a fully functional framework as backup for the main branch.
+The **stable-1** branch is a fully functional framework as backup for the main branch.
 
 ## Disclaimer
 
 Please note RAPMD Crypto, LLC ("the Company"), does not provide financial
 advice. The Company, and any associated companies, owners, employees,
 agents or volunteers, do not hold  themselves out as Commodity Trading
-Advisors (“CTAs”) or Authorized Financial Advisors  (“AFAs”). The owners,
+Advisors ("CTAs") or Authorized Financial Advisors  ("AFAs"). The owners,
 publishers, employees and agents are not licensed under securities laws 
 to address particular investment situations. No information presented
 constitutes a  recommendation to buy, sell or hold any security,
@@ -49,19 +49,27 @@ substantial risk. Any past  results provided are intended as examples
 only and are in no way a reflection of what an individual  could have
 made or lost in the same situation.
 
+## Critical Differences
+
+Critical differences between Version 1 are 2 are:
+
+	1. Identity.cfg is absolutely **REQUIRED**.
+	2. IPList.cfg  is absolutely **REQUIRED**.
+
+Security is more aggressive now, including and upgraded identity generator.
+
 ## Notes
 
 The **alpha-1** branch is the current active branch. **IT IS NOT STABLE TO USE**. 
 
-Rebuilding of the CCXT interface and adding the OANDA API are currently ongoing. 
-The FIX protocol is slated to be assed as well
+Rebuilding of the CCXT interface and adding the OANDA API are currently ongoing. The FIX
+protocol is slated to be assed as well.
 
 The **stable-1** branch is a frozen copy of version 1 of Jackrabbit Relay.
 
 The **main** branch is currently frozen.
 
-**Special Thanks** to the following people for providing me with testing
-accounts.
+**Special Thanks** to the following people for providing me with testing accounts.
 
     1. Me4tGrind3r | Jonas
     2. MisterCrease
@@ -69,8 +77,8 @@ accounts.
     4. Cozzy
     5. bobo2314
 
-Having the test accounts really help in tracking issues and solving
-problems. If you would like to donate a test account, please DM me of Discord.
+Having the test accounts really help in tracking issues and solving problems. If you would
+like to donate a test account, please DM me of Discord.
 
 ## Video
 
