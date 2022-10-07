@@ -262,20 +262,6 @@ def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLi
 
     return data
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ###
 ### Rewritten for single retry loop and JRR class
 ###
