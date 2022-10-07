@@ -53,21 +53,27 @@ def WriteLog(addr,msg):
 
 def ProcessSingleTrade(addr,trades):
     res=""
+    idf=ConfigDirectory+'/Identity.cfg'
 
-    exchange=None
+    if not os.path.exists(idf):
+        WriteLog(addr,"Identity not found")
+        return res
+
+    exchange=trades['Exchange'].lower()
     fn=None
     ts=BaseDirectory+'/PlaceOrder.'
 
     if "Exchange" in trades and "Market" in trades:
-        exchange=trades['Exchange'].lower()
         market=trades['Market'].lower()
         fn=ts+exchange+'.'+market
+        # if market not part of place order program, revert to exchange only
         if not os.path.exists(fn):
-            exchange=trades['Exchange'].lower()
             fn=ts+exchange
     elif "Exchange" in trades:
-        exchange=trades['Exchange'].lower()
         fn=ts+exchange
+    else:
+        WriteLog(addr,"Transactor not found for exchange and/or market: "+fn)
+        return res
 
     if os.path.exists(fn):
         transactor=[ fn ]
@@ -103,6 +109,7 @@ def ProcessTrade(addr,payload):
         else:
             trades=None
             WriteLog(addr,"Unreconized payload type: "+str(payload))
+            return res
 
     if type(res)!=bytes:
         res=res.encode('utf-8')
@@ -139,8 +146,11 @@ def CheckIPaddress(addr):
         cf.close()
         return False
 
-    # if file doesn't exist, revert to previous functionality
-    return True
+    # V1 allowed trades without ip list verification. V2 will NOT any trades without the ip
+    # list file. if file doesn't exist, don't accept trade. This is going to be a real pain in
+    # the ass with load balancers, but overall security must be at the forfront.
+
+    return False
 
 class Handler(BaseHTTPRequestHandler):
 
@@ -153,6 +163,8 @@ class Handler(BaseHTTPRequestHandler):
         fh=open(LogDirectory+'/JackrabbitRelay.log','a')
         fh.write(s)
         fh.close()
+
+    # Handle URL dispatcher here.
 
     def do_GET(self):
         addr=self.client_address[0]
@@ -169,6 +181,8 @@ class Handler(BaseHTTPRequestHandler):
                 res=res.encode('utf-8')
             self.wfile.write(res)
         return res
+
+    # Handle trades here
 
     def do_POST(self):
         res=None

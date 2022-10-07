@@ -71,7 +71,7 @@ def GetPosition(exchange,Active,Asset):
                     position=float(pos['long']['averagePrice'])*float(pos['long']['units'])
                 else:
                     position=-(float(pos['short']['averagePrice']))*float(pos['short']['units'])
-            return position
+                return position
     return None
 
 def GetOHLCV(exchange,Active,**kwargs):
@@ -131,8 +131,8 @@ def GetOpenOrders(exchange,Active,**kwargs):
 # Arg sequence:
 #   symbol, type, side (action), amount, price, params
 #
-# PlaceOrder(exchange, Active, pair=pair, orderType=orderType, action=action, amount=amount, 
-#   close=close, ReduceOnly=ReduceOnly, LedgerNote=ledgerNote)
+# PlaceOrder(pair=pair, orderType=orderType, action=action, amount=amount, 
+#   close=close, Ticket=45, ReduceOnly=ReduceOnly, LedgerNote=ledgerNote)
 #
 # IMPORTANT: buy and sell are TWO DIFFERENT END POINTS
 #
@@ -146,6 +146,7 @@ def PlaceOrder(exchange,Active,**kwargs):
     price=kwargs.get('price')
     ro=kwargs.get('ReduceOnly')
     ln=kwargs.get('LedgerNote')
+    ticket=kwargs.get('ticket')
 
     if(action=='buy'):
         order={}
@@ -163,17 +164,28 @@ def PlaceOrder(exchange,Active,**kwargs):
         results=oandaAPI("OrderCreate",exchange,Active,request=res)
     elif (action=='sell'):
         params={}
-        if str(amount).upper()!='ALL':
-            # amount is STR, need float for abs()
-            amount=float(amount)
-            if float(amount)>=0:
-                params['longUnits']='"'+str(math.floor(abs(amount)))+'"'
+        if ticket==None:
+            if str(amount).upper()!='ALL':
+                # amount is STR, need float for abs()
+                amount=float(amount)
+                if float(amount)>=0:
+                    params['longUnits']=str(math.floor(abs(amount)))
+                else:
+                    params['shortUnits']=str(math.floor(abs(amount)))
             else:
-                params['shortUnits']='"'+str(math.floor(abs(amount)))+'"'
+                params['longUnits']="ALL"
+            res=v20Positions.PositionClose(accountID=Active['AccountID'],instrument=pair,data=params)
+            results=oandaAPI("PositionClose",exchange,Active,request=res)
         else:
-            params['longUnits']="ALL"
-        res=v20Positions.PositionClose(accountID=Active['AccountID'],instrument=pair,data=params)
-        results=oandaAPI("PositionClose",exchange,Active,request=res)
+            if str(amount).upper()!='ALL':
+                # amount is STR, need float for abs()
+                amount=float(amount)
+                if float(amount)>=0:
+                    params['units']=str(math.floor(abs(amount)))
+            else:
+                params['units']="ALL"
+            res=v20Trades.TradeClose(accountID=Active['AccountID'],tradeID=ticket,data=params)
+            results=oandaAPI("TradeClose",exchange,Active,request=res)
     else:
         Active['JRLog'].Error("PlaceOrder","Action is neither BUY nor SELL")
 

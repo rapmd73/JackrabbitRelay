@@ -23,7 +23,7 @@ if relay.GetArgsLen() > 4:
     asset=relay.GetAsset()
     amount=relay.GetArgs(4)
 else:
-    print("An exchange, (sub)account, and an asset must be provided.")
+    print("An exchange, (sub)account, an asset, and an amount must be provided.")
     sys.exit(1)
 
 markets=relay.GetMarkets()
