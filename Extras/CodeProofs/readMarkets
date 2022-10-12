@@ -23,7 +23,9 @@ else:
     print("An exchange and a (sub)account must be provided.")
     sys.exit(1)
 
-markets=relay.GetMarkets()
+# Already loaded from login
+
+markets=relay.Markets
 
 if relay.GetFramework()=='oanda':
     for cur in markets:
@@ -33,5 +35,3 @@ elif relay.GetFramework()=='ccxt':
     for cur in markets:
         asset=markets[cur]['symbol']
         print(f'{asset:12}')
-
-

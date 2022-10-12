@@ -21,7 +21,7 @@ else:
     print("An exchange, (sub)account, and an asset must be provided.")
     sys.exit(1)
 
-markets=relay.GetMarkets()
+markets=relay.Markets
 
 oo=relay.GetOpenOrders(symbol=asset)
 
@@ -30,7 +30,7 @@ if relay.GetFramework()=='ccxt':
         print(f"{o['symbol']:10} {o['id']} {o['side']:4} {o['status']:7} {o['amount']:16.8f} {o['price']:16.8f}")
 elif relay.GetFramework()=='oanda':
     for o in oo:
-        iu=int(o['initialUnits'])
+        iu=int(o['units'])
         price=float(o['price'])
         if price>=0:
             side='Long'
