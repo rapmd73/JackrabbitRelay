@@ -25,7 +25,6 @@ else:
 
 markets=relay.GetMarkets()
 
-
 if relay.GetFramework()=='ccxt':
     balances=relay.GetBalances()
     if balances!=None:
