@@ -13,10 +13,6 @@ import time
 import json
 import requests
 
-import JRRconfig
-import JRRapi
-import JRRlog
-
 # Reusable file locks, using atomic operations
 # NOT suitable for distributed systems or 
 # Windows. Linux ONLY
@@ -28,9 +24,10 @@ import JRRlog
 
 class FileWatch:
     # Initialize the file name
-    def __init__(self,filename):
+    def __init__(self,filename,Log=None):
         self.filename=filename+'.lock'
         self.RetryLimit=37
+        self.Log=Log
 
     # Try to get a lock on the file
 
@@ -51,9 +48,8 @@ class FileWatch:
 
         p=str(os.getpid())
         tn=self.filename+'.'+p
-        fh=open(tn,'w')
-        fh.write(f"{p}\n")
-        fh.close()
+        txt=f"{p}\n"
+        WriteFile(tn,txt)
 
         isLocked=False
         try:
@@ -83,9 +79,8 @@ class FileWatch:
 
         p=str(os.getpid())
         tn=self.filename+'.'+p
-        fh=open(tn,'w')
-        fh.write(f"{p}\n")
-        fh.close()
+        txt=f"{p}\n"
+        WriteFile(tn,txt)
 
         # Let the battle begin...
 
@@ -97,7 +92,8 @@ class FileWatch:
             except:
                 retry+=1
                 if retry>=RetryLimit:
-                    JRRlog.ErrorLog("FileLock","exclusive access request failed")
+                    if self.Log!=None:
+                        self.Log.ErrorLog("FileLock","exclusive access request failed")
             else:
                 done=True
 
@@ -110,6 +106,27 @@ class FileWatch:
             os.remove(self.filename)
         except:
             pass
+
+# Gewneral file tools
+
+def ReadFile(self,fn):
+    if os.path.exists(fn):
+        cf=open(fn,'r')
+        buffer=cf.read()
+        cf.close()
+    else:
+        buffer=None
+    return buffer
+
+def WriteFile(self,fn,data):
+    cf=open(fn,'w')
+    cf.write(data)
+    cf.close()
+
+def AppendFile(self,fn,data):
+    cf=open(fn,'a')
+    cf.write(data)
+    cf.close()
 
 # Doubly lisked list with sentinel for bidirectional intertion
 #
@@ -356,7 +373,6 @@ class DList:
                 self.dump(current)
                 current=current.GetNext()
 
-
 # Dirty support function to block HTML exchange payloads
 
 def StopHTMLtags(txt):
@@ -368,79 +384,15 @@ def StopHTMLtags(txt):
         pass
     return txt
 
-# Remap TradingView symbol to the exchange symbol
+# Filter end of line and hard spaces
 
-def TradingViewRemap(en,pair):
-    np=pair
-    JRRlog.WriteLog('Symbol Remap')
-    JRRlog.WriteLog('|- In: '+pair)
-    fn=JRRconfig.DataDirectory+'/'+en+'.symbolmap'
-    if os.path.exists(fn):
-        try:
-            raw=pathlib.Path(fn).read_text()
-        except:
-            JRRlog.ErrorLog("TradingView Remap",f"Can't read symbol map for {en}")
+def pFilter(s):
+    d=s.replace("\\n","").replace("\\t","").replace("\\r","")
 
-        TVlist=json.loads(raw)
-        if pair in TVlist:
-            np=TVlist[pair]
-        else:
-            JRRlog.WriteLog('|- Pair not in symbol file, reverting')
-    else:
-        JRRlog.WriteLog('|- No symbol file, reverting')
+    for c in '\t\r\n \u00A0':
+        d=d.replace(c,'')
 
-    JRRlog.WriteLog('|- Out: '+np)
-    return np
-
-# Get the order ID from the result provided
-
-def GetOrderID(res):
-    s=res.find('ID:')+4
-    for e in range(s,len(res)):
-        if res[e]=='\n':
-            break
-    oid=res[s:e]
-
-    return oid
-
-# Webhook processing. This unified layer will communicate with Relay for
-# placing the order and return the results.
-
-def SendWebhook(Active,exchangeName,market,account,orderType,pair,action,amount,price,OverrideMaxAssets=False):
-    if OverrideMaxAssets==True:
-        exc='"OverrideMaxAssets":"Yes", "Exchange":"'+exchangeName+'", "Market":"'+market+'"'
-    else:
-        exc='"Exchange":"'+exchangeName+'", "Market":"'+market+'"'
-
-    account='"Account":"'+account+'", "OrderType":"'+orderType+'"'
-    sym='"Asset":"'+pair+'"'
-    direction='"Action":"'+action.lower()+'"'
-    psize='"Base":"'+str(amount)+'"'+',"Close":"'+str(price)+'"'
-
-    if "Identity" in Active:
-        idl='"Identity":"'+Active['Identity']+'"'
-        cmd='{ '+idl+', '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
-    else:
-        cmd='{ '+exc+', '+account+', '+direction+', '+sym+', '+psize+' }'
-
-    headers={'content-type': 'text/plain', 'Connection': 'close'}
-
-    resp=None
-    res=None
-    try:
-        resp=requests.post(Active['Webhook'],headers=headers,data=cmd)
-        try:
-            r=json.loads(resp.text)
-            try:
-                res=r['message']
-            except:
-                res=json.dumps(r)
-        except:
-            res=resp.text
-    except:
-        res=None
-
-    return res
+    return(d)
 
 # Elastic Delay. This is designed to prevent the VPS from being overloaded
 
@@ -469,321 +421,34 @@ def ElasticDelay():
 
     return delay
 
-# Read the asset list and verify max asset allowance
 
-def ReadAssetList(exchange,account,pair,mp,delete):
-    JRRlog.WriteLog('Verifying maximum asset allowance of '+str(mp))
-    coins={}
-    fn=JRRconfig.DataDirectory+'/'+exchange+'.'+account+'.MaxAssets'
 
-    p=pair.upper()
 
-    fw=FileWatch(fn)
-    fw.Lock()
+###
+### Move to JRR class
+###
 
-    try:
-        if os.path.exists(fn):
-            cf=open(fn,'rt+')
-            buffer=cf.read()
-            cf.close()
-            coins=json.loads(buffer)
+# Remap TradingView symbol to the exchange symbol
 
-            if not p in coins and len(coins)<int(mp) and not delete:
-                JRRlog.WriteLog('|- '+p+' added')
-                coins[p]=time.time()
-            else:
-                if p in coins:
-                    if delete:
-                        JRRlog.WriteLog('|- '+p+' removed')
-                        try:
-                            coins.pop(p,None)
-                        except:
-                            pass
-                    else:
-                        JRRlog.WriteLog('|- '+p+' updated')
-                        coins[p]=time.time()
-        else:
-            if not delete:
-                JRRlog.WriteLog('|- '+p+' added')
-                coins[p]=time.time()
-
-        # Remove any coin over 7 days
-
-        for c in coins:
-            t=(time.time()-coins[c])
-            if t>(7*86400):
-                JRRlog.WriteLog('|- '+c+' aged out')
-                try:
-                    coins.pop(c,None)
-                except:
-                    pass
-
-        WriteAssetList(exchange,account,coins)
-    except:
-        pass
-
-    fw.Unlock()
-
-    if len(coins)>=int(mp) and not p in coins:
-        JRRlog.ErrorLog("MaxAsset Verification",p+' not allowed to trade')
-
-    return coins
-
-def WriteAssetList(exchange,account,coins):
-    fn=JRRconfig.DataDirectory+'/'+exchange+'.'+account+'.MaxAssets'
-
-    if coins=={}:
-        try:
-            os.remove(fn)
-        except:
-            pass
-    else:
-        fh=open(fn,'w')
-        fh.write(json.dumps(coins))
-        fh.close()
-
-# Figure out the PCT type. Needs to identify %B and B%, %Q and Q%
-# Default is previous functionality
-
-def GetPCTtype(currency):
-    c=currency.lower()
-    if 'b%' in c or '%b' in c:
-        vs=c.replace('b%','').replace('%b','').strip()
-        PCTtype='B'
-        pct=float(vs)
-    elif 'q%' in c or '%q' in c:
-        vs=c.replace('q%','').replace('%q','').strip()
-        PCTtype='Q'
-        pct=float(vs)
-    else:
-        vs=c.replace('%','').strip()
-        PCTtype='B'
-        pct=float(vs)
-    return pct,PCTtype
-
-# This list determines a fixed percentage for a coin per balance for the
-# life of the trade, bot just the individual position
-
-def ReadPCTValueList(exchange,account,pair,pct,pcttype,close,delete,RetryLimit):
-    coins={}
-    amount=0
-    en=exchange.name.lower().replace(' ','')
-    quote=exchange.markets[pair]['quote']
-    fn=JRRconfig.DataDirectory+'/'+en+'.'+account+'.PCTvalue'
-
-    p=pair.upper()
-    JRRlog.WriteLog('Checking amount/percentage for '+p)
-
-    fw=FileWatch(fn)
-    fw.Lock()
-
-    try:
-        if os.path.exists(fn):
-            cf=open(fn,'rt+')
-            buffer=cf.read()
-            cf.close()
-            coins=json.loads(buffer)
-
-            if not p in coins and not delete:
-                # Read the existing value
-                jpkt={}
-                bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
-                jpkt['Time']=time.time()
-                jpkt['Volume']=round(((pct/100)*bal),8)
-                jpkt['Amount']=round(jpkt['Volume']/close,8)
-                amount=jpkt['Amount']
-                coins[p]=json.dumps(jpkt)
-                JRRlog.WriteLog('|- '+p+' added')
-                JRRlog.WriteLog('|- Amount: '+str(amount))
-                JRRlog.WriteLog('|- Volume: '+str(jpkt['Volume']))
-            else:
-                if p in coins:
-                    if delete:
-                        # Even if deleted, amount needs to be returned for consistency
-                        jpkt=json.loads(coins[p])
-                        jpkt['Time']=time.time()
-                        if pcttype=='B':
-                            amount=jpkt['Amount']
-                        else:
-                            jpkt['Amount']=round(jpkt['Volume']/close,8)
-                            amount=jpkt['Amount']
-                        JRRlog.WriteLog('|- '+p+' removed')
-                        JRRlog.WriteLog('|- Amount: '+str(amount))
-                        JRRlog.WriteLog('|- Volume: '+str(jpkt['Volume']))
-                        try:
-                            coins.pop(p,None)
-                        except:
-                            pass
-                    else:
-                        # Return existing amount
-                        jpkt=json.loads(coins[p])
-                        jpkt['Time']=time.time()
-                        if pcttype=='B':
-                            amount=jpkt['Amount']
-                        else:
-                            jpkt['Amount']=round(jpkt['Volume']/close,8)
-                            amount=jpkt['Amount']
-                        coins[p]=json.dumps(jpkt)
-                        JRRlog.WriteLog('|- '+p+' updated')
-                        JRRlog.WriteLog('|- Amount: '+str(amount))
-                        JRRlog.WriteLog('|- Volume: '+str(jpkt['Volume']))
-        else:
-            if not delete:
-                jpkt={}
-                bal=JRRapi.GetBalance(exchange,quote,RetryLimit)
-                jpkt['Time']=time.time()
-                jpkt['Volume']=round(((pct/100)*bal),8)
-                jpkt['Amount']=round(jpkt['Volume']/close,8)
-                amount=jpkt['Amount']
-                coins[p]=json.dumps(jpkt)
-                JRRlog.WriteLog('|- '+p+' added')
-                JRRlog.WriteLog('|- Amount: '+str(amount))
-                JRRlog.WriteLog('|- Volume: '+str(jpkt['Volume']))
-
-        # Remove any coin over 7 days
-
-        for c in coins:
-            jpkt=json.loads(coins[c])
-            t=(time.time()-jpkt['Time'])
-            if t>(7*86400):
-                JRRlog.WriteLog('|- '+c+' aged out')
-                try:
-                    coins.pop(c,None)
-                except:
-                    pass
-
-        WritePCTValueList(exchange,account,coins)
-    except:
-        pass
-
-    fw.Unlock()
-
-    return amount
-
-def WritePCTValueList(exchange,account,coins):
-    en=exchange.name.lower().replace(' ','')
-    fn=JRRconfig.DataDirectory+'/'+en+'.'+account+'.PCTvalue'
-
-    if coins=={}:
-        try:
-            os.remove(fn)
-        except:
-            pass
-    else:
-        fh=open(fn,'w')
-        fh.write(json.dumps(coins))
-        fh.close()
-
-# Filter end of line and hard spaces
-
-def pFilter(s):
-    d=s.replace("\\n","").replace("\\t","").replace("\\r","")
-
-    for c in '\t\r\n \u00A0':
-        d=d.replace(c,'')
-
-    return(d)
-
-# Read the exchange config file and load API/SECRET for a given (sub)account.
-# MAIN is reserved for the main account
-
-def ReadConfig(echg,account):
-    keys=[]
-
-    idl=None
-    idf=JRRconfig.ConfigDirectory+'/Identity.cfg'
-    if os.path.exists(idf):
-        cf=open(idf,'rt+')
-        try:
-            idl=json.loads(cf.readline())
-        except:
-            JRRlog.ErrorLog("Reading Configuration",'identity damaged')
-        cf.close()
-
-    fn=JRRconfig.ConfigDirectory+'/'+echg+'.cfg'
+def TradingViewRemap(en,pair):
+    np=pair
+    JRRlog.WriteLog('Symbol Remap')
+    JRRlog.WriteLog('|- In: '+pair)
+    fn=JRRconfig.DataDirectory+'/'+en+'.symbolmap'
     if os.path.exists(fn):
-        cf=open(fn,'rt+')
-        for line in cf.readlines():
-            if len(line.strip())>0 and line[0]!='#':
-                try:
-                    key=json.loads(line)
-                except:
-                    JRRlog.ErrorLog("Reading Configuration",'damaged: '+line)
-                if key['Account']==account:
-                    # Add identity to account reference
-                    if idl!=None:
-                        key= { **idl, **key }
-                    keys.append(key)
-        cf.close()
+        try:
+            raw=pathlib.Path(fn).read_text()
+        except:
+            JRRlog.ErrorLog("TradingView Remap",f"Can't read symbol map for {en}")
 
-        if keys==[]:
-            JRRlog.ErrorLog("Reading Configuration",account+' reference not found, check spelling/case')
-
-        return keys
+        TVlist=json.loads(raw)
+        if pair in TVlist:
+            np=TVlist[pair]
+        else:
+            JRRlog.WriteLog('|- Pair not in symbol file, reverting')
     else:
-        JRRlog.ErrorLog("Reading Configuration",echg+'.cfg not found in config directory')
+        JRRlog.WriteLog('|- No symbol file, reverting')
 
-# Read the json entry and verify the required elements as present
+    JRRlog.WriteLog('|- Out: '+np)
+    return np
 
-def ProcessJSON(payload):
-    try:
-        data=json.loads(payload,strict=False)
-    except json.decoder.JSONDecodeError:
-        return None
-
-    if "Exchange" not in data:
-        JRRlog.WriteLog('Missing exchange identifier')
-        return None
-    if "Market" not in data:
-        JRRlog.WriteLog('Missing market identifier')
-        return None
-    if "Account" not in data:
-        JRRlog.WriteLog('Missing account identifier')
-        return None
-    if "Action" not in data:
-        JRRlog.WriteLog('Missing action (buy/sell/close) identifier')
-        return None
-    if "Asset" not in data:
-        JRRlog.WriteLog('Missing asset identifier')
-        return None
-
-    return data
-
-# Verify number is an integer from JSON payload
-
-def verifyInt(s):
-    if s.lower()=="null" or s==None:
-        return(False)
-    f=float(s)
-    i=int(s)
-
-    return(f==i)
-
-# Base 64 math
-
-def int2base(n, b):
-    if n < 0:
-        raise ValueError("no negative numbers")
-    if n < b:
-        return dsrConfig.Base62Digits[n]
-    res = []
-    q = n
-    while q:
-        q, r = divmod(q, b)
-        res.append(dsrConfig.Base62Digits[r])
-    return ''.join(reversed(res))
-
-def base2int(s, base):
-    if not (2 <= base <= len(dsrConfig.Base62Digits)):
-        raise ValueError("base must be >= 2 and <= %d" % len(Base62Digits))
-    res = 0
-    for i, v in enumerate(reversed(s)):
-        digit = digits.index(v)
-        res += digit * (base ** i)
-    return res
-
-def base62(s):
-    n=0
-    for i in range(len(s)):
-        n+=ord(s[i])*i
-    return(int2base(n,62))

@@ -26,24 +26,29 @@ else:
 markets=relay.GetMarkets()
 
 if relay.GetFramework()=='ccxt':
-    balances=relay.GetBalances()
+    balances=relay.GetBalance()
     if balances!=None:
         coinList=balances['total']
         for coin in coinList:
+#            The below line is the best approach for reading the complete list
             bal=float(balances['total'][coin])
 
+            # This is the worst way as it calls the exchange and refetches ALL
+            # assets EVERY time, but its a good testing format.
+
+#            bal=relay.GetBalance(Base=coin)
             if bal>0.0:
-                print(f"{coin:12} {bal:12.8f}")
+                print(f"{coin:12} {bal:16.8f}")
 
         positions=relay.GetPositions()
         if positions!=None:
             for pos in positions:
-                print(pos)
-                bal=float(pos['contracts'])
+                #bal=float(pos['contracts'])
+                bal=relay.GetPositions(symbol=pos['symbol'])
                 if bal>0.0:
                     print(f"{pos['symbol']:12} {bal:12.8f} {pos['side']:5}")
 elif relay.GetFramework()=='oanda':
-    balance=relay.GetBalance(None)
+    balance=relay.GetBalance()
     if balance!=None:
         print(f"{'Balance':12} {balance:16.8f}")
 
@@ -51,9 +56,6 @@ elif relay.GetFramework()=='oanda':
         if positions!=None:
             for pos in positions:
                 asset=pos['instrument'].replace('_','/')
-                bal=relay.GetPosition(asset)
-                print(f"{asset:12} {bal:12.8f}")
+                bal=relay.GetPositions(symbol=asset)
+                print(f"{asset:12} {bal:16.8f}")
 
-#print()
-#print(relay.GetBalance("USD"))
-#print(relay.GetContracts("STEP/USD:USD"))

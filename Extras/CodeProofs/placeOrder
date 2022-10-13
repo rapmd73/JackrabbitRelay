@@ -21,23 +21,16 @@ if relay.GetArgsLen() > 4:
     exchangeName=relay.GetExchange()
     account=relay.GetAccount()
     asset=relay.GetAsset()
-    amount=relay.GetArgs(4)
+    side=relay.GetArgs(4)
+    amount=relay.GetArgs(5)
 else:
-    print("An exchange, (sub)account, an asset, and an amount must be provided.")
+    print("An exchange, (sub)account, an asset, a side (buy/sell), and an amount must be provided.")
     sys.exit(1)
 
-markets=relay.GetMarkets()
-
 ticker=relay.GetTicker(symbol=asset)
-if relay.GetFramework()=='ccxt':
-    bid=ticker['ask']
-elif relay.GetFramework()=='oanda':
-    bid=ticker['Ask']
+bPrice=ticker['Ask']
+sPrice=ticker['Bid']
 
-result=relay.PlaceOrder(pair=asset,orderType="market",action="buy",amount=amount,price=bid,ReduceOnly=False,LedgerNote="Dry Run")
+result=relay.PlaceOrder(pair=asset,orderType="market",action=side,amount=amount,price=bPrice,ReduceOnly=False,LedgerNote="Dry Run")
 print(result)
 
-print("")
-
-result=relay.PlaceOrder(pair=asset,orderType="market",action="sell",amount="all",price=bid,ReduceOnly=False,LedgerNote="Dry Run")
-print(result)
