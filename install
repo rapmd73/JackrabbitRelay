@@ -10,9 +10,9 @@ mkdir -p $BaseDir > /dev/null 2>&1
 mkdir -p $BaseDir/Config > /dev/null 2>&1
 for d in Base Data Logs Ledger Statistics/Balances Statistics/Charts ; do
     mkdir -p $BaseDir/$d > /dev/null 2>&1
-done
 
-cp -r * $BaseDir
+    cp -r /home/GitHub/JackrabbitRelay/$d/* $BaseDir/$d
+done
 
 if [ x$1 != 'xnopull' ] ; then
     for i in `cat requirements.txt` ; do

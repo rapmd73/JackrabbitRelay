@@ -8,16 +8,17 @@
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
-import pathlib
+#import pathlib
 import time
 import json
-import requests
+#import requests
 from datetime import datetime
 
 # Framework APIs
 
 import JRRccxt
 import JRRoanda
+import JRRsupport
 
 # This is the logging class
 #
@@ -125,7 +126,7 @@ class JackrabbitRelay:
         self.Order=None
 
         # Result from last operation
-        self.Result=None
+        self.Results=None
 
         # this is the framework that defines the low level API, 
         # ie CCXT, OANDA, ROBINHOOD, FTXSTOCKS
@@ -178,21 +179,39 @@ class JackrabbitRelay:
     def GetFramework(self):
         return self.Framework
 
-    # Filter end of line and hard spaces
+    # Remap TradingView symbol to the exchange symbol/broker
 
-    def pFilter(self,s):
-        d=s.replace("\\n","").replace("\\t","").replace("\\r","")
+    def TradingViewRemap(self):
+        NewPair=self.Asset
+        self.JRLog.Write('TradingView Symbol Remap')
+        self.JRLog.Write('|- In: '+Asset)
 
-        for c in '\t\r\n \u00A0':
-            d=d.replace(c,'')
+        fn=self.DataDirectory+'/'+self.Exchange+'.symbolmap'
+        if os.path.exists(fn):
+            try:
+                raw=JRRsupport.ReadFile(fn)
+            except:
+                self.JRLog.Error("TradingView Remap",f"Can't read symbol map for {en}")
 
-        return(d)
+            TVlist=json.loads(raw)
+            if pair in TVlist:
+                np=TVlist[pair]
+            else:
+                self.JRLog.Write('|- Pair not in symbol file, reverting')
+        else:
+            self.JRLog.Write('|- No symbol file, reverting')
+
+        self.JRLog.Write('|- Out: '+np)
+
+        return NewPair
 
     # Process and validate the order payload
 
     def ProcessPayload(self):
         if self.Payload==None or self.Payload.strip()=='':
             self.JRLog.Error('Processing Payload','Empty payload')
+
+        self.Payload=JRRsupport.pFilter(self.Payload)
 
         try:
             self.Order=json.loads(self.Payload,strict=False)
@@ -292,6 +311,7 @@ class JackrabbitRelay:
             self.Asset=self.args[3].upper()
 
         # Set up logging file to reference exchange, account, and asset
+        lname=None
         if self.Exchange!=None and self.Account!=None and self.Asset!=None:
             lname=f"{self.Exchange}.{self.Account}.{self.Asset}"
         elif self.Exchange!=None and self.Account!=None:
@@ -299,7 +319,8 @@ class JackrabbitRelay:
         elif self.Exchange!=None:
             lname=f"{self.Exchange}"
 
-        self.JRLog.SetLogName(lname)
+        if lname!=None:
+            self.JRLog.SetLogName(lname)
 
     # Return command line information to user
 
@@ -322,7 +343,7 @@ class JackrabbitRelay:
         self.Active=self.Keys[self.CurrentKey]
 
         if self.Framework=='ccxt':
-            self.ccxt=JRRccxt.SetExchangeAPI(self.ccxt,self.Active,notify=False)
+            self.ccxt=self.Broker.SetExchangeAPI()
 
     # Login to a given exchange
 
@@ -341,112 +362,67 @@ class JackrabbitRelay:
         # well.
 
         if self.Framework=='ccxt':
-            self.ccxt=JRRccxt.ExchangeLogin(self.Exchange,self.Config,self.Active)
-            self.Markets=self.GetMarkets()
+            self.Broker=JRRccxt.ccxtCrypto(self.Exchange,self.Config,self.Active)
         elif self.Framework=='oanda':
             self.Broker=JRRoanda.oanda(self.Exchange,self.Config,self.Active)
-            self.Markets=self.Broker.Markets
+
+        self.Markets=self.Broker.Markets
 
     # Get the market list from the exchange
 
     def GetMarkets(self):
         self.RotateKeys()
-        if self.Framework=='ccxt':
-            self.Markets=JRRccxt.ccxtAPI("load_markets",self.ccxt,self.Active)
-            return self.Result
-        elif self.Framework=='oanda':
-            self.Markets=self.Broker.GetMarkets()
-            return self.Markets
+        self.Markets=self.Broker.GetMarkets()
+        return self.Markets
 
-    # Get the exchange balances. Spot or base market
+    # Get account balance(s)
 
-    def GetBalances(self):
+    def GetBalance(self,**kwargs):
         self.RotateKeys()
-        if self.Framework=='ccxt':
-            self.Result=JRRccxt.ccxtAPI("fetch_balance",self.ccxt,self.Active)
-            return self.Result
-        elif self.Framework=='oanda':
-            self.Result=self.Broker.GetBalances()
-            return self.Result
-
-    # Get account balance
-
-    def GetBalance(self,asset):
-        self.RotateKeys()
-        if self.Framework=='ccxt':
-            self.Result=JRRccxt.ccxtAPI("fetch_balance",self.ccxt,self.Active)
-            self.Result=JRRccxt.GetBalance(self.Result,asset)
-            return self.Result
-        elif self.Framework=='oanda':
-            self.Result=self.Broker.GetBalance()
-            return self.Result
+        self.Results=self.Broker.GetBalance(**kwargs)
+        return self.Results
 
     # Get the exchange positions. For and non-spot market
 
-    def GetPositions(self):
+    def GetPositions(self,**kwargs):
         self.RotateKeys()
-        if self.Framework=='ccxt':
-            self.Result=JRRccxt.ccxtAPI("fetch_positions",self.ccxt,self.Active)
-            return self.Result
-        elif self.Framework=='oanda':
-            self.Result=self.Broker.GetPositions()
-            return self.Result
-
-    # Get a single positions. For and non-spot market
-
-    def GetPosition(self,Asset):
-        self.RotateKeys()
-        self.Result=self.GetPositions()
-        if self.Framework=='ccxt':
-            self.Result=JRRccxt.GetContracts(self.Result,Asset)
-            return self.Result
-        elif self.Framework=='oanda':
-            self.Result=self.Broker.GetPosition(Asset)
-            return self.Result
+        self.Results=self.Broker.GetPositions(**kwargs)
+        return self.Results
 
     # Get OHLCV data from exchange
 
     def GetOHLCV(self,**kwargs):
         self.RotateKeys()
-        if self.Framework=='ccxt':
-            self.Result=JRRccxt.ccxtAPI("fetch_ohlcv",self.ccxt,self.Active,**kwargs)
-            return self.Result
-        elif self.Framework=='oanda':
-            self.Result=self.Broker.GetOHLCV(**kwargs)
-            return self.Result
+        self.Results=self.Broker.GetOHLCV(**kwargs)
+        return self.Results
 
     # Get ticker data from exchange
 
     def GetTicker(self,**kwargs):
         self.RotateKeys()
-        if self.Framework=='ccxt':
-            self.Result=JRRccxt.ccxtAPI("fetch_ticker",self.ccxt,self.Active,**kwargs)
-            return self.Result
-        elif self.Framework=='oanda':
-            self.Result=self.Broker.GetTicker(**kwargs)
-            return self.Result
+        self.Results=self.Broker.GetTicker(**kwargs)
+        return self.Results
 
     # Get orderbook data from exchange
 
     def GetOrderBook(self,**kwargs):
         self.RotateKeys()
-        if self.Framework=='ccxt':
-            self.Result=JRRccxt.GetOrderBook(self.ccxt,self.Active,**kwargs)
-            return self.Result
-        elif self.Framework=='oanda':
-            self.Result=self.Broker.GetOrderBook(**kwargs)
-            return self.Result
+        self.Results=self.Broker.GetOrderBook(**kwargs)
+        return self.Results
 
     # Get open orders
 
     def GetOpenOrders(self,**kwargs):
         self.RotateKeys()
-        if self.Framework=='ccxt':
-            self.Result=JRRccxt.GetOpenOrders(self.ccxt,self.Active,**kwargs)
-            return self.Result
-        elif self.Framework=='oanda':
-            self.Result=self.Broker.GetOpenOrders(**kwargs)
-            return self.Result
+        self.Results=self.Broker.GetOpenOrders(**kwargs)
+        return self.Results
+
+    # Get open Trades
+
+    def GetOpenTrades(self,**kwargs):
+        self.RotateKeys()
+        self.Results=self.Broker.GetOpenTrades(**kwargs)
+        return self.Results
 
     # Place Order to exchange. Needs to handle buy, sell, close
     # exchange
@@ -461,10 +437,6 @@ class JackrabbitRelay:
 
     def PlaceOrder(self,**kwargs):
         self.RotateKeys()
-        if self.Framework=='ccxt':
-            self.Result=JRRccxt.PlaceOrder(self.ccxt,self.Active,**kwargs)
-            return self.Result
-        elif self.Framework=='oanda':
-            self.Result=self.Broker.PlaceOrder(**kwargs)
-            return self.Result
+        self.Results=self.Broker.PlaceOrder(**kwargs)
+        return self.Results
 

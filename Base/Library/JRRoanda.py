@@ -64,6 +64,33 @@ class oanda:
         self.Broker=self.Login()
         self.Markets=self.GetMarkets()
 
+    # Handle the retry functionality and send the request to the broker.
+
+    def API(self,function,**kwargs):
+        req=kwargs.get('request')
+        retry=0
+
+        # Sanity check
+        if 'Retry' in self.Active:
+            RetryLimit=int(self.Active['Retry'])
+        else:
+            RetryLimit=3
+
+        done=False
+        while not done:
+            try:
+                self.results=self.Broker.request(req)
+            except Exception as e:
+                if retry<RetryLimit:
+                    self.Log.Error(function,JRRsupport.StopHTMLtags(str(e)))
+                else:
+                    self.Log.Write(function+' Retrying ('+str(retry+1)+'), '+JRRsupport.StopHTMLtags(str(e)))
+            else:
+                done=True
+            retry+=1
+
+        return self.results
+
     # Register the exchange
 
     def Login(self,Notify=True,Sandbox=False):
@@ -88,38 +115,39 @@ class oanda:
             markets[asset]=cur
         return markets
 
-    # Get the balance of the account
+    # Get the balance of the account. kwargs is needed for conformity with other
+    # exchanges/brokers even though it will never be used by OANDA.
 
-    def GetBalance(self):
+    def GetBalance(self,**kwargs):
         res=v20Accounts.AccountSummary(accountID=self.AccountID)
-        self.results=self.API("GetBalances",request=res)
+        self.results=self.API("GetBalance",request=res)
         return float(self.results['account']['balance'])
 
-    # Get the current positions list
-
-    def GetPositions(self):
-        res=v20Positions.OpenPositions(accountID=self.AccountID)
-        self.results=self.API("GetPositions",request=res)
-        return self.results['positions']
-
-    # Get an individual and specific position. In OANDA, a position may be one
+    # Get the current positions list or
+    # get an individual and specific position. In OANDA, a position may be one
     # or more actual trades.
 
     # Shorts are negative
 
-    def GetPosition(self,Asset):
-        positions=self.GetPositions()
-        position=0.0
-        if positions!=None:
-            for pos in positions:
+    def GetPositions(self,**kwargs):
+        res=v20Positions.OpenPositions(accountID=self.AccountID)
+        self.Results=self.API("GetPositions",request=res)
+
+        symbol=kwargs.get('symbol')
+        if symbol==None:
+            return self.Results['positions']
+        else:
+            symbol=symbol.upper()
+            position=0.0
+            for pos in self.Results['positions']:
                 asset=pos['instrument'].replace('_','/')
-                if Asset.upper()==asset:
+                if symbol==asset:
                     if 'averagePrice' in pos['long']:
                         position=float(pos['long']['averagePrice'])*float(pos['long']['units'])
                     else:
                         position=-(float(pos['short']['averagePrice']))*float(pos['short']['units'])
                     return position
-        return 0
+            return 0
 
     # Get candlestick (OHLCV) data
 
@@ -131,7 +159,7 @@ class oanda:
         candles=[]
 
         res=v20Instruments.InstrumentsCandles(instrument=symbol,params=params)
-        self.results=self.API("GetOHLCV",request=res)
+        self.Results=self.API("GetOHLCV",request=res)
         for cur in self.results['candles']:
             candle=[]
             candle.append(int(datetime.strptime(cur['time'],'%Y-%m-%dT%H:%M:%S.000000000Z').timestamp())*1000)
@@ -154,12 +182,12 @@ class oanda:
 
         # Build the forex pair dictionary
 
-        ForexPair={}
-        ForexPair['Ask']=round(float(self.results['prices'][0]['asks'][0]['price']),5)
-        ForexPair['Bid']=round(float(self.results['prices'][0]['bids'][0]['price']),5)
-        ForexPair['Spread']=round(ForexPair['Ask']-ForexPair['Bid'],5)
+        Pair={}
+        Pair['Ask']=round(float(self.results['prices'][0]['asks'][0]['price']),5)
+        Pair['Bid']=round(float(self.results['prices'][0]['bids'][0]['price']),5)
+        Pair['Spread']=round(Pair['Ask']-Pair['Bid'],5)
 
-        return ForexPair
+        return Pair
 
     # Get the order book
 
@@ -170,6 +198,25 @@ class oanda:
         self.results=self.API("GetOrderBook",request=req)
         return self.results['orderBook']['buckets']
 
+    # Get a list of pending (open) orders.
+
+    def GetOpenOrders(self,**kwargs):
+        symbol=kwargs.get('symbol').replace('/','_')
+
+        req=v20Orders.OrdersPending(accountID=self.AccountID)
+        self.Results=self.API("GetOpenOrders",request=req)
+
+        if symbol==None:
+            return self.Results['orders']
+        else:
+            symbol=symbol.upper().replace('/','_')
+            oList=[]
+            for order in self.Results['orders']:
+                if symbol==order['instrument']:
+                    oList.append(order)
+
+        return oList
+
     # As references in GetPosition, a position may consist ofone or more actual
     # trades. This is NOT the same as an open list of limit orders.
 
@@ -178,29 +225,8 @@ class oanda:
         params={"instruments":symbol }
 
         req=v20Trades.TradesList(accountID=self.AccountID,params=params)
-        self.results=self.API("GetOpenTrades",request=req)
-        return self.results['trades']
-
-    # Get a list of pending (open) orders.
-
-    def GetOpenOrders(self,**kwargs):
-        symbol=kwargs.get('symbol').replace('/','_')
-
-        req=v20Orders.OrdersPending(accountID=self.AccountID)
-        self.results=self.API("GetOpenOrders",request=req)
-
-#        if positions!=None:
-#            for pos in positions:
-#                asset=pos['instrument'].replace('_','/')
-#                if Asset.upper()==asset:
-#                    if 'averagePrice' in pos['long']:
-#                        position=float(pos['long']['averagePrice'])*float(pos['long']['units'])
-#                    else:
-#                        position=-(float(pos['short']['averagePrice']))*float(pos['short']['units'])
-#                    return position
-
-
-        return self.results['orders']
+        self.Results=self.API("GetOpenTrades",request=req)
+        return self.Results['trades']
 
     # Place order. Return order ID and DON'T wait on limit orders. That needs to
     # be a separate functionality.
@@ -273,32 +299,5 @@ class oanda:
                 self.results=self.API("TradeClose",request=res)
         else:
             self.Log.Error("PlaceOrder","Action is neither BUY nor SELL")
-
-        return self.results
-
-    # Handle the retry functionality and send the request to the broker.
-
-    def API(self,function,**kwargs):
-        req=kwargs.get('request')
-        retry=0
-
-        # Sanity check
-        if 'Retry' in self.Active:
-            RetryLimit=int(self.Active['Retry'])
-        else:
-            RetryLimit=3
-
-        done=False
-        while not done:
-            try:
-                self.results=self.Broker.request(req)
-            except Exception as e:
-                if retry<RetryLimit:
-                    self.Log.Error(function,JRRsupport.StopHTMLtags(str(e)))
-                else:
-                    self.Log.Write(function+' Retrying ('+str(retry+1)+'), '+JRRsupport.StopHTMLtags(str(e)))
-            else:
-                done=True
-            retry+=1
 
         return self.results
