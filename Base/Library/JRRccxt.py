@@ -19,7 +19,15 @@ import JRRsupport
 # Class name MUST be different then above import reference.
 
 class ccxtCrypto:
-    def __init__(self,Exchange,Config,Active,Notify=True,Sandbox=False):
+    def __init__(self,Exchange,Config,Active,Notify=True,Sandbox=False,DataDirectory=None):
+
+        # This is sorted by market cap. Hopefully it will speed up the
+        # conversion process. Coins only with 100 million or more listed.
+
+        self.StableCoinUSD=['USDT','USDC','BUSD','UST','DAI','FRAX','TUSD', \
+                'USDP','LUSD','USDN','HUSD','FEI','TRIBE','RSR','OUSD','XSGD', \
+                'GUSD','USDX','SUSD','EURS','CUSD','USD']
+
         # Extract for convience and readability
 
         self.Exchange=Exchange
@@ -29,6 +37,12 @@ class ccxtCrypto:
         self.Notify=Notify
         self.Sandbox=Sandbox
 
+        # This s an absolute bastardation of passing a directory from a upper
+        # level to a lower one for a one off situation. The method used for
+        # logging is the best approach, but not appropriate for a signle use
+        # case.
+
+        self.DataDirectory=DataDirectory
         self.Log=self.Active['JRLog']
 
         self.Notify=True
@@ -39,7 +53,7 @@ class ccxtCrypto:
 
         self.KuCoinSuppress429=True
 
-        # Login to OANDA and pull the market data
+        # Login to crypto exchange and pull the market data
 
         self.Broker=self.Login()
         self.Markets=self.GetMarkets()
@@ -184,7 +198,7 @@ class ccxtCrypto:
             self.Log.Error('Get Markets',pair+" is not traded on this exchange")
 
         if 'active' in exchange.markets[pair]:
-            if self.Broker.markets[pair]['active']==False:
+            if self.Markets[pair]['active']==False:
                 self.Log.Error('Get Markets',pair+" is not active on this exchange")
 
         return True
@@ -261,18 +275,21 @@ class ccxtCrypto:
     def GetOpenTrades(self,**kwargs):
         return None
 
-    # Place order. Return order ID and DON'T wait on limit orders. That needs to be a separate
-    # functionality.
+    # Place order. Return order ID and DON'T wait on limit orders. That needs to
+    # be a separate functionality.
+
+    # Market - LimitTaker - IOC true, limit orders with taker fee, psuedo market
+    #                       orders
+    #          LimitMaker - PostOnly true, full limit orders with maker fee
 
     # Arg sequence:
     #   symbol, type, side (action), amount, price, params
 
-    # PlaceOrder(exchange, Active, pair=pair, orderType=orderType, action=action, amount=amount, 
-    #   close=close, ReduceOnly=ReduceOnly, LedgerNote=ledgerNote)
+    # PlaceOrder(exchange, Active, pair=pair, orderType=orderType,
+    #     action=action, amount=amount, close=close, ReduceOnly=ReduceOnly, 
+    #     LedgerNote=ledgerNote)
 
     def PlaceOrder(self,**kwargs):
-        params = {}
-        order=None
         pair=kwargs.get('pair')
         m=kwargs.get('orderType').lower()
         action=kwargs.get('action').lower()
@@ -280,6 +297,9 @@ class ccxtCrypto:
         price=kwargs.get('price')
         ro=kwargs.get('ReduceOnly')
         ln=kwargs.get('LedgerNote')
+
+        params = {}
+        order=None
 
         # Deal with special case order types
 
@@ -313,265 +333,176 @@ class ccxtCrypto:
 
         return None
 
+    # Find the minimum amount/price. This is one of the mot complex areas of
+    # cryptocurrency markets. Each exchange and market can has its own minimum
+    # amout (units/shares) and price decided either of the base (left) or quote
+    # (right) currency.
 
+    # Get asset information
 
+    def GetMinimum(self,**kwargs):
+        symbol=kwargs.get('symbol')
+        forceQuote=kwargs.get('forceQuote')
+        diagnostics=kwargs.get('diagnostics')
 
+        base=self.Markets[symbol]['base']
+        quote=self.Markets[symbol]['quote']
 
+        minimum,mincost=self.GetAssetMinimum(symbol,diagnostics)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def FindMatchingPair(base,markets):
-    for quote in JRRconfig.StableCoinUSD:
-        pair=base+'/'+quote
-        if pair in markets:
-            return pair
-
-    return None
-
-# Pull the information about the asset minimums from the exchange.
-# Amount is the minimum amount in the ASSET, it TRX/BTC, amount is always BASE value
-# Cost in USD/Stablecoins
-# Price in USD/Stablecoins
-
-def LoadMinimum(exchangeName,pair):
-    minlist={}
-    amount=0
-    fn=JRRconfig.DataDirectory+'/'+exchangeName+'.minimum'
-    if os.path.exists(fn):
-        try:
-            raw=pathlib.Path(fn).read_text()
-        except:
-            Active['JRLog'].Error("Minimum List",f"Can't read minimum list for {exchangeName}")
-
-        minlist=json.loads(raw)
-        if pair in minlist:
-            amount=minlist[pair]
-
-    return amount
-
-def UpdateMinimum(exchangeName,pair,amount):
-    minlist={}
-    fn=JRRconfig.DataDirectory+'/'+exchangeName+'.minimum'
-    if os.path.exists(fn):
-        try:
-            raw=pathlib.Path(fn).read_text()
-        except:
-            Active['JRLog'].Error("Minimum List",f"Can't read minimum list for {exchangeName}")
-
-        minlist=json.loads(raw)
-
-    minlist[pair]=amount
-    fh=open(fn,'w')
-    fh.write(json.dumps(minlist))
-    fh.close()
-
-def GetAssetMinimum(exchange,pair,diagnostics,RetryLimit):
-    exchangeName=exchange.name.lower().replace(' ','')
-    ohlcv,ticker=FetchRetry(exchange,pair,"1m",RetryLimit)
-
-    close=ohlcv[4]
-    if close==None:
-        if ticker['close']==None:
-            close=float(ticker['ask'])
-        else:
-            close=float(ticker['close'])
-
-    minimum=LoadMinimum(exchangeName,pair)
-    if minimum>0.0:
-        mincost=round(minimum*close,8)
+        # Get BASE minimum. This is all that is needed if quote is
+        # USD/Stablecoins
 
         if diagnostics:
-            Active['JRLog'].Write(f"| |- Close: {close:.8f}")
-            Active['JRLog'].Write(f"| |- (Table)Minimum Amount: {minimum:.8f}")
-            Active['JRLog'].Write(f"| |- (Table)Minimum Cost:   {mincost:.8f}")
-    else:
-        minimum1=exchange.markets[pair]['limits']['amount']['min']
-        minimum2=exchange.markets[pair]['limits']['cost']['min']
-        minimum3=exchange.markets[pair]['limits']['price']['min']
+            self.Log.Write("Minimum asset analysis")
+            self.Log.Write("|- Base: "+base)
+            self.Log.Write(f"| |- Minimum: {minimum:.8f}")
+            self.Log.Write(f"| |- Min Cost: {mincost:.8f}")
 
-        if minimum1==None or minimum1==0:
-            if 'contractSize' in exchange.markets[pair]:
-                minimum1=exchange.markets[pair]['contractSize']
-                m1=float(minimum1)*close
-            else:
-                minimum1=0
-                m1=0.0
-        else:
-            m1=float(minimum1)*close
-        if minimum2==None or minimum2==0:
-            minimum2=0
-            m2=0.0
-        else:
-            m2=float(minimum2)/close
-        if minimum3==None or minimum3==0:
-            minimum3=0
-            m3=0.0
-        else:
-            m3=float(minimum3)/close
+            # If quote is NOT USD/Stablecoin. NOTE: This is an API penalty
+            # for the overhead of pulling quote currency. Quote currency
+            # OVERRIDES base ALWAYS.
 
-        minimum=max(float(minimum1),m2,m3)
-        mincost=max(m1,float(minimum2),float(minimum3))
+            self.Log.Write("|- Quote: "+quote)
 
-        if minimum==0.0 or mincost==0.0:
-            if exchange.precisionMode==ccxt.TICK_SIZE:
-                minimum=float(exchange.markets[pair]['precision']['amount'])
-                mincost=minimum*close
-            else:
-                z='000000000'
-                factor=max(exchange.precisionMode,ccxt.TICK_SIZE)
-                minimum=float('0.'+str(z[:factor-1])+'1')
-                mincost=minimum*close
+        if quote not in self.StableCoinUSD or forceQuote:
+            bpair=self.FindMatchingPair(quote)
+            if bpair!=None:
+                minimum,mincost=self.GetAssetMinimum(bpair,diagnostics)
 
-        if diagnostics:
-            Active['JRLog'].Write(f"| |- Close: {close:.8f}")
-            Active['JRLog'].Write(f"| |- Minimum Amount: {minimum1:.8f}, {m1:.8f}")
-            Active['JRLog'].Write(f"| |- Minimum Cost:   {minimum2:.8f}, {m2:.8f}")
-            Active['JRLog'].Write(f"| |- Minimum Price:  {minimum3:.8f}, {m3:.8f}")
+                if diagnostics:
+                    self.Log.Write(f"| |- Minimum: {minimum:.8f}")
+                    self.Log.Write(f"| |- Min Cost: {mincost:.8f}")
 
-    return(minimum, mincost)
+        if minimum==0.0:
+            self.Log.Error("Asset Analysis","minimum position size returned as 0")
+        if mincost==0.0:
+            self.Log.Error("Asset Analysis","minimum cost per position returned as 0")
 
-# Get asset information
+        return minimum,mincost
 
-def GetMinimum(exchange,pair,forceQuote,diagnostics,RetryLimit):
-    base=exchange.markets[pair]['base']
-    quote=exchange.markets[pair]['quote']
+    # Check for an overide value or pull exchange data to calculatethe minimum
+    # amount and cost.
 
-    minimum,mincost=GetAssetMinimum(exchange,pair,diagnostics,RetryLimit)
+    def GetAssetMinimum(self,pair,diagnostics):
+        exchangeName=self.Broker.name.lower().replace(' ','')
+        ticker=self.GetTicker(symbol=pair)
 
-# Get BASE minimum. This is all that is needed if quote is USD/Stablecoins
+        # This is the lowest accepted price of market order
 
-    if diagnostics:
-        Active['JRLog'].Write("Minimum asset analysis")
-        Active['JRLog'].Write("|- Base: "+base)
-        Active['JRLog'].Write("| |- Minimum: "+f"{minimum:.8f}")
-        Active['JRLog'].Write("| |- Min Cost: "+f"{mincost:.8f}")
-        # If quote is NOT USD/Stablecoin. NOTE: This is an API penalty
-        # for the overhead of pulling quote currency. Quote currency
-        # OVERRIDES base ALWAYS.
-        Active['JRLog'].Write("|- Quote: "+quote)
+        close=ticker['Ask']
 
-    if quote not in JRRconfig.StableCoinUSD or forceQuote:
-        bpair=FindMatchingPair(quote,exchange.markets)
-        if bpair!=None:
-            minimum,mincost=GetAssetMinimum(exchange,bpair,diagnostics,RetryLimit)
+        # Check if there is an overide in place
+
+        minimum=self.LoadMinimum(exchangeName,pair)
+        if minimum>0.0:
+            mincost=round(minimum*close,8)
 
             if diagnostics:
-                Active['JRLog'].Write("| |- Minimum: "+f"{minimum:.8f}")
-                Active['JRLog'].Write("| |- Min Cost: "+f"{mincost:.8f}")
-
-    if minimum==0.0:
-        Active['JRLog'].Error("Asset Analysis","minimum position size returned as 0")
-    if mincost==0.0:
-        Active['JRLog'].Error("Asset Analysis","minimum cost per position returned as 0")
-
-    return minimum,mincost
-
-# Place the order
-# Market - LimitTaker - IOC true, limit orders with taker fee, psuedo market orders
-#          LimitMaker - PostOnly true, full limit orders with maker fee
-
-def FetchExchangeOrderHistory(exchange, oi, pair, RetryLimit):
-    # Give the exchange time to settle
-    JRRsupport.ElasticSleep(1)
-
-    retry=0
-    done=False
-    fo=None
-    while not done:
-        try:
-            fo=ccxtAPI("fetchOrder",exchange,RetryLimit,oi,symbol=pair)
-        except Exception as e:
-            if retry>=RetryLimit:
-                done=True
-                fo=None
+                self.Log.Write(f"| |- Close: {close:.8f}")
+                self.Log.Write(f"| |- (Table)Minimum Amount: {minimum:.8f}")
+                self.Log.Write(f"| |- (Table)Minimum Cost:   {mincost:.8f}")
         else:
-            if fo['status']=='closed':
-                return True
-            if retry>=RetryLimit:
-                done=True
-        retry+=1
-        if not done and retry<RetryLimit:
-            JRRsupport.ElasticSleep(10)
+            # Find the minimum amount and price of this asset.
 
-    return False
+            minimum1=self.Markets[pair]['limits']['amount']['min']
+            minimum2=self.Markets[pair]['limits']['cost']['min']
+            minimum3=self.Markets[pair]['limits']['price']['min']
 
-def WaitLimitOrder(exchange,oi,pair,RetryLimit):
-    Active['JRLog'].Write("|- Waiting for limit order")
-    ohist=FetchExchangeOrderHistory(exchange,oi,pair,RetryLimit)
+            # Check if this is a futures market
 
-    # cancel the order
-    if ohist==False:
-        try:
-            ct=ccxtAPI("cancel_order",exchange,RetryLimit,oi,pair)
-        except:
-            pass
-    else:
-        return True
+            if minimum1==None or minimum1==0:
+                if 'contractSize' in self.Markets[pair]:
+                    minimum1=self.Markets[pair]['contractSize']
+                    m1=float(minimum1)*close
+                else:
+                    minimum1=0
+                    m1=0.0
+            else:
+                m1=float(minimum1)*close
+            if minimum2==None or minimum2==0:
+                minimum2=0
+                m2=0.0
+            else:
+                m2=float(minimum2)/close
+            if minimum3==None or minimum3==0:
+                minimum3=0
+                m3=0.0
+            else:
+                m3=float(minimum3)/close
 
-def FetchCandles_interval(exchange,pair,tf,start_date_time,end_date_time,RetryLimit):
-    from_timestamp = exchange.parse8601(start_date_time)
-    to_timestamp = exchange.parse8601(end_date_time)
+            minimum=max(float(minimum1),m2,m3)
+            mincost=max(m1,float(minimum2),float(minimum3))
 
-    # For kucoin only, 429000 errors are a mess. Not the best way to
-    # manage them, but the onle way I know of currently to prevent losses.
-    # Save the only rate limit and remap it.
+            if minimum==0.0 or mincost==0.0:
+                if self.Broker.precisionMode==ccxt.TICK_SIZE:
+                    minimum=float(self.Markets[pair]['precision']['amount'])
+                    mincost=minimum*close
+                else:
+                    z='000000000'
+                    factor=max(self.Broker.precisionMode,ccxt.TICK_SIZE)
+                    minimum=float('0.'+str(z[:factor-1])+'1')
+                    mincost=minimum*close
 
-    if exchangeName=='kucoin':
-        rleSave=exchange.enableRateLimit
-        rlvSave=exchange.rateLimit
-        exchange.enableRateLimit=True
-        exchange.rateLimit=372+JRRsupport.ElasticDelay()
+            if diagnostics:
+                self.Log.Write(f"| |- Close: {close:.8f}")
+                self.Log.Write(f"| |- Minimum Amount: {minimum1:.8f}, {m1:.8f}")
+                self.Log.Write(f"| |- Minimum Cost:   {minimum2:.8f}, {m2:.8f}")
+                self.Log.Write(f"| |- Minimum Price:  {minimum3:.8f}, {m3:.8f}")
 
-    done=False
-    while from_timestamp < to_timestamp:
-        try:
-            ohlcvs=ccxtAPI("fetch_ohlcv",exchange,RetryLimit,pair,tf,from_timestamp)
-            first = ohlcvs[0][0]
-            last = ohlcvs[-1][0]
-            if tf == "1m":
-                from_timestamp += len(ohlcvs) * minute 
-            if tf == "5m":
-                from_timestamp += len(ohlcvs) * 5 * minute 
-            if tf == "15m":
-                from_timestamp += len(ohlcvs) * 15 * minute 
-            if tf == "1h":
-                from_timestamp += len(ohlcvs) * hour
-            if tf == "1d":
-                from_timestamp += len(ohlcvs) * day
-            data += ohlcvs
-        except Exception as e:
-            if exchangeName=='kucoin':
-                x=str(e)
-                if x.find('429000')>-1:
-                    retry429+=1
-            if retry>=RetryLimit:
-                Active['JRLog'].Error("Fetching OHLCV",e)
-        else:
-            done=True
+        return minimum,mincost
 
-        if exchangeName=='kucoin':
-            if retry429>=(RetryLimit*7):
-                retry429=0
-                retry+=1
-        else:
-            retry+=1
+    # if quote is UDSC, find a market that provides a close price comparision
+    # that is on the exchange, ie... USDT. For example BTC/USDC compares to
+    # BTC/USDT is terms of both quote currenciesbeing pegged to the USD as
+    # stable.
 
-    if exchangeName=='kucoin':
-        exchange.enableRateLimit=rleSave
-        exchange.rateLimit=rlvSave
+    def FindMatchingPair(base):
+        for quote in self.StableCoinUSD:
+            pair=base+'/'+quote
+            if pair in self.Markets:
+                return pair
 
-    return data
+        return None
+
+    # Pull the information about the asset minimums from the exchange.
+
+    # Amount is the minimum amount in the ASSET, if TRX/BTC, amount is always
+    # BASE value
+
+    # Cost in USD/Stablecoins
+    # Price in USD/Stablecoins
+
+    def LoadMinimum(self,exchangeName,pair):
+        minlist={}
+        amount=0
+        fn=self.DataDirectory+'/'+exchangeName+'.minimum'
+        if os.path.exists(fn):
+            try:
+                raw=pathlib.Path(fn).read_text()
+            except:
+                self.Log.Error("Minimum List",f"Can't read minimum list for {exchangeName}")
+
+            minlist=json.loads(raw)
+            if pair in minlist:
+                amount=minlist[pair]
+
+        return amount
+
+    # This is used to update the minimum amount list. 
+
+    def UpdateMinimum(self,exchangeName,pair,amount):
+        minlist={}
+        fn=self.DataDirectory+'/'+exchangeName+'.minimum'
+        if os.path.exists(fn):
+            try:
+                raw=pathlib.Path(fn).read_text()
+            except:
+                self.Log.Error("Minimum List",f"Can't read minimum list for {exchangeName}")
+
+        minlist=json.loads(raw)
+
+        minlist[pair]=amount
+        fh=open(fn,'w')
+        fh.write(json.dumps(minlist))
+        fh.close()

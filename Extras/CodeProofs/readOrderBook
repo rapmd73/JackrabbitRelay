@@ -33,8 +33,8 @@ ticker=relay.GetTicker(symbol=asset)
 orderbook=relay.GetOrderBook(symbol=asset)
 
 if relay.GetFramework()=='ccxt':
-    BuyPrice=round(float(ticker['ask']),8)
-    SellPrice=round(float(ticker['bid']),8)
+    BuyPrice=round(float(ticker['Ask']),8)
+    SellPrice=round(float(ticker['Bid']),8)
 
     # Variables for order book
 

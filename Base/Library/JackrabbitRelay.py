@@ -128,7 +128,7 @@ class JackrabbitRelay:
         # Result from last operation
         self.Results=None
 
-        # this is the framework that defines the low level API, 
+        # this is the framework that defines the low level API,
         # ie CCXT, OANDA, ROBINHOOD, FTXSTOCKS
         # Framework can be provided by config file
 
@@ -362,7 +362,7 @@ class JackrabbitRelay:
         # well.
 
         if self.Framework=='ccxt':
-            self.Broker=JRRccxt.ccxtCrypto(self.Exchange,self.Config,self.Active)
+            self.Broker=JRRccxt.ccxtCrypto(self.Exchange,self.Config,self.Active,DataDirectory=self.DataDirectory)
         elif self.Framework=='oanda':
             self.Broker=JRRoanda.oanda(self.Exchange,self.Config,self.Active)
 
@@ -439,4 +439,9 @@ class JackrabbitRelay:
         self.RotateKeys()
         self.Results=self.Broker.PlaceOrder(**kwargs)
         return self.Results
+
+    def GetMinimum(self,**kwargs):
+        self.RotateKeys()
+        minimum,mincost=self.Broker.GetMinimum(**kwargs)
+        return minimum,mincost
 
