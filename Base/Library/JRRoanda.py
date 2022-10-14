@@ -301,3 +301,13 @@ class oanda:
             self.Log.Error("PlaceOrder","Action is neither BUY nor SELL")
 
         return self.results
+
+    # This is mostly a place holder and not used for OANDA as the minimum units
+    # is always 1. Minimum cost of a market order is always ask price.
+
+    def GetMinimum(self,**kwargs):
+        symbol=kwargs.get('symbol')
+
+        minimum=1
+        mincost=self.GetTicker(symbol=symbol)['Ask']
+        return minimum,mincost
