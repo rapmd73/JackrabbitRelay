@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+import time
+
+import JRRsupport
+
+lines=sys.stdin.readlines()
+
+tList=JRRsupport.TimedList("timedList.test")
+
+for line in lines:
+    line=line.strip()
+
+    dataTV=json.loads(line)
+    key=dataTV['Recipe'].replace(" ","")+dataTV['Exchange']+dataTV['Asset']+dataTV['TCycles']+dataTV['TBuys']
+    results=tList.add(key,line,10)
+#    if results!=None:
+#        print("Found    ",results)
+
+    tList.purge()
+
+
+

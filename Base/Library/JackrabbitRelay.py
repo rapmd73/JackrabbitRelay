@@ -31,13 +31,15 @@ class JackrabbitLog:
         self.LogDirectory="/home/JackrabbitRelay2/Logs"
         self.StartTime=datetime.now()
         self.basename=os.path.basename(sys.argv[0])
+        self.logfile=None
+
         self.SetLogName(filename)
 
     def SetLogName(self,filename):
         if filename==None:
             self.logfile=self.basename
         else:
-            self.logfile=self.basename+'.'+filename.replace('/','').replace('-','').replace(':','')
+            self.logfile=self.basename+'.'+filename.replace('/','').replace('-','').replace(':','').replace(' ','')
 
     def Write(self,text):
         pid=os.getpid()
@@ -143,20 +145,29 @@ class JackrabbitRelay:
 
         # Process command line. Must be first function called
 
-        self.ProcessCommandLine()
+        if self.argslen>1
+            self.ProcessCommandLine()
 
         # if no command line, check for stabdard input, ie. process order
 
-        if self.argslen==1:
+        if self.Payload!=None:
             self.ProcessPayload()
 
         # Process config file
 
         self.ProcessConfig()
 
+        # Now that all parts are loaded, fully verify the payload for the specific broker
+
+        if self.Payload!=None:
+            self.VerifyPayload()
+
         # Login to exchange/Broker
 
-        self.Login()
+        if self.Exchange!=None and self.Account!=None:
+            self.Login()
+        else:
+            self.JRLog.Error("Login","An exchange and an account must be provided")
 
     def GetExchange(self):
         return self.Exchange
@@ -179,31 +190,42 @@ class JackrabbitRelay:
     def GetFramework(self):
         return self.Framework
 
+    # Return command line information to user
+
+    def GetArgsLen(self):
+        return self.argslen
+
+    def GetArgs(self,x):
+        return self.args[x]
+
     # Remap TradingView symbol to the exchange symbol/broker
 
     def TradingViewRemap(self):
         NewPair=self.Asset
         self.JRLog.Write('TradingView Symbol Remap')
-        self.JRLog.Write('|- In: '+Asset)
+        self.JRLog.Write('|- In: '+self.Asset)
 
         fn=self.DataDirectory+'/'+self.Exchange+'.symbolmap'
         if os.path.exists(fn):
             try:
                 raw=JRRsupport.ReadFile(fn)
-            except:
-                self.JRLog.Error("TradingView Remap",f"Can't read symbol map for {en}")
+            except Exception as e:
+                self.JRLog.Error("TradingView Remap",f"Can't read symbol map for {self.Exchange}")
 
             TVlist=json.loads(raw)
-            if pair in TVlist:
-                np=TVlist[pair]
+            if self.Asset in TVlist:
+                NewPair=TVlist[self.Asset]
             else:
-                self.JRLog.Write('|- Pair not in symbol file, reverting')
+                self.JRLog.Write('|- Pair not in symbol file')
+                return
         else:
-            self.JRLog.Write('|- No symbol file, reverting')
+            self.JRLog.Write('|- No symbol file')
+            return
 
-        self.JRLog.Write('|- Out: '+np)
+        self.JRLog.Write('|- Out: '+NewPair)
 
-        return NewPair
+        self.Asset=NewPair
+        self.Order['Asset']=NewPair
 
     # Process and validate the order payload
 
@@ -218,28 +240,53 @@ class JackrabbitRelay:
         except json.decoder.JSONDecodeError as err:
             self.JRLog.Error('Processing Payload','Payload damaged')
 
+        # These are absolutely required to load thwe proper configuration.
+
         if "Exchange" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing exchange identifier')
         else:
+            self.Order['Exchange']=self.Order['Exchange'].lower().replace(' ','')
             self.Exchange=self.Order['Exchange']
         if "Account" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing account identifier')
         else:
             self.Account=self.Order['Account']
-        if "Market" not in self.Order:
-            self.JRLog.Error('Processing Payload','Missing market identifier')
+
+    # Verify the payload based upon a specific broker requirements.
+
+    def VerifyPayload(self):
+        if self.Framework=='ccxt':
+            if "Market" not in self.Order:
+                self.JRLog.Error('Processing Payload','Missing market identifier')
         if "Action" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing action (buy/sell/close) identifier')
+        if "OrderType" not in self.Order:
+            self.Order['OrderType']='Market'
         if "Asset" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing asset identifier')
-
-        self.Order['Asset']=self.Order['Asset'].upper()
+        else:
+            self.Order['Asset']=self.Order['Asset'].upper()
+            self.Asset=self.Order['Asset']
 
         # Set up logging data
 
         if self.Exchange!=None and self.Account!=None and self.Asset!=None:
-            lname=f"{self.Exchange}.{self.Account}.{self.Asset}"
+            if "Market" in self.Order:
+                lname=f"{self.Exchange}.{self.Account}.{self.Order['Market']}.{self.Asset}"
+            else:
+                lname=f"{self.Exchange}.{self.Account}.{self.Asset}"
             self.JRLog.SetLogName(lname)
+
+        # Verify the Identity within the paylod. Identity now REQUIRED.
+
+        if "Identity" in self.Active:
+            if "Identity" in self.Order:
+                if self.Order['Identity']!=self.Active['Identity']:
+                    self.JRLog.Error("Identity verification","FAILED: Identity does not match")
+            else:
+                self.Log.Error("Identity verification","FAILED: Identity not in payload")
+        else:
+            self.Log.Error("Identity verification","FAILED: Identity.cfg not found")
 
     # Read the exchange config file and load API/SECRET for a given (sub)account.
     # MAIN is reserved for the main account
@@ -264,6 +311,8 @@ class JackrabbitRelay:
             except:
                 self.JRLog.Error("Reading Configuration",'identity damaged')
             cf.close()
+        else:
+            self.JRLog.Error("Reading Configuration",'Identity.cfg not found')
 
         fn=self.ConfigDirectory+'/'+self.Exchange+'.cfg'
         if os.path.exists(fn):
@@ -289,12 +338,12 @@ class JackrabbitRelay:
                 cf.close()
 
             if self.Keys==[]:
-                self.JRLog.Error("Reading Configuration",account+' reference not found, check spelling/case')
+                self.JRLog.Error("Reading Configuration",self.Account+' reference not found, check spelling/case')
             else:
                 # Initialize to the first key
                 self.Active=self.Keys[0]
         else:
-            self.JRLog.Error("Reading Configuration",echg+'.cfg not found in config directory')
+            self.JRLog.Error("Reading Configuration",self.Exchange+'.cfg not found in config directory')
 
     def ProcessCommandLine(self):
         self.args=sys.argv
@@ -304,7 +353,7 @@ class JackrabbitRelay:
         if self.argslen>=1:
             self.Basename=self.args[0]
         if self.argslen>=2:
-            self.Exchange=self.args[1].lower()
+            self.Exchange=self.args[1].lower().replace(' ','')
         if self.argslen>=3:
             self.Account=self.args[2]
         if self.argslen>=4:
@@ -321,14 +370,6 @@ class JackrabbitRelay:
 
         if lname!=None:
             self.JRLog.SetLogName(lname)
-
-    # Return command line information to user
-
-    def GetArgsLen(self):
-        return self.argslen
-
-    def GetArgs(self,x):
-        return self.args[x]
 
     # This if where things get messy. The basic API must have calls to
     # each framework buy uniform to the Relay core.
