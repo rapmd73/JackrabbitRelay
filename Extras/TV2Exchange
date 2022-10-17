@@ -6,50 +6,39 @@
 # All rights reserved unconditionally.
 
 import sys
-sys.path.append('/home/JackrabbitRelay/Base/Library')
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
-import ccxt
 import json
 
-import JRRconfig
+import JackrabbitRelay as JRR
 
-if len(sys.argv) > 1:
-    exchangeName=sys.argv[1].lower()
+relay=JRR.JackrabbitRelay()
+if relay.GetArgsLen() > 2:
+    exchangeName=relay.GetExchange()
+    account=relay.GetAccount()
 else:
-    print("An exchange must be provided.")
+    print("An exchange and an account must be provided.")
     sys.exit(1)
 
-if exchangeName in ccxt.exchanges:
-    exchange=getattr(ccxt,exchangeName)()
-else:
-    if exchangeName=="ftxus":
-        exchange=ccxt.ftx({'hostname': 'ftx.us'})
-    else:
-        print("Invalid exchange")
-        sys.exit(1)
+# Already loaded from login
 
-done=False
-c=0
-while not done:
-    try:
-        markets=exchange.load_markets()
-        done=True
-    except:
-        if c>4:
-            print("Fetching Market - retries failed")
-            sys.exit(1)
-        c+=1
-        sleep(1)
-        pass
+markets=relay.Markets
 
 TradingView={}
-for pair in markets:
-    p=markets[pair]
-    tv=p['id'].replace('/','').replace('-','').replace(':','')
-    ns=p['symbol']
-    TradingView[tv]=ns
+if relay.GetFramework()=='oanda':
+    for cur in markets:
+        p=markets[cur]
+        tv=p['displayName'].replace('/','').replace('_','')
+        ns=p['name']
+        TradingView[tv]=ns
+elif relay.GetFramework()=='ccxt':
+    for cur in markets:
+        p=markets[cur]
+        tv=p['id'].replace('/','').replace('-','').replace(':','')
+        ns=p['symbol']
+        TradingView[tv]=ns
 
-fn=JRRconfig.DataDirectory+'/'+exchangeName+'.symbolmap'
+fn=relay.DataDirectory+'/'+exchangeName+'.'+account+'.symbolmap'
 fh=open(fn,'w')
 fh.write(json.dumps(TradingView)+"\n")
 fh.close()

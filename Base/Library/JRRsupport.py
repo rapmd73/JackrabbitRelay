@@ -8,10 +8,8 @@
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
-import pathlib
 import time
 import json
-import requests
 
 # Reusable file locks, using atomic operations
 # NOT suitable for distributed systems or 
@@ -107,9 +105,9 @@ class FileWatch:
         except:
             pass
 
-# Gewneral file tools
+# General file tools
 
-def ReadFile(self,fn):
+def ReadFile(fn):
     if os.path.exists(fn):
         cf=open(fn,'r')
         buffer=cf.read()
@@ -118,12 +116,12 @@ def ReadFile(self,fn):
         buffer=None
     return buffer
 
-def WriteFile(self,fn,data):
+def WriteFile(fn,data):
     cf=open(fn,'w')
     cf.write(data)
     cf.close()
 
-def AppendFile(self,fn,data):
+def AppendFile(fn,data):
     cf=open(fn,'a')
     cf.write(data)
     cf.close()
@@ -421,34 +419,97 @@ def ElasticDelay():
 
     return delay
 
+# Read a timed list. Add data if not present.
 
+# The DSR, MaxAssets, and PCTvalue lists are all built on this functionality
 
+# Driver Test
 
-###
-### Move to JRR class
-###
+#lines=sys.stdin.readlines()
 
-# Remap TradingView symbol to the exchange symbol
+#for line in lines:
+#    line=line.strip()
+#    tList=TimedList("timedList.test")
+#    dataTV=json.loads(line)
+#    key=dataTV['Recipe'].replace(" ","")+dataTV['Exchange']+dataTV['Asset']+dataTV['TCycles']+dataTV['TBuys']
+#    results=tList.add(key,line,10)
+#    if results!=None:
+#        print("Found    ",results)
 
-def TradingViewRemap(en,pair):
-    np=pair
-    JRRlog.WriteLog('Symbol Remap')
-    JRRlog.WriteLog('|- In: '+pair)
-    fn=JRRconfig.DataDirectory+'/'+en+'.symbolmap'
-    if os.path.exists(fn):
+#tList=TimedList("timedList.test")
+#tList.delete()
+
+class TimedList():
+    def __init__(self,fname):
+        self.fname=fname
+        self.fw=FileWatch(self.fname)
+
+    def add(self,key,payload,expire):
+        dataDB={}
+        results=None
+
+        self.fw.Lock()
         try:
-            raw=pathlib.Path(fn).read_text()
+            data=ReadFile(self.fname)
+
+            if data!=None and data!='':
+                dataDB=json.loads(data)
+                if dataDB!=None:
+                    if key in dataDB:
+                        dataItem=json.loads(dataDB[key])
+                        if dataItem['Expire']>time.time():
+                            # Found and not expired, return result
+                            results=dataItem
+                        else: # Found and expired, replace old data with new data
+                            dataItem['Expire']=time.time()+expire
+                            dataItem['Payload']=payload
+                            dataDB[key]=json.dumps(dataItem)
+                    else: # New item
+                        dataItem={}
+                        dataItem['Expire']=time.time()+expire
+                        dataItem['Payload']=payload
+                        dataDB[key]=json.dumps(dataItem)
+            else: # First Item
+                dataItem={}
+                dataItem['Expire']=time.time()+expire
+                dataItem['Payload']=payload
+                dataDB[key]=json.dumps(dataItem)
+
+            WriteFile(self.fname,json.dumps(dataDB))
+            self.fw.Unlock()
         except:
-            JRRlog.ErrorLog("TradingView Remap",f"Can't read symbol map for {en}")
+            self.fw.Unlock()
+        return results
 
-        TVlist=json.loads(raw)
-        if pair in TVlist:
-            np=TVlist[pair]
-        else:
-            JRRlog.WriteLog('|- Pair not in symbol file, reverting')
-    else:
-        JRRlog.WriteLog('|- No symbol file, reverting')
+    def search(self,key):
+        dataDB={}
+        data=ReadFile(self.fname)
 
-    JRRlog.WriteLog('|- Out: '+np)
-    return np
+        if data!=None and data!='':
+            dataDB=json.loads(data)
+            if dataDB!=None:
+                if key in dataDB:
+                    # Don't report expired items
+                    dataItem=json.loads(dataDB[key])
+                    if dataItem['Expire']>time.time():
+                        return dataDB[key]
+        return None
 
+    def purge(self):
+        dataDB={}
+        self.fw.Lock()
+        try:
+            data=ReadFile(self.fname)
+            if data!=None and data!='':
+                dataDB=json.loads(data)
+
+                # Remove expired entries
+                NewDataDB={}
+                for cur in dataDB:
+                    dataItem=json.loads(dataDB[cur])
+                    if dataItem['Expire']>time.time():
+                        NewDataDB[cur]=dataDB[cur]
+                WriteFile(self.fname,json.dumps(NewDataDB))
+            self.fw.Unlock()
+        except:
+            self.fw.Unlock()
