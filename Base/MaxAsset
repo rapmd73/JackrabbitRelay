@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Jackrabbit Equilibrium
+# Jackrabbit
 # 2021 Copyright © Robert APM Darin
 # All rights reserved unconditionally.
 
@@ -22,7 +22,7 @@ def main():
 
     coins={}
 
-    fw=JRRsupport.FileWatch(fn)
+    fw=JRRsupport.Locker(fn)
     fw.Lock()
 
     try:

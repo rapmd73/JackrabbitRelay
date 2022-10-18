@@ -258,10 +258,18 @@ class JackrabbitRelay:
         if self.Framework=='ccxt':
             if "Market" not in self.Order:
                 self.JRLog.Error('Processing Payload','Missing market identifier')
+
         if "Action" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing action (buy/sell/close) identifier')
+        self.Order['Action']=self.Order['Action'].lower()
+        if self.Order['Action']!='buy' and self.Order['Action']!='sell' and self.Order['Action']!='close':
+            self.JRLog.Error('Processing Payload','Action must be one of buy, sell or close')
+
         if "OrderType" not in self.Order:
-            self.Order['OrderType']='Market'
+            self.Order['OrderType']='market'
+        else:
+            self.Order['OrderType']=self.Order['OrderType'].lower()
+
         if "Asset" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing asset identifier')
         else:
@@ -277,7 +285,7 @@ class JackrabbitRelay:
                 lname=f"{self.Exchange}.{self.Account}.{self.Asset}"
             self.JRLog.SetLogName(lname)
 
-        # Verify the Identity within the paylod. Identity now REQUIRED.
+        # Verify the Identity within the payload. Identity now REQUIRED.
 
         if "Identity" in self.Active:
             if "Identity" in self.Order:

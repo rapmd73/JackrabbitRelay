@@ -63,6 +63,18 @@ def main():
             s=f"too large, {spread:.8f} > {relay.Active['SpreadOverride']:.8f}"
             relay.JRLog.Error("Spread", s)
 
+    # Check for maximum allowed assets
+
+    if not "OverrideMaxAssets" in relay.Order:
+        if "MaxAssets" in relay.Active:
+            fn=relay.DataDirectory+'/'+relay.Exchange+'.'+relay.Account
+            maxAssetsList=JRRsupport.TimedList("MaxAssets",fn,int(relay.Active['MaxAssets']))
+            if relay.Order['Action']`=='close':
+                expire=0
+            else:
+                expire=(7*86400)
+            results=maxAssetsList.update(relay.Order['Asset'],json.dumps(relay.Order),expire)
+
     # Get Minimum allowed amount (units) and cost
 
     isMinimum=False
@@ -124,15 +136,17 @@ def main():
                 price=round(float(relay.Order['Price']),8)
         else:
             price=round(ticker['Ask'],8)
-    else:   # No amount method so using exchange minimum for market orders.
-        if (not hasUSD and not hasBase and not hasQuote) \
-            and 'market' in relay.Order['OrderType']:
+    elif 'market' in relay.Order['OrderType']:
+        # No amount method so using exchange minimum
+        if (not hasUSD and not hasBase and not hasQuote):
             isMinimum=True
             amount=minimum
             price=mincost
             relay.JRLog.Write('Using minimum position amount/price')
             relay.JRLog.Write(f'|- Minimum Amount: {minimum:.8f}')
             relay.JRLog.Write(f'|- Minimum Cost:   {mincost:.8f}')
+    else:
+        relay.JRLog.Error("PlaceOrder", "OrderType must be limit or market")
 
     # Get Previous Balance
 
@@ -221,13 +235,6 @@ if __name__ == '__main__':
 
 """
 
-
-# Check for maximum allowed assets
-
-    if not "OverrideMaxAssets" in Order:
-        if "MaxAssets" in Active:
-            delete=(action=='close')
-            JRRsupport.ReadAssetList(exchangeName,account,pair,Active['MaxAssets'],delete)
 
 # Market Check, questionable for future usage requirements
 
