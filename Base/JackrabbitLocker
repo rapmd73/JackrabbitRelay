@@ -1,0 +1,142 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Locker
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+# { "ID":"DEADBWEEF", "FileName":"testData", "Action":"Lock", "Expire":"300" }
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import time
+from datetime import datetime
+import socket
+import select
+import json
+
+Version="0.0.0.1.0"
+BaseDirectory='/home/JackrabbitRelay2/Base'
+ConfigDirectory='/home/JackrabbitRelay2/Config'
+LogDirectory="/home/JackrabbitRelay2/Logs"
+
+# Write pid in port file
+
+def WritePID(port):
+    fn=BaseDirectory+'/'+str(port)+'.pid'
+    f = open(fn, "w")
+    f.write(str(os.getpid()))
+    f.close()
+
+# Write log entry
+
+def WriteLog(addr,msg):
+    time=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+
+    s=f'{time} {addr:16} {msg}\n'
+
+    fh=open(LogDirectory+'/JackrabbitLocker.log','a')
+    fh.write(s)
+    fh.close()
+
+def main():
+    port=37373
+
+    WritePID(port)
+#    WriteLog(Version,"Jackrabbit Locker")
+
+    Locker={}
+
+    try:
+        lockerSocket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        lockerSocket.setblocking(0)
+        lockerSocket.bind(('', port))
+        lockerSocket.listen(1024)
+    except OSError as err:
+        x=str(err)
+        if x.find('Address already in use')>-1:
+            print('Another program is using this port: '+str(port))
+        else:
+            print(x)
+        WriteLog(Version,x)
+        sys.exit(1)
+
+    inputs=[lockerSocket]
+
+    # Response queue connected to each client
+
+    queue={}
+
+    while True:
+        infds,outfds,errfds=select.select(inputs, inputs, [], 5)
+
+        if len(infds)!=0:
+            for fds in infds:
+                if fds is lockerSocket:
+                    clientsock,clientaddr=fds.accept()
+                    clientsock.setblocking(0)
+                    inputs.append(clientsock)
+                else:
+                    data=None
+                    try:
+                        data=fds.recv(1024)
+                    except:
+                        pass
+
+                    # No data received, close connection
+
+                    if not data:
+                        inputs.remove(fds)
+                        if fds in queue:
+                            queue.pop(fds)
+                    else:
+                        try:
+                            dataDB=json.loads(data.decode())
+                        except: # timeout
+                            pass
+                        else: # Find the lock
+                            FileName=dataDB['FileName']
+                            if FileName in Locker:
+                                # Link this entry to the connected socket
+                                if dataDB['Action'].lower()=='lock':
+                                    # Lock has expired, now unlocked
+                                    if time.time()>Locker[FileName]['Expire']:
+                                        Locker[FileName]['ID']=dataDB['ID']
+                                        Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
+                                        queue[fds]="Locked"
+                                    else:
+                                        if Locker[FileName]['ID']==dataDB['ID']:
+                                            Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
+                                            queue[fds]="Locked"
+                                        else:
+                                            queue[fds]="Failure"
+                                elif dataDB['Action'].lower()=='unlock':
+                                    # Unlock request
+                                    if Locker[FileName]['ID']==dataDB['ID']:
+                                        Locker[FileName]['Expire']=0
+                                        queue[fds]="Unlocked"
+                                    else:
+                                        queue[fds]="Failure"
+                                else:
+                                    queue[fds]="Failure"
+                            else: # New Lock Request
+                                if dataDB['Action'].lower()=='lock':
+                                    dataLock={}
+                                    dataLock['ID']=dataDB['ID']
+                                    dataLock['Expire']=time.time()+float(dataDB['Expire'])
+                                    Locker[FileName]=dataLock
+                                    queue[fds]="Locked"
+
+        # Send response and close connection
+
+        if len(outfds)!=0:
+            for fds in outfds:
+                if fds in queue:
+                    fds.sendall(queue[fds].encode())
+                    queue.pop(fds)
+                    inputs.remove(fds)
+                    fds.close()
+
+if __name__ == '__main__':
+    main()

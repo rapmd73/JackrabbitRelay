@@ -9,101 +9,105 @@ import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
 import time
+import random
+import socket
+import select
 import json
 
 # Reusable file locks, using atomic operations
 # NOT suitable for distributed systems or 
 # Windows. Linux ONLY
 #
-# fw=FileWatch(filename)
+# fw=Locker(filename)
 # fw.Lock()
 # ( do somwething )
 # fw.Unlock()
 
-class FileWatch:
+# { "ID":"DEADBWEEF", "FileName":"testData", "Action":"Lock", "Expire":"300" }
+
+class Locker:
     # Initialize the file name
-    def __init__(self,filename,Log=None):
-        self.filename=filename+'.lock'
-        self.RetryLimit=37
+    def __init__(self,filename,Retry=7,Log=None):
+        self.ID=self.GetID()
+        self.filename=filename
+        self.retryLimit=Retry
         self.Log=Log
+        self.port=37373
+        self.host=''
 
-    # Try to get a lock on the file
+    # Generate an ID String
 
-    def TestLock(self):
-        # Deal with a dead lock file.
-        # This will start a race with other programs waiting and testing
-        # Under no circumstances should a lock last more then 5 minutes (300 seconds)
+    def GetID(self):
+        letters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        llen=len(letters)
 
+        pw=""
+        oc=""
+
+        for i in range(20):
+            done=False
+            while not done:
+                for z in range(random.randrange(73,237)):
+                    c=random.randrange(llen)
+                if pw=="" or (len(pw)>0 and letters[c]!=oc):
+                    done=True
+            oc=letters[c]
+            pw+=oc
+        return pw
+
+    # Contact the Locker Server and WAIT for response. NOT thread safe.
+
+    def Talker(self,msg):
         try:
-            st=os.stat(self.filename)
-            age=time.time()-st.st_mtime
-            if age>300:
-                self.Unlock()
+            ls=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            ls.connect((self.host, self.port))
+            ls.send(msg.encode())
+            buf=ls.recv(1024)
+            ls.close()
+            if len(buf)!=0:
+                return buf.decode().lower()
+            else:
+                return None
         except:
-            pass
+            return None
 
-        # Set up the local lock file
+    # Contact Lock server
 
-        p=str(os.getpid())
-        tn=self.filename+'.'+p
-        txt=f"{p}\n"
-        WriteFile(tn,txt)
+    def Retry(self,action,expire):
+        outbuf='{ '+f'"ID":"{self.ID}", "FileName":"{self.filename}", "Action":"{action}", "Expire":"{expire}"'+' }'
 
-        isLocked=False
-        try:
-            os.rename(tn,self.filename)
-        except:
-            pass
-        else:
-            isLocked=True
-        return isLocked
+        retry=0
+        done=False
+        while not done:
+            buf=self.Talker(outbuf)
+            if buf==None:
+                if retry>self.retryLimit:
+                    if self.Log!=None:
+                        self.Log.Error("Locker",f"{self.filename}: {action} request failed")
+                    else:
+                        print("Locker",f"{self.filename}: {action} request failed")
+                        sys.exit(1)
+                retry+=1
+                time.sleep(1)
+            else:
+                if len(buf)!=0:
+                    if buf=='locked' or buf=='unlocked' or buf=='failure':
+                        done=True
+                    else:
+                        time.sleep(1)
+                else:
+                    time.sleep(1)
+        return buf
 
     # Lock the file
 
-    def Lock(self):
-        # Deal with a dead lock file.
-        # This will start a race with other programs waiting and testing
-        # Under no circumstances should a lock last more then 5 minutes (300 seconds)
-
-        try:
-            st=os.stat(self.filename)
-            age=time.time()-st.st_mtime
-            if age>300:
-                self.Unlock()
-        except:
-            pass
-
-        # Set up the local lock file
-
-        p=str(os.getpid())
-        tn=self.filename+'.'+p
-        txt=f"{p}\n"
-        WriteFile(tn,txt)
-
-        # Let the battle begin...
-
-        done=False
-        retry=0
-        while not done:
-            try:
-                os.rename(tn,self.filename)
-            except:
-                retry+=1
-                if retry>=RetryLimit:
-                    if self.Log!=None:
-                        self.Log.ErrorLog("FileLock","exclusive access request failed")
-            else:
-                done=True
-
-            time.sleep(0.1)
+    def Lock(self,expire=300):
+        return self.Retry("Lock",expire)
 
     # Unlock the file
 
     def Unlock(self):
-        try:
-            os.remove(self.filename)
-        except:
-            pass
+        return self.Retry("Unlock",0)
 
 # General file tools
 
@@ -440,13 +444,25 @@ def ElasticDelay():
 #tList.delete()
 
 class TimedList():
-    def __init__(self,fname):
+    def __init__(self,title,fname,maxsize=0):
         self.fname=fname
-        self.fw=FileWatch(self.fname)
+        self.title=title
+        self.maxsize=maxsize
+        self.fw=Locker(self.fname)
 
-    def add(self,key,payload,expire):
+    # Return a count that does NOT include expired items
+
+    def countDB(self,dataDB):
+        count=0
+        for cur in dataDB:
+            dataItem=json.loads(dataDB[cur])
+            if dataItem['Expire']>time.time():
+                count+=1
+        return count
+
+    def update(self,key,payload,expire):
         dataDB={}
-        results=None
+        results={}
 
         self.fw.Lock()
         try:
@@ -459,21 +475,46 @@ class TimedList():
                         dataItem=json.loads(dataDB[key])
                         if dataItem['Expire']>time.time():
                             # Found and not expired, return result
-                            results=dataItem
+                            if expire==0:
+                                # Force kill item
+                                dataItem['Expire']=expire
+                                dataDB[key]=json.dumps(dataItem)
+                                results['Status']='Expired'
+                                results['Payload']=dataItem
+                            else:
+                                results['Status']='Found'
+                                results['Payload']=dataItem
                         else: # Found and expired, replace old data with new data
+                            c=self.countDB(dataDB)
+                            if (self.maxsize==0) or (self.maxsize>0 and c<self.maxsize):
+                                dataItem['Expire']=time.time()+expire
+                                dataItem['Payload']=payload
+                                dataDB[key]=json.dumps(dataItem)
+                                results['Status']='Replaced'
+                                results['Payload']=dataItem
+                            else: # Size limit hit
+                                results['Status']='Error'
+                                results['Payload']='Maximum size limit exceeded'
+                    else: # New item
+                        # Needs to deal with expired item not being counted in limits
+                        c=self.countDB(dataDB)
+                        if (self.maxsize==0) or (self.maxsize>0 and c<self.maxsize):
+                            dataItem={}
                             dataItem['Expire']=time.time()+expire
                             dataItem['Payload']=payload
                             dataDB[key]=json.dumps(dataItem)
-                    else: # New item
-                        dataItem={}
-                        dataItem['Expire']=time.time()+expire
-                        dataItem['Payload']=payload
-                        dataDB[key]=json.dumps(dataItem)
+                            results['Status']='Added'
+                            results['Payload']=dataItem
+                        else: # Size limit hit
+                            results['Status']='ErrorLimit'
+                            results['Payload']='Maximum size limit exceeded'
             else: # First Item
                 dataItem={}
                 dataItem['Expire']=time.time()+expire
                 dataItem['Payload']=payload
                 dataDB[key]=json.dumps(dataItem)
+                results['Status']='Added'
+                results['Payload']=dataItem
 
             WriteFile(self.fname,json.dumps(dataDB))
             self.fw.Unlock()

@@ -15,18 +15,25 @@ import JRRsupport
 
 lines=sys.stdin.readlines()
 
-tList=JRRsupport.TimedList("timedList.test")
+tList=JRRsupport.TimedList("Timed List Test","timedList.test")
 
+s=time.time()
 for line in lines:
     line=line.strip()
 
     dataTV=json.loads(line)
     key=dataTV['Recipe'].replace(" ","")+dataTV['Exchange']+dataTV['Asset']+dataTV['TCycles']+dataTV['TBuys']
-    results=tList.add(key,line,10)
-#    if results!=None:
-#        print("Found    ",results)
+e=time.time()-s
+print(f"Took {e} seconds to load {len(lines)} lines")
 
-    tList.purge()
+#    s=time.time()
+#    results=tList.update(key,line,300)
+#    e=time.time()-s
+#    if results['Status']!='ErrorLimit':
+#        print(f"{e:4.8f} {results['Status']:10} {results['Payload']}")
+#    else:
+#        print(f"Max Limit, purging...")
+#        tList.purge()
 
 
 
