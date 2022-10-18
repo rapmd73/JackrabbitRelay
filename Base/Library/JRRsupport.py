@@ -27,10 +27,11 @@ import json
 
 class Locker:
     # Initialize the file name
-    def __init__(self,filename,Retry=7,Log=None):
+    def __init__(self,filename,Retry=7,Timeout=180,Log=None):
         self.ID=self.GetID()
         self.filename=filename
         self.retryLimit=Retry
+        self.timeout=Timeout
         self.Log=Log
         self.port=37373
         self.host=''
@@ -94,15 +95,31 @@ class Locker:
                     if buf=='locked' or buf=='unlocked' or buf=='failure':
                         done=True
                     else:
-                        time.sleep(1)
+                        time.sleep(0.1)
                 else:
-                    time.sleep(1)
+                    time.sleep(0.1)
         return buf
 
     # Lock the file
 
     def Lock(self,expire=300):
-        return self.Retry("Lock",expire)
+        resp=None
+        done=False
+        timeout=time.time()+self.timeout
+        while not done:
+            resp=self.Retry("Lock",expire)
+            if resp=="locked":
+                done=True
+            else:
+                if time.time()>timeout:
+                    if self.Log!=None:
+                        self.Log.Error("Locker",f"{self.filename} {os.getpid()}: lock request failed")
+                    else:
+                        print("Locker",f"{self.filename}{os.getpid()}: lock request failed")
+                        sys.exit(1)
+            # Prevent race conditions
+            time.sleep(0.1)
+        return resp
 
     # Unlock the file
 
@@ -444,11 +461,13 @@ def ElasticDelay():
 #tList.delete()
 
 class TimedList():
-    def __init__(self,title,fname,maxsize=0):
+    def __init__(self,title,fname,maxsize=0,Timeout=180,Log=None):
+        self.Log=Log
+        self.Timeout=Timeout
         self.fname=fname
         self.title=title
         self.maxsize=maxsize
-        self.fw=Locker(self.fname)
+        self.fw=Locker(self.fname,Timeout=self.Timeout,Log=self.Log)
 
     # Return a count that does NOT include expired items
 
