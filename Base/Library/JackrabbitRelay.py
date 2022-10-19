@@ -145,7 +145,7 @@ class JackrabbitRelay:
 
         # Process command line. Must be first function called
 
-        if self.argslen>1
+        if self.argslen>1:
             self.ProcessCommandLine()
 
         # if no command line, check for stabdard input, ie. process order
@@ -201,11 +201,14 @@ class JackrabbitRelay:
     # Remap TradingView symbol to the exchange symbol/broker
 
     def TradingViewRemap(self):
+        if self.Asset!=self.Order['Asset']:
+            self.JRLog.Errr("TradingViewRemap",'internal asset conflict. Report this error.')
+
         NewPair=self.Asset
         self.JRLog.Write('TradingView Symbol Remap')
         self.JRLog.Write('|- In: '+self.Asset)
 
-        fn=self.DataDirectory+'/'+self.Exchange+'.symbolmap'
+        fn=self.DataDirectory+'/'+self.Exchange+'.'+self.Account+'.symbolmap'
         if os.path.exists(fn):
             try:
                 raw=JRRsupport.ReadFile(fn)
@@ -258,6 +261,7 @@ class JackrabbitRelay:
         if self.Framework=='ccxt':
             if "Market" not in self.Order:
                 self.JRLog.Error('Processing Payload','Missing market identifier')
+        self.Order['Market']=self.Order['Market'].lower()
 
         if "Action" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing action (buy/sell/close) identifier')
