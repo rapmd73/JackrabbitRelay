@@ -323,7 +323,7 @@ class ccxtCrypto:
             if self.Broker.id=='binanceusdm':
                 params['reduceOnly']='true'
             else:
-                params['reduce_only']=ReduceOnly
+                params['reduce_only']=ro
 
         # Shorts are stored as negative numbers, abs() is a safety catch
 

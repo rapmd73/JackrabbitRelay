@@ -145,7 +145,7 @@ class JackrabbitRelay:
 
         # Process command line. Must be first function called
 
-        if self.argslen>1:
+        if len(sys.argv)>1:
             self.ProcessCommandLine()
 
         # if no command line, check for stabdard input, ie. process order
