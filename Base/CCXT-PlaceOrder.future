@@ -116,7 +116,7 @@ def main():
     marketType="spot"
     if "type" in relay.Markets[relay.Order['Asset']]:
         if "type" in relay.Markets[relay.Order['Asset']]['info']:
-            if relay.Markets[relay.Order['Asset']]['info']['type']==exchange.markets[relay.Order['Asset']]['type']:
+            if relay.Markets[relay.Order['Asset']]['info']['type']==relay.Markets[relay.Order['Asset']]['type']:
                 marketType=relay.Markets[relay.Order['Asset']]['type'].lower()
             else:
                 marketType=relay.Markets[relay.Order['Asset']]['info']['type'].lower()
@@ -259,9 +259,10 @@ def main():
     pBalance=relay.GetPositions(symbol=relay.Order['Asset'])
     relay.JRLog.Write(f"Previous Balance: {abs(pBalance):.8f} contracts")
 
-    # If the amount is less then the minimum and action is to sell/close
+    # If the amount is less then the minimum and action is to close. Sell opens
+    # a short position.
 
-    if abs(pBalance)<mincost and (relay.Order['Action']=='close' or relay.Order['Action']=='sell'):
+    if abs(pBalance)<mincost and relay.Order['Action']=='close':
         relay.JRLog.Error(relay.Exchange, "not enough to sell/close position")
 
     # Closing the position, with futures, we need to figure out the current
@@ -271,8 +272,8 @@ def main():
         if pBalance>0:    # Long Position
             relay.Order['Action']='sell'
         elif pBalance<0:  # Short Position
-            action='buy'
-        relay.JRLog.Write("Forcing direction to "+action)
+            relay.Order['Action']='buy'
+        relay.JRLog.Write(f"Forcing direction to {relay.Order['Action']}")
         amount=abs(pBalance)
 
     # Determine trade action and carry it out
@@ -281,7 +282,7 @@ def main():
     relay.JRLog.Write("Placing Order")
     relay.JRLog.Write(f"|- Asset: {relay.Order['Asset']}")
     relay.JRLog.Write(f"|- Action: {relay.Order['Action']}")
-    relay.JRLog.Write(f"|- Amount: {amount:.8f}")
+    relay.JRLog.Write(f"|- Contracts: {amount:.8f}")
     relay.JRLog.Write(f"|- Price: {price:.8f}")
     relay.JRLog.Write(f"|- Total: {total:.8f}")
 

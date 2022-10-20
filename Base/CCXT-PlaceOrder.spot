@@ -116,7 +116,7 @@ def main():
     marketType="spot"
     if "type" in relay.Markets[relay.Order['Asset']]:
         if "type" in relay.Markets[relay.Order['Asset']]['info']:
-            if relay.Markets[relay.Order['Asset']]['info']['type']==exchange.markets[relay.Order['Asset']]['type']:
+            if relay.Markets[relay.Order['Asset']]['info']['type']==relay.Markets[relay.Order['Asset']]['type']:
                 marketType=relay.Markets[relay.Order['Asset']]['type'].lower()
             else:
                 marketType=relay.Markets[relay.Order['Asset']]['info']['type'].lower()

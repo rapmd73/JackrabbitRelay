@@ -45,8 +45,8 @@ if relay.GetFramework()=='ccxt':
             for pos in positions:
                 #bal=float(pos['contracts'])
                 bal=relay.GetPositions(symbol=pos['symbol'])
-                if bal>0.0:
-                    print(f"{pos['symbol']:12} {bal:12.8f} {pos['side']:5}")
+                if bal!=0.0:
+                    print(f"{pos['symbol']:12} {abs(bal):12.8f} {pos['side']:5}")
 elif relay.GetFramework()=='oanda':
     balance=relay.GetBalance()
     if balance!=None:
