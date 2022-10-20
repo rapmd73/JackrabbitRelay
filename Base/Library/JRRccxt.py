@@ -192,7 +192,7 @@ class ccxtCrypto:
         self.Markets=self.GetMarkets()
 
         if pair[0]=='.' or pair.find(".d")>-1:
-            swelf.Log.Error('Get Markets',pair+" is not tradable on this exchange")
+            self.Log.Error('Get Markets',pair+" is not tradable on this exchange")
 
         if pair not in exchange.markets:
             self.Log.Error('Get Markets',pair+" is not traded on this exchange")
@@ -253,6 +253,11 @@ class ccxtCrypto:
 
     def GetTicker(self,**kwargs):
         self.Results=self.API("fetch_ticker",**kwargs)
+
+        # Kucoin Sandbox system doesn't always give complete data
+
+        if self.Results['ask']==None or self.Results['bid']==None:
+            self.Log.Error('GetTicker',"ticker data is incomplete")
 
         Pair={}
         Pair['Ask']=self.Results['ask']
@@ -320,10 +325,12 @@ class ccxtCrypto:
             else:
                 params['reduce_only']=ReduceOnly
 
+        # Shorts are stored as negative numbers, abs() is a safety catch
+
         if params!={}:
-            order=self.API("create_order",symbol=pair,type=m,side=action,amount=amount,price=price,params=params)
+            order=self.API("create_order",symbol=pair,type=m,side=action,amount=abs(amount),price=price,params=params)
         else:
-            order=self.API("create_order",symbol=pair,type=m,side=action,amount=amount,price=price)
+            order=self.API("create_order",symbol=pair,type=m,side=action,amount=abs(amount),price=price)
 
         if order['id']!=None:
             self.Log.Write("|- Order Confirmation ID: "+order['id'])
