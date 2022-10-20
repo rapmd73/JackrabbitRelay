@@ -261,7 +261,7 @@ class JackrabbitRelay:
         if self.Framework=='ccxt':
             if "Market" not in self.Order:
                 self.JRLog.Error('Processing Payload','Missing market identifier')
-        self.Order['Market']=self.Order['Market'].lower()
+            self.Order['Market']=self.Order['Market'].lower()
 
         if "Action" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing action (buy/sell/close) identifier')
