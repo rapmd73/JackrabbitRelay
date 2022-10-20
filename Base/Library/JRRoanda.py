@@ -10,7 +10,6 @@ sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
 import json
 import pathlib
-import math
 from datetime import datetime
 
 import oandapyV20
@@ -62,6 +61,8 @@ class oanda:
         # Login to OANDA and pull the market data
 
         self.Broker=self.Login()
+        self.Summary=self.GetSummary()
+        self.Currency=None
         self.Markets=self.GetMarkets()
 
     # Handle the retry functionality and send the request to the broker.
@@ -104,13 +105,21 @@ class oanda:
 
         return self.Broker
 
+    # Get general account sumerary
+
+    def GetSummary(self,**kwargs):
+        res=v20Accounts.AccountSummary(accountID=self.AccountID)
+        self.Results=self.API("GetBalance",request=res)
+        self.Currency=self.Results['account']['currency']
+        return self.Results
+
     # Get the list of cureent markets allowed to trade.
 
     def GetMarkets(self):
         markets={}
         res=v20Accounts.AccountInstruments(accountID=self.AccountID)
-        self.results=self.API("GetMarkets",request=res)
-        for cur in self.results['instruments']:
+        self.Results=self.API("GetMarkets",request=res)
+        for cur in self.Results['instruments']:
             asset=cur['name'].upper().replace('_','/')
             markets[asset]=cur
         return markets
@@ -120,8 +129,9 @@ class oanda:
 
     def GetBalance(self,**kwargs):
         res=v20Accounts.AccountSummary(accountID=self.AccountID)
-        self.results=self.API("GetBalance",request=res)
-        return float(self.results['account']['balance'])
+        self.Results=self.API("GetBalance",request=res)
+        self.Currency=self.Results['account']['currency']
+        return float(self.Results['account']['balance'])
 
     # Get the current positions list or
     # get an individual and specific position. In OANDA, a position may be one
@@ -280,9 +290,9 @@ class oanda:
                     # amount is STR, need float for abs()
                     amount=int(amount)
                     if float(amount)>=0:
-                        params['longUnits']=str(math.floor(abs(amount)))
+                        params['longUnits']=str(int(abs(amount)))
                     else:
-                        params['shortUnits']=str(math.floor(abs(amount)))
+                        params['shortUnits']=str(int(abs(amount)))
                 else:
                     params['longUnits']="ALL"
                 res=v20Positions.PositionClose(accountID=self.AccountID,instrument=pair,data=params)
