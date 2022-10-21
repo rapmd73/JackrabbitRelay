@@ -153,10 +153,15 @@ class oanda:
                 asset=pos['instrument'].replace('_','/')
                 if symbol==asset:
                     if 'averagePrice' in pos['long']:
-                        position=float(pos['long']['averagePrice'])*float(pos['long']['units'])
+                        units=int(pos['long']['units'])
+                        position=float(pos['long']['averagePrice'])*units
                     else: # shorts already negative
-                        position=(float(pos['short']['averagePrice']))*float(pos['short']['units'])
+                        units=int(pos['short']['units'])
+                        position=(float(pos['short']['averagePrice']))*units
+                    # Access the Results to get units
+                    self.Results['Units']=units
                     return position
+            self.Results['Units']=0
             return 0
 
     # Get candlestick (OHLCV) data
