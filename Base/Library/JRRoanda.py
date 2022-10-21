@@ -154,8 +154,8 @@ class oanda:
                 if symbol==asset:
                     if 'averagePrice' in pos['long']:
                         position=float(pos['long']['averagePrice'])*float(pos['long']['units'])
-                    else:
-                        position=-(float(pos['short']['averagePrice']))*float(pos['short']['units'])
+                    else: # shorts already negative
+                        position=(float(pos['short']['averagePrice']))*float(pos['short']['units'])
                     return position
             return 0
 
@@ -286,25 +286,31 @@ class oanda:
         elif (action=='sell'):
             params={}
             if ticket==None:
-                if str(amount).upper()!='ALL':
-                    # amount is STR, need float for abs()
+                if 'ALL' not in str(amount).upper():
+                    # amount is STR, need int for abs()
                     amount=int(amount)
-                    if float(amount)>=0:
+                    if amount>=0:
                         params['longUnits']=str(int(abs(amount)))
                     else:
                         params['shortUnits']=str(int(abs(amount)))
                 else:
-                    params['longUnits']="ALL"
+                    if '-' in str(amount):
+                        params['shortUnits']="ALL"
+                    else:
+                        params['longUnits']="ALL"
                 res=v20Positions.PositionClose(accountID=self.AccountID,instrument=pair,data=params)
                 self.results=self.API("PositionClose",request=res)
             else:
-                if str(amount).upper()!='ALL':
+                if 'ALL' not in str(amount).upper():
                     # amount is STR, need float for abs()
                     amount=int(amount)
                     if float(amount)>=0:
                         params['units']=str(math.floor(abs(amount)))
                 else:
-                    params['units']="ALL"
+                    if '-' in str(amount):
+                        params['shortUnits']="ALL"
+                    else:
+                        params['longUnits']="ALL"
                 res=v20Trades.TradeClose(accountID=self.AccountID,tradeID=ticket,data=params)
                 self.results=self.API("TradeClose",request=res)
         else:
