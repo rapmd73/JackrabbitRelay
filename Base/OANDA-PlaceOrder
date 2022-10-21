@@ -166,21 +166,19 @@ def main():
             relay.JRLog.Write(f'|- Minimum Amount: {minimum:.8f}')
             relay.JRLog.Write(f'|- Minimum Cost:   {mincost:.8f}')
         else:
-            # Figure out percentages. AMOUNT or VOLUME to buy/sell
-
-            if not isMinimum:
-                price=ticker['Ask']
-                if '%' in relay.Order['Units']:
-                    amount=int(GetPCTamount(relay,price))
-                else:
-                    amount=int(relay.Order['Units'])
+            price=ticker['Ask']
+            if '%' in relay.Order['Units']:
+                amount=int(GetPCTamount(relay,price))
             else:
-                relay.JRLog.Error("PlaceOrder", "Amount for buy/sell not provided")
+                amount=int(relay.Order['Units'])
 
-                # Make sure minimum is enforced.
-                # KuCoin sub accounts do NOT verify or report correctly on this.
+            # Make sure minimum is enforced. Negative is for short.
+
             if abs(amount)<minimum:
-                amount=minimum
+                if amount>=0:
+                    amount=minimum
+                else:
+                    amount-minimum
     else:
         relay.JRLog.Error("PlaceOrder", "OrderType must be limit or market")
 
@@ -205,40 +203,45 @@ def main():
     elif relay.Order['Action']=='sell' and ReduceOnly==True:
         if pBalance>0:    # Long Position
             relay.Order['Action']='sell'
+            relay.JRLog.Write(f"Forcing direction to {relay.Order['Action']}")
+            amount=int(pBalance/price)
         elif pBalance<0:  # Short Position
             relay.Order['Action']='buy'
-        relay.JRLog.Write(f"Forcing direction to {relay.Order['Action']}")
-        amount=int(abs(pBalance))
+            relay.JRLog.Write(f"Forcing direction to {relay.Order['Action']}")
+            amount=int(pBalance/price)
 
     # Determine trade action and carry it out
 
     if type(amount)==int:
-        total=round(amount*price,8)
+        total=abs(round(amount*price,8))
     else:
         total=abs(pBalance)
+    if (type(amount)==str and amount.upper()=='ALL' and pBalance>=0) \
+    or (type(amount)==int and amount>=0):
+        dir='Long'
+    elif (type(amount)==str and amount.upper()=='ALL' and pBalance<0) \
+    or (type(amount)==int and amount<0):
+        dir='Short'
+`
     relay.JRLog.Write("Placing Order")
     relay.JRLog.Write(f"|- Asset: {relay.Order['Asset']}")
     relay.JRLog.Write(f"|- Action: {relay.Order['Action']}")
     if type(amount)==int:
-        relay.JRLog.Write(f"|- Units: {amount:.8f}")
+        relay.JRLog.Write(f"|- Units: {abs(amount):.8f} {dir}")
     else:
-        relay.JRLog.Write(f"|- Units: {amount}")
+        relay.JRLog.Write(f"|- Units: {amount} {dir}")
     relay.JRLog.Write(f"|- Price: {price:.8f}")
     relay.JRLog.Write(f"|- Total: {total:.8f}")
 
-    try:
-        if "Reduction" in relay.Active and relay.Order['Action']!="buy" and amount>=pBalance:
-            pct=relay.Active['Reduction']
-            r=(amount*pct)
-            relay.JRLog.Write("|- Reduction: "+str(r))
-            amount-=r
-    except:
-        pass
-
-    if (type(amount)==int and amount>0) or (type(amount)==str and amount.upper()=='ALL'):
+    if (type(amount)==int and amount!=0) \
+    or (type(amount)==str and amount.upper()=='ALL'):
         lNote=None
         if 'LedgerNote' in relay.Order:
             lNote=relay.Order['LedgerNote']
+
+        # Make sure short close is clearly marked negative for ALL
+        if pBalance<0 and type(amount)==str and amount.upper()=='ALL':
+            amount='-ALL'
 
         order=relay.PlaceOrder(pair=relay.Order['Asset'], \
             orderType=relay.Order['OrderType'], \
