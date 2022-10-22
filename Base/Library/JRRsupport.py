@@ -469,6 +469,21 @@ class TimedList():
         self.maxsize=maxsize
         self.fw=Locker(self.fname,Timeout=self.Timeout,Log=self.Log)
 
+    # Read the data from the table and return to user
+
+    def read(self):
+        dataDB=None
+
+        self.fw.Lock()
+        try:
+            data=ReadFile(self.fname)
+            dataDB=json.loads(data)
+        except:
+            pass
+        self.fw.Unlock()
+
+        return dataDB
+
     # Return a count that does NOT include expired items
 
     def countDB(self,dataDB):
@@ -478,6 +493,8 @@ class TimedList():
             if dataItem['Expire']>time.time():
                 count+=1
         return count
+
+    # Update the table and add new items if needed
 
     def update(self,key,payload,expire):
         dataDB={}
@@ -541,6 +558,8 @@ class TimedList():
             self.fw.Unlock()
         return results
 
+    # Search for a specific item
+
     def search(self,key):
         dataDB={}
         data=ReadFile(self.fname)
@@ -554,6 +573,8 @@ class TimedList():
                     if dataItem['Expire']>time.time():
                         return dataDB[key]
         return None
+
+    # Purge the list of all expired items
 
     def purge(self):
         dataDB={}

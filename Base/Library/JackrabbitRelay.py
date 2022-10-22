@@ -114,6 +114,17 @@ class JackrabbitRelay:
 
         # Convience for uniformity
         self.Exchange=None
+
+        # Break down any chained lists. Exchange will be first, rest of chain
+        # will be in the list. Exchange place order MUST be last. With the below
+        # example, Exchange will contain dsr and ExchangeList will contain
+        # kucoin. It is the responsibility of the PlaceOrder for dsr (this
+        # example) to build the order for kucoin (this example) and feed it back
+        # into the Relay Server with SendWebhook.
+        #    "Exchange":"dsr,kucoin",
+
+        self.ExchangeList=None
+
         self.Account=None
         self.Asset=None
 
@@ -171,6 +182,15 @@ class JackrabbitRelay:
 
     def GetExchange(self):
         return self.Exchange
+
+    def GetExchangeRest(self):
+        return self.ExchangeList
+
+    def GetExchangeNext(self):
+        if len(self.Exchange.List)>0:
+            return self.ExchangeList[0]
+        else:
+            return None
 
     def GetAccount(self):
         return self.Account
@@ -248,7 +268,14 @@ class JackrabbitRelay:
         if "Exchange" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing exchange identifier')
         else:
-            self.Order['Exchange']=self.Order['Exchange'].lower().replace(' ','')
+            # Check for and handle an exchange list
+            echg=self.Order['Exchange'].lower().replace(' ','')
+            if ',' in echg:
+                eList=echg.split(',')
+                self.Order['Exchange']=eList[0]
+                self.ExchangeRest=eList[1:]
+            else: # No list
+                self.Order['Exchange']=echg
             self.Exchange=self.Order['Exchange']
         if "Account" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing account identifier')
@@ -366,6 +393,14 @@ class JackrabbitRelay:
             self.Basename=self.args[0]
         if self.argslen>=2:
             self.Exchange=self.args[1].lower().replace(' ','')
+            # Check for and handle an exchange list
+            echg=self.args[1].lower().replace(' ','')
+            if ',' in echg:
+                eList=echg.split(',')
+                self.Exchange=eList[0]
+                self.ExchangeRest=eList[1:]
+            else: # No list
+                self.Exchange=echg
         if self.argslen>=3:
             self.Account=self.args[2]
         if self.argslen>=4:
