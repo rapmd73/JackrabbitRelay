@@ -20,6 +20,7 @@ import oandapyV20.endpoints.pricing as v20Pricing
 import oandapyV20.endpoints.orders as v20Orders
 import oandapyV20.endpoints.positions as v20Positions
 import oandapyV20.endpoints.trades as v20Trades
+import oandapyV20.endpoints.transactions as v20Transactions
 import oandapyV20.contrib.requests as v20Requests
 
 import JRRsupport
@@ -52,7 +53,7 @@ class oanda:
 
         self.Notify=True
         self.Sandbox=False
-        self.results=None
+        self.Results=None
 
         # Login to OANDA and pull the market data
 
@@ -76,7 +77,7 @@ class oanda:
         done=False
         while not done:
             try:
-                self.results=self.Broker.request(req)
+                self.Results=self.Broker.request(req)
             except Exception as e:
                 if retry<RetryLimit:
                     self.Log.Error(function,JRRsupport.StopHTMLtags(str(e)))
@@ -86,7 +87,7 @@ class oanda:
                 done=True
             retry+=1
 
-        return self.results
+        return self.Results
 
     # Register the exchange
 
@@ -171,7 +172,7 @@ class oanda:
 
         res=v20Instruments.InstrumentsCandles(instrument=symbol,params=params)
         self.Results=self.API("GetOHLCV",request=res)
-        for cur in self.results['candles']:
+        for cur in self.Results['candles']:
             candle=[]
             candle.append(int(datetime.strptime(cur['time'],'%Y-%m-%dT%H:%M:%S.000000000Z').timestamp())*1000)
             candle.append(float(cur['mid']['o']))
@@ -189,13 +190,13 @@ class oanda:
         params={"instruments":symbol }
 
         res=v20Pricing.PricingInfo(accountID=self.AccountID,params=params)
-        self.results=self.API("GetTicker",request=res)
+        self.Results=self.API("GetTicker",request=res)
 
         # Build the forex pair dictionary
 
         Pair={}
-        Pair['Ask']=round(float(self.results['prices'][0]['asks'][0]['price']),5)
-        Pair['Bid']=round(float(self.results['prices'][0]['bids'][0]['price']),5)
+        Pair['Ask']=round(float(self.Results['prices'][0]['asks'][0]['price']),5)
+        Pair['Bid']=round(float(self.Results['prices'][0]['bids'][0]['price']),5)
         Pair['Spread']=round(Pair['Ask']-Pair['Bid'],5)
 
         return Pair
@@ -206,8 +207,8 @@ class oanda:
         symbol=kwargs.get('symbol').replace('/','_')
 
         req=v20Instruments.InstrumentsOrderBook(instrument=symbol,params={})
-        self.results=self.API("GetOrderBook",request=req)
-        return self.results['orderBook']['buckets']
+        self.Results=self.API("GetOrderBook",request=req)
+        return self.Results['orderBook']['buckets']
 
     # Get a list of pending (open) orders.
 
@@ -283,7 +284,7 @@ class oanda:
             params['order']=order
 
             res=v20Orders.OrderCreate(accountID=self.AccountID,data=params)
-            self.results=self.API("OrderCreate",request=res)
+            self.Results=self.API("OrderCreate",request=res)
         elif (action=='sell'):
             params={}
             if ticket==None:
@@ -300,7 +301,7 @@ class oanda:
                     else:
                         params['longUnits']="ALL"
                 res=v20Positions.PositionClose(accountID=self.AccountID,instrument=pair,data=params)
-                self.results=self.API("PositionClose",request=res)
+                self.Results=self.API("PositionClose",request=res)
             else:
                 if 'ALL' not in str(amount).upper():
                     # amount is STR, need float for abs()
@@ -313,11 +314,11 @@ class oanda:
                     else:
                         params['longUnits']="ALL"
                 res=v20Trades.TradeClose(accountID=self.AccountID,tradeID=ticket,data=params)
-                self.results=self.API("TradeClose",request=res)
+                self.Results=self.API("TradeClose",request=res)
         else:
             self.Log.Error("PlaceOrder","Action is neither BUY nor SELL")
 
-        return self.results
+        return self.Results
 
     # This is mostly a place holder and not used for OANDA as the minimum units
     # is always 1. Minimum cost of a market order is always ask price.
@@ -328,3 +329,12 @@ class oanda:
         minimum=1
         mincost=self.GetTicker(symbol=symbol)['Ask']
         return minimum,mincost
+
+    # Get an order's details by ticket number
+
+    def GetOrderDetails(self,**kwargs):
+        ticket=kwargs.get('OrderID')
+        res=v20Transactions.TransactionDetails(accountID=self.AccountID,transactionID=ticket)
+        self.Results=self.API("OrderDetails",request=res)
+
+        return self.Results

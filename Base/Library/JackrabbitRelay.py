@@ -537,3 +537,10 @@ class JackrabbitRelay:
         minimum,mincost=self.Broker.GetMinimum(**kwargs)
         return minimum,mincost
 
+    # Get the exact details of a specific order
+
+    def GetOrderDetails(self,**kwargs):
+        self.RotateKeys()
+        self.Results=self.Broker.GetOrderDetails(**kwargs)
+        return self.Results
+

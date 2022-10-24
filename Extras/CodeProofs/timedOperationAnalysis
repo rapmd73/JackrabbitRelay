@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+import time
+
+import JRRsupport
+
+s=time.time()
+lines=JRRsupport.ReadFile("opData").split('\n')
+for i in range(9000):
+    lines=lines[1:]
+e=time.time()-s
+print(f"ReadFile took {e} seconds over {len(lines)} lines")
+
+s=time.time()
+fh=open("opData","r")
+lines=fh.readlines()
+fh.close()
+for i in range(9000):
+    lines=lines[1:]
+e=time.time()-s
+print(f"bulk readlines() took {e} seconds over {len(lines)} lines")
+
+s=time.time()
+fh=open("opData","r")
+lines=[]
+for line in fh.readlines():
+    lines.append(line.strip())
+fh.close()
+for i in range(9000):
+    lines=lines[1:]
+e=time.time()-s
+print(f"1by1 readline() took {e} seconds over {len(lines)} lines")
+
+s=time.time()
+fh=open("opData","r")
+dList=JRRsupport.DList()
+lines=fh.readlines()
+for line in lines:
+    dList.insert(line.strip())
+fh.close()
+for i in range(9000):
+    dList.delete(dList.GetHead().GetData())
+e=time.time()-s
+print(f"dList(dup filter) took {e} seconds over {dList.Length()} lines")
+
