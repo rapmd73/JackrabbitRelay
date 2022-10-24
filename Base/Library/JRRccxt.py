@@ -512,3 +512,12 @@ class ccxtCrypto:
         fh=open(fn,'w')
         fh.write(json.dumps(minlist))
         fh.close()
+
+    # Get details of a specific order by ID
+
+    def GetOrderDetails(self,**kwargs):
+        if self.Broker.has['fetchOrder']:
+            self.Results=self.API("fetchOrder",**kwargs)
+        else:
+            self.Results=self.API("fetchClosedOrder",**kwargs)
+        return self.Results

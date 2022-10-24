@@ -26,7 +26,7 @@ import json
 
 class Locker:
     # Initialize the file name
-    def __init__(self,filename,Retry=7,Timeout=180,Log=None):
+    def __init__(self,filename,Retry=7,Timeout=300,Log=None):
         self.ID=self.GetID()
         self.filename=filename
         self.retryLimit=Retry
@@ -112,9 +112,9 @@ class Locker:
             else:
                 if time.time()>timeout:
                     if self.Log!=None:
-                        self.Log.Error("Locker",f"{self.filename} {os.getpid()}: lock request failed")
+                        self.Log.Error("Locker",f"{self.filename}/{os.getpid()}: lock request failed")
                     else:
-                        print("Locker",f"{self.filename}{os.getpid()}: lock request failed")
+                        print("Locker",f"{self.filename}/{os.getpid()}: lock request failed")
                         sys.exit(1)
             # Prevent race conditions
             time.sleep(0.1)
@@ -147,17 +147,6 @@ def AppendFile(fn,data):
     cf.close()
 
 # Doubly lisked list with sentinel for bidirectional intertion
-#
-# Comparison example
-#def compare(node1,d2):
-#    d1=node1.GetData()
-#
-#    if int(d2)<int(d1):
-#        return 1
-#    elif int(d2)>int(d1):
-#        return -1
-#    else: #if int(d2)==int(d1):
-#        return 0
 #
 # Driver example
 #
@@ -222,11 +211,15 @@ class DListNode:
         self.next=next
 
 class DList:
-    def __init__(self):
+    def __init__(self,Compare=None):
         self.head=None
         self.tail=None
         self.sentinel=None
         self.size=0
+        if Compare==None:
+            self.DoCompare=self.compare
+        else:
+            self.DoCompare=Compare
 
     def GetHead(self):
         return self.head
@@ -243,25 +236,35 @@ class DList:
     def Length(self):
         return self.size
 
-    def find(self,data,compare=None):
+    def compare(self,node,d2):
+        d1=str(node.GetData())
+
+        if d1<str(d2):
+            return -1
+        elif d1>str(d2):
+            return 1
+        else: #if intd1==str(d2):
+            return 0
+
+    def find(self,data):
         if self.head:
-            if compare(self.head,data)==0:
+            if self.DoCompare(self.head,data)==0:
                 return self.head
-            elif compare(self.tail,data)==0:
+            elif self.DoCompare(self.tail,data)==0:
                 return self.tail
             else:
                 if self.sentinel==None:
                     self.sentinel=self.head
                 res=compare(self.sentinel,data)
                 if res>0:
-                    while self.sentinel.GetNext()!=None and compare(self.sentinel,data)>0:
+                    while self.sentinel.GetNext()!=None and self.DoCompare(self.sentinel,data)>0:
                         self.sentinel=self.sentinel.GetNext()
-                    if compare(self.sentinel,data)==0:
+                    if self.DoCompare(self.sentinel,data)==0:
                         return self.sentinel
                     else:
                         return None
                 elif res<0:
-                    while self.sentinel.GetPrev()!=None and compare(self.sentinel,data)<0:
+                    while self.sentinel.GetPrev()!=None and self.DoCompare(self.sentinel,data)<0:
                         self.sentinel=self.sentinel.GetPrev()
                     if compare(self.sentinel,data)==0:
                         return self.sentinel
@@ -272,13 +275,13 @@ class DList:
         else:
             return None
 
-    def insert(self,data,compare=None):
+    def insert(self,data):
         if self.head:
             # Initialize sentinel ptr. This will move according to direction of
             # comparisons. Will befaster then always starting at head of list.
 
             # New head of list test
-            if compare(self.head,data)<0:
+            if self.DoCompare(self.head,data)<0:
                 newNode=DListNode(data)
                 newNode.SetNext(self.head)
                 newNode.GetNext().SetPrev(newNode)
@@ -286,7 +289,7 @@ class DList:
                 self.size+=1
                 return
             # New tail of list test
-            elif compare(self.tail,data)>0:
+            elif self.DoCompare(self.tail,data)>0:
                 newNode=DListNode(data)
                 newNode.SetPrev(self.tail)
                 newNode.GetPrev().SetNext(newNode)
@@ -297,9 +300,9 @@ class DList:
             else:
                 if self.sentinel==None:
                     self.sentinel=self.head
-                res=compare(self.sentinel,data)
+                res=self.DoCompare(self.sentinel,data)
                 if res>0:
-                    while self.sentinel.GetNext()!=None and compare(self.sentinel.GetNext(),data)>0:
+                    while self.sentinel.GetNext()!=None and self.DoCompare(self.sentinel.GetNext(),data)>0:
                         self.sentinel=self.sentinel.GetNext()
                     newNode=DListNode(data)
                     newNode.SetNext(self.sentinel.GetNext())
@@ -310,7 +313,7 @@ class DList:
                     self.size+=1
                     return
                 elif res<0:
-                    while self.sentinel.GetPrev()!=None and compare(self.sentinel.GetPrev(),data)<0:
+                    while self.sentinel.GetPrev()!=None and self.DoCompare(self.sentinel.GetPrev(),data)<0:
                         self.sentinel=self.sentinel.GetPrev()
                     newNode=DListNode(data)
                     newNode.SetPrev(self.sentinel.GetPrev())
@@ -329,9 +332,9 @@ class DList:
             self.size+=1
             return
 
-    def delete(self,data,compare=None):
+    def delete(self,data):
         if self.head:
-            node=self.find(data,compare)
+            node=self.find(data)
             # Not in list
             if node==None:
                 return
