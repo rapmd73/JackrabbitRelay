@@ -330,7 +330,10 @@ class oanda:
         mincost=self.GetTicker(symbol=symbol)['Ask']
         return minimum,mincost
 
-    # Get an order's details by ticket number
+    # Get an order's details by ticket number. If current ID is not last ID, search and match
+    # "batchID" for the completed transaction. batch ID will match the placed order. OANDA
+    # puts sequwential ID on EVERY action, pending will have separate ID from a fully filled
+    # trade.
 
     def GetOrderDetails(self,**kwargs):
         ticket=kwargs.get('OrderID')

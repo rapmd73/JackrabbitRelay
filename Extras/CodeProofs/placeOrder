@@ -31,6 +31,8 @@ ticker=relay.GetTicker(symbol=asset)
 bPrice=ticker['Ask']
 sPrice=ticker['Bid']
 
-result=relay.PlaceOrder(pair=asset,orderType="market",action=side,amount=amount,price=bPrice,ReduceOnly=False,LedgerNote="Dry Run")
+mPrice=min(bPrice,sPrice)
+
+result=relay.PlaceOrder(pair=asset,orderType="limit",action=side,amount=amount,price=bPrice,ReduceOnly=False,LedgerNote="Dry Run")
 print(result)
 
