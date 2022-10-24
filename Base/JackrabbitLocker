@@ -56,9 +56,7 @@ def main():
     except OSError as err:
         x=str(err)
         if x.find('Address already in use')>-1:
-            print('Another program is using this port: '+str(port))
-        else:
-            print(x)
+            x='Another program is using this port: '+str(port)
         WriteLog(Version,x)
         sys.exit(1)
 
@@ -89,7 +87,8 @@ def main():
                     if not data:
                         inputs.remove(fds)
                         if fds in queue:
-                            queue.pop(fds)
+                            queue.pop(fds,None)
+                        fds.close()
                     else:
                         try:
                             dataDB=json.loads(data.decode())
@@ -97,6 +96,9 @@ def main():
                             pass
                         else: # Find the lock
                             FileName=dataDB['FileName']
+                            #pn=fds.getpeername()
+                            #ip=f'{pn[0]}:{pn[1]}'
+                            #WriteLog(ip,FileName)
                             if FileName in Locker:
                                 # Link this entry to the connected socket
                                 if dataDB['Action'].lower()=='lock':
@@ -133,8 +135,11 @@ def main():
         if len(outfds)!=0:
             for fds in outfds:
                 if fds in queue:
+                    #pn=fds.getpeername()
+                    #ip=f'{pn[0]}:{pn[1]}'
+                    #WriteLog(ip,queue[fds])
                     fds.sendall(queue[fds].encode())
-                    queue.pop(fds)
+                    queue.pop(fds,None)
                     inputs.remove(fds)
                     fds.close()
 

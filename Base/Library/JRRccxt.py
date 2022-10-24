@@ -9,7 +9,6 @@ import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
 import json
-import pathlib
 from datetime import datetime
 
 import ccxt
@@ -486,7 +485,7 @@ class ccxtCrypto:
         fn=self.DataDirectory+'/'+exchangeName+'.minimum'
         if os.path.exists(fn):
             try:
-                raw=pathlib.Path(fn).read_text()
+                raw=JRRsupport.ReadFile(fn)
             except:
                 self.Log.Error("Minimum List",f"Can't read minimum list for {exchangeName}")
 
@@ -503,7 +502,7 @@ class ccxtCrypto:
         fn=self.DataDirectory+'/'+exchangeName+'.minimum'
         if os.path.exists(fn):
             try:
-                raw=pathlib.Path(fn).read_text()
+                raw=JRRsupport.ReadFile(fn)
             except:
                 self.Log.Error("Minimum List",f"Can't read minimum list for {exchangeName}")
 

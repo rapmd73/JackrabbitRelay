@@ -9,7 +9,6 @@ import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
 import json
-import pathlib
 from datetime import datetime
 
 import oandapyV20
@@ -23,9 +22,6 @@ import oandapyV20.endpoints.positions as v20Positions
 import oandapyV20.endpoints.trades as v20Trades
 import oandapyV20.contrib.requests as v20Requests
 
-import JRRconfig
-import JRRlog
-import JRRledger
 import JRRsupport
 
 class oanda:
