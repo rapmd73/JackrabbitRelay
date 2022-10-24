@@ -28,14 +28,14 @@ for line in lines:
 
     dataTV=json.loads(line)
     key=dataTV['Recipe'].replace(" ","")+dataTV['Exchange']+dataTV['Asset']+dataTV['TCycles']+dataTV['TBuys']
-    s=time.time()
+#    s=time.time()
     results=tList.update(key,line,300)
-    e=time.time()-s
-    if results['Status']!='ErrorLimit':
-        print(f"{e:4.8f} {results['Status']:10} {results['Payload']}")
-    else:
-        print(f"Max Limit, purging...")
-        tList.purge()
+#    e=time.time()-s
+#    if results['Status']!='ErrorLimit':
+#        print(f"{e:4.8f} {results['Status']:10} {results['Payload']}")
+#    else:
+#        print(f"Max Limit, purging...")
+#        tList.purge()
 
 et=time.time()-st
 print(f"Took {et} seconds to load {len(lines)} lines")
