@@ -11,7 +11,6 @@ import os
 import time
 import random
 import socket
-import select
 import json
 
 # Reusable file locks, using atomic operations

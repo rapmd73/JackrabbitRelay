@@ -8,10 +8,8 @@
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
-#import pathlib
-import time
+#import time
 import json
-#import requests
 from datetime import datetime
 
 # Framework APIs
@@ -379,6 +377,12 @@ class JackrabbitRelay:
             if self.Keys==[]:
                 self.JRLog.Error("Reading Configuration",self.Account+' reference not found, check spelling/case')
             else:
+                # Verify and set framework
+                for config in self.Keys:
+                    if 'Framework' not in config:
+                        self.JRLog.Error(f"{self.Exchange}/{self.Account} does no identify the framework")
+                self.Framework=self.Keys[0]['Framework'].lower()
+
                 # Initialize to the first key
                 self.Active=self.Keys[0]
         else:
@@ -442,7 +446,7 @@ class JackrabbitRelay:
 
         if self.Framework==None:
             if 'Framework' in self.Active:
-                self.Framework=self.Active['Framework']
+                self.Framework=self.Active['Framework'].lower()
             else:
                 self.JRLog.Error("Login",self.Exchange+' framework not given in configuration')
 
