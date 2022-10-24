@@ -74,7 +74,8 @@ def main():
                 if fds is lockerSocket:
                     clientsock,clientaddr=fds.accept()
                     clientsock.setblocking(0)
-                    inputs.append(clientsock)
+                    if clientsock not in inputs:
+                        inputs.append(clientsock)
                 else:
                     data=None
                     try:
@@ -85,7 +86,8 @@ def main():
                     # No data received, close connection
 
                     if not data:
-                        inputs.remove(fds)
+                        if fds in inputs:
+                            inputs.remove(fds)
                         if fds in queue:
                             queue.pop(fds,None)
                         fds.close()
@@ -135,13 +137,16 @@ def main():
         if len(outfds)!=0:
             for fds in outfds:
                 if fds in queue:
-                    #pn=fds.getpeername()
-                    #ip=f'{pn[0]}:{pn[1]}'
-                    #WriteLog(ip,queue[fds])
-                    fds.sendall(queue[fds].encode())
+                    try:
+                        #pn=fds.getpeername()
+                        #ip=f'{pn[0]}:{pn[1]}
+                        #print(ip,queue[fds])
+                        fds.sendall(queue[fds].encode())
+                    except:
+                        if fds in inputs:
+                            inputs.remove(fds)
+                        fds.close()
                     queue.pop(fds,None)
-                    inputs.remove(fds)
-                    fds.close()
 
 if __name__ == '__main__':
     main()
