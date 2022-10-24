@@ -32,6 +32,7 @@ class JackrabbitLog:
         self.logfile=None
 
         self.SetLogName(filename)
+        self.fw=JRRsupport.Locker(self.logfile,self.logfile)
 
     def SetLogName(self,filename):
         if filename==None:
@@ -46,9 +47,11 @@ class JackrabbitLog:
         s=f'{time} {pid:7.0f} {text}\n'
 
         fn=self.LogDirectory+'/'+self.logfile+'.log'
+        self.fw.Lock()
         fh=open(fn,'a+')
         fh.write(s)
         fh.close()
+        self.fw.Unlock()
         print(s.rstrip())
         sys.stdout.flush()
 
