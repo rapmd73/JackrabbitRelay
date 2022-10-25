@@ -25,8 +25,11 @@ markets=relay.Markets
 
 if relay.Framework=='oanda':
     oo=relay.GetOrderDetails(OrderID=oid)
-    for o in oo:
-        print(f'{o}\n')
+    if oo!=None:
+        for o in oo:
+            print(f'{o}\n')
+    else:
+        print("Order is still pending or is incomplete")
 elif relay.Framework=='ccxt':
     oo=relay.GetOrderDetails(id=oid)
-
+    print(oo)

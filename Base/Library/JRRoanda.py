@@ -340,8 +340,20 @@ class oanda:
 
         ticket=kwargs.get('OrderID')
         res=v20Transactions.TransactionDetails(accountID=self.AccountID,transactionID=ticket)
-
         self.Results=self.API("OrderDetails",request=res)
+
+        # Check for a "chain" sequence order and find the beginning
+
+        if 'replacesOrderID' in self.Results['transaction']:
+            nid=int(self.Results['transaction']['replacesOrderID'])
+            if nid<int(ticket):
+                return self.GetOrderDetails(OrderID=str(nid))
+
+        if 'orderID' in self.Results['transaction']:
+            nid=int(self.Results['transaction']['orderID'])
+            if nid<int(ticket):
+                return self.GetOrderDetails(OrderID=str(nid))
+
         FinalResults.append(self.Results['transaction'])
 
         tid=int(self.Results['transaction']['id'])
@@ -371,7 +383,7 @@ class oanda:
                         sid=int(self.Results['transaction']['replacedByOrderID'])
 
                         # Intremediary order, needs to be trackd as well
-                        res=v20Transactions.TransactionDetails(accountID=self.AccountID,transactionID=str(id))
+                        res=v20Transactions.TransactionDetails(accountID=self.AccountID,transactionID=str(sid))
                         self.Results=self.API("OrderDetails",request=res)
                         FinalResults.append(self.Results['transaction'])
                     else:
