@@ -25,7 +25,8 @@ markets=relay.Markets
 
 if relay.Framework=='oanda':
     oo=relay.GetOrderDetails(OrderID=oid)
+    for o in oo:
+        print(f'{o}\n')
 elif relay.Framework=='ccxt':
     oo=relay.GetOrderDetails(id=oid)
-print(oo)
 

@@ -330,14 +330,56 @@ class oanda:
         mincost=self.GetTicker(symbol=symbol)['Ask']
         return minimum,mincost
 
-    # Get an order's details by ticket number. If current ID is not last ID, search and match
-    # "batchID" for the completed transaction. batch ID will match the placed order. OANDA
-    # puts sequwential ID on EVERY action, pending will have separate ID from a fully filled
-    # trade.
+    # Get an order's details by ticket number. If current ID is not last ID,
+    # search and match "orderID" for the completed transaction. order ID will
+    # match the placed order. OANDA puts sequwential ID on EVERY action, pending
+    # will have separate ID from a fully filled trade.
 
     def GetOrderDetails(self,**kwargs):
+        FinalResults=[]
+
         ticket=kwargs.get('OrderID')
         res=v20Transactions.TransactionDetails(accountID=self.AccountID,transactionID=ticket)
-        self.Results=self.API("OrderDetails",request=res)
 
-        return self.Results
+        self.Results=self.API("OrderDetails",request=res)
+        FinalResults.append(self.Results['transaction'])
+
+        tid=int(self.Results['transaction']['id'])
+        ltid=int(self.Results['lastTransactionID'])
+
+        # Order is still pending, no details available
+        if tid==ltid and 'orderID' not in transaction:
+            return None
+
+        sid=tid
+        id=tid+1
+        done=False
+        while not done:
+            res=v20Transactions.TransactionDetails(accountID=self.AccountID,transactionID=str(id))
+            self.Results=self.API("OrderDetails",request=res)
+
+            # Always update last ID
+            ltid=int(self.Results['lastTransactionID'])
+
+            # Checkfor the order ID matching the original ID (tid) of the first
+            # order.
+
+            if 'orderID' in self.Results['transaction']:
+                if int(self.Results['transaction']['orderID'])==sid:
+                    if 'replacedByOrderID' in self.Results['transaction']:
+                        FinalResults.append(self.Results['transaction'])
+                        sid=int(self.Results['transaction']['replacedByOrderID'])
+
+                        # Intremediary order, needs to be trackd as well
+                        res=v20Transactions.TransactionDetails(accountID=self.AccountID,transactionID=str(id))
+                        self.Results=self.API("OrderDetails",request=res)
+                        FinalResults.append(self.Results['transaction'])
+                    else:
+                        FinalResults.append(self.Results['transaction'])
+                        return FinalResults
+
+            id+=1
+            if id>ltid:
+                done=True
+
+        return None
