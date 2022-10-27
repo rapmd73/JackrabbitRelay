@@ -13,7 +13,10 @@ import time
 
 import JRRsupport
 
+s=time.time()
 lines=sys.stdin.readlines()
+e=time.time()-s
+print(f"Reading data took {e} seconds over {len(lines)} lines")
 
 tList=JRRsupport.TimedList("Timed List Test","timedList.test",Timeout=300)
 
@@ -38,7 +41,7 @@ for line in lines:
 #        tList.purge()
 
 et=time.time()-st
-print(f"Took {et} seconds to load {len(lines)} lines")
+print(f"Took {et} seconds to process {len(lines)} lines")
 
 
 

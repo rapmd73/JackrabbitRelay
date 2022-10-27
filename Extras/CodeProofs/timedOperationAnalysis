@@ -14,11 +14,17 @@ import time
 import JRRsupport
 
 s=time.time()
+buffer=JRRsupport.ReadFile("testData")
+JRRsupport.WriteFile("opData",buffer)
+e=time.time()-s
+print(f"Copy file took {e} seconds for {len(buffer)} bytes")
+
+s=time.time()
 lines=JRRsupport.ReadFile("opData").split('\n')
 for i in range(9000):
     lines=lines[1:]
 e=time.time()-s
-print(f"ReadFile took {e} seconds over {len(lines)} lines")
+print(f"ReadFile/parse/list delete took {e} seconds over {len(lines)} lines")
 
 s=time.time()
 fh=open("opData","r")
@@ -27,7 +33,7 @@ fh.close()
 for i in range(9000):
     lines=lines[1:]
 e=time.time()-s
-print(f"bulk readlines() took {e} seconds over {len(lines)} lines")
+print(f"bulk readlines/delete took {e} seconds over {len(lines)} lines")
 
 s=time.time()
 fh=open("opData","r")
@@ -38,7 +44,7 @@ fh.close()
 for i in range(9000):
     lines=lines[1:]
 e=time.time()-s
-print(f"1by1 readline() took {e} seconds over {len(lines)} lines")
+print(f"1by1 readline()/delete took {e} seconds over {len(lines)} lines")
 
 s=time.time()
 fh=open("opData","r")
