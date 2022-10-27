@@ -177,7 +177,12 @@ class JackrabbitRelay:
         # Login to exchange/Broker
 
         if self.Exchange!=None and self.Account!=None:
-            self.Login()
+
+            # Do NOT automatically log into a virtual exchange. This is
+            # responsibility of calling program.
+
+            if self.Framework!='virtual':
+                self.Login()
         else:
             self.JRLog.Error("Login","An exchange and an account must be provided")
 
@@ -324,9 +329,9 @@ class JackrabbitRelay:
                 if self.Order['Identity']!=self.Active['Identity']:
                     self.JRLog.Error("Identity verification","FAILED: Identity does not match")
             else:
-                self.Log.Error("Identity verification","FAILED: Identity not in payload")
+                self.JRLog.Error("Identity verification","FAILED: Identity not in payload")
         else:
-            self.Log.Error("Identity verification","FAILED: Identity.cfg not found")
+            self.JRLog.Error("Identity verification","FAILED: Identity.cfg not found")
 
     # Read the exchange config file and load API/SECRET for a given (sub)account.
     # MAIN is reserved for the main account

@@ -8,6 +8,7 @@
 import sys
 sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
 import os
+import json
 
 import JackrabbitRelay as JRR
 
@@ -15,8 +16,7 @@ import JackrabbitRelay as JRR
 ### Main code base. Place order on exchange
 ###
 
-relay=JRR.JackrabbitRelay("ccxt",sys.stdin.read())
-markets=relay.GetMarkets()
+relay=JRR.JackrabbitRelay(None,sys.stdin.read())
 
-print(relay.Payload)
+print(json.dumps(relay.Order,indent=2))
 
