@@ -18,5 +18,11 @@ import JackrabbitRelay as JRR
 
 relay=JRR.JackrabbitRelay(None,sys.stdin.read())
 
-print(json.dumps(relay.Order,indent=2))
+print(json.dumps(relay.Order,indent=2),'\n')
 
+print("Varable ",relay.Exchange)
+print("Funcrion",relay.GetExchange())
+print("List    ",relay.ExchangeList)
+print("GetList ",relay.GetExchangeList())
+print("Next    ",relay.GetExchangeNext())
+print("After   ",relay.GetExchangeAfterNext())

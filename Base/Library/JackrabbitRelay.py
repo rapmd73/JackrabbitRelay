@@ -8,8 +8,8 @@
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
-#import time
 import json
+import requests
 from datetime import datetime
 
 # Framework APIs
@@ -77,6 +77,7 @@ class JackrabbitLog:
 # will also allow me to build in place as I replace one section at a time.
 
 # relay=JackrabbitRelay(framework="ccxt",payload=order)
+# relay=JackrabbitRelay(secondary="EquilibriumConfig")
 
 # The config files can also provide the framework and work from the command
 # line.
@@ -84,7 +85,7 @@ class JackrabbitLog:
 # relay=JackrabbitRelay()
 
 class JackrabbitRelay:
-    def __init__(self,framework=None,payload=None):
+    def __init__(self,framework=None,payload=None,secondary=None):
         # All the default locations
         self.Version="0.0.0.1.0"
         self.BaseDirectory='/home/JackrabbitRelay2/Base'
@@ -112,6 +113,13 @@ class JackrabbitRelay:
 
         # This is the main exchange configuration structure, including APIs.
         self.Config=[]
+
+        # Secondary config reader for Equilibrium or any other external program
+        # hooking into Relay. This will be responsible for the same
+        # functionality as the payload or commandline methods. Exchange,
+        # Account, Asset, etc must be set up.
+
+        self.Secondary=secondary
 
         # Convience for uniformity
         self.Exchange=None
@@ -165,11 +173,18 @@ class JackrabbitRelay:
         if self.Payload!=None:
             self.ProcessPayload()
 
-        # Process config file
+        # Process secondary config file. Exchange, Account, and Asset must be
+        # defined.
+
+        if self.Secondary!=None:
+            self.Secondary()
+
+        # Process exchange/broker config file
 
         self.ProcessConfig()
 
-        # Now that all parts are loaded, fully verify the payload for the specific broker
+        # Now that all parts are loaded, fully verify the payload for the
+        # specific broker
 
         if self.Payload!=None:
             self.VerifyPayload()
@@ -179,7 +194,7 @@ class JackrabbitRelay:
         if self.Exchange!=None and self.Account!=None:
 
             # Do NOT automatically log into a virtual exchange. This is
-            # responsibility of calling program.
+            # responsibility of calling program (the virtual exchange).
 
             if self.Framework!='virtual':
                 self.Login()
@@ -189,12 +204,24 @@ class JackrabbitRelay:
     def GetExchange(self):
         return self.Exchange
 
-    def GetExchangeRest(self):
-        return self.ExchangeList
+    def GetExchangeList(self):
+        return ','.join(self.ExchangeList)
 
     def GetExchangeNext(self):
-        if len(self.Exchange.List)>0:
+        if self.ExchangeList!=None and len(self.ExchangeList)>0:
             return self.ExchangeList[0]
+        else:
+            return None
+
+    def GetExchangeAfterNext(self):
+        if self.ExchangeList!=None and len(self.ExchangeList)>1:
+            return self.ExchangeList[1:]
+        else:
+            return None
+
+    def GetExchangeLast(self):
+        if self.ExchangeList!=None and len(self.ExchangeList)>0:
+            return self.ExchangeList[-1]
         else:
             return None
 
@@ -223,6 +250,29 @@ class JackrabbitRelay:
 
     def GetArgs(self,x):
         return self.args[x]
+
+    # Webhook processing. This unified layer will communicate with Relay for
+    # placing the order and return the results.
+
+    def SendWebhook(self,Order):
+        headers={'content-type': 'text/plain', 'Connection': 'close'}
+
+        resp=None
+        res=None
+        try:
+            resp=requests.post(self.Active['Webhook'],headers=headers,data=json.dumps(Order))
+            try:
+                r=json.loads(resp.text)
+                try:
+                    res=r['message']
+                except:
+                    res=json.dumps(r)
+            except:
+                res=resp.text
+        except:
+            res=None
+
+        return res
 
     # Remap TradingView symbol to the exchange symbol/broker
 
@@ -279,9 +329,7 @@ class JackrabbitRelay:
             if ',' in echg:
                 eList=echg.split(',')
                 self.Order['Exchange']=eList[0]
-                self.ExchangeRest=eList[1:]
-            else: # No list
-                self.Order['Exchange']=echg
+                self.ExchangeList=eList[1:]
             self.Exchange=self.Order['Exchange']
         if "Account" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing account identifier')
@@ -410,8 +458,8 @@ class JackrabbitRelay:
             if ',' in echg:
                 eList=echg.split(',')
                 self.Exchange=eList[0]
-                self.ExchangeRest=eList[1:]
-            else: # No list
+                self.ExchangeList=eList[1:]
+            else:
                 self.Exchange=echg
         if self.argslen>=3:
             self.Account=self.args[2]

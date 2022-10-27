@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay DSR
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import json
+
+import JRRsupport
+import JackrabbitRelay as JRR
+
+def main():
+    relay=JRR.JackrabbitRelay(None,sys.stdin.read())
+
+    # If we made it this far, give our header
+
+    relay.JRLog.Write('PlaceOrder Tester '+relay.Version)
+
+    # Now lets get down to business. The processed order is in:
+    #    relay.Order
+
+    relay.JRLog.Write('Order parsed')
+    for detail in relay.Order:
+        # Do NOT display identity
+        if detail=='Identity':
+            continue
+        relay.JRLog.Write(f'|- {detail}: {relay.Order[detail]}')
+
+    # Close out the program with the elapsed time it ran
+
+    relay.JRLog.Elapsed()
+
+if __name__ == '__main__':
+    main()
+
