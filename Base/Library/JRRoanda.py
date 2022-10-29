@@ -360,7 +360,7 @@ class oanda:
         ltid=int(self.Results['lastTransactionID'])
 
         # Order is still pending, no details available
-        if tid==ltid and 'orderID' not in transaction:
+        if tid==ltid and 'orderID' not in self.Results['transaction']:
             return None
 
         sid=tid
