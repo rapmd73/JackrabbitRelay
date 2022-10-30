@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+import time
+
+import JRRsupport
+
+letters='ABCDEFGHIJ'
+
+data=sys.stdin.read().strip()
+
+buf=''
+if len(data)>0:
+    for i in range(len(data)):
+        place=int(data[i])
+        buf+=letters[place]
+
+print(buf)
