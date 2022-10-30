@@ -22,6 +22,7 @@ pipeWriter='/home/GitHub/JackrabbitRelay/Extras/CodeProofs/pipeWriter'
 # activity.
 
 gLock=JRRsupport.Locker("pipeReader")
+cLock=JRRsupport.Locker("pipeReaderCompare")
 
 def GetID():
     letters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -42,7 +43,9 @@ def GetID():
     return pw
 
 def compareCounter(node,dz):
-    d2=str(json.loads(node.GetData())['ID'])
+    nData=node.GetData()
+
+    d2=str(json.loads(nData)['ID'])
     d1=str(json.loads(dz)['ID'])
 
     if d1<d2:
@@ -63,13 +66,15 @@ def ProcessResults(result):
 
     # Find entry in list by ID
     pData=pList.find(json.dumps(result))
-    # Get original list entry
-    pd=json.loads(pData.GetData())
-    # Add data element to original entry
-    pd['Result']=result['Result']
-    # Update the original list with new data
-    pData.SetData(json.dumps(pd))
-
+    if pData!=None:
+        # Get original list entry
+        pd=json.loads(pData.GetData())
+        # Add data element to original entry
+        pd['Result']=result['Result']
+        # Update the original list with new data
+        pData.SetData(json.dumps(pd))
+    else:
+        ptint("Unmatch:",result)
     gLock.Unlock()
 
 def ProcessData(data,id):
@@ -123,7 +128,11 @@ def main():
         cur=cur.GetNext()
 
 if __name__=='__main__':
-    main()
+    try:
+        main()
+    except:
+        cLock.Unlock()
+        gLock.Unlock()
 
 """
 s=time.time()
