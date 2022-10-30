@@ -255,7 +255,7 @@ class DList:
             else:
                 if self.sentinel==None:
                     self.sentinel=self.head
-                res=compare(self.sentinel,data)
+                res=self.DoCompare(self.sentinel,data)
                 if res>0:
                     while self.sentinel.GetNext()!=None and self.DoCompare(self.sentinel,data)>0:
                         self.sentinel=self.sentinel.GetNext()
@@ -266,7 +266,7 @@ class DList:
                 elif res<0:
                     while self.sentinel.GetPrev()!=None and self.DoCompare(self.sentinel,data)<0:
                         self.sentinel=self.sentinel.GetPrev()
-                    if compare(self.sentinel,data)==0:
+                    if self.DoCompare(self.sentinel,data)==0:
                         return self.sentinel
                     else:
                         return None
