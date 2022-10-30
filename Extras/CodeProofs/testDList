@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+import time
+import random
+
+import JRRsupport
+
+words=JRRsupport.ReadFile('wordlist').split('\n')
+
+def GetID():
+    letters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    llen=len(letters)
+
+    pw=""
+    oc=""
+
+    for i in range(30):
+        done=False
+        while not done:
+            for z in range(random.randrange(73,237)):
+                c=random.randrange(llen)
+            if pw=="" or (len(pw)>0 and letters[c]!=oc):
+                done=True
+        oc=letters[c]
+        pw+=oc
+    return pw
+
+def AddWord(id):
+    w=random.randrange(len(words))
+
+    tData={}
+    tData['ID']=id
+    # Must e minimum structure to complete search
+    pData=pList.find(json.dumps(tData))
+
+    # Load original
+    pd=json.loads(pData.GetData())
+    # Add additional data
+    pd['Word']=words[w]
+    pData.SetData(json.dumps(pd))
+
+def AddAlpha(id):
+    tData={}
+    tData['ID']=id
+    # Must e minimum structure to complete search
+    pData=pList.find(json.dumps(tData))
+
+    # Load original
+    pd=json.loads(pData.GetData())
+    # Add additional data
+    pd['Alpha']=AlphaStr(pd['Counter'])
+    pData.SetData(json.dumps(pd))
+
+def AlphaStr(anum):
+    letters='ABCDEFGHIJ'
+    data=str(anum)
+
+    buf=''
+    if len(data)>0:
+        for i in range(len(data)):
+            place=int(data[i])
+            buf+=letters[place]
+    return buf
+
+def compareCounter(node,dz):
+    d2=json.loads(node.GetData())['ID']
+    d1=json.loads(dz)['ID']
+
+    if d1<d2:
+        r=-1
+    elif d1>d2:
+        r=1
+    else:
+        r=0
+    return r
+
+pList=JRRsupport.DList(Compare=compareCounter)
+
+def main():
+    cMax=10
+    if len(sys.argv)>1:
+        cMax=int(sys.argv[1])
+
+    idList=[]
+    counter=0
+
+    while counter<cMax:
+        data=str(counter)
+        pData={}
+        pData['Counter']=data
+        pData['ID']=GetID()
+        idList.append(pData['ID'])
+        pList.insert(json.dumps(pData))
+
+        # Frag the list with random manipulations that add elements
+
+        if counter>1:
+            r=random.randrange(counter)
+            AddWord(idList[r])
+
+            t=random.randrange(100)
+            if t>75:
+                r=random.randrange(counter)
+                AddAlpha(idList[r])
+
+        counter+=1
+
+    cur=pList.GetHead()
+    while cur!=None:
+        print(cur.GetData())
+        cur=cur.GetNext()
+
+if __name__=='__main__':
+    main()
+
+"""
+s=time.time()
+fh=open("opData","r")
+dList=JRRsupport.DList()
+lines=fh.readlines()
+for line in lines:
+    dList.insert(line.strip())
+fh.close()
+for i in range(9000):
+    dList.delete(dList.GetHead().GetData())
+e=time.time()-s
+print(f"dList(dup filter) took {e} seconds over {dList.Length()} lines")
+"""
+
