@@ -17,12 +17,12 @@ import subprocess
 import JRRsupport
 
 pipeWriter='/home/GitHub/JackrabbitRelay/Extras/CodeProofs/pipeWriter'
+words=JRRsupport.ReadFile('wordlist').split('\n')
 
 # Global lock required to prevent memory from being destroyed during asychonrous
 # activity.
 
 gLock=JRRsupport.Locker("pipeReader")
-cLock=JRRsupport.Locker("pipeReaderCompare")
 
 def GetID():
     letters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -73,8 +73,21 @@ def ProcessResults(result):
         pd['Result']=result['Result']
         # Update the original list with new data
         pData.SetData(json.dumps(pd))
-    else:
-        ptint("Unmatch:",result)
+    gLock.Unlock()
+
+def ProcessWords(result):
+    w=random.randrange(len(words))
+
+    # Locking required to protect memory structures
+    gLock.Lock()
+
+    pData=pList.find(json.dumps(result))
+    if pData!=None:
+        # Load original
+        pd=json.loads(pData.GetData())
+        # Add additional data
+        pd['Word']=words[w]
+        pData.SetData(json.dumps(pd))
     gLock.Unlock()
 
 def ProcessData(data,id):
@@ -99,26 +112,27 @@ def main():
 
     ProcessPool=multiprocessing.Pool(processes=multiprocessing.cpu_count()*2,maxtasksperchild=237)
 
-    counter=0
-#    while True:
-    while counter<cMax:
-        data=str(counter)
-        pData={}
-        pData['Counter']=data
-        pData['ID']=GetID()
+    try:
+        counter=0
+        while counter<cMax:
+            data=str(counter)
+            pData={}
+            pData['Counter']=data
+            pData['ID']=GetID()
 
-        # Lock required to stop memory thrashing
+            # Lock required to stop memory thrashing
 
-        gLock.Lock()
-        pList.insert(json.dumps(pData))
-        gLock.Unlock()
+            gLock.Lock()
+            pList.insert(json.dumps(pData))
+            gLock.Unlock()
 
-        ProcessPool.apply_async(ProcessData,args=(data,pData['ID'],),callback=ProcessResults)
-        counter+=1
-
-    # Clean up and shutdown
-    ProcessPool.close()
-    ProcessPool.join()
+            ProcessPool.apply_async(ProcessData,args=(data,pData['ID'],),callback=ProcessResults)
+            ProcessPool.apply_async(ProcessData,args=(data,pData['ID'],),callback=ProcessWords)
+            counter+=1
+    except:
+        # Clean up and shutdown
+        ProcessPool.close()
+        ProcessPool.join()
 
     # Show the list be just built
 
@@ -131,19 +145,5 @@ if __name__=='__main__':
     try:
         main()
     except:
-        cLock.Unlock()
         gLock.Unlock()
 
-"""
-s=time.time()
-fh=open("opData","r")
-dList=JRRsupport.DList()
-lines=fh.readlines()
-for line in lines:
-    dList.insert(line.strip())
-fh.close()
-for i in range(9000):
-    dList.delete(dList.GetHead().GetData())
-e=time.time()-s
-print(f"dList(dup filter) took {e} seconds over {dList.Length()} lines")
-"""
