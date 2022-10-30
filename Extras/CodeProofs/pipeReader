@@ -10,6 +10,7 @@ sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
 import os
 import json
 import time
+import random
 import multiprocessing
 import subprocess
 
@@ -17,51 +18,104 @@ import JRRsupport
 
 pipeWriter='/home/GitHub/JackrabbitRelay/Extras/CodeProofs/pipeWriter'
 
+# Global lock required to prevent memory from being destroyed during asychonrous
+# activity.
+
+gLock=JRRsupport.Locker("pipeReader")
+
+def GetID():
+    letters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    llen=len(letters)
+
+    pw=""
+    oc=""
+
+    for i in range(20):
+        done=False
+        while not done:
+            for z in range(random.randrange(73,237)):
+                c=random.randrange(llen)
+            if pw=="" or (len(pw)>0 and letters[c]!=oc):
+                done=True
+        oc=letters[c]
+        pw+=oc
+    return pw
+
 def compareCounter(node,dz):
-    d2=json.loads(node.GetData())['Counter']
-    d1=json.loads(dz)['Counter']
+    d2=str(json.loads(node.GetData())['ID'])
+    d1=str(json.loads(dz)['ID'])
 
     if d1<d2:
-        return -1
+        r=-1
     elif d1>d2:
-        return 1
-    else: #if intd1==str(d2):
-        return 0
+        r=1
+    else:
+        r=0
+    return r
 
 def ProcessResults(result):
-    pData=pList.find(json.dumps(result))
-    pData.SetData(json.dumps(result))
+    # Locking required to protect memory structures
 
-def ProcessData(data):
+    gLock.Lock()
+
+    # At this stage, pData should NEVER be None or undefined. If it is, then
+    # memory was thrashed.
+
+    # Find entry in list by ID
+    pData=pList.find(json.dumps(result))
+    # Get original list entry
+    pd=json.loads(pData.GetData())
+    # Add data element to original entry
+    pd['Result']=result['Result']
+    # Update the original list with new data
+    pData.SetData(json.dumps(pd))
+
+    gLock.Unlock()
+
+def ProcessData(data,id):
     transactor=[ pipeWriter ]
     subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     subp.stdin.write(data.encode())
     res=subp.communicate()[0].decode().strip()
 
     pData={}
-    pData['Counter']=data
+    pData['ID']=id
     pData['Result']=res
     return pData
+
+# Must be global, but after compare function declared.
 
 pList=JRRsupport.DList(Compare=compareCounter)
 
 def main():
-    ProcessPool=multiprocessing.Pool(multiprocessing.cpu_count()*2)
+    cMax=10
+    if len(sys.argv)>1:
+        cMax=int(sys.argv[1])
 
-    counter=1
+    ProcessPool=multiprocessing.Pool(processes=multiprocessing.cpu_count()*2,maxtasksperchild=237)
+
+    counter=0
 #    while True:
-    while counter<10000:
+    while counter<cMax:
         data=str(counter)
         pData={}
         pData['Counter']=data
-        pList.insert(json.dumps(pData))
+        pData['ID']=GetID()
 
-        ProcessPool.apply_async(ProcessData,args=(data,),callback=ProcessResults)
+        # Lock required to stop memory thrashing
+
+        gLock.Lock()
+        pList.insert(json.dumps(pData))
+        gLock.Unlock()
+
+        ProcessPool.apply_async(ProcessData,args=(data,pData['ID'],),callback=ProcessResults)
         counter+=1
 
     # Clean up and shutdown
     ProcessPool.close()
     ProcessPool.join()
+
+    # Show the list be just built
 
     cur=pList.GetHead()
     while cur!=None:

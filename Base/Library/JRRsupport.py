@@ -14,7 +14,7 @@ import socket
 import json
 
 # Reusable file locks, using atomic operations
-# NOT suitable for distributed systems or 
+# NOT suitable for distributed systems or
 # Windows. Linux ONLY
 #
 # fw=Locker(filename)
@@ -243,7 +243,7 @@ class DList:
             return -1
         elif d1>str(d2):
             return 1
-        else: #if intd1==str(d2):
+        else:
             return 0
 
     def find(self,data):
@@ -255,10 +255,12 @@ class DList:
             else:
                 if self.sentinel==None:
                     self.sentinel=self.head
+                # Find out which direction we need to search based upon sentinel
                 res=self.DoCompare(self.sentinel,data)
                 if res>0:
                     while self.sentinel.GetNext()!=None and self.DoCompare(self.sentinel,data)>0:
                         self.sentinel=self.sentinel.GetNext()
+                    # Did we find the item we wanted?
                     if self.DoCompare(self.sentinel,data)==0:
                         return self.sentinel
                     else:
@@ -266,6 +268,7 @@ class DList:
                 elif res<0:
                     while self.sentinel.GetPrev()!=None and self.DoCompare(self.sentinel,data)<0:
                         self.sentinel=self.sentinel.GetPrev()
+                    # Did we find the item we wanted?
                     if self.DoCompare(self.sentinel,data)==0:
                         return self.sentinel
                     else:
