@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+
+import JackrabbitRelay as JRR
+
+relay=JRR.JackrabbitRelay()
+if relay.GetArgsLen() > 3:
+    exchangeName=relay.GetExchange()
+    account=relay.GetAccount()
+    asset=relay.GetAsset()
+else:
+    print("An exchange, (sub)account, and an asset must be provided.")
+    sys.exit(1)
+
+oo=relay.GetOpenOrders(symbol=asset)
+
+if relay.GetFramework()=='ccxt':
+    for o in oo:
+        #print(f"{o['symbol']:10} {o['id']} {o['side']:4} {o['status']:7} {o['amount']:16.8f} {o['price']:16.8f}")
+        Order={}
+        Order['Exchange']=relay.Exchange
+        Order['Account']=relay.Account
+        Order['Asset']=relay.Asset
+        Order['Market']='Spot'
+        Order['OrderType']='Limit'
+        Order['Action']=o['side']
+        Order['Base']=o['amount']
+        Order['Price']=o['price']
+        Orphan={}
+        Orphan['Status']='Open'
+        Orphan['Framework']=relay.Framework
+        Orphan['ID']=o['id']
+        Orphan['DateTime']=o['datetime']
+        Orphan['Order']=json.dumps(Order)
+        Orphan['Response']=json.dumps(o)
+        print(json.dumps(Orphan))
+elif relay.GetFramework()=='oanda':
+    for o in oo:
+        if float(o['units'])>=0:
+            side='Buy'
+        else:
+            side='Sell'
+#        print(f"{o['instrument']:10} {o['id']} {side:4} {o['state']:7} {iu:16.8f} {price:16.8f}")
+        Order={}
+        Order['Exchange']=relay.Exchange
+        Order['Account']=relay.Account
+        Order['Asset']=relay.Asset
+        Order['OrderType']='Limit'
+        Order['Action']=side
+        Order['Units']=o['units']
+        Order['Price']=o['price']
+        Orphan={}
+        Orphan['Status']='Open'
+        Orphan['Framework']=relay.Framework
+        Orphan['ID']=o['id']
+        Orphan['DateTime']=o['createTime']
+        Orphan['Order']=json.dumps(Order)
+        Orphan['Response']=json.dumps(o)
+        print(json.dumps(Orphan))
