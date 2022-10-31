@@ -35,6 +35,7 @@ if relay.GetFramework()=='ccxt':
         Order['Action']=o['side']
         Order['Base']=o['amount']
         Order['Price']=o['price']
+        Order['Identity']=relay.Active['Identity']
         Orphan={}
         Orphan['Status']='Open'
         Orphan['Framework']=relay.Framework
@@ -58,6 +59,7 @@ elif relay.GetFramework()=='oanda':
         Order['Action']=side
         Order['Units']=o['units']
         Order['Price']=o['price']
+        Order['Identity']=relay.Active['Identity']
         Orphan={}
         Orphan['Status']='Open'
         Orphan['Framework']=relay.Framework
