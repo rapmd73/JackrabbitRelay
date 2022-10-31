@@ -47,14 +47,27 @@ e=time.time()-s
 print(f"1by1 readline()/delete took {e} seconds over {len(lines)} lines")
 
 s=time.time()
-fh=open("opData","r")
 dList=JRRsupport.DList()
+fh=open("opData","r")
 lines=fh.readlines()
 for line in lines:
-    dList.insert(line.strip())
+    line=line.strip()
+    if line!=None and line!='':
+        dList.insert(line)
 fh.close()
 for i in range(9000):
     dList.delete(dList.GetHead().GetData())
 e=time.time()-s
-print(f"dList(dup filter) took {e} seconds over {dList.Length()} lines")
+print(f"dList(dup filter)/1by1 took {e} seconds over {dList.Length()} lines")
 
+s=time.time()
+dList=JRRsupport.DList()
+lines=JRRsupport.ReadFile("opData").split('\n')
+for line in lines:
+    line=line.strip()
+    if line!=None and line!='':
+        dList.insert(line)
+for i in range(9000):
+    dList.delete(dList.GetHead().GetData())
+e=time.time()-s
+print(f"dList(dup filter)/ReadFile took {e} seconds over {dList.Length()} lines")

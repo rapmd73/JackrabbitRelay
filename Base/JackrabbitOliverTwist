@@ -14,18 +14,22 @@
 # IMPORTANT: Under no circumstances should THIS program manage an individual
 # order. It is to be managed by a separate process, called an orphan manager.
 # This is simply because there is no way on knowing how many exchanges/brokers
-# might be used simultaneously. Thememory of a single process managing a
+# might be used simultaneously. The memory of a single process managing a
 # thousand orders would be absolutely thrashed. The orphan manager will follow
 # the same conventions of the PlaceOrder program, ie:
 
 #    Orphan.ccxt
 #    Orphan.oanda
 
+# Framework identification, along with any other order verification, is done in
+# PlaceOrder.OliverTwist
+
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
 import time
 import json
+import random
 import multiprocessing
 import subprocess
 
@@ -45,8 +49,9 @@ OrphanStorehouse=DataDirectory+'/OliverTwist.Storehouse'
 
 gLock=JRRsupport.Locker("OliverTwist")
 
-# This lock guards the receiver file. Both PlaceOrder.olivertwist and JackrabbitOliverTwist
-# will access this file. Collisions must not be allowed to happen.
+# This lock guards the receiver file. Both PlaceOrder.olivertwist and
+# JackrabbitOliverTwist will access this file. Collisions must not be allowed to
+# happen.
 
 orphanLock=JRRsupport.Locker(OrphanReceiver)
 
@@ -55,8 +60,8 @@ orphanLock=JRRsupport.Locker(OrphanReceiver)
 def compareOrphan(node,dz):
     nData=node.GetData()
 
-    d2=str(json.loads(nData)['OrphanID'])
-    d1=str(json.loads(dz)['OrphanID'])
+    d2=str(json.loads(nData)['Key'])
+    d1=str(json.loads(dz)['Key'])
 
     if d1<d2:
         r=-1
@@ -66,8 +71,8 @@ def compareOrphan(node,dz):
         r=0
     return r
 
-# The list of orphaned orders to track and manage. Must be global, but after compare function
-# declared.
+# The list of orphaned orders to track and manage. Must be global, but after
+# compare function declared.
 
 OrphanList=JRRsupport.DList(Compare=compareOrphan)
 
@@ -123,7 +128,7 @@ def ProcessOrphan(Key):
     res=subp.communicate()[0].decode().strip()
 
     pData={}
-    pData['Key']=
+    pData['Key']=Key
     pData['Result']=res
     return pData
 
@@ -142,32 +147,36 @@ def WriteOrphanList():
 #    New        Process order, buy, sell, close
 #    Pending    Already placed order, waiting for completion
 
-def ReceiveOrphan():
+def ReceiveOrphans():
     # The key is the time of payload and random ID
 
-    orphanLock.Lock()
-    try:
+#    orphanLock.Lock()
+#    try:
+    if 1==1:
         buffer=JRRsupport.ReadFile(OrphanReceiver)
         if buffer!=None and buffer!='':
             # Remove the receiver after we load it
-            os.remove(OrphanReceiver)
+            # os.remove(OrphanReceiver)
 
-            # Process all the orphsns
+            # Process all the orphans
 
             Orphans=buffer.split('\n')
             for Entry in Orphans:
-                Order=json.loads(Entry.strip())
+                if Entry.strip()=='':
+                    continue
 
-                pData={}
-                pData['Key']=Order['Time']+'.'+GetID()
-                pData['Ststus']='New'
-                pData['Order']=Order
+                Orphan=json.loads(Entry)
 
-                OrphanList.insert(json.dumps(pData))
+                Orphan['Key']=Orphan['DateTime']+'.'+GetID()
+
+                print(json.dumps(Orphan))
+
+                OrphanList.insert(json.dumps(Orphan))
+
         orphanLock.Unlock()
-    except:
-        orphanLock.Unlock()
-
+        sys.exit(1)
+#    except:
+#        orphanLock.Unlock()
 
 ###
 ### Main driver
@@ -177,58 +186,41 @@ def main():
     # Read saved list from disk into OrphanList
 
     # Establish the process pool to handle the orphans
-    ProcessPool=multiprocessing.Pool(processes=multiprocessing.cpu_count()*2,maxtasksperchild=237)
+#    ProcessPool=multiprocessing.Pool(processes=multiprocessing.cpu_count()*2,maxtasksperchild=237)
 
-    try:
+#    try:
+    if 1==1:
         while True:
-            ReceiveOrphan()
 
-            ProcessPool.apply_async(ProcessOrphan,args=(data,pData['Key'],),callback=OrphanUpdata)
+            # Walk the list of orphans.
+
+            cur=OrphanList.GetHead()
+
+            # If there is no list, check the receiver
+            if cur==None:
+                ReceiveOrphans()
+                sys.exit(1)
+
+            while cur!=None:
+                ReceiveOrphans()
+
+                if cur!=None:
+                    print(cur)
+                    #ProcessPool.apply_async(ProcessOrphan,args=(data,cur['Key'],),callback=OrphanUpdata)
+
+                    cur=cur.GetNext()
 
             # Brief rest to maintain control over server
-
             JRRsupport.ElasticSleep(1)
-    except:
+#    except:
         # Something bad happensed. Clean up and shutdown
-        gLock.Unlock()
-        ProcessPool.close()
-        ProcessPool.join()
+#        gLock.Unlock()
+#        ProcessPool.close()
+#        ProcessPool.join()
 
 if __name__ == '__main__':
-    try:
+#    try:
         main()
-    except:
-        gLock.Unlock()
+#    except:
+#        gLock.Unlock()
 
-"""
-        try:
-            fw=JRRsupport.Locker(TwitterDB)
-            fw.Lock()
-            buffer=JRRsupport.ReadFile(TwitterDB)
-            if buffer!=None and buffer!='':
-                buffer=buffer.strip()
-                tweet=buffer.split('\n')
-                rest=''
-                if len(tweet)>1:
-                    for i in tweet[1:]:
-                        x=i.strip()
-                        rest+=f'{x}\n'
-                JRRsupport.WriteFile(TwitterDB,rest)
-                fw.Unlock()
-
-                x=tweet[0].strip()
-                if x!='':
-                    try:
-                        api=tweepy.API(auth)
-                        api.update_status(x)
-                    except:
-                        pass
-                    time.sleep(60)
-            else:
-                fw.Unlock()
-                time.sleep(60)
-        except:
-            fw.Unlock()
-            time.sleep(300)
-
-"""
