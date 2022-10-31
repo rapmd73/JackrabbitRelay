@@ -15,6 +15,7 @@ import JRRsupport
 import JackrabbitRelay as JRR
 
 def main():
+    s=time.time()
     data=sys.stdin.read().strip()
     Orphan=json.loads(data)
 
@@ -29,6 +30,7 @@ def main():
             rData={}
             rData['Key']=Orphan['Key']
             rData['Status']='Open'
+            rData['Elapsed']=time.time()-s
             print(json.dumps(rData))
             sys.exit(0)
 
@@ -36,6 +38,7 @@ def main():
     rData={}
     rData['Key']=Orphan['Key']
     rData['Status']='Closed'
+    rData['Elapsed']=time.time()-s
     print(json.dumps(rData))
 
 if __name__ == '__main__':

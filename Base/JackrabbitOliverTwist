@@ -114,9 +114,10 @@ def OrphanUpdate(result):
             # Get original list entry
             pd=json.loads(pData.GetData())
             rd=json.loads(result)
-            if pd['Status'].lower()!=rd['status']:
+            print(OrphanList.size,result)
+#            if pd['Status'].lower()!=rd['status']:
                 # Order status has changed. Handle it
-                print("Status",pd['ID'],pd['Status'],rd['Status'])
+#                print("Status",pd['ID'],pd['Status'],rd['Status'])
             # Add data element to original entry
             #pd['Result']=result['Result']
             # Update the original list with new data
@@ -156,15 +157,15 @@ def WriteOrphanList():
 
 # Order stattus:
 
-#    New        Process order, buy, sell, close
-#    Pending    Already placed order, waiting for completion
+#    New       Process order, buy, sell, close
+#    Open      Already placed order, waiting for completion
+#    Closed    Order closed and ready to be logged
 
 def ReceiveOrphans():
     # The key is the time of payload and random ID
 
-#    orphanLock.Lock()
-#    try:
-    if 1==1:
+    orphanLock.Lock()
+    try:
         buffer=JRRsupport.ReadFile(OrphanReceiver)
         if buffer!=None and buffer!='':
             # Remove the receiver after we load it
@@ -178,14 +179,12 @@ def ReceiveOrphans():
                     continue
 
                 Orphan=json.loads(Entry)
-
                 Orphan['Key']=Orphan['DateTime']+'.'+GetID()
-
                 OrphanList.insert(json.dumps(Orphan))
 
         orphanLock.Unlock()
-#    except:
-#        orphanLock.Unlock()
+    except:
+        orphanLock.Unlock()
 
 ###
 ### Main driver
@@ -197,14 +196,14 @@ def main():
     # Establish the process pool to handle the orphans
     ProcessPool=multiprocessing.Pool(processes=multiprocessing.cpu_count()*2,maxtasksperchild=237)
 
-#    try:
-    if 1==1:
+    try:
+        ReceiveOrphans()
         cur=None
         while True:
 
             # If there is no list, check the receiver
-            if cur==None:
-                ReceiveOrphans()
+#            if cur==None:
+#                ReceiveOrphans()
 
             # Walk the list of orphans.
 
@@ -220,15 +219,12 @@ def main():
 
             # Brief rest to maintain control over server
             JRRsupport.ElasticSleep(1)
-#    except:
-        # Something bad happensed. Clean up and shutdown
-#        gLock.Unlock()
-#        ProcessPool.close()
-#        ProcessPool.join()
+    except:
+        # Something bad happened. Clean up and shutdown
+        gLock.Unlock()
+        ProcessPool.close()
+        ProcessPool.join()
 
 if __name__ == '__main__':
-#    try:
-        main()
-#    except:
-#        gLock.Unlock()
+    main()
 
