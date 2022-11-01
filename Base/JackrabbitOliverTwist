@@ -55,6 +55,10 @@ gLock=JRRsupport.Locker("OliverTwist")
 
 orphanLock=JRRsupport.Locker(OrphanReceiver)
 
+# We only want to write to disk when there is an actual change in the OrphanList
+
+OrphanListChanged=False
+
 # Compare orphan IDs
 
 def compareOrphan(node,dz):
@@ -98,6 +102,13 @@ def GetID():
 
 # Receive an update on an orphan and update, delete, or add to the main list
 
+# Order stattus:
+
+#    New       Process order, buy, sell, close
+#    Open      Already placed order, waiting for completion
+#    Closed    Order closed and ready to be logged
+#    Delete    Order closed and ready to be logged
+
 def OrphanUpdate(result):
     if result!=None:
         # result in JSON format
@@ -109,19 +120,29 @@ def OrphanUpdate(result):
         # memory was thrashed.
 
         # Find entry in list by ID
-        pData=OrphanList.find(result)
-        if pData!=None:
+        found=OrphanList.find(result)
+        if found!=None:
             # Get original list entry
-            pd=json.loads(pData.GetData())
-            rd=json.loads(result)
+            thisOrphan=json.loads(found.GetData())
+            rData=json.loads(result)
             print(OrphanList.size,result)
-#            if pd['Status'].lower()!=rd['status']:
-                # Order status has changed. Handle it
-#                print("Status",pd['ID'],pd['Status'],rd['Status'])
-            # Add data element to original entry
-            #pd['Result']=result['Result']
-            # Update the original list with new data
-            #pData.SetData(json.dumps(pd))
+
+            # if returned status is open, replace the response, if it has
+            # changed or the orphan record doesn't have a response
+
+            if rData['status'].lower()=='open':
+                if Response in rData:
+                    if 'Response' not in thisOrphan or rData['Response']!=thisOrphan['Response']:
+                        thisOrphan['Response']=rData['Response']
+                        found.SetData(json.dumps(ThisOrphan))
+                        OrphanListChanged=True
+                else:
+                    print(rData['ID'],"missing Rresponse")
+
+            # if the status returnd is delete, remove record
+            elif rData['status'].lower()=='delete':
+                OrphanList.delete(thisOrphan)
+                OrphanListChanged=True
         gLock.Unlock()
 
 # This spins up the orphan manager to ensure each orphan is handled.
@@ -145,46 +166,59 @@ def ProcessOrphan(Orphan):
         return res
     return None
 
+# Read the complete list stored on disk, if it exists
+
 def ReadOrphanList():
-    pass
+    orphanLock.Lock()
+    if os.path.exists(OrphanStorehouse):
+        buffer=JRRsupport.ReadFile(OrphanStorehouse)
+        if buffer!=None and buffer!='':
+            Orphans=buffer.split('\n')
+            for Entry in Orphans:
+                Entry=Entry.strip()
+                if Entry=='':
+                    continue
+                OrphanList.insert(Entry)
+    orphanLock.Unlock()
 
 # Write only when there are changes.
 
 def WriteOrphanList():
-    pass
+    orphanLock.Lock()
+    buffer=''
+    cur=OrphanList.GetHead()
+    while cur!=None:
+        buffer+=cur.GetData()+'\n'
+        cur=cur.GetNext()
+    JRRsupport.WriteFile(OrphanStorehouse,buffer)
+    orphanLock.Unlock()
 
 # Check the receiver file for new orders.
-
-# Order stattus:
-
-#    New       Process order, buy, sell, close
-#    Open      Already placed order, waiting for completion
-#    Closed    Order closed and ready to be logged
 
 def ReceiveOrphans():
     # The key is the time of payload and random ID
 
     orphanLock.Lock()
     try:
-        buffer=JRRsupport.ReadFile(OrphanReceiver)
-        if buffer!=None and buffer!='':
-            # Remove the receiver after we load it
-            # os.remove(OrphanReceiver)
+        if os.path.exists(OrphanReceiver):
+            buffer=JRRsupport.ReadFile(OrphanReceiver)
+            if buffer!=None and buffer!='':
+                # Remove the receiver after we load it
+                os.remove(OrphanReceiver)
 
-            # Process all the orphans
+                # Process all the orphans
 
-            Orphans=buffer.split('\n')
-            for Entry in Orphans:
-                if Entry.strip()=='':
-                    continue
+                Orphans=buffer.split('\n')
+                for Entry in Orphans:
+                    if Entry.strip()=='':
+                        continue
 
-                Orphan=json.loads(Entry)
-                Orphan['Key']=Orphan['DateTime']+'.'+GetID()
-                OrphanList.insert(json.dumps(Orphan))
-
-        orphanLock.Unlock()
+                    Orphan=json.loads(Entry)
+                    Orphan['Key']=Orphan['DateTime']+'.'+GetID()
+                    OrphanList.insert(json.dumps(Orphan))
     except:
-        orphanLock.Unlock()
+        pass
+    orphanLock.Unlock()
 
 ###
 ### Main driver
@@ -197,33 +231,34 @@ def main():
     ProcessPool=multiprocessing.Pool(processes=multiprocessing.cpu_count()*2,maxtasksperchild=237)
 
     try:
-        ReceiveOrphans()
-        cur=None
         while True:
-
-            # If there is no list, check the receiver
-#            if cur==None:
-#                ReceiveOrphans()
+            # At the beginning of each loop, check for new orphans
+            ReceiveOrphans()
 
             # Walk the list of orphans.
 
             cur=OrphanList.GetHead()
-
             while cur!=None:
-                #ReceiveOrphans()
-
                 data=json.loads(cur.GetData())
                 ProcessPool.apply_async(ProcessOrphan,args=(data,),callback=OrphanUpdate)
-
                 cur=cur.GetNext()
+
+            # Save the orphan list to disk, ONLY IF it actually changed
+
+            if OrphanListChanged==True:
+                gLock.Lock()
+                WriteOrphanList()
+                OrphanListChanged=False
+                gLock.Unlock()
 
             # Brief rest to maintain control over server
             JRRsupport.ElasticSleep(1)
     except:
         # Something bad happened. Clean up and shutdown
         gLock.Unlock()
-        ProcessPool.close()
         ProcessPool.join()
+        ProcessPool.close()
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()
