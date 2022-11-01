@@ -55,10 +55,6 @@ gLock=JRRsupport.Locker("OliverTwist")
 
 orphanLock=JRRsupport.Locker(OrphanReceiver)
 
-# We only want to write to disk when there is an actual change in the OrphanList
-
-OrphanListChanged=False
-
 # Compare orphan IDs
 
 def compareOrphan(node,dz):
@@ -79,6 +75,10 @@ def compareOrphan(node,dz):
 # compare function declared.
 
 OrphanList=JRRsupport.DList(Compare=compareOrphan)
+
+# We only want to write to disk when there is an actual change in the OrphanList
+
+OrphanListChanged=False
 
 # Generate a random ID
 
@@ -110,6 +110,9 @@ def GetID():
 #    Delete    Order closed and ready to be logged
 
 def OrphanUpdate(result):
+    global OrphanList
+    global OrphanListChanged
+
     if result!=None:
         # result in JSON format
         # Locking required to protect memory structures
@@ -125,7 +128,9 @@ def OrphanUpdate(result):
             # Get original list entry
             thisOrphan=json.loads(found.GetData())
             rData=json.loads(result)
-            print(OrphanList.size,result)
+
+            # Temporary Diagnostics
+            print(OrphanList.size,rData['ID'],rData['Status'])
 
             # if returned status is open, replace the response, if it has
             # changed or the orphan record doesn't have a response
@@ -137,11 +142,14 @@ def OrphanUpdate(result):
                         found.SetData(json.dumps(ThisOrphan))
                         OrphanListChanged=True
                 else:
+                    # Needs to be properly logged
                     print(rData['ID'],"missing Rresponse")
 
-            # if the status returnd is delete, remove record
+            # if the status returnd is delete, flag for parent
+            # do NOT delete here, will trash orphan list.
             elif rData['status'].lower()=='delete':
-                OrphanList.delete(thisOrphan)
+                thisOrphan['Status']='Delete'
+                found.SetData(json.dumps(ThisOrphan))
                 OrphanListChanged=True
         gLock.Unlock()
 
@@ -169,6 +177,8 @@ def ProcessOrphan(Orphan):
 # Read the complete list stored on disk, if it exists
 
 def ReadOrphanList():
+    global OrphanList
+
     orphanLock.Lock()
     if os.path.exists(OrphanStorehouse):
         buffer=JRRsupport.ReadFile(OrphanStorehouse)
@@ -196,6 +206,8 @@ def WriteOrphanList():
 # Check the receiver file for new orders.
 
 def ReceiveOrphans():
+    global OrphanList
+
     # The key is the time of payload and random ID
 
     orphanLock.Lock()
@@ -225,12 +237,20 @@ def ReceiveOrphans():
 ###
 
 def main():
+    global OrphanList
+    global OrphanListChanged
+
     # Read saved list from disk into OrphanList
 
     # Establish the process pool to handle the orphans
     ProcessPool=multiprocessing.Pool(processes=multiprocessing.cpu_count()*2,maxtasksperchild=237)
 
-    try:
+    # Load saved orphans into memory
+
+    ReadOrphanList()
+
+#    try:
+    if 1==1:
         while True:
             # At the beginning of each loop, check for new orphans
             ReceiveOrphans()
@@ -240,8 +260,27 @@ def main():
             cur=OrphanList.GetHead()
             while cur!=None:
                 data=json.loads(cur.GetData())
-                ProcessPool.apply_async(ProcessOrphan,args=(data,),callback=OrphanUpdate)
-                cur=cur.GetNext()
+
+                if data['Status']=='Delete':
+
+                    # This is the ONLY way to properly handle deletions that
+                    # won't risk trashing memory, as this part of the program is
+                    # huarenteed to be non-parrellel. The next pointer must be
+                    # fetched BEFORE this orphan is removed to maintain the list
+                    # scan integrity.
+
+                    gLock.Lock()
+                    # Get next orphan
+                    cNext=cur.GetNext()
+                    # Remove THIS orphan
+                    OrphanList.delete(cur)
+                    # Set the next orphan
+                    cur=cNext
+                    OrphanListChanged=True
+                    gLock.Unlock()
+                else:
+                    ProcessPool.apply_async(ProcessOrphan,args=(data,),callback=OrphanUpdate)
+                    cur=cur.GetNext()
 
             # Save the orphan list to disk, ONLY IF it actually changed
 
@@ -253,12 +292,12 @@ def main():
 
             # Brief rest to maintain control over server
             JRRsupport.ElasticSleep(1)
-    except:
+#    except:
         # Something bad happened. Clean up and shutdown
-        gLock.Unlock()
-        ProcessPool.join()
-        ProcessPool.close()
-        sys.exit(1)
+#        gLock.Unlock()
+#        ProcessPool.close()
+#        ProcessPool.join()
+#        sys.exit(1)
 
 if __name__ == '__main__':
     main()
