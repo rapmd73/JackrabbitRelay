@@ -20,6 +20,28 @@ e=time.time()-s
 print(f"Copy file took {e} seconds for {len(buffer)} bytes")
 
 s=time.time()
+lines=JRRsupport.ReadFile("testData").split('\n')
+fh=open("opData","w")
+for line in lines:
+    line=line.strip()
+    if line!=None and line!='':
+        fh.write(line+'\n')
+fh.close()
+e=time.time()-s
+print(f"Buffer splice/1x1Write took {e} seconds for {len(lines)} lines")
+
+s=time.time()
+lines=JRRsupport.ReadFile("testData").split('\n')
+buffer=''
+for line in lines:
+    line=line.strip()
+    if line!=None and line!='':
+        buffer+=line+'\n'
+JRRsupport.WriteFile("opData",buffer)
+e=time.time()-s
+print(f"Buffer splice/Build Buffer/Bulk Write took {e} seconds for {len(lines)} lines")
+
+s=time.time()
 lines=JRRsupport.ReadFile("opData").split('\n')
 for i in range(9000):
     lines=lines[1:]
