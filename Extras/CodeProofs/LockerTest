@@ -12,9 +12,11 @@ import time
 
 import JRRsupport
 
-fw1=JRRsupport.Locker("LockerTest")
-fw2=JRRsupport.Locker("LockerTest")
+tv=str(time.time())
+
+fw1=JRRsupport.Locker("LockerTest."+tv,Timeout=60)
+fw2=JRRsupport.Locker("LockerTest."+tv,Timeout=60)
 
 print(fw1.Lock())
-print(fw2.Lock())
+#print(fw2.Lock())
 print(fw1.Unlock())

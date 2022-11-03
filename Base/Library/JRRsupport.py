@@ -57,15 +57,22 @@ class Locker:
 
     # Contact the Locker Server and WAIT for response. NOT thread safe.
 
-    def Talker(self,msg):
+    def Talker(self,msg,casefold=True):
         try:
             ls=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             ls.connect((self.host, self.port))
-            ls.send(msg.encode())
-            buf=ls.recv(1024)
+            sfn=ls.makefile('rw')
+            sfn.write(msg)
+            sfn.flush()
+            buf=None
+            while buf==None:
+                buf=sfn.readline()
             ls.close()
             if len(buf)!=0:
-                return buf.decode().lower()
+                if casefold==True:
+                    return buf.lower().strip()
+                else:
+                    return buf.strip()
             else:
                 return None
         except:
@@ -74,7 +81,7 @@ class Locker:
     # Contact Lock server
 
     def Retry(self,action,expire):
-        outbuf='{ '+f'"ID":"{self.ID}", "FileName":"{self.filename}", "Action":"{action}", "Expire":"{expire}"'+' }'
+        outbuf='{ '+f'"ID":"{self.ID}", "FileName":"{self.filename}", "Action":"{action}", "Expire":"{expire}"'+' }\n'
 
         retry=0
         done=False

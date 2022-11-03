@@ -44,16 +44,11 @@ LogDirectory="/home/JackrabbitRelay2/Logs"
 OrphanReceiver=DataDirectory+'/OliverTwist.Receiver'
 OrphanStorehouse=DataDirectory+'/OliverTwist.Storehouse'
 
-# Global lock required to prevent memory from being destroyed during asychonrous
-# activity.
-
-gLock=JRRsupport.Locker("OliverTwist")
-
-# This lock guards the receiver file. Both PlaceOrder.olivertwist and
+# This lock guards the orphan list. Both PlaceOrder.olivertwist and
 # JackrabbitOliverTwist will access this file. Collisions must not be allowed to
 # happen.
 
-orphanLock=JRRsupport.Locker(OrphanReceiver)
+orphanLock=JRRsupport.Locker("OliverTwist."+str(time.time()))
 
 # Compare orphan IDs
 
@@ -69,6 +64,7 @@ def compareOrphan(node,dz):
         r=1
     else:
         r=0
+
     return r
 
 # The list of orphaned orders to track and manage. Must be global, but after
@@ -117,7 +113,7 @@ def OrphanUpdate(result):
         # result in JSON format
         # Locking required to protect memory structures
 
-        gLock.Lock()
+        orphanLock.Lock()
 
         # At this stage, pData should NEVER be None or undefined. If it is, then
         # memory was thrashed.
@@ -125,33 +121,37 @@ def OrphanUpdate(result):
         # Find entry in list by ID
         found=OrphanList.find(result)
         if found!=None:
-            # Get original list entry
-            thisOrphan=json.loads(found.GetData())
             rData=json.loads(result)
 
-            # Temporary Diagnostics
-            print(OrphanList.size,rData['ID'],rData['Status'])
+            # Get original list entry
+            thisOrphan=json.loads(found.GetData())
 
             # if returned status is open, replace the response, if it has
             # changed or the orphan record doesn't have a response
 
-            if rData['status'].lower()=='open':
-                if Response in rData:
+            rStatus=rData['Status'].lower()
+            print("RET:",rStatus,rData['InMotion'],rData['Key'])
+            if rStatus=='open':
+                if 'Response' in rData:
                     if 'Response' not in thisOrphan or rData['Response']!=thisOrphan['Response']:
                         thisOrphan['Response']=rData['Response']
+                        thisOrphan['InMotion']=False
                         found.SetData(json.dumps(ThisOrphan))
                         OrphanListChanged=True
                 else:
                     # Needs to be properly logged
-                    print(rData['ID'],"missing Rresponse")
+                    print(rData['Key'],"missing Rresponse")
 
             # if the status returnd is delete, flag for parent
             # do NOT delete here, will trash orphan list.
-            elif rData['status'].lower()=='delete':
+            elif rStatus=='delete' or rStatus=='closed':
                 thisOrphan['Status']='Delete'
-                found.SetData(json.dumps(ThisOrphan))
+                thisOrphan['InMotion']=False
+                found.SetData(json.dumps(thisOrphan))
                 OrphanListChanged=True
-        gLock.Unlock()
+            else:
+                print("ERROR:",rStatus,rData['Key'])
+        orphanLock.Unlock()
 
 # This spins up the orphan manager to ensure each orphan is handled.
 
@@ -185,6 +185,7 @@ def ReadOrphanList():
         if buffer!=None and buffer!='':
             Orphans=buffer.split('\n')
             for Entry in Orphans:
+                # Force set InMotion to False
                 Entry=Entry.strip()
                 if Entry=='':
                     continue
@@ -260,6 +261,10 @@ def main():
             cur=OrphanList.GetHead()
             while cur!=None:
                 data=json.loads(cur.GetData())
+                if 'InMotion' not in data:
+                    data['InMotion']=False
+
+                print(OrphanList.size,data['Status'],data['Key'])
 
                 if data['Status']=='Delete':
 
@@ -269,32 +274,40 @@ def main():
                     # fetched BEFORE this orphan is removed to maintain the list
                     # scan integrity.
 
-                    gLock.Lock()
+                    orphanLock.Lock()
                     # Get next orphan
                     cNext=cur.GetNext()
                     # Remove THIS orphan
-                    OrphanList.delete(cur)
+                    OrphanList.delete(cur.GetData())
                     # Set the next orphan
                     cur=cNext
                     OrphanListChanged=True
-                    gLock.Unlock()
+                    orphanLock.Unlock()
                 else:
+                    # Dont process orphans scheduled for removal
+                    orphanLock.Lock()
+
+#                    if data['Status']!='Delete':
+#                    if data['Status']!='Delete' and data['InMotion']==False:
+#                        data['InMotion']=True
+#                        cur.SetData(json.dumps(data))
                     ProcessPool.apply_async(ProcessOrphan,args=(data,),callback=OrphanUpdate)
                     cur=cur.GetNext()
+                    orphanLock.Unlock()
 
-            # Save the orphan list to disk, ONLY IF it actually changed
+                # Save the orphan list to disk, ONLY IF it actually changed
 
-            if OrphanListChanged==True:
-                gLock.Lock()
-                WriteOrphanList()
-                OrphanListChanged=False
-                gLock.Unlock()
+                if OrphanListChanged==True:
+                    orphanLock.Lock()
+                    WriteOrphanList()
+                    OrphanListChanged=False
+                    orphanLock.Unlock()
 
             # Brief rest to maintain control over server
-            JRRsupport.ElasticSleep(1)
+            JRRsupport.ElasticSleep(10)
 #    except:
-        # Something bad happened. Clean up and shutdown
-#        gLock.Unlock()
+       # Something bad happened. Clean up and shutdown
+#        orphanLock.Unlock()
 #        ProcessPool.close()
 #        ProcessPool.join()
 #        sys.exit(1)

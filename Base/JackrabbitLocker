@@ -21,6 +21,11 @@ BaseDirectory='/home/JackrabbitRelay2/Base'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
 LogDirectory="/home/JackrabbitRelay2/Logs"
 
+# Required global for the process to work
+
+Locker={}
+dataStore={}
+
 # Write pid in port file
 
 def WritePID(port):
@@ -40,13 +45,81 @@ def WriteLog(addr,msg):
     fh.write(s)
     fh.close()
 
+def ProcessPayload(data):
+    global Locker
+    global dataStore
+
+    try:
+        dataDB=json.loads(data)
+    except: # damaged payload
+        return "BadPayload\n"
+    else: # Find the lock
+        #pn=fds.getpeername()
+        #ip=f'{pn[0]}:{pn[1]}'
+        #WriteLog(ip,FileName)
+
+        # FileName and Action are required
+        if 'FileName' not in dataDB \
+        or 'Action' not in dataDB:
+            return "BadPayload\n"
+
+        # Valid actions:
+        #    Lock        Complete
+        #    Unlock      Complete
+        #    Get
+        #    Put
+
+        # What are we doing. FileName also doubles as memory ID
+        FileName=dataDB['FileName']
+        action=dataDB['Action'].lower()
+
+        # Link this entry to the connected socket
+        if action=='lock':
+            # New request
+            if FileName not in Locker:
+                dataLock={}
+                dataLock['ID']=dataDB['ID']
+                dataLock['Expire']=time.time()+float(dataDB['Expire'])
+                Locker[FileName]=dataLock
+                return "Locked\n"
+            # Lock has expired, now unlocked
+            elif time.time()>Locker[FileName]['Expire']:
+                Locker[FileName]['ID']=dataDB['ID']
+                Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
+                return "Locked\n"
+            else:
+                if Locker[FileName]['ID']==dataDB['ID']:
+                    Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
+                    return "Locked\n"
+                else:
+                    return "Failure\n"
+        # Unlock request
+        elif action=='unlock':
+            # Just pass through unlocks
+            if FileName not in Locker:
+                return "Unlocked\n"
+            # Verify owner and unlock
+            elif Locker[FileName]['ID']==dataDB['ID']:
+                Locker[FileName]['Expire']=0
+                return "Unlocked\n"
+            else:
+                return "Failure\n"
+            # Wrong key
+        else:
+            return "BadAction\n"
+
+###
+### Main Driver
+###
+
 def main():
+    global Locker
+    global dataStore
+
     port=37373
 
     WritePID(port)
 #    WriteLog(Version,"Jackrabbit Locker")
-
-    Locker={}
 
     try:
         lockerSocket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -59,6 +132,8 @@ def main():
             x='Another program is using this port: '+str(port)
         WriteLog(Version,x)
         sys.exit(1)
+
+    # Track incoming connections
 
     inputs=[lockerSocket]
 
@@ -76,6 +151,7 @@ def main():
                     clientsock.setblocking(0)
                     if clientsock not in inputs:
                         inputs.append(clientsock)
+                    dataStore[clientsock]=''
                 else:
                     data=None
                     try:
@@ -91,46 +167,15 @@ def main():
                         if fds in queue:
                             queue.pop(fds,None)
                         fds.close()
+                        now=time.time()
+                        for k in list(Locker):
+                            if now>Locker[k]['Expire']:
+                                Locker.pop(k,None)
                     else:
-                        try:
-                            dataDB=json.loads(data.decode())
-                        except: # timeout
-                            pass
-                        else: # Find the lock
-                            FileName=dataDB['FileName']
-                            #pn=fds.getpeername()
-                            #ip=f'{pn[0]}:{pn[1]}'
-                            #WriteLog(ip,FileName)
-                            if FileName in Locker:
-                                # Link this entry to the connected socket
-                                if dataDB['Action'].lower()=='lock':
-                                    # Lock has expired, now unlocked
-                                    if time.time()>Locker[FileName]['Expire']:
-                                        Locker[FileName]['ID']=dataDB['ID']
-                                        Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
-                                        queue[fds]="Locked"
-                                    else:
-                                        if Locker[FileName]['ID']==dataDB['ID']:
-                                            Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
-                                            queue[fds]="Locked"
-                                        else:
-                                            queue[fds]="Failure"
-                                elif dataDB['Action'].lower()=='unlock':
-                                    # Unlock request
-                                    if Locker[FileName]['ID']==dataDB['ID']:
-                                        Locker[FileName]['Expire']=0
-                                        queue[fds]="Unlocked"
-                                    else:
-                                        queue[fds]="Failure"
-                                else:
-                                    queue[fds]="Failure"
-                            else: # New Lock Request
-                                if dataDB['Action'].lower()=='lock':
-                                    dataLock={}
-                                    dataLock['ID']=dataDB['ID']
-                                    dataLock['Expire']=time.time()+float(dataDB['Expire'])
-                                    Locker[FileName]=dataLock
-                                    queue[fds]="Locked"
+                        data=data.decode()
+                        dataStore[fds]+=data
+                        if data[-1]=='\n':
+                            queue[fds]=ProcessPayload(dataStore[fds])
 
         # Send response and close connection
 
@@ -140,7 +185,7 @@ def main():
                     try:
                         #pn=fds.getpeername()
                         #ip=f'{pn[0]}:{pn[1]}
-                        #print(ip,queue[fds])
+                        #print("S:",queue[fds].strip())
                         fds.sendall(queue[fds].encode())
                     except:
                         if fds in inputs:
