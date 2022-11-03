@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+import os
+import time
+import random
+import socket
+
+class Locker:
+    # Initialize the file name
+    def __init__(self,filename,Retry=7,Timeout=300,Log=None):
+        self.ID=self.GetID(20,21)
+        self.filename=filename
+        self.retryLimit=Retry
+        self.timeout=Timeout
+        self.Log=Log
+        self.port=37773
+        self.host=''
+
+    # Generate an ID String
+
+    def GetID(self,alpha,beta):
+        letters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        llen=len(letters)
+
+        pw=""
+        oc=""
+
+        for i in range(random.randrange(alpha,beta)):
+            done=False
+            while not done:
+                for z in range(random.randrange(73,237)):
+                    c=random.randrange(llen)
+                if pw=="" or (len(pw)>0 and letters[c]!=oc):
+                    done=True
+            oc=letters[c]
+            pw+=oc
+        return pw
+
+    # Contact the Locker Server and WAIT for response. NOT thread safe.
+
+    def Talker(self,msg,casefold=True):
+        try:
+            ls=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            ls.connect((self.host, self.port))
+            sfn=ls.makefile('rw')
+            sfn.write(msg)
+            sfn.flush()
+            buf=None
+            while buf==None:
+                buf=sfn.readline()
+            ls.close()
+            if len(buf)!=0:
+                if casefold==True:
+                    return buf.lower().strip()
+                else:
+                    return buf.strip()
+            else:
+                return None
+        except:
+            return None
+
+    # Contact Lock server
+
+    def Retry(self,action,expire):
+        outbuf='{ '+f'"ID":"{self.ID}", "FileName":"{self.filename}", "Action":"{action}", "Expire":"{expire}"'+' }\n'
+
+        retry=0
+        done=False
+        while not done:
+            buf=self.Talker(outbuf)
+            if buf==None:
+                if retry>self.retryLimit:
+                    if self.Log!=None:
+                        self.Log.Error("Locker",f"{self.filename}: {action} request failed")
+                    else:
+                        print("Locker",f"{self.filename}: {action} request failed")
+                        sys.exit(1)
+                retry+=1
+                time.sleep(1)
+            else:
+                if len(buf)!=0:
+                    if buf=='locked' or buf=='unlocked' or buf=='failure':
+                        done=True
+                    else:
+                        time.sleep(0.1)
+                else:
+                    time.sleep(0.1)
+        return buf
+
+    # Lock the file
+
+    def Lock(self,expire=300):
+        resp=None
+        done=False
+        timeout=time.time()+self.timeout
+        while not done:
+            resp=self.Retry("Lock",expire)
+            if resp=="locked":
+                done=True
+            else:
+                if time.time()>timeout:
+                    if self.Log!=None:
+                        self.Log.Error("Locker",f"{self.filename}/{os.getpid()}: lock request failed")
+                    else:
+                        print("Locker",f"{self.filename}/{os.getpid()}: lock request failed")
+                        sys.exit(1)
+            # Prevent race conditions
+            time.sleep(0.1)
+        return resp
+
+    # Unlock the file
+
+    def Unlock(self):
+        return self.Retry("Unlock",0)
+
+###
+### Main
+###
+
+fw1=Locker("LockerTest")
+#fw2=Locker("LockerTest")
+
+#print(fw1.Lock())
+#print(fw2.Lock())
+#print(fw1.Unlock())
+
+for i in range(100):
+    print(fw1.Talker(fw1.GetID(37,18000)+'\n'))
+

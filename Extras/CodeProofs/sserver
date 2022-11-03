@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Locker
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+# { "ID":"DEADBWEEF", "FileName":"testData", "Action":"Lock", "Expire":"300" }
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import time
+from datetime import datetime
+import socket
+import select
+import json
+
+def main():
+    port=37773
+
+    Locker={}
+
+    try:
+        lockerSocket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        lockerSocket.setblocking(0)
+        lockerSocket.bind(('', port))
+        lockerSocket.listen(1024)
+    except OSError as err:
+        x=str(err)
+        if x.find('Address already in use')>-1:
+            x='Another program is using this port: '+str(port)
+        WriteLog(Version,x)
+        sys.exit(1)
+
+    inputs=[lockerSocket]
+    dataStore={}
+
+    # Response queue connected to each client
+
+    queue={}
+
+    while True:
+        infds,outfds,errfds=select.select(inputs, inputs, [], 5)
+
+        if len(infds)!=0:
+            for fds in infds:
+                if fds is lockerSocket:
+                    clientsock,clientaddr=fds.accept()
+                    clientsock.setblocking(0)
+                    if clientsock not in inputs:
+                        inputs.append(clientsock)
+                    # Initialize empty string
+                    dataStore[clientsock]=''
+                else:
+                    data=None
+                    try:
+                        data,srv=fds.recvfrom(1024)
+                    except:
+                        pass
+
+                    # No data received, close connection
+
+                    if not data:
+                        if fds in inputs:
+                            inputs.remove(fds)
+                        if fds in queue:
+                            queue.pop(fds,None)
+                        if fds in dataStore:
+                            dataStore.pop(fds,None)
+                        fds.close()
+                    else:
+                        dataStore[fds]+=data.decode()
+                        if dataStore[fds][-1]=='\n':
+                            queue[fds]='Payload is '+str(len(dataStore[fds]))+' bytes long '+dataStore[fds]+'\n'
+
+        # Send response and close connection
+
+        if len(outfds)!=0:
+            for fds in outfds:
+                if fds in queue:
+                    try:
+                        #pn=fds.getpeername()
+                        #ip=f'{pn[0]}:{pn[1]}
+                        print("S",queue[fds])
+                        fds.sendall(queue[fds].encode())
+                    except:
+                        if fds in inputs:
+                            inputs.remove(fds)
+                        fds.close()
+                    queue.pop(fds,None)
+
+if __name__ == '__main__':
+    main()
