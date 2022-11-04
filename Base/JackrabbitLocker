@@ -5,7 +5,16 @@
 # 2021 Copyright © Robert APM Darin
 # All rights reserved unconditionally.
 
+# For (un)locking
+
 # { "ID":"DEADBWEEF", "FileName":"testData", "Action":"Lock", "Expire":"300" }
+# { "ID":"DEADBWEEF", "FileName":"testData", "Action":"Unlock" }
+
+# For memory reference
+
+# { "ID":"DEADBWEEF", "FileName":"testData", "Action":"Get" }
+# { "ID":"DEADBWEEF", "FileName":"testData", "Action":"Put", "Expire":"300","DataStore":"Blah" }
+# { "ID":"DEADBWEEF", "FileName":"testData", "Action":"Erase" }
 
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
@@ -45,29 +54,39 @@ def WriteLog(addr,msg):
     fh.write(s)
     fh.close()
 
+def jsonStatus(str,Tag=None,Data=None):
+    res={}
+    res['Status']=str
+
+    if Tag!=None and Data!=None:
+        res[Tag]=Data
+
+    return json.dumps(res)+'\n'
+
 def ProcessPayload(data):
     global Locker
-    global dataStore
 
     try:
         dataDB=json.loads(data)
     except: # damaged payload
-        return "BadPayload\n"
+        return jsonStatus("BadPayload")
     else: # Find the lock
         #pn=fds.getpeername()
         #ip=f'{pn[0]}:{pn[1]}'
         #WriteLog(ip,FileName)
 
-        # FileName and Action are required
+        # FileName and Action are required. For memory fetches, FileName is memory ID.
+
         if 'FileName' not in dataDB \
         or 'Action' not in dataDB:
-            return "BadPayload\n"
+            return jsonStatus("BadPayload")
 
         # Valid actions:
         #    Lock        Complete
         #    Unlock      Complete
         #    Get
         #    Put
+        #    Erase
 
         # What are we doing. FileName also doubles as memory ID
         FileName=dataDB['FileName']
@@ -81,32 +100,71 @@ def ProcessPayload(data):
                 dataLock['ID']=dataDB['ID']
                 dataLock['Expire']=time.time()+float(dataDB['Expire'])
                 Locker[FileName]=dataLock
-                return "Locked\n"
+                return jsonStatus("Locked")
             # Lock has expired, now unlocked
             elif time.time()>Locker[FileName]['Expire']:
                 Locker[FileName]['ID']=dataDB['ID']
                 Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
-                return "Locked\n"
+                return jsonStatus("Locked")
             else:
                 if Locker[FileName]['ID']==dataDB['ID']:
                     Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
-                    return "Locked\n"
+                    return jsonStatus("Locked")
                 else:
-                    return "Failure\n"
-        # Unlock request
-        elif action=='unlock':
-            # Just pass through unlocks
+                    return jsonStatus("Failure")
+        # Get memory reference
+        elif action=='get':
             if FileName not in Locker:
-                return "Unlocked\n"
+                return jsonStatus("NotFound")
+            # Verify owner and unlock/Erase memory
+            elif Locker[FileName]['ID']==dataDB['ID']:
+                return jsonStatus("Done",Tag="DataStore",Data=Locker[FileName]['DataStore'])
+            # Not the rightful owner
+            else:
+                return jsonStatus("Failure")
+        elif action=='put':
+            # New memory object
+            if FileName not in Locker:
+                dStore={}
+                dStore['ID']=dataDB['ID']
+                dStore['Expire']=time.time()+float(dataDB['Expire'])
+                dStore['DataStore']=dataDB['DataStore']
+                Locker[FileName]=dStore
+                return jsonStatus("Done")
+            # Existing memory object, verify owner
+            elif Locker[FileName]['ID']==dataDB['ID']:
+                Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
+                Locker[FileName]['DataStore']=dataDB['DataStore']
+                return jsonStatus("Done")
+            # Not the rightful owner
+            else:
+                return jsonStatus("Failure")
+        # Unlock/Erase request
+        elif action=='unlock':
+            # Just pass through unlock
+            if FileName not in Locker:
+                return jsonStatus("Unlocked")
             # Verify owner and unlock
             elif Locker[FileName]['ID']==dataDB['ID']:
                 Locker[FileName]['Expire']=0
-                return "Unlocked\n"
+                return jsonStatus("Unlocked")
             else:
-                return "Failure\n"
+                return jsonStatus("Failure")
+        # Unlock/Erase request
+        elif action=='erase':
+            # Just pass through unlock/erase
+            if FileName not in Locker:
+                return jsonStatus("Done")
+            # Verify owner and erase memory
+            elif Locker[FileName]['ID']==dataDB['ID']:
+                Locker[FileName]['Expire']=0
+                Locker[FileName]['DataStore']=None
+                return jsonStatus("Done")
+            else:
+                return jsonStatus("Failure")
             # Wrong key
         else:
-            return "BadAction\n"
+            return jsonStatus("BadAction")
 
 ###
 ### Main Driver
@@ -175,6 +233,7 @@ def main():
                         data=data.decode()
                         dataStore[fds]+=data
                         if data[-1]=='\n':
+                            #print("R:",dataStore[fds].strip())
                             queue[fds]=ProcessPayload(dataStore[fds])
 
         # Send response and close connection

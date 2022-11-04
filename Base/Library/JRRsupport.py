@@ -27,6 +27,8 @@ import json
 class Locker:
     # Initialize the file name
     def __init__(self,filename,Retry=7,Timeout=300,Log=None):
+        self.ulResp=['badpayload','locked','unlocked','failure']
+
         self.ID=self.GetID()
         self.filename=filename
         self.retryLimit=Retry
@@ -80,13 +82,13 @@ class Locker:
 
     # Contact Lock server
 
-    def Retry(self,action,expire):
+    def Retry(self,action,expire,casefold=True):
         outbuf='{ '+f'"ID":"{self.ID}", "FileName":"{self.filename}", "Action":"{action}", "Expire":"{expire}"'+' }\n'
 
         retry=0
         done=False
         while not done:
-            buf=self.Talker(outbuf)
+            buf=self.Talker(outbuf,casefold)
             if buf==None:
                 if retry>self.retryLimit:
                     if self.Log!=None:
@@ -98,10 +100,42 @@ class Locker:
                 time.sleep(1)
             else:
                 if len(buf)!=0:
-                    if buf=='locked' or buf=='unlocked' or buf=='failure':
+                    # Received JSON, brak done and get status
+                    try:
+                        bData=json.loads(buf)
+                        # IMPORTANT: This IS casefolded
+                        buf=bData['status']
+                    except:
+                        pass
+                    if casefold==True:
+                        buf=buf.lower()
+                    if buf in self.ulResp:
                         done=True
                     else:
                         time.sleep(0.1)
+                else:
+                    time.sleep(0.1)
+        return buf
+
+    def RetryData(self,action,expire,data):
+        outbuf='{ '+f'"ID":"{self.ID}", "FileName":"{self.filename}", "Action":"{action}", "Expire":"{expire}", "DataStore":"{data}"'+' }\n'
+
+        retry=0
+        done=False
+        while not done:
+            buf=self.Talker(outbuf,casefold=False)
+            if buf==None:
+                if retry>self.retryLimit:
+                    if self.Log!=None:
+                        self.Log.Error("Locker",f"{self.filename}: {action} request failed")
+                    else:
+                        print("Locker",f"{self.filename}: {action} request failed")
+                        sys.exit(1)
+                retry+=1
+                time.sleep(1)
+            else:
+                if len(buf)!=0:
+                    done=True
                 else:
                     time.sleep(0.1)
         return buf
@@ -113,7 +147,7 @@ class Locker:
         done=False
         timeout=time.time()+self.timeout
         while not done:
-            resp=self.Retry("Lock",expire)
+            resp=self.Retry("Lock",expire,casefold=True)
             if resp=="locked":
                 done=True
             else:
@@ -131,6 +165,15 @@ class Locker:
 
     def Unlock(self):
         return self.Retry("Unlock",0)
+
+    def Get(self):
+        return self.RetryData("Get",0,None)
+
+    def Put(self,expire,data):
+        return self.RetryData("Put",expire,data)
+
+    def Erase(self):
+        return self.RetryData("Erase",0,None)
 
 # General file tools
 
