@@ -394,13 +394,15 @@ class DList:
 
             if node==self.head:
                 n=self.head.GetNext()
-                n.SetPrev(None)
+                if n!=None:
+                    n.SetPrev(None)
                 self.head=n
                 self.size-=1
                 return
             elif node==self.tail:
                 p=self.tail.GetPrev()
-                p.SetNext(None)
+                if p!=None:
+                    p.SetNext(None)
                 self.tail=p
                 self.size-=1
                 return

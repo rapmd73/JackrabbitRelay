@@ -29,7 +29,6 @@ def main():
             rData={}
             rData['Key']=Orphan['Key']
             rData['Status']=cur['status']
-            rData['Response']=json.dumps(cur)
             print(json.dumps(rData))
             sys.exit(0)
 

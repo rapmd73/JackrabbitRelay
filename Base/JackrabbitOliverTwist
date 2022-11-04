@@ -71,10 +71,16 @@ def compareOrphan(node,dz):
 # compare function declared.
 
 OrphanList=JRRsupport.DList(Compare=compareOrphan)
+OrphanMemory={}
+OrphanListChanged=False
+
+def GetExpireTime():
+    expire=OrphanList.size*10
+    if expire<3600:
+        expire=3600
+    return expire
 
 # We only want to write to disk when there is an actual change in the OrphanList
-
-OrphanListChanged=False
 
 # Generate a random ID
 
@@ -107,7 +113,7 @@ def GetID():
 
 def OrphanUpdate(result):
     global OrphanList
-    global OrphanListChanged
+    global OrphanMemory
 
     if result!=None:
         # result in JSON format
@@ -130,25 +136,13 @@ def OrphanUpdate(result):
             # changed or the orphan record doesn't have a response
 
             rStatus=rData['Status'].lower()
-            print("RET:",rStatus,rData['InMotion'],rData['Key'])
             if rStatus=='open':
-                if 'Response' in rData:
-                    if 'Response' not in thisOrphan or rData['Response']!=thisOrphan['Response']:
-                        thisOrphan['Response']=rData['Response']
-                        thisOrphan['InMotion']=False
-                        found.SetData(json.dumps(ThisOrphan))
-                        OrphanListChanged=True
-                else:
-                    # Needs to be properly logged
-                    print(rData['Key'],"missing Rresponse")
-
+                # Nothing changed, go back to waiting
+                OrphanMemory[thisOrphan['Key']].Put(3600,"Waiting")
             # if the status returnd is delete, flag for parent
             # do NOT delete here, will trash orphan list.
             elif rStatus=='delete' or rStatus=='closed':
-                thisOrphan['Status']='Delete'
-                thisOrphan['InMotion']=False
-                found.SetData(json.dumps(thisOrphan))
-                OrphanListChanged=True
+                OrphanMemory[thisOrphan['Key']].Put(3600,"Delete")
             else:
                 print("ERROR:",rStatus,rData['Key'])
         orphanLock.Unlock()
@@ -178,6 +172,7 @@ def ProcessOrphan(Orphan):
 
 def ReadOrphanList():
     global OrphanList
+    global OrphanMemory
 
     orphanLock.Lock()
     if os.path.exists(OrphanStorehouse):
@@ -189,7 +184,19 @@ def ReadOrphanList():
                 Entry=Entry.strip()
                 if Entry=='':
                     continue
-                OrphanList.insert(Entry)
+                # Break down entry and set up memory locker
+                Orphan=json.loads(Entry)
+                # Set up memory locker
+                expire=len(Orphans)*10
+                if expire<3600:
+                    expire=3600
+
+                OrphanList.insert(json.dumps(Orphan))
+
+                OrphanMemory[Orphan['Key']]=JRRsupport.Locker(Orphan['Key'])
+                OrphanMemory[Orphan['Key']].Put(GetExpireTime(),"Waiting")
+
+                OrphanListChanged=True
     orphanLock.Unlock()
 
 # Write only when there are changes.
@@ -208,29 +215,37 @@ def WriteOrphanList():
 
 def ReceiveOrphans():
     global OrphanList
+    global OrphanMemory
 
     # The key is the time of payload and random ID
 
     orphanLock.Lock()
-    try:
-        if os.path.exists(OrphanReceiver):
-            buffer=JRRsupport.ReadFile(OrphanReceiver)
-            if buffer!=None and buffer!='':
-                # Remove the receiver after we load it
-                os.remove(OrphanReceiver)
+    if os.path.exists(OrphanReceiver):
+        buffer=JRRsupport.ReadFile(OrphanReceiver)
+        if buffer!=None and buffer!='':
+            # Remove the receiver after we load it
+            os.remove(OrphanReceiver)
 
-                # Process all the orphans
+            # Process all the orphans
 
-                Orphans=buffer.split('\n')
-                for Entry in Orphans:
-                    if Entry.strip()=='':
-                        continue
+            Orphans=buffer.split('\n')
+            for Entry in Orphans:
+                if Entry.strip()=='':
+                    continue
 
-                    Orphan=json.loads(Entry)
-                    Orphan['Key']=Orphan['DateTime']+'.'+GetID()
-                    OrphanList.insert(json.dumps(Orphan))
-    except:
-        pass
+                Orphan=json.loads(Entry)
+                Orphan['Key']=Orphan['DateTime']+'.'+GetID()
+
+                # Set up memory locker
+                expire=len(Orphans)*10
+                if expire<3600:
+                    expire=3600
+
+                OrphanList.insert(json.dumps(Orphan))
+
+                OrphanMemory[Orphan['Key']]=JRRsupport.Locker(Orphan['Key'])
+                OrphanMemory[Orphan['Key']].Put(GetExpireTime(),"Waiting")
+                OrphanListChanged=True
     orphanLock.Unlock()
 
 ###
@@ -239,6 +254,7 @@ def ReceiveOrphans():
 
 def main():
     global OrphanList
+    global OrphanMemory
     global OrphanListChanged
 
     # Read saved list from disk into OrphanList
@@ -250,67 +266,66 @@ def main():
 
     ReadOrphanList()
 
-#    try:
-    if 1==1:
-        while True:
-            # At the beginning of each loop, check for new orphans
-            ReceiveOrphans()
+    while True:
+        expire=GetExpireTime()
 
-            # Walk the list of orphans.
+        # At the beginning of each loop, check for new orphans
+        ReceiveOrphans()
 
-            cur=OrphanList.GetHead()
-            while cur!=None:
-                data=json.loads(cur.GetData())
-                if 'InMotion' not in data:
-                    data['InMotion']=False
+        # Walk the list of orphans.
 
-                print(OrphanList.size,data['Status'],data['Key'])
+        cur=OrphanList.GetHead()
+        while cur!=None:
+            data=json.loads(cur.GetData())
 
-                if data['Status']=='Delete':
+            # Redo using Locker Get/Put
+            orphanLock.Lock()
+            sData=json.loads(OrphanMemory[data['Key']].Get())
+            orphanLock.Unlock()
+            if sData['Status']=='Done':
+                status=sData['DataStore']
+            else:
+                status="Skip"
 
-                    # This is the ONLY way to properly handle deletions that
-                    # won't risk trashing memory, as this part of the program is
-                    # huarenteed to be non-parrellel. The next pointer must be
-                    # fetched BEFORE this orphan is removed to maintain the list
-                    # scan integrity.
+            if status=='Delete':
 
-                    orphanLock.Lock()
-                    # Get next orphan
-                    cNext=cur.GetNext()
-                    # Remove THIS orphan
-                    OrphanList.delete(cur.GetData())
-                    # Set the next orphan
-                    cur=cNext
-                    OrphanListChanged=True
-                    orphanLock.Unlock()
-                else:
-                    # Dont process orphans scheduled for removal
-                    orphanLock.Lock()
+                # This is the ONLY way to properly handle deletions that
+                # won't risk trashing memory, as this part of the program is
+                # huarenteed to be non-parrellel. The next pointer must be
+                # fetched BEFORE this orphan is removed to maintain the list
+                # scan integrity.
 
-#                    if data['Status']!='Delete':
-#                    if data['Status']!='Delete' and data['InMotion']==False:
-#                        data['InMotion']=True
-#                        cur.SetData(json.dumps(data))
+                orphanLock.Lock()
+                # Get next orphan
+                cNext=cur.GetNext()
+                # Remove THIS orphan
+                OrphanMemory[data['Key']].Erase()
+                OrphanMemory.pop(data['Key'],None)
+                OrphanList.delete(cur.GetData())
+                # Set the next orphan
+                cur=cNext
+                OrphanListChanged=True
+                orphanLock.Unlock()
+            else:
+                # Dont process orphans scheduled for removal
+                orphanLock.Lock()
+
+                if status=='Waiting':
+                    OrphanMemory[data['Key']].Put(expire,"Running")
                     ProcessPool.apply_async(ProcessOrphan,args=(data,),callback=OrphanUpdate)
-                    cur=cur.GetNext()
-                    orphanLock.Unlock()
+                cur=cur.GetNext()
+                orphanLock.Unlock()
 
-                # Save the orphan list to disk, ONLY IF it actually changed
+            # Save the orphan list to disk, ONLY IF it actually changed
 
-                if OrphanListChanged==True:
-                    orphanLock.Lock()
-                    WriteOrphanList()
-                    OrphanListChanged=False
-                    orphanLock.Unlock()
+            if OrphanListChanged==True:
+                orphanLock.Lock()
+                WriteOrphanList()
+                OrphanListChanged=False
+                orphanLock.Unlock()
 
-            # Brief rest to maintain control over server
-            JRRsupport.ElasticSleep(10)
-#    except:
-       # Something bad happened. Clean up and shutdown
-#        orphanLock.Unlock()
-#        ProcessPool.close()
-#        ProcessPool.join()
-#        sys.exit(1)
+        # Brief rest to maintain control over server
+        JRRsupport.ElasticSleep(1)
 
 if __name__ == '__main__':
     main()
