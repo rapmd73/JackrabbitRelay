@@ -1,0 +1,7 @@
+        iu=int(o['units'])
+        price=float(o['price'])
+        if price>=0:
+            side='Long'
+        else:
+            side='Shrt'
+        print(f"{o['instrument']:10} {o['id']} {side:4} {o['state']:7} {iu:16.8f} {price:16.8f}")

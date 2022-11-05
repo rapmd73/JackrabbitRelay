@@ -198,6 +198,40 @@ def main():
     if (hasUSD and hasBase) or (hasUSD and hasQuote) or (hasQuote and hasBase):
         relay.JRLog.Error("Quote validation","USD, Base, or Quote can be present, NOT a combination of two or more.")
 
+    # No amount method so using exchange minimum
+    if (not hasUSD and not hasBase and not hasQuote):
+        isMinimum=True
+        amount=minimum
+        price=mincost
+        relay.JRLog.Write('Using minimum position amount/price')
+        relay.JRLog.Write(f'|- Minimum Amount: {minimum:.8f}')
+        relay.JRLog.Write(f'|- Minimum Cost:   {mincost:.8f}')
+    else:
+        # Figure out percentages. AMOUNT or VOLUME to buy/sell
+
+        if not isMinimum:
+            price=ticker['Ask']
+            if hasUSD:
+                if '%' in relay.Order['USD']:
+                    amount=GetPCTamount(relay,'USD',quote,price)
+                else:
+                    amount=round(float(relay.Order['USD'])/price,8)
+            elif hasQuote:
+                if '%' in relay.Order['Quote']:
+                    amount=GetPCTamount(relay,'Quote',quote,price)
+                else:
+                    amount=round(float(relay.Order['Quote'])/price,8)
+            else: # hasBase
+                if '%' in relay.Order['Base']:
+                    amount=GetPCTamount(relay,'Base',base,price)
+                else:
+                    amount=round(float(relay.Order['Base']),8)
+
+            # Make sure minimum is enforced.
+            # KuCoin sub accounts do NOT verify or report correctly on this.
+            if abs(amount)<minimum:
+                amount=minimum
+
     # Figure limit order pricing, minimum cost is ignored as limit orders can be
     # anything.
 
@@ -212,42 +246,6 @@ def main():
                 price=round(float(relay.Order['Price']),8)
         else:
             price=round(ticker['Ask'],8)
-    elif 'market' in relay.Order['OrderType']:
-        # No amount method so using exchange minimum
-        if (not hasUSD and not hasBase and not hasQuote):
-            isMinimum=True
-            amount=minimum
-            price=mincost
-            relay.JRLog.Write('Using minimum position amount/price')
-            relay.JRLog.Write(f'|- Minimum Amount: {minimum:.8f}')
-            relay.JRLog.Write(f'|- Minimum Cost:   {mincost:.8f}')
-        else:
-            # Figure out percentages. AMOUNT or VOLUME to buy/sell
-
-            if not isMinimum:
-                price=ticker['Ask']
-                if hasUSD:
-                    if '%' in relay.Order['USD']:
-                        amount=GetPCTamount(relay,'USD',quote,price)
-                    else:
-                        amount=round(float(relay.Order['USD'])/price,8)
-                elif hasQuote:
-                    if '%' in relay.Order['Quote']:
-                        amount=GetPCTamount(relay,'Quote',quote,price)
-                    else:
-                        amount=round(float(relay.Order['Quote'])/price,8)
-                else: # hasBase
-                    if '%' in relay.Order['Base']:
-                        amount=GetPCTamount(relay,'Base',base,price)
-                    else:
-                        amount=round(float(relay.Order['Base']),8)
-
-                # Make sure minimum is enforced.
-                # KuCoin sub accounts do NOT verify or report correctly on this.
-                if abs(amount)<minimum:
-                    amount=minimum
-    else:
-        relay.JRLog.Error("PlaceOrder", "OrderType must be limit or market")
 
     # Get Previous Balance
 

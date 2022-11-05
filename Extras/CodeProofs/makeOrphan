@@ -25,7 +25,6 @@ oo=relay.GetOpenOrders(symbol=asset)
 
 if relay.GetFramework()=='ccxt':
     for o in oo:
-        #print(f"{o['symbol']:10} {o['id']} {o['side']:4} {o['status']:7} {o['amount']:16.8f} {o['price']:16.8f}")
         Order={}
         Order['Exchange']=relay.Exchange
         Order['Account']=relay.Account
@@ -46,11 +45,10 @@ if relay.GetFramework()=='ccxt':
         print(json.dumps(Orphan))
 elif relay.GetFramework()=='oanda':
     for o in oo:
-        if float(o['units'])>=0:
-            side='Buy'
-        else:
-            side='Sell'
-#        print(f"{o['instrument']:10} {o['id']} {side:4} {o['state']:7} {iu:16.8f} {price:16.8f}")
+#        if float(o['units'])>=0:
+        side='Buy'
+#        else:
+#            side='Sell'
         Order={}
         Order['Exchange']=relay.Exchange
         Order['Account']=relay.Account

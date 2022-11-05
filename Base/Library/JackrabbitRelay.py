@@ -609,5 +609,5 @@ class JackrabbitRelay:
         self.Results=self.Broker.GetOrderDetails(**kwargs)
         return self.Results
 
-    def MakeOrphanOrder(id,Order):
+    def MakeOrphanOrder(self,id,Order):
         self.Results=self.Broker.MakeOrphanOrder(id,Order)
