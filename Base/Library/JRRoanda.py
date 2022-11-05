@@ -40,7 +40,9 @@ class oanda:
 
     # AccessToken (Bearer) is API
 
-    def __init__(self,Exchange,Config,Active):
+    def __init__(self,Exchange,Config,Active,DataDirectory=None):
+        self.DataDirectory=DataDirectory
+
         self.Exchange=Exchange
         self.Config=Config
         self.Active=Active
@@ -395,3 +397,18 @@ class oanda:
                 done=True
 
         return None
+
+    def MakeOrphanOrder(id,Order):
+        OrphanReceiver=self.DataDirectory+'/OliverTwist.Receiver'
+        orphanLock=JRRsupport.Locker("OliverTwist")
+
+        Orphan={}
+        Orphan['Status']='Open'
+        Orphan['Framework']=relay.Framework
+        Orphan['ID']=id
+        Orphan['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+        Orphan['Order']=json.dumps(Order)
+
+        orphanLock.Lock()
+        JRRsupport.AppendFile(OrphanReceiver,json.dumps(Orphan))
+        orphanLock.Unlock()

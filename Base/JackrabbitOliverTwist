@@ -34,6 +34,7 @@ import multiprocessing
 import subprocess
 
 import JRRsupport
+import JackrabbitRelay as JRR
 
 Version="0.0.0.1.0"
 BaseDirectory='/home/JackrabbitRelay2/Base'
@@ -44,11 +45,15 @@ LogDirectory="/home/JackrabbitRelay2/Logs"
 OrphanReceiver=DataDirectory+'/OliverTwist.Receiver'
 OrphanStorehouse=DataDirectory+'/OliverTwist.Storehouse'
 
+# Set up the logging system
+
+JRLog=JRR.JackrabbitLog()
+
 # This lock guards the orphan list. Both PlaceOrder.olivertwist and
 # JackrabbitOliverTwist will access this file. Collisions must not be allowed to
 # happen.
 
-orphanLock=JRRsupport.Locker("OliverTwist."+str(time.time()))
+orphanLock=JRRsupport.Locker("OliverTwist")
 
 # Compare orphan IDs
 
@@ -112,6 +117,7 @@ def GetID():
 #    Delete    Order closed and ready to be logged
 
 def OrphanUpdate(result):
+    global JRLog
     global OrphanList
     global OrphanMemory
 
@@ -144,7 +150,7 @@ def OrphanUpdate(result):
             elif rStatus=='delete' or rStatus=='closed':
                 OrphanMemory[thisOrphan['Key']].Put(3600,"Delete")
             else:
-                print("ERROR:",rStatus,rData['Key'])
+                JRLog.Write(f"ERROR: {rStatus}/{rData['Key']}")
         orphanLock.Unlock()
 
 # This spins up the orphan manager to ensure each orphan is handled.
@@ -171,10 +177,16 @@ def ProcessOrphan(Orphan):
 # Read the complete list stored on disk, if it exists
 
 def ReadOrphanList():
+    global JRLog
     global OrphanList
     global OrphanMemory
+    global OrphanListChanged
 
-    orphanLock.Lock()
+    done=None
+    while done!='locked':
+        done=orphanLock.Lock()
+        if done!='locked':
+            JRRsupport.ElasticSleep(1)
     if os.path.exists(OrphanStorehouse):
         buffer=JRRsupport.ReadFile(OrphanStorehouse)
         if buffer!=None and buffer!='':
@@ -197,6 +209,7 @@ def ReadOrphanList():
                 OrphanMemory[Orphan['Key']].Put(GetExpireTime(),"Waiting")
 
                 OrphanListChanged=True
+            JRLog.Write(f"{OrphanList.size} orphan(s) read")
     orphanLock.Unlock()
 
 # Write only when there are changes.
@@ -214,8 +227,10 @@ def WriteOrphanList():
 # Check the receiver file for new orders.
 
 def ReceiveOrphans():
+    global JRLog
     global OrphanList
     global OrphanMemory
+    global OrphanListChanged
 
     # The key is the time of payload and random ID
 
@@ -228,6 +243,7 @@ def ReceiveOrphans():
 
             # Process all the orphans
 
+            rc=0
             Orphans=buffer.split('\n')
             for Entry in Orphans:
                 if Entry.strip()=='':
@@ -246,6 +262,8 @@ def ReceiveOrphans():
                 OrphanMemory[Orphan['Key']]=JRRsupport.Locker(Orphan['Key'])
                 OrphanMemory[Orphan['Key']].Put(GetExpireTime(),"Waiting")
                 OrphanListChanged=True
+                rc+=1
+            JRLog.Write(f"{rc} orphan(s) received")
     orphanLock.Unlock()
 
 ###
@@ -253,20 +271,21 @@ def ReceiveOrphans():
 ###
 
 def main():
+    global JRLog
     global OrphanList
     global OrphanMemory
     global OrphanListChanged
 
-    # Read saved list from disk into OrphanList
+    JRLog.Write('OliverTwist '+Version)
 
     # Establish the process pool to handle the orphans
     ProcessPool=multiprocessing.Pool(processes=multiprocessing.cpu_count()*2,maxtasksperchild=237)
 
     # Load saved orphans into memory
-
     ReadOrphanList()
 
     while True:
+        # Try to figure out an expiration time based upon the size of the list
         expire=GetExpireTime()
 
         # At the beginning of each loop, check for new orphans
@@ -285,6 +304,7 @@ def main():
             if sData['Status']=='Done':
                 status=sData['DataStore']
             else:
+#                JRLog.Write(f"Unrecognized status: {data['Key']}/{sData}")
                 status="Skip"
 
             if status=='Delete':
@@ -306,6 +326,8 @@ def main():
                 cur=cNext
                 OrphanListChanged=True
                 orphanLock.Unlock()
+
+                JRLog.Write(f"Unorphaned: {data['Key']}")
             else:
                 # Dont process orphans scheduled for removal
                 orphanLock.Lock()

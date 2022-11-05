@@ -298,6 +298,10 @@ def main():
 
         nBalance=relay.GetBalance(Base=base)
         relay.JRLog.Write(f"New Balance: {nBalance:.8f} {base}")
+
+        if "Orphan" in relay.Active or "Orphan" in relay.Order \
+        and 'limit' in relay.Order['OrderType']:
+            relay.MakeOrphanOrder(order['id'],relay.Order)
     else: # logic fault, should never happen
         relay.JRLog.Error(relay.Exchange, "can not buy/sell nothing")
 

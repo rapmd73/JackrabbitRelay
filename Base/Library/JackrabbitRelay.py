@@ -25,16 +25,27 @@ import JRRsupport
 #   -> spot.kucoin.adausdt
 
 class JackrabbitLog:
-    def __init__(self,filename=None):
+    def __init__(self,filename=None,Base=None):
         self.LogDirectory="/home/JackrabbitRelay2/Logs"
         self.StartTime=datetime.now()
-        self.basename=os.path.basename(sys.argv[0])
         self.logfile=None
+        self.filename=filename
+        self.basename=Base
+        if self.basename==None:
+            self.basename=os.path.basename(sys.argv[0])
 
         self.SetLogName(filename)
-        self.fw=JRRsupport.Locker(self.logfile,self.logfile)
+
+    def SetBaseName(self,basename):
+        if basename==None:
+            self.basename=os.path.basename(sys.argv[0])
+        else:
+            self.basename=basename
+        self.SetLogName(self.filename)
 
     def SetLogName(self,filename):
+        if filename!=self.filename:
+            self.filename=filename
         if filename==None:
             self.logfile=self.basename
         else:
@@ -47,11 +58,9 @@ class JackrabbitLog:
         s=f'{time} {pid:7.0f} {text}\n'
 
         fn=self.LogDirectory+'/'+self.logfile+'.log'
-        self.fw.Lock()
         fh=open(fn,'a+')
         fh.write(s)
         fh.close()
-        self.fw.Unlock()
         print(s.rstrip())
         sys.stdout.flush()
 
@@ -512,7 +521,7 @@ class JackrabbitRelay:
         if self.Framework=='ccxt':
             self.Broker=JRRccxt.ccxtCrypto(self.Exchange,self.Config,self.Active,DataDirectory=self.DataDirectory)
         elif self.Framework=='oanda':
-            self.Broker=JRRoanda.oanda(self.Exchange,self.Config,self.Active)
+            self.Broker=JRRoanda.oanda(self.Exchange,self.Config,self.Active,DataDirectory=self.DataDirectory)
 
         self.Markets=self.Broker.Markets
 
@@ -600,3 +609,5 @@ class JackrabbitRelay:
         self.Results=self.Broker.GetOrderDetails(**kwargs)
         return self.Results
 
+    def MakeOrphanOrder(id,Order):
+        self.Results=self.Broker.MakeOrphanOrder(id,Order)
