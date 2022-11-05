@@ -20,6 +20,7 @@ def main():
 
     # Use Relay to process and validate the order
     relay=JRR.JackrabbitRelay(Orphan['Framework'],Orphan['Order'])
+    relay.JRLog.SetBaseName('OliverTwist')
 
     # Check to see if order is still open and return current state
     id=Orphan['ID']

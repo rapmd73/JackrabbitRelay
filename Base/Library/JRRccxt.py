@@ -297,7 +297,7 @@ class ccxtCrypto:
         pair=kwargs.get('pair')
         m=kwargs.get('orderType').lower()
         action=kwargs.get('action').lower()
-        amount=kwargs.get('amount')
+        amount=float(kwargs.get('amount'))
         price=kwargs.get('price')
         ro=kwargs.get('ReduceOnly')
         ln=kwargs.get('LedgerNote')
@@ -521,3 +521,20 @@ class ccxtCrypto:
         else:
             self.Results=self.API("fetchClosedOrder",**kwargs)
         return self.Results
+
+    # Create an orphan order and deliver to OliverTwist
+
+    def MakeOrphanOrder(id,Order):
+        OrphanReceiver=self.DataDirectory+'/OliverTwist.Receiver'
+        orphanLock=JRRsupport.Locker("OliverTwist")
+
+        Orphan={}
+        Orphan['Status']='Open'
+        Orphan['Framework']=relay.Framework
+        Orphan['ID']=id
+        Orphan['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+        Orphan['Order']=json.dumps(Order)
+
+        orphanLock.Lock()
+        JRRsupport.AppendFile(OrphanReceiver,json.dumps(Orphan))
+        orphanLock.Unlock()
