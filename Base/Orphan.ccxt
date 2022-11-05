@@ -38,6 +38,7 @@ def main():
     rData['Key']=Orphan['Key']
     rData['Status']='Delete'
     print(json.dumps(rData))
+    relay.WriteLedger(Order=Orphan,Response=None)
 
 if __name__ == '__main__':
     main()

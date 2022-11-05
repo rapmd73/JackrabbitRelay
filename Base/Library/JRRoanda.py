@@ -428,7 +428,8 @@ class oanda:
         ledger['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
         ledger['ID']=id
         ledger['Order']=Order
-        ledger['Response']=Response
+        if Responswe!=None:
+            ledger['Response']=Response
         ledger['Detail']=detail
 
         if Order['Exchange']!=None and Order['Account']!=None and Order['Asset']!=None:
