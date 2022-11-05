@@ -538,3 +538,34 @@ class ccxtCrypto:
         orphanLock.Lock()
         JRRsupport.AppendFile(OrphanReceiver,json.dumps(Orphan))
         orphanLock.Unlock()
+
+    # Make ledger entry. Record everything for accounting purposes
+
+    def WriteLedger(self,**kwargs):
+        Order=kwargs.get('Order')
+        Response=kwargs.get('Response')
+        LedgerDirectory=kwargs.get('LedgerDirectory')
+
+        id=Response['id']
+
+        detail=self.GetOrderDetails(id=id)
+
+        ledger={}
+        ledger['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+        ledger['ID']=id
+        ledger['Order']=Order
+        ledger['Response']=Response
+        ledger['Detail']=detail
+
+        if Order['Exchange']!=None and Order['Account']!=None and Order['Asset']!=None:
+            if "Market" in Order:
+                lname=f"{Order['Exchange']}.{Order['Account']}.{Order['Market']}.{Order['Asset']}".replace('/','').replace('-','').replace(':','').replace(' ','')
+            else:
+                lname=f"{Order['Exchange']}.{Order['Account']}.{Order['Asset']}".replace('/','').replace('-','').replace(':','').replace(' ','')
+
+            lname=LedgerDirectory+"/"+lname
+
+            ledgerLock=JRRsupport.Locker(lname)
+            ledgerLock.Lock()
+            JRRsupport.AppendFile(lname,json.dumps(ledger))
+            ledgerLock.Unlock()

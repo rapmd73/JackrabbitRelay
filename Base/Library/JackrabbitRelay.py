@@ -609,5 +609,12 @@ class JackrabbitRelay:
         self.Results=self.Broker.GetOrderDetails(**kwargs)
         return self.Results
 
+    # Process the orphan order
+
     def MakeOrphanOrder(self,id,Order):
         self.Results=self.Broker.MakeOrphanOrder(id,Order)
+
+    # Make ledger entry
+
+    def WriteLedger(self,**kwargs):
+        self.Results=self.Broker.WriteLedger(**kwargs,LedgerDirectory=self.LedgerDirectory)
