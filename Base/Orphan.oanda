@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+import time
+
+import JRRsupport
+import JackrabbitRelay as JRR
+
+def main():
+    data=sys.stdin.read().strip()
+    Orphan=json.loads(data)
+
+    # Use Relay to process and validate the order
+    relay=JRR.JackrabbitRelay(Orphan['Framework'],Orphan['Order'])
+    relay.JRLog.SetBaseName('OliverTwist')
+
+    # Check to see if order is still open and return current state
+    id=Orphan['ID']
+    openOrders=relay.GetOpenOrders(symbol=relay.Order['Asset'])
+    for cur in openOrders:
+        if cur['id']==id:
+            rData={}
+            rData['Key']=Orphan['Key']
+            rData['Status']=cur['state']
+            print(json.dumps(rData))
+            sys.exit(0)
+
+    # Order must be closed
+    rData={}
+    rData['Key']=Orphan['Key']
+    rData['Status']='Delete'
+    print(json.dumps(rData))
+
+if __name__ == '__main__':
+    main()
+

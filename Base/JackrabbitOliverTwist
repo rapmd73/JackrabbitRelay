@@ -142,12 +142,12 @@ def OrphanUpdate(result):
             # changed or the orphan record doesn't have a response
 
             rStatus=rData['Status'].lower()
-            if rStatus=='open':
+            if rStatus!='delete': # open/pnding
                 # Nothing changed, go back to waiting
                 OrphanMemory[thisOrphan['Key']].Put(3600,"Waiting")
             # if the status returnd is delete, flag for parent
             # do NOT delete here, will trash orphan list.
-            elif rStatus=='delete' or rStatus=='closed':
+            elif rStatus=='delete': # or closed
                 OrphanMemory[thisOrphan['Key']].Put(3600,"Delete")
             else:
                 JRLog.Write(f"ERROR: {rStatus}/{rData['Key']}")

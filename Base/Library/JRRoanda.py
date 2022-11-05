@@ -398,13 +398,13 @@ class oanda:
 
         return None
 
-    def MakeOrphanOrder(id,Order):
+    def MakeOrphanOrder(self,id,Order):
         OrphanReceiver=self.DataDirectory+'/OliverTwist.Receiver'
         orphanLock=JRRsupport.Locker("OliverTwist")
 
         Orphan={}
         Orphan['Status']='Open'
-        Orphan['Framework']=relay.Framework
+        Orphan['Framework']='oanda'
         Orphan['ID']=id
         Orphan['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
         Orphan['Order']=json.dumps(Order)

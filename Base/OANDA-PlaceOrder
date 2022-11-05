@@ -142,6 +142,29 @@ def main():
     isMinimum=False
     minimum,mincost=relay.GetMinimum(symbol=relay.Order['Asset'])
 
+    # No amount method so using exchange minimum
+    if 'Units' not in relay.Order:
+        isMinimum=True
+        amount=minimum
+        price=mincost
+        relay.JRLog.Write('Using minimum position amount/price')
+        relay.JRLog.Write(f'|- Minimum Amount: {minimum:.8f}')
+        relay.JRLog.Write(f'|- Minimum Cost:   {mincost:.8f}')
+    else:
+        price=ticker['Ask']
+        if '%' in relay.Order['Units']:
+            amount=int(GetPCTamount(relay,price))
+        else:
+            amount=int(relay.Order['Units'])
+
+        # Make sure minimum is enforced. Negative is for short.
+
+        if abs(amount)<minimum:
+            if amount>=0:
+                amount=minimum
+            else:
+                amount-minimum
+
     # Figure limit order pricing, minimum cost is ignored as limit orders can be
     # anything.
 
@@ -156,31 +179,6 @@ def main():
                 price=round(float(relay.Order['Price']),8)
         else:
             price=round(ticker['Ask'],8)
-    elif 'market' in relay.Order['OrderType']:
-        # No amount method so using exchange minimum
-        if 'Units' not in relay.Order:
-            isMinimum=True
-            amount=minimum
-            price=mincost
-            relay.JRLog.Write('Using minimum position amount/price')
-            relay.JRLog.Write(f'|- Minimum Amount: {minimum:.8f}')
-            relay.JRLog.Write(f'|- Minimum Cost:   {mincost:.8f}')
-        else:
-            price=ticker['Ask']
-            if '%' in relay.Order['Units']:
-                amount=int(GetPCTamount(relay,price))
-            else:
-                amount=int(relay.Order['Units'])
-
-            # Make sure minimum is enforced. Negative is for short.
-
-            if abs(amount)<minimum:
-                if amount>=0:
-                    amount=minimum
-                else:
-                    amount-minimum
-    else:
-        relay.JRLog.Error("PlaceOrder", "OrderType must be limit or market")
 
     # Get Previous Balance. Shorts will be negative
 
