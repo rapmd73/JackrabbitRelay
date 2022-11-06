@@ -43,4 +43,4 @@ fh=open(fn,'w')
 fh.write(json.dumps(TradingView)+"\n")
 fh.close()
 
-print(exchangeName+' symbol map file written')
+print(f'{exchangeName}/{account} symbol map file written')
