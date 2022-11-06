@@ -420,7 +420,10 @@ class oanda:
         Response=kwargs.get('Response')
         LedgerDirectory=kwargs.get('LedgerDirectory')
 
-        id=Response['id']
+        if Response!=None:
+            id=Response['id']
+        else:
+            id=Order['ID']
 
         detail=self.GetOrderDetails(OrderID=id)
 
@@ -428,13 +431,19 @@ class oanda:
         ledger['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
         ledger['ID']=id
         ledger['Order']=Order
-        if Responswe!=None:
+        if Response!=None:
             ledger['Response']=Response
         ledger['Detail']=detail
 
-        if Order['Exchange']!=None and Order['Account']!=None and Order['Asset']!=None:
-            lname=f"{Order['Exchange']}.{Order['Account']}.{Order['Asset']}".replace('/','').replace('-','').replace(':','').replace(' ','')
-            lname=LedgerDirectory+"/"+lname
+        # We need the embedded order reference
+        subOrder=json.loads(Order['Order'])
+        if subOrder['Exchange']!=None and subOrder['Account']!=None and subOrder['Asset']!=None:
+            if "Market" in subOrder:
+                fname=subOrder['Exchange']+'.'+subOrder['Market']+'.'+subOrder['Account']+'.'+subOrder['Asset']
+            else:
+                fname=sbOrder['Exchange']+'.'+subOrder['Account']+'.'+subOrder['Market']+'.'+subOrder['Asset']
+            fname=fname.replace('/','').replace('-','').replace(':','').replace(' ','')
+            lname=LedgerDirectory+'/'+fname+'.ledger'
 
             ledgerLock=JRRsupport.Locker(lname)
             ledgerLock.Lock()
