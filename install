@@ -8,7 +8,7 @@ cd /home/GitHub/JackrabbitRelay
 
 mkdir -p $BaseDir > /dev/null 2>&1
 mkdir -p $BaseDir/Config > /dev/null 2>&1
-for d in Base Data Logs Ledger Statistics/Balances Statistics/Charts ; do
+for d in Base Data Extras Logs Ledger Statistics/Balances Statistics/Charts ; do
     mkdir -p $BaseDir/$d > /dev/null 2>&1
 
     cp -r /home/GitHub/JackrabbitRelay/$d/* $BaseDir/$d
@@ -26,18 +26,6 @@ if [ x$1 != 'xnopull' ] ; then
 fi
 
 git pull https://github.com/rapmd73/JackrabbitRelay
-
-#if test -f /home/Equilibrium/install ; then
-#    /home/GitHub/JackrabbitRelay/Extras/Equilibrium/install
-#fi
-
-#if test -f /home/Procurator/install ; then
-#    /home/GitHub/JackrabbitRelay/Extras/Procurator/install
-#fi
-
-#if test -f /home/BlackCrowHunter/install ; then
-#    /home/GitHub/JackrabbitRelay/Extras/BlackCrowHunter/install
-#fi
 
 NFS=`stat --printf="%s" install`
 
