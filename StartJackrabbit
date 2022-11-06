@@ -1,0 +1,16 @@
+#!/bin/bash
+
+BaseDir="/home/JackrabbitRelay2/Base"
+
+Port=$1
+
+if [ -z $Port ] ; then
+    echo A port to use must be given.
+    exit 1
+fi
+
+( $BaseDir/LauncherLocker & ) > /dev/null 2>&1
+sleep 3
+( $BaseDir/LauncherOliverTwist & ) > /dev/null 2>&1
+sleep 3
+( $BaseDir/LauncherRelay $Port & ) > /dev/null 2>&1
