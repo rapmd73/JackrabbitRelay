@@ -434,8 +434,10 @@ class JackrabbitRelay:
 
                         # Add the hooks for the logging process.
 
-                        if idl!=None:
+                        if idl!=None and 'Identity' not in key:
                             key={ **idl, **key, **logProcess }
+                        else:
+                            key={ **key, **logProcess }
                         self.Keys.append(key)
                 cf.close()
 
