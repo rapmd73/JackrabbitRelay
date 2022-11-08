@@ -435,8 +435,11 @@ class oanda:
             ledger['Response']=Response
         ledger['Detail']=detail
 
-        # We need the embedded order reference
-        subOrder=json.loads(Order['Order'])
+        # We need the embedded order reference if comming from OliverTwist
+        if 'Order' in Order:
+            subOrder=json.loads(Order['Order'])
+        else:
+            subOrder=Order
         if subOrder['Exchange']!=None and subOrder['Account']!=None and subOrder['Asset']!=None:
             if "Market" in subOrder:
                 fname=subOrder['Exchange']+'.'+subOrder['Market']+'.'+subOrder['Account']+'.'+subOrder['Asset']
@@ -447,5 +450,5 @@ class oanda:
 
             ledgerLock=JRRsupport.Locker(lname)
             ledgerLock.Lock()
-            JRRsupport.AppendFile(lname,json.dumps(ledger))
+            JRRsupport.AppendFile(lname,json.dumps(ledger)+'\n')
             ledgerLock.Unlock()
