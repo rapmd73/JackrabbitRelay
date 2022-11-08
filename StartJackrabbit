@@ -9,6 +9,8 @@ if [ -z $Port ] ; then
     exit 1
 fi
 
+kill -s 9 `ps xaf | egrep "JackrabbitRelay|JackrabbitOliverTwist|JackrabbitLocker" | cut -b-8`
+
 ( $BaseDir/LauncherLocker & ) > /dev/null 2>&1
 sleep 3
 ( $BaseDir/LauncherOliverTwist & ) > /dev/null 2>&1

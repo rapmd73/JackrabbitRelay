@@ -222,12 +222,12 @@ def main():
         sys.exit(2)
 
     # Sanity check: Identity.cfg REQUIRED!
-    if os.path.exists(ConfigDirectory+'/Identity.cfg'):
+    if not os.path.exists(ConfigDirectory+'/Identity.cfg'):
         print("Identity.cfg is now REQUIRED, but not found.")
         sys.exit(2)
 
     # Sanity check: IPList.cfg REQUIRED!
-    if os.path.exists(ConfigDirectory+'/IPList.cfg'):
+    if not os.path.exists(ConfigDirectory+'/IPList.cfg'):
         print("IPList.cfg is now REQUIRED, but not found.")
         sys.exit(2)
 
