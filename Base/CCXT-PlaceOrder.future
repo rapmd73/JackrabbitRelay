@@ -302,6 +302,10 @@ def main():
 
     if relay.Order['Action']=='close':
         relay.Order['Action']='sell'
+    elif relay.Order['Action']=='long':
+        relay.Order['Action']='buy'
+    elif relay.Order['Action']=='short':
+        relay.Order['Action']='sell'
 
     if amount>0:
         lNote=None

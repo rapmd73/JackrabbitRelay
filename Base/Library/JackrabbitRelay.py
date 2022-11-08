@@ -356,6 +356,11 @@ class JackrabbitRelay:
         if "Action" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing action (buy/sell/close) identifier')
         self.Order['Action']=self.Order['Action'].lower()
+        # Convert version 1 payloads to version 2
+        if self.Order['Action']=='long':
+            self.Order['Action']='buy'
+        if self.Order['Action']=='short':
+            self.Order['Action']='sell'
         if self.Order['Action']!='buy' and self.Order['Action']!='sell' and self.Order['Action']!='close':
             self.JRLog.Error('Processing Payload','Action must be one of buy, sell or close')
 

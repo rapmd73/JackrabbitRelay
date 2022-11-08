@@ -16,14 +16,17 @@ cd $BaseDir
 fnSpot="CCXT-PlaceOrder.spot"
 fnFuture="CCXT-PlaceOrder.future"
 
+echo Updating / replacing PlaceOrder OANDA
+cp $GitHubBase"/OANDA-PlaceOrder" $BaseDir"/PlaceOrder.oanda"
+
+echo Updating / replacing PlaceOrder Tester
+cp $GitHubBase"/TESTER-PlaceOrder" $BaseDir"/PlaceOrder.tester"
+
 echo Updating / replacing PlaceOrder spot
 cp $GitHubBase"/"$fnSpot $BaseDir"/"$snSpot
 
 echo Updating / replacing PlaceOrder future
 cp $GitHubBase"/"$fnFuture $BaseDir"/"$fnFuture
-
-echo Updating / replacing PlaceOrder Sandbox
-cp $GitHubBase"/Sandbox*" $BaseDir"/Sandbox*"
 
 for i in $@ ; do
     exchange=$1
