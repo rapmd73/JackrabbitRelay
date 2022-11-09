@@ -326,7 +326,11 @@ class oanda:
                         params['longUnits']="ALL"
                 res=v20Trades.TradeClose(accountID=self.AccountID,tradeID=ticket,data=params)
                 self.Results=self.API("TradeClose",request=res)
-                print(self.Results)
+
+                if 'longOrderCreateTransaction' in self.Results:
+                    self.Log.Write("|- Order Confirmation ID: "+self.Results['longOrderCreateTransaction']['id'])
+                elif 'shortOrderCreateTransaction' in self.Results:
+                    self.Log.Write("|- Order Confirmation ID: "+self.Results['shortOrderCreateTransaction']['id'])
         else:
             self.Log.Error("PlaceOrder","Action is neither BUY nor SELL")
 
