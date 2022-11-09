@@ -163,7 +163,7 @@ def main():
             if amount>=0:
                 amount=minimum
             else:
-                amount-minimum
+                amount=-minimum
 
     # Figure limit order pricing, minimum cost is ignored as limit orders can be
     # anything.
@@ -184,6 +184,7 @@ def main():
 
     base=relay.Order['Asset'].split('/')[0]
     pBalance=relay.GetPositions(symbol=relay.Order['Asset'])
+    units=relay.Broker.Results['Units']
     relay.JRLog.Write(f"Previous Balance: {abs(pBalance):.8f} {base}")
 
     # If the amount is less then the minimum and action is to close. Sell opens

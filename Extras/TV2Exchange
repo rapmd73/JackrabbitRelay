@@ -29,7 +29,7 @@ if relay.GetFramework()=='oanda':
     for cur in markets:
         p=markets[cur]
         tv=p['displayName'].replace('/','').replace('_','')
-        ns=p['name']
+        ns=p['displayName']
         TradingView[tv]=ns
 elif relay.GetFramework()=='ccxt':
     for cur in markets:

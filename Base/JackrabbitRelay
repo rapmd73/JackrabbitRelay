@@ -59,7 +59,13 @@ def ProcessSingleTrade(addr,trades):
         WriteLog(addr,"Identity not found")
         return res
 
-    exchange=trades['Exchange'].lower()
+    # handle exchange list
+
+    if ',' in trades['Exchange']:
+        exchange=trades['Exchange'].split(',')[0].lower().strip()
+    else:
+        exchange=trades['Exchange'].lower().strip()
+
     fn=None
     ts=BaseDirectory+'/PlaceOrder.'
 
