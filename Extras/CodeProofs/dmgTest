@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+
+###
+### Main code base. Place order on exchange
+###
+
+data=sys.stdin.read().split('\n')
+
+for line in data:
+    line=line[3:-1]
+
+    if line.strip()=='':
+        continue
+
+    try:
+        td=json.loads(line)
+    except:
+        print(line)

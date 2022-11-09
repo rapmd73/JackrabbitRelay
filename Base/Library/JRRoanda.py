@@ -287,6 +287,10 @@ class oanda:
 
             res=v20Orders.OrderCreate(accountID=self.AccountID,data=params)
             self.Results=self.API("OrderCreate",request=res)
+
+            if 'orderCreateTransaction' in self.Results:
+                self.Log.Write("|- Order Confirmation ID: "+self.Results['orderCreateTransaction']['id'])
+
         elif (action=='sell'):
             params={}
             if ticket==None:
@@ -304,6 +308,11 @@ class oanda:
                         params['longUnits']="ALL"
                 res=v20Positions.PositionClose(accountID=self.AccountID,instrument=pair,data=params)
                 self.Results=self.API("PositionClose",request=res)
+
+                if 'longOrderCreateTransaction' in self.Results:
+                    self.Log.Write("|- Order Confirmation ID: "+self.Results['longOrderCreateTransaction']['id'])
+                elif 'shortOrderCreateTransaction' in self.Results:
+                    self.Log.Write("|- Order Confirmation ID: "+self.Results['shortOrderCreateTransaction']['id'])
             else:
                 if 'ALL' not in str(amount).upper():
                     # amount is STR, need float for abs()
@@ -317,6 +326,7 @@ class oanda:
                         params['longUnits']="ALL"
                 res=v20Trades.TradeClose(accountID=self.AccountID,tradeID=ticket,data=params)
                 self.Results=self.API("TradeClose",request=res)
+                print(self.Results)
         else:
             self.Log.Error("PlaceOrder","Action is neither BUY nor SELL")
 
@@ -421,7 +431,12 @@ class oanda:
         LedgerDirectory=kwargs.get('LedgerDirectory')
 
         if Response!=None:
-            id=Response['id']
+            if 'orderCreateTransaction' in Response:
+                id=Response['orderCreateTransaction']['id']
+            elif 'longOrderCreateTransaction' in Response:
+                id=Response['longOrderCreateTransaction']['id']
+            elif 'shortOrderCreateTransaction' in Response:
+                id=Response['shortOrderCreateTransaction']['id']
         else:
             id=Order['ID']
 
@@ -441,10 +456,7 @@ class oanda:
         else:
             subOrder=Order
         if subOrder['Exchange']!=None and subOrder['Account']!=None and subOrder['Asset']!=None:
-            if "Market" in subOrder:
-                fname=subOrder['Exchange']+'.'+subOrder['Market']+'.'+subOrder['Account']+'.'+subOrder['Asset']
-            else:
-                fname=sbOrder['Exchange']+'.'+subOrder['Account']+'.'+subOrder['Market']+'.'+subOrder['Asset']
+            fname=subOrder['Exchange']+'.'+subOrder['Account']+'.'+subOrder['Asset']
             fname=fname.replace('/','').replace('-','').replace(':','').replace(' ','')
             lname=LedgerDirectory+'/'+fname+'.ledger'
 

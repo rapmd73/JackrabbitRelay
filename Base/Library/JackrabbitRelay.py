@@ -143,7 +143,13 @@ class JackrabbitRelay:
 
         self.ExchangeList=None
 
+        # Account must also be a list reference to coinside with the coresponding
+        # exchange.
+        #    "Account":"Sandbox,MAIN",
+
         self.Account=None
+        self.AccountList=None
+
         self.Asset=None
 
         # API/Secret for a specific account
@@ -236,6 +242,27 @@ class JackrabbitRelay:
 
     def GetAccount(self):
         return self.Account
+
+    def GetAccountList(self):
+        return ','.join(self.AccountList)
+
+    def GetAccountNext(self):
+        if self.AccountList!=None and len(self.AccountList)>0:
+            return self.AccountList[0]
+        else:
+            return None
+
+    def GetAccountAfterNext(self):
+        if self.AccountList!=None and len(self.AccountList)>1:
+            return self.AccountList[1:]
+        else:
+            return None
+
+    def GetAccountLast(self):
+        if self.AccountList!=None and len(self.AccountList)>0:
+            return self.AccountList[-1]
+        else:
+            return None
 
     def GetAsset(self):
         return self.Asset
@@ -340,9 +367,16 @@ class JackrabbitRelay:
                 self.Order['Exchange']=eList[0]
                 self.ExchangeList=eList[1:]
             self.Exchange=self.Order['Exchange']
+
         if "Account" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing account identifier')
         else:
+            # Check for and handle an account list
+            acct=self.Order['Account'].replace(' ','')
+            if ',' in acct:
+                aList=acct.split(',')
+                self.Order['Account']=aList[0]
+                self.AccountList=aList[1:]
             self.Account=self.Order['Account']
 
     # Verify the payload based upon a specific broker requirements.

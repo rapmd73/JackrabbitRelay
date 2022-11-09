@@ -16,6 +16,9 @@ cd $BaseDir
 fnSpot="CCXT-PlaceOrder.spot"
 fnFuture="CCXT-PlaceOrder.future"
 
+echo Updating / replacing PlaceOrder DSR
+cp $GitHubBase"/DSR-PlaceOrder" $BaseDir"/PlaceOrder.dsr"
+
 echo Updating / replacing PlaceOrder OANDA
 cp $GitHubBase"/OANDA-PlaceOrder" $BaseDir"/PlaceOrder.oanda"
 

@@ -68,6 +68,9 @@ def main():
     # Prepare to send this order to the next exchange in the chain.
 
     relay.Order['Exchange']=relay.GetExchangeList()
+    relay.Order['Account']=relay.GetAccountList()
+
+    relay.SendWebhook(relay.Order)
 
     # Close out the program with the elapsed time it ran
 
