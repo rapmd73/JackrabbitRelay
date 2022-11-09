@@ -70,7 +70,9 @@ def main():
     relay.Order['Exchange']=relay.GetExchangeList()
     relay.Order['Account']=relay.GetAccountList()
 
-    relay.SendWebhook(relay.Order)
+    relay.JRLog.Write(f"Dispatching to {relay.Order['Exchange']}/{relay.Order['Account']}")
+
+    res=relay.SendWebhook(relay.Order)
 
     # Close out the program with the elapsed time it ran
 

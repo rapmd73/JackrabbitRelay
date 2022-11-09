@@ -209,7 +209,7 @@ class Handler(BaseHTTPRequestHandler):
 
             # Process Payload
 
-            res=ProcessTrade(addr,payload)
+            res=ProcessTrade(addr,payload.decode())
 
             if res!=None:
                 if type(res)!=bytes:
