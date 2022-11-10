@@ -193,6 +193,11 @@ def main():
     if abs(pBalance)<mincost and relay.Order['Action']=='close':
         relay.JRLog.Error(relay.Exchange, "not enough to sell/close position")
 
+    # Check if we close on sell
+
+    if ("CloseOnSell" in relay.Active or "CloseOnSell" in relay.Order) and relay.Order['Action']=='sell':
+        relay.Order['Action']='close'
+
     # Closing the position, with futures, we need to figure out the current direction and
     # place an order opposite to it. If not ReduceOnly, all position flipping.
 
@@ -203,11 +208,11 @@ def main():
         if pBalance>0:    # Long Position
             relay.Order['Action']='sell'
             relay.JRLog.Write(f"Forcing direction to {relay.Order['Action']}")
-            amount=int(pBalance/price)
+            amount=units  #int(pBalance/price)
         elif pBalance<0:  # Short Position
             relay.Order['Action']='buy'
             relay.JRLog.Write(f"Forcing direction to {relay.Order['Action']}")
-            amount=int(pBalance/price)
+            amount=units #int(pBalance/price)
     elif relay.Order['Action']=='sell' \
      and ((amount<0 and amount<units) or (amount>0 and amount>units)):
         # Make ure units is in range of what we actually hold
