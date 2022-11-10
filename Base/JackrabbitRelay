@@ -121,23 +121,8 @@ def ProcessTrade(addr,payload):
         res=res.encode('utf-8')
     return res
 
-def ProcessStatistatorium(addr,path):
-    ws=BaseDirectory+'/Statistatorium'
-    idf=ConfigDirectory+'/Identity.cfg'
-
-    if os.path.exists(ws) and os.path.exists(idf):
-        transactor= [ ws ]
-        subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-
-        # Web server request is pushed in as STDIN
-
-        subp.stdin.write(path.encode())
-        res=subp.communicate()[0]
-    else:
-        res=NOhtml
-        WriteLog(addr,f"Transactor not found.")
-
-    return res
+def ProcessPageRead(addr,path):
+    return NOhtml
 
 def CheckIPaddress(addr):
     fn=ConfigDirectory+'/IPList.cfg'
@@ -159,6 +144,8 @@ def CheckIPaddress(addr):
     return False
 
 class Handler(BaseHTTPRequestHandler):
+    BaseHTTPRequestHandler.server_version='JackrabbitRelay/'+Version
+    BaseHTTPRequestHandler.sys_version=''
 
     def log_message(self,format,*args):
         addr=self.client_address[0]
@@ -180,7 +167,9 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(bytes('\r\n'.encode()))
 
-        res=ProcessStatistatorium(addr,self.path)
+        # Gives a big red NO to everything
+
+        res=ProcessPageRead(addr,self.path)
 
         if res!=None:
             if type(res)!=bytes:
