@@ -1,5 +1,0 @@
-    # Check if we close on sell
-
-    if ("CloseOnSell" in relay.Active or "CloseOnSell" in relay.Order) and relay.Order['Action']=='sell':
-        amount=abs(pBalance)
-

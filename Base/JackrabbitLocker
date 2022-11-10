@@ -121,7 +121,7 @@ def ProcessPayload(data):
                 return jsonStatus("Done",Tag="DataStore",Data=Locker[FileName]['DataStore'])
             # Not the rightful owner
             else:
-                return jsonStatus("Failure")
+                return jsonStatus("NotOwner")
         elif action=='put':
             # New memory object
             if FileName not in Locker:
@@ -138,7 +138,7 @@ def ProcessPayload(data):
                 return jsonStatus("Done")
             # Not the rightful owner
             else:
-                return jsonStatus("Failure")
+                return jsonStatus("NotOwner")
         # Unlock/Erase request
         elif action=='unlock':
             # Just pass through unlock
@@ -200,7 +200,7 @@ def main():
     queue={}
 
     while True:
-        infds,outfds,errfds=select.select(inputs, inputs, [], 5)
+        infds,outfds,errfds=select.select(inputs, inputs, [], 30)
 
         if len(infds)!=0:
             for fds in infds:

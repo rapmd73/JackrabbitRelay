@@ -45,6 +45,13 @@ LogDirectory="/home/JackrabbitRelay2/Logs"
 OrphanReceiver=DataDirectory+'/OliverTwist.Receiver'
 OrphanStorehouse=DataDirectory+'/OliverTwist.Storehouse'
 
+# The timeout setting for the memory locks. If it takes longer then 15 minutes to
+# check the status of an order, there is a major problem with the exchange/broker.
+# Testing has show that only a few seconds is actually requred. The extended amount
+# is just to compensate for an overloaded server.
+
+OrphanTimeout=(15*60)
+
 # Set up the logging system
 
 JRLog=JRR.JackrabbitLog()
@@ -78,12 +85,6 @@ def compareOrphan(node,dz):
 OrphanList=JRRsupport.DList(Compare=compareOrphan)
 OrphanMemory={}
 OrphanListChanged=False
-
-def GetExpireTime():
-    expire=OrphanList.size*10
-    if expire<3600:
-        expire=3600
-    return expire
 
 # We only want to write to disk when there is an actual change in the OrphanList
 
@@ -144,11 +145,11 @@ def OrphanUpdate(result):
             rStatus=rData['Status'].lower()
             if rStatus!='delete': # open/pnding
                 # Nothing changed, go back to waiting
-                OrphanMemory[thisOrphan['Key']].Put(3600,"Waiting")
+                OrphanMemory[thisOrphan['Key']].Put(OrphanTimeout,"Waiting")
             # if the status returnd is delete, flag for parent
             # do NOT delete here, will trash orphan list.
             elif rStatus=='delete': # or closed
-                OrphanMemory[thisOrphan['Key']].Put(3600,"Delete")
+                OrphanMemory[thisOrphan['Key']].Put(OrphanTimeout,"Delete")
             else:
                 JRLog.Write(f"ERROR: {rStatus}/{rData['Key']}")
         orphanLock.Unlock()
@@ -198,15 +199,11 @@ def ReadOrphanList():
                     continue
                 # Break down entry and set up memory locker
                 Orphan=json.loads(Entry)
-                # Set up memory locker
-                expire=len(Orphans)*10
-                if expire<3600:
-                    expire=3600
 
                 OrphanList.insert(json.dumps(Orphan))
 
                 OrphanMemory[Orphan['Key']]=JRRsupport.Locker(Orphan['Key'])
-                OrphanMemory[Orphan['Key']].Put(GetExpireTime(),"Waiting")
+                OrphanMemory[Orphan['Key']].Put(OrphanTimeout,"Waiting")
 
                 OrphanListChanged=True
             JRLog.Write(f"{OrphanList.size} orphan(s) read")
@@ -252,15 +249,10 @@ def ReceiveOrphans():
                 Orphan=json.loads(Entry)
                 Orphan['Key']=Orphan['DateTime']+'.'+GetID()
 
-                # Set up memory locker
-                expire=len(Orphans)*10
-                if expire<3600:
-                    expire=3600
-
                 OrphanList.insert(json.dumps(Orphan))
 
                 OrphanMemory[Orphan['Key']]=JRRsupport.Locker(Orphan['Key'])
-                OrphanMemory[Orphan['Key']].Put(GetExpireTime(),"Waiting")
+                OrphanMemory[Orphan['Key']].Put(OrphanTimeout,"Waiting")
                 OrphanListChanged=True
                 rc+=1
             JRLog.Write(f"{rc} orphan(s) received")
@@ -285,9 +277,6 @@ def main():
     ReadOrphanList()
 
     while True:
-        # Try to figure out an expiration time based upon the size of the list
-        expire=GetExpireTime()
-
         # At the beginning of each loop, check for new orphans
         ReceiveOrphans()
 
@@ -301,10 +290,12 @@ def main():
             orphanLock.Lock()
             sData=json.loads(OrphanMemory[data['Key']].Get())
             orphanLock.Unlock()
-            if sData['Status']=='Done':
+            if sData['Status']=='NotFound':
+                JRLog.Write(f"Memory key expired: {data['Key']}")
+                status='Waiing'
+            elif sData['Status']=='Done':
                 status=sData['DataStore']
             else:
-#                JRLog.Write(f"Unrecognized status: {data['Key']}/{sData}")
                 status="Skip"
 
             if status=='Delete':
@@ -333,7 +324,7 @@ def main():
                 orphanLock.Lock()
 
                 if status=='Waiting':
-                    OrphanMemory[data['Key']].Put(expire,"Running")
+                    OrphanMemory[data['Key']].Put(OrphanTimeout,"Running")
                     ProcessPool.apply_async(ProcessOrphan,args=(data,),callback=OrphanUpdate)
                 cur=cur.GetNext()
                 orphanLock.Unlock()
