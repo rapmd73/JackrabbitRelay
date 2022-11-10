@@ -162,7 +162,7 @@ Start with these shell commands
 ```bash
 mkdir -p /home/GitHub
 cd /home/GitHub
-git clone https://github.com/rapmd73/JackrabbitRelay
+git clone -b stable-1 https://github.com/rapmd73/JackrabbitRelay
 ```
 
 You now have a copy of the Jackrabbit Relay repository. Now its time to install
