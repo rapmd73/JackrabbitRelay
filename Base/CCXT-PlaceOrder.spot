@@ -248,25 +248,27 @@ def main():
     # Should follow Version 1 and separate spot/future market to individual
     # PlaceOrder programs.
 
-#    if ':' in relay.Order['Asset']:
-#        pBalace=relay.GetPositions(symbol=relay.Order['Asset'])
-#    else:
     pBalance=relay.GetBalance(Base=base)
     relay.JRLog.Write(f"Previous Balance: {pBalance:.8f} {base}")
 
-# If the amount is less then the minimum and action is to sell/close
+    # If the amount is less then the minimum and action is to sell/close
 
     if pBalance<mincost and (relay.Order['Action']=='close' or relay.Order['Action']=='sell'):
         relay.JRLog.Error(relay.Exchange, "not enough to sell/close position")
 
-# Test to see if amount is more than balance and correct in needed
+    # Check if we close on sell
+
+    if ("CloseOnSell" in relay.Active or "CloseOnSell" in relay.Order) and relay.Order['Action']=='sell':
+        relay.Order['Action']='close'
+
+    # Test to see if amount is more than balance and correct in needed
 
     if ((relay.Order['Action']=='close' or relay.Order['Action']=='sell') \
     and (amount>pBalance and pBalance>0)) or (relay.Order['Action']=='close'):
         relay.JRLog.Write("|- Forcing balance")
         amount=pBalance
 
-# Determine trade action and carry it out
+    # Determine trade action and carry it out
 
     total=round(amount*price,8)
     relay.JRLog.Write("Placing Order")

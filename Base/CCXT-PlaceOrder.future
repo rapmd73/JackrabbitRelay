@@ -263,6 +263,11 @@ def main():
     if abs(pBalance)<mincost and relay.Order['Action']=='close':
         relay.JRLog.Error(relay.Exchange, "not enough to sell/close position")
 
+    # Check if we close on sell
+
+    if ("CloseOnSell" in relay.Active or "CloseOnSell" in relay.Order) and relay.Order['Action']=='sell':
+        relay.Order['Action']='close'
+
     # Closing the position, with futures, we need to figure out the current
     # direction and place an order opposite to it.
 
