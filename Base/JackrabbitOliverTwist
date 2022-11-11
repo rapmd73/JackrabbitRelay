@@ -292,7 +292,7 @@ def main():
             orphanLock.Unlock()
             if sData['Status']=='NotFound':
                 JRLog.Write(f"Memory key expired: {data['Key']}")
-                status='Waiing'
+                status='Waiting'
             elif sData['Status']=='Done':
                 status=sData['DataStore']
             else:
