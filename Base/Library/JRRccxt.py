@@ -166,7 +166,7 @@ class ccxtCrypto:
             if self.Exchange=="ftxus" and self.Active['Account']!='MAIN':
                 self.Broker.headers['FTXUS-SUBACCOUNT']=self.Active['Account']
             else:
-                if self.Exchange=="kucoin" or self.exchange=="kucoin futures":
+                if self.Exchange=="kucoin" or self.Exchange=="kucoinfutures":
                     if 'Passphrase' in self.Active:
                         self.Broker.password=self.Active['Passphrase']
                     else:
@@ -254,12 +254,16 @@ class ccxtCrypto:
         return self.Results
 
     def GetTicker(self,**kwargs):
+        error=kwargs.get('Error')
         self.Results=self.API("fetch_ticker",**kwargs)
 
         # Kucoin Sandbox system doesn't always give complete data
 
-        if self.Results['ask']==None or self.Results['bid']==None:
-            self.Log.Error('GetTicker',"ticker data is incomplete")
+        if (self.Results['ask']==None or self.Results['bid']==None):
+            if  error==True:
+                self.Log.Error('GetTicker',"ticker data is incomplete")
+            else:
+                return None
 
         Pair={}
         Pair['Ask']=self.Results['ask']
