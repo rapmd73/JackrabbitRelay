@@ -131,27 +131,32 @@ def OrphanUpdate(result):
         # At this stage, pData should NEVER be None or undefined. If it is, then
         # memory was thrashed.
 
-        # Find entry in list by ID
+        # Find entry in list by Key
         found=OrphanList.find(result)
         if found!=None:
-            rData=json.loads(result)
+            try:
+                rData=json.loads(result)
 
-            # Get original list entry
-            thisOrphan=json.loads(found.GetData())
+                # Get original list entry
+                thisOrphan=json.loads(found.GetData())
 
-            # if returned status is open, replace the response, if it has
-            # changed or the orphan record doesn't have a response
+                # if returned status is open, replace the response, if it has
+                # changed or the orphan record doesn't have a response
 
-            rStatus=rData['Status'].lower()
-            if rStatus!='delete': # open/pnding
-                # Nothing changed, go back to waiting
-                OrphanMemory[thisOrphan['Key']].Put(OrphanTimeout,"Waiting")
-            # if the status returnd is delete, flag for parent
-            # do NOT delete here, will trash orphan list.
-            elif rStatus=='delete': # or closed
-                OrphanMemory[thisOrphan['Key']].Put(OrphanTimeout,"Delete")
-            else:
-                JRLog.Write(f"ERROR: {rStatus}/{rData['Key']}",stdOut=False)
+                rStatus=rData['Status'].lower()
+                if rStatus!='delete': # open/pnding
+                    # Nothing changed, go back to waiting
+                    OrphanMemory[thisOrphan['Key']].Put(OrphanTimeout,"Waiting")
+                # if the status returnd is delete, flag for parent
+                # do NOT delete here, will trash orphan list.
+                elif rStatus=='delete': # or closed
+                    OrphanMemory[thisOrphan['Key']].Put(OrphanTimeout,"Delete")
+                else:
+                    JRLog.Write(f"ERROR: {rStatus}/{rData['Key']}",stdOut=False)
+            except Exception as e:
+                x=str(e)
+                JRLog.Write(f"{result['Key']}: {x}",stdOut=False)
+                OrphanMemory[result['Key']].Put(OrphanTimeout,"Waiting")
         orphanLock.Unlock()
 
 # This spins up the orphan manager to ensure each orphan is handled.

@@ -32,6 +32,7 @@ def main():
             rData['Status']=cur['state']
             print(json.dumps(rData))
             sys.stdout.flush()
+            #relay.JRLog.Write(f"{id}: {cur['state']}",stdOut=False)
             sys.exit(0)
 
     # Order must be closed
