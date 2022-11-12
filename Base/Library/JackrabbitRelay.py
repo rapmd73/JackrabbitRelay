@@ -486,7 +486,7 @@ class JackrabbitRelay:
                 # Verify and set framework
                 for config in self.Keys:
                     if 'Framework' not in config:
-                        self.JRLog.Error(f"{self.Exchange}/{self.Account} does no identify the framework")
+                        self.JRLog.Error("Reading Configuration",f"{self.Exchange}/{self.Account} does no identify the framework")
                 self.Framework=self.Keys[0]['Framework'].lower()
 
                 # Initialize to the first key

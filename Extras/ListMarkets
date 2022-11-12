@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+
+import JackrabbitRelay as JRR
+
+def main():
+    relay=JRR.JackrabbitRelay()
+    if relay.GetArgsLen() > 2:
+        exchangeName=relay.GetExchange()
+        account=relay.GetAccount()
+    else:
+        print("An exchange and an account must be provided.")
+        sys.exit(1)
+
+    # Already loaded from login
+
+    markets=relay.Markets
+
+    # Get additional command line setting
+
+    srch='ALL'
+    if relay.GetArgsLen() > 3:
+        srch=relay.GetArgs(3).upper()
+    if relay.GetArgsLen() > 4:
+        srchLT=True
+        sLT=float(relay.GetArgs(4))
+    else:
+        srchLT=False
+    if relay.GetArgsLen() > 5:
+        srchGT=True
+        sGT=float(relay.GetArgs(5))
+    else:
+        srchGT=False
+
+    # Begin listing this exchange/broker
+
+    for pair in relay.Markets:
+        if relay.Framework=='ccxt':
+            if pair[0]=='.' or pair.find(".d")>-1:
+                continue
+            if 'active' in relay.Markets[pair]:
+                if relay.Markets[pair]['active']==False:
+                    continue
+
+        if srch!=None and srch.upper()!='ALL':
+            if pair.find(srch)<0:
+                continue
+
+        ticker=relay.GetTicker(symbol=pair)
+        if ticker==None:
+            continue
+
+        if relay.Framework=='ccxt':
+            marketType=relay.Markets[pair]['type']
+            print(f"{pair:30} {marketType:8} {ticker['Ask']:18.8f} {ticker['Spread']:18.8f} {ticker['Bid']:18.8f}")
+        elif relay.Framework=='ccxt':
+            print(f"{pair:30} {ticker['Ask']:18.8f} {ticker['Spread']:18.8f} {ticker['Bid']:18.8f}")
+        else:
+            print("Unrecognized framework")
+            sys.exit(0)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Terminated")

@@ -291,7 +291,6 @@ def main():
             sData=json.loads(OrphanMemory[data['Key']].Get())
             orphanLock.Unlock()
             if sData['Status']=='NotFound':
-                JRLog.Write(f"Memory key expired: {data['Key']}")
                 status='Waiting'
             elif sData['Status']=='Done':
                 status=sData['DataStore']
