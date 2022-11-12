@@ -24,6 +24,7 @@ def main():
 
     # Check to see if order is still open and return current state
     id=Orphan['ID']
+
     openOrders=relay.GetOpenOrders(symbol=relay.Order['Asset'])
     for cur in openOrders:
         if cur['id']==id:
@@ -31,6 +32,8 @@ def main():
             rData['Key']=Orphan['Key']
             rData['Status']=cur['status']
             print(json.dumps(rData))
+            sys.stdout.flush()
+            relay.JRLog.Write(f"{id}: {cur['status']}",stdOut=False)
             sys.exit(0)
 
     # Order must be closed
@@ -38,7 +41,8 @@ def main():
     rData['Key']=Orphan['Key']
     rData['Status']='Delete'
     print(json.dumps(rData))
-    relay.WriteLedger(Order=Orphan,Response=None)
+    sys.stdout.flush()
+    relay.WriteLedger(Order=Orphan,Response=None,Log=True)
 
 if __name__ == '__main__':
     main()

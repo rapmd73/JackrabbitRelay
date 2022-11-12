@@ -151,12 +151,15 @@ def OrphanUpdate(result):
             elif rStatus=='delete': # or closed
                 OrphanMemory[thisOrphan['Key']].Put(OrphanTimeout,"Delete")
             else:
-                JRLog.Write(f"ERROR: {rStatus}/{rData['Key']}")
+                JRLog.Write(f"ERROR: {rStatus}/{rData['Key']}",stdOut=False)
         orphanLock.Unlock()
 
 # This spins up the orphan manager to ensure each orphan is handled.
 
 def ProcessOrphan(Orphan):
+    global OrphanMemory
+    global JRLog
+
     OrphanManager=BaseDirectory+'/Orphan.'+Orphan['Framework']
 
     if os.path.exists(OrphanManager):
@@ -166,9 +169,14 @@ def ProcessOrphan(Orphan):
 
         # Time to get down to business
 
-        subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-        subp.stdin.write(payload)
-        res=subp.communicate()[0].decode().strip()
+        try:
+            subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            subp.stdin.write(payload)
+            res=subp.communicate()[0].decode().strip()
+        except Exception as e:
+            x=str(e)
+            JRLog.Write(f"{os.getpid()}/{Orphan['Key']}: {x}",stdOut=False)
+            OrphanMemory[Orphan['Key']].Put(OrphanTimeout,"Waiting")
 
         # response will be proper json
 

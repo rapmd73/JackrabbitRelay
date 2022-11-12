@@ -50,14 +50,14 @@ def main():
             if pair.find(srch)<0:
                 continue
 
-        ticker=relay.GetTicker(symbol=pair)
+        ticker=relay.GetTicker(symbol=pair,Error=False)
         if ticker==None:
             continue
 
         if relay.Framework=='ccxt':
             marketType=relay.Markets[pair]['type']
             print(f"{pair:30} {marketType:8} {ticker['Ask']:18.8f} {ticker['Spread']:18.8f} {ticker['Bid']:18.8f}")
-        elif relay.Framework=='ccxt':
+        elif relay.Framework=='oanda':
             print(f"{pair:30} {ticker['Ask']:18.8f} {ticker['Spread']:18.8f} {ticker['Bid']:18.8f}")
         else:
             print("Unrecognized framework")
