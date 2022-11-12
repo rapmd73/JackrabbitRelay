@@ -255,6 +255,10 @@ class ccxtCrypto:
 
     def GetTicker(self,**kwargs):
         error=kwargs.get('Error')
+        if type(error)!=bool:
+            error=True
+        if error!=None:
+            kwargs.pop('Error',None)
         self.Results=self.API("fetch_ticker",**kwargs)
 
         # Kucoin Sandbox system doesn't always give complete data
@@ -551,6 +555,7 @@ class ccxtCrypto:
     def WriteLedger(self,**kwargs):
         Order=kwargs.get('Order')
         Response=kwargs.get('Response')
+        IsLog=kwargs.get('Log')
         LedgerDirectory=kwargs.get('LedgerDirectory')
 
         if Response!=None:
@@ -585,4 +590,7 @@ class ccxtCrypto:
             ledgerLock.Lock()
             JRRsupport.AppendFile(lname,json.dumps(ledger)+'\n')
             ledgerLock.Unlock()
+
+            if type(IsLog)==bool and IsLog==True:
+                self.Log.Write(f"Ledgered: {sbOrder['Exchange']}/{subOrder['Account']}:{id}",stdOut=False)
 

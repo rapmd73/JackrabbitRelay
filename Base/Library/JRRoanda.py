@@ -432,6 +432,7 @@ class oanda:
     def WriteLedger(self,**kwargs):
         Order=kwargs.get('Order')
         Response=kwargs.get('Response')
+        IsLog=kwargs.get('Log')
         LedgerDirectory=kwargs.get('LedgerDirectory')
 
         if Response!=None:
@@ -468,3 +469,8 @@ class oanda:
             ledgerLock.Lock()
             JRRsupport.AppendFile(lname,json.dumps(ledger)+'\n')
             ledgerLock.Unlock()
+
+            if type(IsLog)==bool and IsLog==True:
+                self.Log.Write(f"Ledgered: {sbOrder['Exchange']}:{id}",stdOut=False)
+
+

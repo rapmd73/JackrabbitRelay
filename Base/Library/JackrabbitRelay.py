@@ -51,7 +51,7 @@ class JackrabbitLog:
         else:
             self.logfile=self.basename+'.'+filename.replace('/','').replace('-','').replace(':','').replace(' ','')
 
-    def Write(self,text):
+    def Write(self,text,stdOut=True):
         pid=os.getpid()
         time=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
 
@@ -61,8 +61,9 @@ class JackrabbitLog:
         fh=open(fn,'a+')
         fh.write(s)
         fh.close()
-        print(s.rstrip())
-        sys.stdout.flush()
+        if stdOut==True:
+            print(s.rstrip())
+            sys.stdout.flush()
 
     def Elapsed(self):
         EndTime=datetime.now()
