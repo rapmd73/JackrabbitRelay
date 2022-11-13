@@ -484,27 +484,48 @@ def GetLoadAVG():
 # Convert load average to seconds
 
 def ElasticSleep(s):
+    throttle=0
     LoadAVG=GetLoadAVG()
     d=float(max(LoadAVG[0],LoadAVG[1],LoadAVG[2]))
 
+    c=os.cpu_count()
+
+    # Convert lo into seconds
+
     i=int(d)
     f=d-i
+
     delay=i+(f/100)
 
-    time.sleep(s+delay)
+    # if load is greater then cpu count, begin throttling the delay factor.
+
+    if (d>c):
+        throttle=(d-c)*delay
+
+    time.sleep(s+delay+throttle)
 
 # Returns milliseconds
 
 def ElasticDelay():
+    throttle=0
     LoadAVG=GetLoadAVG()
     d=int(float(max(LoadAVG[0],LoadAVG[1],LoadAVG[2])))
+
+    c=os.cpu_count()
+
+    # Convert lo into seconds
 
     i=int(d)
     f=d-i
 
     delay=int((i+(f/100))*1000)
 
-    return delay
+    # if load is greater then cpu count, begin throttling the delay factor.
+
+    if (d>c):
+        throttle=int((d-c)*delay)
+
+    return delay+throttle
 
 # Read a timed list. Add data if not present.
 
