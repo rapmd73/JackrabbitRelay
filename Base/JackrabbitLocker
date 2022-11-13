@@ -25,6 +25,8 @@ import socket
 import select
 import json
 
+import JRRsupport
+
 Version="0.0.0.1.0"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -71,9 +73,6 @@ def ProcessPayload(data):
     except: # damaged payload
         return jsonStatus("BadPayload")
     else: # Find the lock
-        #pn=fds.getpeername()
-        #ip=f'{pn[0]}:{pn[1]}'
-        #WriteLog(ip,FileName)
 
         # FileName and Action are required. For memory fetches, FileName is memory ID.
 
@@ -177,7 +176,6 @@ def main():
     port=37373
 
     WritePID(port)
-#    WriteLog(Version,"Jackrabbit Locker")
 
     try:
         lockerSocket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -215,9 +213,10 @@ def main():
                     try:
                         data=fds.recv(1024)
                     except:
-                        pass
+                        # Sleep based upon server load
+                        JRRsupport.ElasticSleep(0)
 
-                    # No data received, close connection
+                    # No data received, close connection, clean up and sleep
 
                     if not data:
                         if fds in inputs:
@@ -230,10 +229,10 @@ def main():
                             if now>Locker[k]['Expire']:
                                 Locker.pop(k,None)
                     else:
+                        # Collect the entire line.
                         data=data.decode()
                         dataStore[fds]+=data
                         if data[-1]=='\n':
-                            #print("R:",dataStore[fds].strip())
                             queue[fds]=ProcessPayload(dataStore[fds])
 
         # Send response and close connection
@@ -242,9 +241,6 @@ def main():
             for fds in outfds:
                 if fds in queue:
                     try:
-                        #pn=fds.getpeername()
-                        #ip=f'{pn[0]}:{pn[1]}
-                        #print("S:",queue[fds].strip())
                         fds.sendall(queue[fds].encode())
                     except:
                         if fds in inputs:
