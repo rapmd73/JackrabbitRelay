@@ -481,11 +481,15 @@ def GetLoadAVG():
 
     return(LoadAVG)
 
-# Returns seconds
+# Convert load average to seconds
 
 def ElasticSleep(s):
     LoadAVG=GetLoadAVG()
-    delay=float(max(LoadAVG[0],LoadAVG[1],LoadAVG[2]))
+    d=float(max(LoadAVG[0],LoadAVG[1],LoadAVG[2]))
+
+    i=int(d)
+    f=d-i
+    delay=i+(f/100)
 
     time.sleep(s+delay)
 
@@ -493,7 +497,12 @@ def ElasticSleep(s):
 
 def ElasticDelay():
     LoadAVG=GetLoadAVG()
-    delay=int(float(max(LoadAVG[0],LoadAVG[1],LoadAVG[2]))*1000)
+    d=int(float(max(LoadAVG[0],LoadAVG[1],LoadAVG[2])))
+
+    i=int(d)
+    f=d-i
+
+    delay=int((i+(f/100))*1000)
 
     return delay
 

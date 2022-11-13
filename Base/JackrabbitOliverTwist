@@ -289,68 +289,67 @@ def main():
     # Load saved orphans into memory
     ReadOrphanList()
 
+    cur=None
     while True:
         # At the beginning of each loop, check for new orphans
         ReceiveOrphans()
 
-        # Walk the list of orphans.
+        # Walk the list of orphans one by one.
+        if cur==None:
+            cur=OrphanList.GetHead()
 
-        cur=OrphanList.GetHead()
-        while cur!=None:
-            data=json.loads(cur.GetData())
+        data=json.loads(cur.GetData())
 
-            # Redo using Locker Get/Put
+        orphanLock.Lock()
+        sData=json.loads(OrphanMemory[data['Key']].Get())
+        orphanLock.Unlock()
+        if sData['Status']=='NotFound':
+            status='Waiting'
+        elif sData['Status']=='Done':
+            status=sData['DataStore']
+        else:
+            status="Skip"
+
+        if status=='Delete':
+
+            # This is the ONLY way to properly handle deletions that
+            # won't risk trashing memory, as this part of the program is
+            # huarenteed to be non-parrellel. The next pointer must be
+            # fetched BEFORE this orphan is removed to maintain the list
+            # scan integrity.
+
             orphanLock.Lock()
-            sData=json.loads(OrphanMemory[data['Key']].Get())
+            # Get next orphan
+            cNext=cur.GetNext()
+            # Remove THIS orphan
+            OrphanMemory[data['Key']].Erase()
+            OrphanMemory.pop(data['Key'],None)
+            OrphanList.delete(cur.GetData())
+            # Set the next orphan
+            cur=cNext
+            OrphanListChanged=True
             orphanLock.Unlock()
-            if sData['Status']=='NotFound':
-                status='Waiting'
-            elif sData['Status']=='Done':
-                status=sData['DataStore']
-            else:
-                status="Skip"
 
-            if status=='Delete':
+            JRLog.Write(f"Unorphaned: {data['Key']}")
+        else:
+            orphanLock.Lock()
 
-                # This is the ONLY way to properly handle deletions that
-                # won't risk trashing memory, as this part of the program is
-                # huarenteed to be non-parrellel. The next pointer must be
-                # fetched BEFORE this orphan is removed to maintain the list
-                # scan integrity.
+            if status=='Waiting':
+                OrphanMemory[data['Key']].Put(OrphanTimeout,"Running")
+                ProcessPool.apply_async(ProcessOrphan,args=(data,),callback=OrphanUpdate)
+            cur=cur.GetNext()
+            orphanLock.Unlock()
 
-                orphanLock.Lock()
-                # Get next orphan
-                cNext=cur.GetNext()
-                # Remove THIS orphan
-                OrphanMemory[data['Key']].Erase()
-                OrphanMemory.pop(data['Key'],None)
-                OrphanList.delete(cur.GetData())
-                # Set the next orphan
-                cur=cNext
-                OrphanListChanged=True
-                orphanLock.Unlock()
+        # Save the orphan list to disk, ONLY IF it actually changed
 
-                JRLog.Write(f"Unorphaned: {data['Key']}")
-            else:
-                # Dont process orphans scheduled for removal
-                orphanLock.Lock()
-
-                if status=='Waiting':
-                    OrphanMemory[data['Key']].Put(OrphanTimeout,"Running")
-                    ProcessPool.apply_async(ProcessOrphan,args=(data,),callback=OrphanUpdate)
-                cur=cur.GetNext()
-                orphanLock.Unlock()
-
-            # Save the orphan list to disk, ONLY IF it actually changed
-
-            if OrphanListChanged==True:
-                orphanLock.Lock()
-                WriteOrphanList()
-                OrphanListChanged=False
-                orphanLock.Unlock()
+        if OrphanListChanged==True:
+            orphanLock.Lock()
+            WriteOrphanList()
+            OrphanListChanged=False
+            orphanLock.Unlock()
 
         # Brief rest to maintain control over server
-        JRRsupport.ElasticSleep(1)
+        JRRsupport.ElasticSleep(0)
 
 if __name__ == '__main__':
     main()
