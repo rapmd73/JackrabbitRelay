@@ -170,11 +170,11 @@ def ProcessOrphan(Orphan):
     if os.path.exists(OrphanManager):
         transactor=[ OrphanManager ]
 
-        payload=json.dumps(Orphan).encode()
-
         # Time to get down to business
 
         try:
+            payload=json.dumps(Orphan).encode()
+
             subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
             subp.stdin.write(payload)
             res=subp.communicate()[0].decode().strip()
@@ -291,7 +291,7 @@ def main():
 
     cur=None
     while True:
-        # At the beginning of each loop, check for new orphans
+        # Check for new orphans
         ReceiveOrphans()
 
         # Walk the list of orphans one by one.
@@ -303,6 +303,8 @@ def main():
         orphanLock.Lock()
         sData=json.loads(OrphanMemory[data['Key']].Get())
         orphanLock.Unlock()
+
+        # Timeout expired
         if sData['Status']=='NotFound':
             status='Waiting'
         elif sData['Status']=='Done':
@@ -334,9 +336,14 @@ def main():
         else:
             orphanLock.Lock()
 
+            # Only run if not already running. It is possible for this state to
+            # occur, especially if there are only a few orders to process or a
+            # veryfast broker.
+
             if status=='Waiting':
                 OrphanMemory[data['Key']].Put(OrphanTimeout,"Running")
                 ProcessPool.apply_async(ProcessOrphan,args=(data,),callback=OrphanUpdate)
+
             cur=cur.GetNext()
             orphanLock.Unlock()
 

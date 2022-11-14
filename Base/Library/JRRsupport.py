@@ -153,7 +153,7 @@ class Locker:
             else:
                 if time.time()>timeout:
                     if self.Log!=None:
-                        self.Log.Error("Locker",f"{self.filename}/{os.getpid()}: lock request failed")
+                        self.Log.Error("Locker",f"{self.filename}: lock request failed")
                     else:
                         print("Locker",f"{self.filename}/{os.getpid()}: lock request failed")
                         sys.exit(1)

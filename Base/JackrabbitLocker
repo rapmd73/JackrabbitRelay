@@ -77,12 +77,14 @@ def ProcessPayload(data):
         # FileName and Action are required. For memory fetches, FileName is memory ID.
 
         if 'FileName' not in dataDB \
-        or 'Action' not in dataDB:
+        or 'Action' not in dataDB \
+        or 'ID' not in dataDB \
+        or 'Expire' not in dataDB:
             return jsonStatus("BadPayload")
 
         # Valid actions:
-        #    Lock        Complete
-        #    Unlock      Complete
+        #    Lock
+        #    Unlock
         #    Get
         #    Put
         #    Erase
