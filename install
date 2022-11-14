@@ -7,11 +7,14 @@ BaseDir="/home/JackrabbitRelay2"
 cd /home/GitHub/JackrabbitRelay
 
 mkdir -p $BaseDir > /dev/null 2>&1
-mkdir -p $BaseDir/Config > /dev/null 2>&1
-for d in Base Data Extras Logs Ledger Statistics/Balances Statistics/Charts ; do
-    mkdir -p $BaseDir/$d > /dev/null 2>&1
+cp * /home/JackrabbitRelay2 > /dev/null 2>&1
 
-    cp -r /home/GitHub/JackrabbitRelay/$d/* $BaseDir/$d
+# Do NOT copy the Config folder
+mkdir -p $BaseDir/Config > /dev/null 2>&1
+
+for d in Base Base/Library Data Extras Extras/CodeProofs Logs Ledger ; do
+    mkdir -p $BaseDir/$d > /dev/null 2>&1
+    cp -r /home/GitHub/JackrabbitRelay/$d/* $BaseDir/$d > /dev/null 2>&1
 done
 
 if [ x$1 != 'xnopull' ] ; then
