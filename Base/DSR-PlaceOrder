@@ -50,13 +50,17 @@ def main():
 
     # Process DSR inforation
 
-    fn=relay.DataDirectory+'/'+relay.GetExchangeLast()+'.'+relay.Order['Account']+'.'+relay.Order['Asset']+'.DSR'
+    # We are using GetExchangeLast and GetAccountLast in order to get the reference
+    # to the PlaceOrder function, since placing the order has to be the last thing
+    # done.
+
+    fn=relay.DataDirectory+'/'+relay.GetExchangeLast()+'.'+relay.GetAccountLast()+'.'+relay.Order['Asset']+'.DSR'
     dsrList=JRRsupport.TimedList("DSR",fn,Log=relay.JRLog)
     if relay.Order['Action']=='close':
         expire=0
     else:
         expire=DataTTL
-    key=relay.Order['Recipe'].replace(" ","")+relay.Order['Exchange']+relay.Order['Account']+relay.Order['Asset']+relay.Order['TCycles']+relay.Order['TBuys']
+    key=relay.Order['Recipe'].replace(" ","")+relay.GetExchangeLast()+relay.GetAccountLast()+relay.Order['Asset']+relay.Order['TCycles']+relay.Order['TBuys']
     results=dsrList.update(key,json.dumps(relay.Order),expire)
 
     # Replaced is a special case where the itwem in the list expired, but is not unique.
