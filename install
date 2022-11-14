@@ -21,7 +21,8 @@ if [ x$1 != 'xnopull' ] ; then
 
     for i in $BaseDir/Data/*.symbolmap ; do 
         N=`echo $i | cut -d/ -f5 | cut -d. -f1`
-        $BaseDir/Extras/TV2Exchange $N
+        A=`echo $i | cut -d/ -f5 | cut -d. -f2`
+        $BaseDir/Extras/TV2Exchange $N $A
     done
 fi
 
