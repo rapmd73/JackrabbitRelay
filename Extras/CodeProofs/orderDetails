@@ -16,7 +16,8 @@ relay=JRR.JackrabbitRelay()
 if relay.GetArgsLen() > 3:
     exchangeName=relay.GetExchange()
     account=relay.GetAccount()
-    oid=relay.GetAsset()
+    pair=relay.GetAsset()
+    oid=relay.GetArgs(4)
 else:
     print("An exchange, (sub)account, and an order ID must be provided.")
     sys.exit(1)
@@ -31,5 +32,5 @@ if relay.Framework=='oanda':
     else:
         print("Order is still pending or is incomplete")
 elif relay.Framework=='ccxt':
-    oo=relay.GetOrderDetails(id=oid)
+    oo=relay.GetOrderDetails(id=oid,symbol=pair)
     print(oo)

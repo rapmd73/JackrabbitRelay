@@ -113,12 +113,16 @@ class ccxtCrypto:
             else:
                 done=True
 
+            print(self.Exchange,retry429,retry)
+
             if self.Exchange=='kucoin':
                 if retry429>=(RetryLimit*7):
                     retry429=0
                     retry+=1
                 else:
                     retry+=1
+            else:
+                retry+=1
 
         if self.Exchange=='kucoin':
             self.Broker.enableRateLimit=rleSave
@@ -563,7 +567,15 @@ class ccxtCrypto:
         else:
             id=Order['ID']
 
-        detail=self.GetOrderDetails(id=id)
+        # We need the embedded order reference if comming from OliverTwist
+        if 'Order' in Order:
+            subOrder=json.loads(Order['Order'])
+        else:
+            subOrder=Order
+
+        # Asset is REQUIRED to get the details
+
+        detail=self.GetOrderDetails(id=id,symbol=subOrder['Asset'])
 
         ledger={}
         ledger['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
@@ -573,11 +585,6 @@ class ccxtCrypto:
             ledger['Response']=Response
         ledger['Detail']=detail
 
-        # We need the embedded order reference if comming from OliverTwist
-        if 'Order' in Order:
-            subOrder=json.loads(Order['Order'])
-        else:
-            subOrder=Order
         if subOrder['Exchange']!=None and subOrder['Account']!=None and subOrder['Asset']!=None:
             if "Market" in subOrder:
                 fname=subOrder['Exchange']+'.'+subOrder['Market']+'.'+subOrder['Account']+'.'+subOrder['Asset']
