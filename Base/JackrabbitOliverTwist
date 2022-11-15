@@ -308,7 +308,9 @@ def main():
         if sData['Status']=='NotFound':
             status='Waiting'
         elif sData['Status']=='Done':
-            status=sData['DataStore']
+            status=sData['DataStore'].lower()
+            if status!='Delete':
+                status='Waiting'
         else:
             status="Skip"
 
