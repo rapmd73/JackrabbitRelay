@@ -113,8 +113,6 @@ class ccxtCrypto:
             else:
                 done=True
 
-            print(self.Exchange,retry429,retry)
-
             if self.Exchange=='kucoin':
                 if retry429>=(RetryLimit*7):
                     retry429=0
