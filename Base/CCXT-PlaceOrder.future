@@ -198,11 +198,12 @@ def main():
     if (hasUSD and hasBase) or (hasUSD and hasQuote) or (hasQuote and hasBase):
         relay.JRLog.Error("Quote validation","USD, Base, or Quote can be present, NOT a combination of two or more.")
 
+    price=ticker['Ask']
+
     # No amount method so using exchange minimum
     if (not hasUSD and not hasBase and not hasQuote):
         isMinimum=True
         amount=minimum
-        price=mincost
         relay.JRLog.Write('Using minimum position amount/price')
         relay.JRLog.Write(f'|- Minimum Amount: {minimum:.8f}')
         relay.JRLog.Write(f'|- Minimum Cost:   {mincost:.8f}')
@@ -210,7 +211,6 @@ def main():
         # Figure out percentages. AMOUNT or VOLUME to buy/sell
 
         if not isMinimum:
-            price=ticker['Ask']
             if hasUSD:
                 if '%' in relay.Order['USD']:
                     amount=GetPCTamount(relay,'USD',quote,price)
