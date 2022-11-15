@@ -337,6 +337,9 @@ class ccxtCrypto:
             else:
                 params['reduce_only']=ro
 
+        if 'binance' in self.Broker.id:
+            params['quoteOrderQty']=amount
+
         # Shorts are stored as negative numbers, abs() is a safety catch
 
         if params!={}:
