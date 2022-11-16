@@ -152,8 +152,6 @@ class ccxtCrypto:
         return self.Broker
 
     def SetExchangeAPI(self):
-        pwList=['kucoin','kucoinfutures','bitget']
-
         if "Sandbox" in self.Active:
             self.Broker.setSandboxMode(True)
 
@@ -170,7 +168,7 @@ class ccxtCrypto:
             if self.Exchange=="ftxus" and self.Active['Account']!='MAIN':
                 self.Broker.headers['FTXUS-SUBACCOUNT']=self.Active['Account']
             else:
-                if self.Exchange in pwList:
+                if self.Broker.requiredCredentials['password']==True:
                     if 'Passphrase' in self.Active:
                         self.Broker.password=self.Active['Passphrase']
                     else:
