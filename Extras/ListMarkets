@@ -51,9 +51,7 @@ def main():
             if pair.find(srch)<0:
                 continue
 
-        ticker=relay.GetTicker(symbol=pair,Error=False)
-        if ticker==None:
-            continue
+        ticker=relay.GetTicker(symbol=pair)
 
         if relay.Framework=='ccxt':
             marketType=relay.Markets[pair]['type']

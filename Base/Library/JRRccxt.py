@@ -279,29 +279,17 @@ class ccxtCrypto:
         return self.Results
 
     def GetTicker(self,**kwargs):
-        error=kwargs.get('Error')
-        if type(error)!=bool:
-            error=True
-        if error!=None:
-            kwargs.pop('Error',None)
         self.Results=self.API("fetch_ticker",**kwargs)
 
         # Kucoin/Binance  system doesn't always give complete data
         # This is an absolute crap wway of faking it, but the only way I've come up with.
 
-        # Buying price
-        if self.Results['ask']==None:
-            self.Results['ask']=max(self.Results['open'],self.Results['close'])
-
-        # Selling price
-        if self.Results['bid']==None:
-            self.Results['bid']=min(self.Results['open'],self.Results['close'])
-
         if (self.Results['ask']==None or self.Results['bid']==None):
-            if  error==True:
-                self.Log.Error('GetTicker',"ticker data is incomplete")
-            else:
-                return None
+            # Worst case situation
+            symbol=kwargs.get('symbol')
+            ob=self.GetOrderBook(symbol=symbol)
+            self.Results['bid']=ob['bids'][0][0]
+            self.Results['ask']=ob['asks'][0][0]
 
         Pair={}
         Pair['Ask']=self.Results['ask']
