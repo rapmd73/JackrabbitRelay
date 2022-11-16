@@ -155,24 +155,30 @@ class ccxtCrypto:
         if "Sandbox" in self.Active:
             self.Broker.setSandboxMode(True)
 
-        # Set API/Secret for every exchange
-
-        self.Broker.apiKey=self.Active['API']
-        self.Broker.secret=self.Active['SECRET']
-
         # Set special setting for specific exchange.
 
         if self.Exchange=="ftx" and self.Active['Account']!='MAIN':
             self.Broker.headers['FTX-SUBACCOUNT']=self.Active['Account']
-        else:
-            if self.Exchange=="ftxus" and self.Active['Account']!='MAIN':
-                self.Broker.headers['FTXUS-SUBACCOUNT']=self.Active['Account']
-            else:
-                if self.Broker.requiredCredentials['password']==True:
-                    if 'Passphrase' in self.Active:
-                        self.Broker.password=self.Active['Passphrase']
-                    else:
-                        self.Log.Error("Connecting to exchange",self.Exchange+" requires a passphrase as well")
+        elif self.Exchange=="ftxus" and self.Active['Account']!='MAIN':
+            self.Broker.headers['FTXUS-SUBACCOUNT']=self.Active['Account']
+
+        # Cycle through required login types. Each exchange could have different login
+        # requireents. Try to soft through each requirement and handle it.
+
+        # CCXT reference
+        er=[ 'apiKey','secret','uid','login','password','twofa','privateKey','walletAddress','token' ]
+        # Jackrabbit referrence for config file
+        re=[ 'API','SECRET','UserID','UserLogin','Passphrase','2Factor','PrivateKey','LoginWallet','Token' ]
+
+        for r in range(len(er)):
+            rf=er[r]
+            jf=re[r]
+            # test for the requiremnt and try to satisfy it
+            if self.Broker.requiredCredentials[rf]==True:
+                if jf in self.Active:
+                    self.Broker.__dict__[rf]=self.Active[jf]
+                else:
+                    self.Log.Error("Connecting to exchange",self.Exchange+" requires a(n) '+jf+' as well")
 
         # Logging the rate limit is an absolute nightmare as it is so frequent
 
