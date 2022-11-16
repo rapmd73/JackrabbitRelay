@@ -40,6 +40,7 @@ def main():
 
     for pair in relay.Markets:
         if relay.Framework=='ccxt':
+
             if pair[0]=='.' or pair.find(".d")>-1:
                 continue
             if 'active' in relay.Markets[pair]:
