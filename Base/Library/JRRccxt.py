@@ -180,6 +180,23 @@ class ccxtCrypto:
                 else:
                     self.Log.Error("Connecting to exchange",self.Exchange+" requires a(n) '+jf+' as well")
 
+        if 'MarketType' in self.Active:
+            self.Active['MarketType']=self.Active['MarketType'].lower()
+
+            if 'accountsByType' in self.Broker.options:
+                mt=' '.join(self.Broker.options['accountsByType'].keys()).lower()
+            elif 'typesByAccount' in self.Broker.options:
+                mt=' '.join(self.Broker.options['typesByAccount'].keys()).lower()
+            elif 'timeframes' in self.Broker.options:
+                mt=' '.join(self.Broker.options['timeframes'].keys()).lower()
+            else:
+                mt='spot'
+
+            if self.Active['MarketType'] in mt:
+                self.Broker.options['defaultType']=self.Active['MarketType']
+            else:
+                self.Log.Error("Connecting to exchange","Unsupported market type: "+self.Active['MarketType'])
+
         # Logging the rate limit is an absolute nightmare as it is so frequent
 
         if "RateLimit" in self.Active:
