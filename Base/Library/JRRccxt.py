@@ -152,6 +152,8 @@ class ccxtCrypto:
         return self.Broker
 
     def SetExchangeAPI(self):
+        pwList=['kucoin','kucoinfutures','bitget']
+
         if "Sandbox" in self.Active:
             self.Broker.setSandboxMode(True)
 
@@ -168,11 +170,11 @@ class ccxtCrypto:
             if self.Exchange=="ftxus" and self.Active['Account']!='MAIN':
                 self.Broker.headers['FTXUS-SUBACCOUNT']=self.Active['Account']
             else:
-                if self.Exchange=="kucoin" or self.Exchange=="kucoinfutures":
+                if self.Exchange in pwList:
                     if 'Passphrase' in self.Active:
                         self.Broker.password=self.Active['Passphrase']
                     else:
-                        self.Log.Error("Connecting to exchange","Kucoin requires a passphrase as well")
+                        self.Log.Error("Connecting to exchange",self.Exchange+" requires a passphrase as well")
 
         # Logging the rate limit is an absolute nightmare as it is so frequent
 
