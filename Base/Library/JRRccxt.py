@@ -65,7 +65,7 @@ class ccxtCrypto:
 
     def API(self,function,**kwargs):
         # Kucoin don not support this, but don't break program
-        if function=='fetch_positions' and self.Exchange=='kucoin':
+        if function=='fetch_positions' and 'kucoin' in self.Exchange:
             self.Results=None
             return self.Results
 
@@ -101,7 +101,7 @@ class ccxtCrypto:
             try:
                 self.Results=callCCXT(**kwargs)
             except Exception as e:
-                if self.Exchange=='kucoin':
+                if 'kucoin' in self.Exchange:
                     x=str(e)
                     if x.find('429000')>-1:
                         retry429+=1
@@ -113,7 +113,7 @@ class ccxtCrypto:
             else:
                 done=True
 
-            if self.Exchange=='kucoin':
+            if 'kucoin' in self.Exchange:
                 if retry429>=(RetryLimit*7):
                     retry429=0
                     retry+=1
@@ -122,7 +122,7 @@ class ccxtCrypto:
             else:
                 retry+=1
 
-        if self.Exchange=='kucoin':
+        if 'kucoin' in self.Exchange:
             self.Broker.enableRateLimit=rleSave
             self.Broker.rateLimit=rlvSave
 
@@ -282,10 +282,10 @@ class ccxtCrypto:
         self.Results=self.API("fetch_ticker",**kwargs)
 
         # Kucoin/Binance  system doesn't always give complete data
-        # This is an absolute crap wway of faking it, but the only way I've come up with.
+        # This is an absolute crap way of faking it, but the only way I've come up with.
 
         if (self.Results['ask']==None or self.Results['bid']==None):
-            # Worst case situation
+            # Worst case situation, pull the orderbook. takes at least 5 seconds.
             symbol=kwargs.get('symbol')
             ob=self.GetOrderBook(symbol=symbol)
             self.Results['bid']=ob['bids'][0][0]
@@ -330,10 +330,11 @@ class ccxtCrypto:
         pair=kwargs.get('pair')
         m=kwargs.get('orderType').lower()
         action=kwargs.get('action').lower()
-        amount=float(kwargs.get('amount'))
         price=kwargs.get('price')
         ro=kwargs.get('ReduceOnly')
         ln=kwargs.get('LedgerNote')
+        # Shorts are stored as negative numbers, abs() is a safety catch
+        amount=self.Broker.amount_to_precision(pair,abs(float(kwargs.get('amount'))))
 
         params = {}
         order=None
@@ -357,15 +358,13 @@ class ccxtCrypto:
             else:
                 params['reduce_only']=ro
 
-        if 'binance' in self.Broker.id:
-            params['quoteOrderQty']=amount
-
-        # Shorts are stored as negative numbers, abs() is a safety catch
+        #if 'binance' in self.Broker.id:
+        #    params['quoteOrderQty']=amount
 
         if params!={}:
-            order=self.API("create_order",symbol=pair,type=m,side=action,amount=abs(amount),price=price,params=params)
+            order=self.API("create_order",symbol=pair,type=m,side=action,amount=amount,price=price,params=params)
         else:
-            order=self.API("create_order",symbol=pair,type=m,side=action,amount=abs(amount),price=price)
+            order=self.API("create_order",symbol=pair,type=m,side=action,amount=amount,price=price)
 
         if order['id']!=None:
             self.Log.Write("|- Order Confirmation ID: "+order['id'])

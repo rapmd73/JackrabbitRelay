@@ -28,10 +28,10 @@ markets=relay.GetMarkets()
 if relay.GetFramework()=='ccxt':
     balances=relay.GetBalance()
     if balances!=None:
-        coinList=balances['total']
+        coinList=balances['free']
         for coin in coinList:
 #            The below line is the best approach for reading the complete list
-            bal=float(balances['total'][coin])
+            bal=float(balances['free'][coin])
 
             # This is the worst way as it calls the exchange and refetches ALL
             # assets EVERY time, but its a good testing format.
@@ -41,7 +41,6 @@ if relay.GetFramework()=='ccxt':
                 print(f"{coin:20} {bal:16.8f}")
 
         positions=relay.GetPositions()
-        print(positions)
         if positions!=None:
             for pos in positions:
                 #bal=float(pos['contracts'])

@@ -1,5 +1,16 @@
 #!/bin/bash
 pip3=`which pip3`
+if [ "x$pip3" == "x" ] ; then
+    echo PIP3 not installed. Please install it first, then re-run this script.
+    exit 1
+fi
+
+stat=`which stat`
+if [ "x$stat" == "x" ] ; then
+    echo stat command not installed. Please install it first, then re-run this script.
+    exit 1
+fi
+
 OFS=`stat --printf="%s" install`
 
 BaseDir="/home/JackrabbitRelay2"
