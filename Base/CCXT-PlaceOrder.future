@@ -297,9 +297,10 @@ def main():
         pass
 
     try:
-        if "Reduction" in relay.Active and relay.Order['Action']!="buy" and amount>=pBalance:
+        if ("Reduction" in relay.Active or "Reduction" in relay.Order) \
+        and relay.Order['Action']!="buy" and amount>=pBalance:
             pct=relay.Active['Reduction']
-            r=(amount*pct)
+            r=round((amount*pct),8)
             relay.JRLog.Write("|- Reduction: "+str(r))
             amount-=r
     except:

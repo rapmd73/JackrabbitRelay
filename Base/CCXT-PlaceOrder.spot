@@ -278,10 +278,22 @@ def main():
     relay.JRLog.Write(f"|- Price: {price:.8f}")
     relay.JRLog.Write(f"|- Total: {total:.8f}")
 
+    # Check for reduction
+
+    try:
+        if ("Reduction" in relay.Active or "Reduction" in relay.Order) \
+        and relay.Order['Action']!="buy" and amount>=pBalance:
+            pct=relay.Active['Reduction']
+            r=round((amount*pct),8)
+            relay.JRLog.Write("|- Reduction: "+str(r))
+            amount-=r
+    except:
+        pass
+
     if relay.Order['Action']=='close':
         relay.Order['Action']='sell'
 
-# In spot markets, ReduceOnly is ALWAYS false
+# In spot markets, ReduceOnly ALWAYS false
 
     if amount>0:
         lNote=None
