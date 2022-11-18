@@ -354,14 +354,14 @@ class ccxtCrypto:
 
         # Deal with Binance Futures special case
 
-        if kwargs.get('ReduceOnly')==True:
-            if self.Broker.id=='binanceusdm':
+        if ro==True:
+            if 'binance' in self.Broker.id:
                 params['reduceOnly']='true'
             else:
                 params['reduce_only']=ro
 
-        #if 'binance' in self.Broker.id:
-        #    params['quoteOrderQty']=amount
+        if 'binance' in self.Broker.id:
+            params['quoteOrderQty']=amount
 
         if params!={}:
             order=self.API("create_order",symbol=pair,type=m,side=action,amount=amount,price=price,params=params)
@@ -390,6 +390,9 @@ class ccxtCrypto:
 
         base=self.Markets[symbol]['base']
         quote=self.Markets[symbol]['quote']
+
+        if 'binance' in self.Broker.id:
+            forceQuote=True
 
         minimum,mincost=self.GetAssetMinimum(symbol,diagnostics)
 
@@ -487,11 +490,15 @@ class ccxtCrypto:
                     minimum=float('0.'+str(z[:factor-1])+'1')
                     mincost=minimum*close
 
+            if 'binance' in self.Broker.id:
+                mincost+=0.3
+                minimum=mincost/close
+
             if diagnostics:
                 self.Log.Write(f"| |- Close: {close:.8f}")
                 self.Log.Write(f"| |- Minimum Amount: {minimum1:.8f}, {m1:.8f}")
-                self.Log.Write(f"| |- Minimum Cost:   {minimum2:.8f}, {m2:.8f}")
                 self.Log.Write(f"| |- Minimum Price:  {minimum3:.8f}, {m3:.8f}")
+                self.Log.Write(f"| |- Minimum Cost:   {minimum2:.8f}, {m2:.8f}")
 
         return minimum,mincost
 
@@ -500,7 +507,7 @@ class ccxtCrypto:
     # BTC/USDT is terms of both quote currenciesbeing pegged to the USD as
     # stable.
 
-    def FindMatchingPair(base):
+    def FindMatchingPair(self,base):
         for quote in self.StableCoinUSD:
             pair=base+'/'+quote
             if pair in self.Markets:
