@@ -253,7 +253,8 @@ def main():
 
     # If the amount is less then the minimum and action is to sell/close
 
-    if pBalance<mincost and (relay.Order['Action']=='close' or relay.Order['Action']=='sell'):
+    if (abs(pBalance)<minimum or abs(pBalance*price)<mincost) \
+    and (relay.Order['Action']=='close' or relay.Order['Action']=='sell'):
         relay.JRLog.Error(relay.Exchange, "not enough to sell/close position")
 
     # Check if we close on sell
