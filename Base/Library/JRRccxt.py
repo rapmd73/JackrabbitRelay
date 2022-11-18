@@ -90,7 +90,7 @@ class ccxtCrypto:
 
         # Save the only rate limit and remap it.
 
-        if self.Exchange=='kucoin':
+        if 'kucoin' in self.Exchange:
             rleSave=self.Broker.enableRateLimit
             rlvSave=self.Broker.rateLimit
             self.Broker.enableRateLimit=True
@@ -280,20 +280,22 @@ class ccxtCrypto:
 
     def GetTicker(self,**kwargs):
         self.Results=self.API("fetch_ticker",**kwargs)
+        bid=self.Results['bid']
+        ask=self.Results['ask']
 
         # Kucoin/Binance  system doesn't always give complete data
         # This is an absolute crap way of faking it, but the only way I've come up with.
 
-        if (self.Results['ask']==None or self.Results['bid']==None):
+        if (bid==None or ask==None):
             # Worst case situation, pull the orderbook. takes at least 5 seconds.
             symbol=kwargs.get('symbol')
             ob=self.GetOrderBook(symbol=symbol)
-            self.Results['bid']=ob['bids'][0][0]
-            self.Results['ask']=ob['asks'][0][0]
+            bid=ob['bids'][0][0]
+            ask=ob['asks'][0][0]
 
         Pair={}
-        Pair['Ask']=self.Results['ask']
-        Pair['Bid']=self.Results['bid']
+        Pair['Ask']=ask
+        Pair['Bid']=bid
         Pair['Spread']=Pair['Ask']-Pair['Bid']
 
         return Pair
