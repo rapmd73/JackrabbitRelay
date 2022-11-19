@@ -253,17 +253,17 @@ def main():
     pBalance=relay.GetPositions(symbol=relay.Order['Asset'])
     relay.JRLog.Write(f"Previous Balance: {abs(pBalance):.8f} contracts")
 
+    # Check if we close on sell
+
+    if ("CloseOnSell" in relay.Active or "CloseOnSell" in relay.Order) and relay.Order['Action']=='sell':
+        relay.Order['Action']='close'
+
     # If the amount is less then the minimum and action is to close. Sell opens
     # a short position.
 
     if (abs(pBalance)<minimum or abs(pBalance*price)<mincost) \
     and relay.Order['Action']=='close':
-        relay.JRLog.Error(relay.Exchange, "not enough to sell/close position")
-
-    # Check if we close on sell
-
-    if ("CloseOnSell" in relay.Active or "CloseOnSell" in relay.Order) and relay.Order['Action']=='sell':
-        relay.Order['Action']='close'
+        relay.JRLog.Error(relay.Exchange, "not enough to close position")
 
     # Closing the position, with futures, we need to figure out the current
     # direction and place an order opposite to it.

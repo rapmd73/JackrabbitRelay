@@ -238,7 +238,10 @@ class ccxtCrypto:
             return self.Results
         else:
             base=base.upper()
-            if base in self.Results['total']:
+            if 'free' in self.Results and base in self.Results['free']:
+                bal=float(self.Results['free'][base])
+                return bal
+            elif 'total' in self.Results and base in self.Results['total']:
                 bal=float(self.Results['total'][base])
                 return bal
             else:
