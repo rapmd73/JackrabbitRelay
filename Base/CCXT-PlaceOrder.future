@@ -276,6 +276,19 @@ def main():
         relay.JRLog.Write(f"Forcing direction to {relay.Order['Action']}")
         amount=abs(pBalance)
 
+    # Check for reduction
+
+    if "Reduction" in relay.Active and relay.Order['Action']!="buy" and amount>=pBalance:
+        pct=float(relay.Active['Reduction'])/100
+        r=round((amount*pct),8)
+        relay.JRLog.Write("Reduction: "+str(r))
+        amount-=r
+    elif "Reduction" in relay.Order and relay.Order['Action']!="buy" and amount>=pBalance:
+        pct=float(relay.Order['Reduction'])/100
+        r=round((amount*pct),8)
+        relay.JRLog.Write("Reduction: "+str(r))
+        amount-=r
+
     # Determine trade action and carry it out
 
     total=round(amount*price,8)
@@ -301,16 +314,6 @@ def main():
         if "set_margin_mode" in relay.Broker and "Margin" in relay.Order:
             relay.Broker.set_margin_mode(relay.Order['Asset'],relay.Order['Margin'].upper())
             relay.JRLog.Write("|- Margin: "+Order['Margin'])
-    except:
-        pass
-
-    try:
-        if ("Reduction" in relay.Active or "Reduction" in relay.Order) \
-        and relay.Order['Action']!="buy" and amount>=pBalance:
-            pct=relay.Active['Reduction']
-            r=round((amount*pct),8)
-            relay.JRLog.Write("|- Reduction: "+str(r))
-            amount-=r
     except:
         pass
 

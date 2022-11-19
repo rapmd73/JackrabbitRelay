@@ -366,10 +366,18 @@ class ccxtCrypto:
         if 'binance' in self.Broker.id:
             params['quoteOrderQty']=amount
 
-        if params!={}:
-            order=self.API("create_order",symbol=pair,type=m,side=action,amount=amount,price=price,params=params)
+        # Pure market orders break (phemex) when price in included.
+
+        if m=='market':
+            if params!={}:
+                order=self.API("create_order",symbol=pair,type=m,side=action,amount=amount,params=params)
+            else:
+                order=self.API("create_order",symbol=pair,type=m,side=action,amount=amount)
         else:
-            order=self.API("create_order",symbol=pair,type=m,side=action,amount=amount,price=price)
+            if params!={}:
+                order=self.API("create_order",symbol=pair,type=m,side=action,amount=amount,price=price,params=params)
+            else:
+                order=self.API("create_order",symbol=pair,type=m,side=action,amount=amount,price=price)
 
         if order['id']!=None:
             self.Log.Write("|- Order Confirmation ID: "+order['id'])

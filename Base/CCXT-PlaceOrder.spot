@@ -269,6 +269,19 @@ def main():
         relay.JRLog.Write("|- Forcing balance")
         amount=pBalance
 
+    # Check for reduction
+
+    if "Reduction" in relay.Active and relay.Order['Action']!="buy" and amount>=pBalance:
+        pct=float(relay.Active['Reduction'])/100
+        r=round((amount*pct),8)
+        relay.JRLog.Write("Reduction: "+str(r))
+        amount-=r
+    elif "Reduction" in relay.Order and relay.Order['Action']!="buy" and amount>=pBalance:
+        pct=float(relay.Order['Reduction'])/100
+        r=round((amount*pct),8)
+        relay.JRLog.Write("Reduction: "+str(r))
+        amount-=r
+
     # Determine trade action and carry it out
 
     total=round(amount*price,8)
@@ -278,18 +291,6 @@ def main():
     relay.JRLog.Write(f"|- Amount: {amount:.8f}")
     relay.JRLog.Write(f"|- Price: {price:.8f}")
     relay.JRLog.Write(f"|- Total: {total:.8f}")
-
-    # Check for reduction
-
-    try:
-        if ("Reduction" in relay.Active or "Reduction" in relay.Order) \
-        and relay.Order['Action']!="buy" and amount>=pBalance:
-            pct=relay.Active['Reduction']
-            r=round((amount*pct),8)
-            relay.JRLog.Write("|- Reduction: "+str(r))
-            amount-=r
-    except:
-        pass
 
     if relay.Order['Action']=='close':
         relay.Order['Action']='sell'
