@@ -284,7 +284,7 @@ def main():
     JRLog.Write('OliverTwist '+Version)
 
     # Establish the process pool to handle the orphans
-    ProcessPool=multiprocessing.Pool(processes=multiprocessing.cpu_count()*2,maxtasksperchild=237)
+    ProcessPool=multiprocessing.Pool(processes=multiprocessing.cpu_count()*2,maxtasksperchild=73)
 
     # Load saved orphans into memory
     ReadOrphanList()
@@ -302,17 +302,17 @@ def main():
 
         orphanLock.Lock()
         sData=json.loads(OrphanMemory[data['Key']].Get())
+        status=sData['DataStore'].lower()
         orphanLock.Unlock()
 
-        # Timeout expired
-        if sData['Status']=='NotFound':
+        #if cur.GetPrev()==None:
+        #    JRLog.Write(f"{data['Key']}: {sData}")
+
+        if status!='delete' \
+        or status=='done' \
+        or status=='notfound' \
+        or status=='notowner':
             status='Waiting'
-        elif sData['Status']=='Done':
-            status=sData['DataStore'].lower()
-            if status!='Delete':
-                status='Waiting'
-        else:
-            status="Skip"
 
         if status=='Delete':
 
