@@ -293,8 +293,18 @@ class ccxtCrypto:
             # Worst case situation, pull the orderbook. takes at least 5 seconds.
             symbol=kwargs.get('symbol')
             ob=self.GetOrderBook(symbol=symbol)
-            bid=ob['bids'][0][0]
-            ask=ob['asks'][0][0]
+            if (ob['bids']==None or ob['bids']==[]):
+                bid=ask
+            else:
+                bid=ob['bids'][0][0]
+            if (ob['asks']==None or ob['asks']==[]):
+                ask=bid
+            else:
+                ask=ob['asks'][0][0]
+
+        if (bid==None and ask==None):
+            bid=0
+            ask=0
 
         Pair={}
         Pair['Ask']=ask
