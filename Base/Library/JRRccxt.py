@@ -375,6 +375,8 @@ class ccxtCrypto:
 
         if 'binance' in self.Broker.id:
             params['quoteOrderQty']=amount
+        else:
+            amount=float(amount)
 
         # Pure market orders break (phemex) when price in included.
 
