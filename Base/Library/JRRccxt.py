@@ -96,7 +96,6 @@ class ccxtCrypto:
             try:
                 self.Results=callCCXT(**kwargs)
             except Exception as e:
-                print(function,str(e))
                 if 'kucoin' in self.Exchange:
                     x=str(e)
                     if x.find('429000')>-1:
