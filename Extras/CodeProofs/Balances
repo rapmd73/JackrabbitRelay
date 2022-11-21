@@ -44,7 +44,7 @@ if relay.GetFramework()=='ccxt':
         if positions!=None:
             for pos in positions:
                 #bal=float(pos['contracts'])
-                bal=relay.GetPositions(symbol=pos['symbol'])
+                bal=relay.GetPositions(symbols=pos['symbol'])
                 if bal==None:
                     bal=0.0
                 if bal!=0.0 and 'symbol' in pos:
