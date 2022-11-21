@@ -64,11 +64,6 @@ class ccxtCrypto:
     # balance=aelf.API("fetch_balance",exchange)
 
     def API(self,function,**kwargs):
-        # Kucoin don not support this, but don't break program
-        if function=='fetch_positions' and 'kucoin' in self.Exchange:
-            self.Results=None
-            return self.Results
-
         retry429=0
         retry=0
 
@@ -101,6 +96,7 @@ class ccxtCrypto:
             try:
                 self.Results=callCCXT(**kwargs)
             except Exception as e:
+                print(function,str(e))
                 if 'kucoin' in self.Exchange:
                     x=str(e)
                     if x.find('429000')>-1:
@@ -255,12 +251,11 @@ class ccxtCrypto:
 
     def GetPositions(self,**kwargs):
         self.Results=self.API("fetch_positions")
-
-        symbol=kwargs.get('symbol')
+        symbol=kwargs.get('symbols')
         if symbol==None:
             return self.Results
         else:
-            symbol=symbol.upper()
+            symbol=symbol[0].upper()
             position=None
             # No results means a 0 balance
             if self.Results==None:
@@ -268,6 +263,9 @@ class ccxtCrypto:
             for pos in self.Results:
                 if pos['symbol']==symbol:
                     position=pos
+                    break
+                if 'info' in pos and pos['info']['symbol']==symbol:
+                    position=pos['info']
                     break
             if position!=None:
                 bal=position['contracts']

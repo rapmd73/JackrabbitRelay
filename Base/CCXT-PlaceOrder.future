@@ -250,8 +250,8 @@ def main():
     # Should follow Version 1 and separate spot/future market to individual
     # PlaceOrder programs. Shorts will be negative
 
-    pBalance=relay.GetPositions(symbol=relay.Order['Asset'])
-    relay.JRLog.Write(f"Previous Balance: {abs(pBalance):.8f} contracts")
+    pBalance=relay.GetPositions(symbols=[relay.Order['Asset']])
+    relay.JRLog.Write(f"Previous Balance: {abs(pBalance):.8f} contract amount")
 
     # Check if we close on sell
 
@@ -337,8 +337,8 @@ def main():
             ReduceOnly=ReduceOnly, \
             LedgerNote=lNote)
 
-        nBalance=relay.GetPositions(symbol=relay.Order['Asset'])
-        relay.JRLog.Write(f"New Balance: {abs(nBalance):.8f} contracts")
+        nBalance=relay.GetPositions(symbols=[relay.Order['Asset']])
+        relay.JRLog.Write(f"New Balance: {abs(nBalance):.8f} contract amount")
 
         if "Orphan" in relay.Active or "Orphan" in relay.Order \
         and 'limit' in relay.Order['OrderType']:
