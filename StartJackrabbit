@@ -15,6 +15,6 @@ kill -s 9 $kPids > /dev/null 2>&1
 sleep 3
 ( $BaseDir/LauncherLocker & ) > /dev/null 2>&1
 sleep 3
-#( $BaseDir/LauncherOliverTwist & ) > /dev/null 2>&1
+( $BaseDir/LauncherOliverTwist & ) > /dev/null 2>&1
 sleep 3
 ( $BaseDir/LauncherRelay $Port & ) > /dev/null 2>&1
