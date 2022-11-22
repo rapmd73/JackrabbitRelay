@@ -108,63 +108,46 @@ def GetID():
         pw+=oc
     return pw
 
-# Receive an update on an orphan and update, delete, or add to the main list
-
-# Order stattus:
-
-#    New       Process order, buy, sell, close
-#    Open      Already placed order, waiting for completion
-#    Closed    Order closed and ready to be logged
-#    Delete    Order closed and ready to be logged
+# Receive an update on an orphan and update, delete, or add to the main list. This is NOT part of the
+# main process, but rather a child process. NONE o the global or main variables are available. The ONLY
+# information know is what is EXPLICTLY given.
 
 def OrphanUpdate(result):
-    global JRLog
-    global OrphanList
-    global OrphanMemory
-
     if result!=None:
+        OrphanTimeout=(15*60)
+
         # result in JSON format
         # Locking required to protect memory structures
 
-        orphanLock.Lock()
-
-        # At this stage, pData should NEVER be None or undefined. If it is, then
+        # At this stage, rData should NEVER be None or undefined. If it is, then
         # memory was thrashed.
 
-        # Find entry in list by Key
-        found=OrphanList.find(result)
-        if found!=None:
-            try:
-                rData=json.loads(result)
+        rData=json.loads(result)
+        orphanLock=JRRsupport.Locker("OliverTwist",ID=rData['lID'])
+        OrphanMemory=JRRsupport.Locker(rData['Key'],ID=rData['mID'])
+        orphanLock.Lock()
 
-                # Get original list entry
-                thisOrphan=json.loads(found.GetData())
+        # if returned status is open, replace the response, if it has
+        # changed or the orphan record doesn't have a response
 
-                # if returned status is open, replace the response, if it has
-                # changed or the orphan record doesn't have a response
-
-                rStatus=rData['Status'].lower()
-                if rStatus!='delete': # open/pnding
-                    # Nothing changed, go back to waiting
-                    OrphanMemory[thisOrphan['Key']].Put(OrphanTimeout,"Waiting")
-                # if the status returnd is delete, flag for parent
-                # do NOT delete here, will trash orphan list.
-                elif rStatus=='delete': # or closed
-                    OrphanMemory[thisOrphan['Key']].Put(OrphanTimeout,"Delete")
-                else:
-                    JRLog.Write(f"ERROR: {rStatus}/{rData['Key']}",stdOut=False)
-            except Exception as e:
-                x=str(e)
-                JRLog.Write(f"{result['Key']}: {x}",stdOut=False)
-                OrphanMemory[result['Key']].Put(OrphanTimeout,"Waiting")
+        rStatus=rData['Status'].lower()
+        if rStatus!='delete': # open/pnding
+            # Nothing changed, go back to waiting
+            OrphanMemory.Put(OrphanTimeout,"Waiting")
+        # if the status returnd is delete, flag for parent
+        # do NOT delete here, will trash orphan list.
+        elif rStatus=='delete': # or closed
+            OrphanMemory.Put(OrphanTimeout,"Delete")
+        else:
+            JRLog.Write(f"ERROR: {rStatus}/{rData['Key']}",stdOut=False)
         orphanLock.Unlock()
 
-# This spins up the orphan manager to ensure each orphan is handled.
+# This spins up the orphan manager to ensure each orphan is handled. This is NOT part of the main
+# process, but rather a child process. NONE o the global or main variables are available. The ONLY
+# information know is what is EXPLICTLY given.
 
 def ProcessOrphan(Orphan):
-    global OrphanMemory
-    global JRLog
-
+    OrphanTimeout=(15*60)
     OrphanManager=BaseDirectory+'/Orphan.'+Orphan['Framework']
 
     if os.path.exists(OrphanManager):
@@ -178,29 +161,32 @@ def ProcessOrphan(Orphan):
             subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
             subp.stdin.write(payload)
             res=subp.communicate()[0].decode().strip()
-        except Exception as e:
-            x=str(e)
-            JRLog.Write(f"{os.getpid()}/{Orphan['Key']}: {x}",stdOut=False)
-            OrphanMemory[Orphan['Key']].Put(OrphanTimeout,"Waiting")
 
-        # response will be proper json
+            # response will be proper json
+            return res
+        except:
+            # This should never happen, but if it dowes, go back to waiting state
+            OrphanMemory=JRRsupport.Locker(Orphan['Key'],ID=Orphan['mID'])
+            OrphanMemory.Put(OrphanTimeout,"Waiting")
+            return None
 
-        return res
+    # This should never happen, but if it dowes, go back to waiting state
+    OrphanMemory=JRRsupport.Locker(Orphan['Key'],ID=Orphan['mID'])
+    OrphanMemory.Put(OrphanTimeout,"Waiting")
     return None
 
 # Read the complete list stored on disk, if it exists
 
 def ReadOrphanList():
-    global JRLog
+    global orphanLock
     global OrphanList
     global OrphanMemory
     global OrphanListChanged
+    global JRLog
 
-    done=None
-    while done!='locked':
-        done=orphanLock.Lock()
-        if done!='locked':
-            JRRsupport.ElasticSleep(1)
+    while orphanLock.Lock()!='locked':
+        JRRsupport.ElasticSleep(1)
+
     if os.path.exists(OrphanStorehouse):
         buffer=JRRsupport.ReadFile(OrphanStorehouse)
         if buffer!=None and buffer!='':
@@ -225,6 +211,9 @@ def ReadOrphanList():
 # Write only when there are changes.
 
 def WriteOrphanList():
+    global orphanLock
+    global OrphanList
+
     orphanLock.Lock()
     buffer=''
     cur=OrphanList.GetHead()
@@ -237,10 +226,11 @@ def WriteOrphanList():
 # Check the receiver file for new orders.
 
 def ReceiveOrphans():
-    global JRLog
+    global orphanLock
     global OrphanList
     global OrphanMemory
     global OrphanListChanged
+    global JRLog
 
     # The key is the time of payload and random ID
 
@@ -276,14 +266,16 @@ def ReceiveOrphans():
 ###
 
 def main():
-    global JRLog
+    global orphanLock
     global OrphanList
     global OrphanMemory
     global OrphanListChanged
+    global JRLog
 
     JRLog.Write('OliverTwist '+Version)
 
     # Establish the process pool to handle the orphans
+    multiprocessing.set_start_method("spawn")
     ProcessPool=multiprocessing.Pool(processes=multiprocessing.cpu_count()*2,maxtasksperchild=73)
 
     # Load saved orphans into memory
@@ -302,19 +294,28 @@ def main():
 
         orphanLock.Lock()
         sData=json.loads(OrphanMemory[data['Key']].Get())
-        status=sData['DataStore'].lower()
         orphanLock.Unlock()
+
+        if 'DataStore' in sData:
+            status=sData['DataStore'].lower()
+        else:
+            status=sData['Status'].lower()
 
         #if cur.GetPrev()==None:
         #    JRLog.Write(f"{data['Key']}: {sData}")
 
-        if status!='delete' \
-        or status=='done' \
-        or status=='notfound' \
-        or status=='notowner':
-            status='Waiting'
+        # This check must contain all possible expected values.
 
-        if status=='Delete':
+        if status!='delete':
+            if status=='done' \
+            or status=='notfound' \
+            or status=='notowner' \
+            or status=='waiting':
+                status='waiting'
+            else:
+                JRLog.Error("Corruption",f"{data['Key']}: {sData}")
+
+        if status=='delete':
 
             # This is the ONLY way to properly handle deletions that
             # won't risk trashing memory, as this part of the program is
@@ -340,9 +341,15 @@ def main():
 
             # Only run if not already running. It is possible for this state to
             # occur, especially if there are only a few orders to process or a
-            # veryfast broker.
+            # very fast broker.
 
-            if status=='Waiting':
+            # ID *MUST* be dynamic for security. Howver, the child process has
+            # to have it in order to access the data store. orphan lock and
+            # orphan memory IDs will be different.
+
+            if status=='waiting':
+                data['lID']=orphanLock.ID
+                data['mID']=OrphanMemory[data['Key']].ID
                 OrphanMemory[data['Key']].Put(OrphanTimeout,"Running")
                 ProcessPool.apply_async(ProcessOrphan,args=(data,),callback=OrphanUpdate)
 
@@ -362,4 +369,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
