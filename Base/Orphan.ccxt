@@ -30,6 +30,8 @@ def main():
         if cur['id']==id:
             rData={}
             rData['Key']=Orphan['Key']
+            rData['lID']=Orphan['lID']
+            rData['mID']=Orphan['mID']
             rData['Status']=cur['status']
             print(json.dumps(rData))
             sys.stdout.flush()
@@ -39,6 +41,8 @@ def main():
     # Order must be closed
     rData={}
     rData['Key']=Orphan['Key']
+    rData['lID']=Orphan['lID']
+    rData['mID']=Orphan['mID']
     rData['Status']='Delete'
     print(json.dumps(rData))
     sys.stdout.flush()
@@ -46,4 +50,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

@@ -26,10 +26,13 @@ import json
 
 class Locker:
     # Initialize the file name
-    def __init__(self,filename,Retry=7,Timeout=300,Log=None):
+    def __init__(self,filename,Retry=7,Timeout=300,Log=None,ID=None):
         self.ulResp=['badpayload','locked','unlocked','failure']
 
-        self.ID=self.GetID()
+        if ID==None:
+            self.ID=self.GetID()
+        else:
+            self.ID=ID
         self.filename=filename
         self.retryLimit=Retry
         self.timeout=Timeout

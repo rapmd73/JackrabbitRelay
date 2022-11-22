@@ -162,7 +162,7 @@ def ProcessPayload(data):
                 Locker[FileName]['DataStore']=None
                 return jsonStatus("Done")
             else:
-                return jsonStatus("Failure")
+                return jsonStatus("NotOwner")
             # Wrong key
         else:
             return jsonStatus("BadAction")
