@@ -654,4 +654,3 @@ class ccxtCrypto:
 
             if type(IsLog)==bool and IsLog==True:
                 self.Log.Write(f"Ledgered: {sbOrder['Exchange']}/{subOrder['Account']}:{id}",stdOut=False)
-
