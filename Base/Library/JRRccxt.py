@@ -580,10 +580,15 @@ class ccxtCrypto:
     # Get details of a specific order by ID
 
     def GetOrderDetails(self,**kwargs):
-        if self.Broker.has['fetchOrder']:
-            self.Results=self.API("fetchOrder",**kwargs)
+        if self.Broker.has['fetchClosedOrders']:
+            id=kwargs.get('id')
+            kwargs.pop('id',None)
+            self.Results=self.API("fetchClosedOrders",**kwargs)
+            for c in range(len(self.Results)):
+                if self.Results[c]['id']==id:
+                    self.Results=(self.Results[c])
         else:
-            self.Results=self.API("fetchClosedOrder",**kwargs)
+            self.Results=self.API("fetchOrder",**kwargs)
         return self.Results
 
     # Create an orphan order and deliver to OliverTwist
