@@ -1,0 +1,6 @@
+#!/bin/bash
+
+BaseDir="/home/JackrabbitRelay2/Base"
+
+kPids=`ps xaf | egrep "LauncherRelay|LauncherOliverTwist|LauncherLocker|JackrabbitRelay|JackrabbitOliverTwist|JackrabbitLocker" | grep -v StartJackrabbit | cut -b-8`
+kill -s 9 $kPids > /dev/null 2>&1
