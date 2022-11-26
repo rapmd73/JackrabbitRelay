@@ -290,6 +290,11 @@ def main():
         if cur==None:
             cur=OrphanList.GetHead()
 
+        if cur==None:
+            # Brief rest to maintain control over server
+            JRRsupport.ElasticSleep(1)
+            continue
+
         data=json.loads(cur.GetData())
 
         orphanLock.Lock()
