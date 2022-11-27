@@ -318,8 +318,9 @@ class ccxtCrypto:
         self.Results=self.API("fetch_open_orders",**kwargs)
         return self.Results
 
-    # Most brokers track individual trades, as well as the average. Cryptocurrency exchanges
-    # track only averages, but this is needed for conformity with the main Relay structure.
+    # Most brokers track individual trades, as well as the average.
+    # Cryptocurrency exchanges track only averages, but this is needed for
+    # conformity with the main Relay structure.
 
     def GetOpenTrades(self,**kwargs):
         return None
