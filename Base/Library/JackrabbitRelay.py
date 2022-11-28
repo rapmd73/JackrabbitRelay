@@ -97,7 +97,7 @@ class JackrabbitLog:
 class JackrabbitRelay:
     def __init__(self,framework=None,payload=None,secondary=None):
         # All the default locations
-        self.Version="0.0.0.1.1"
+        self.Version="0.0.0.1.2"
         self.BaseDirectory='/home/JackrabbitRelay2/Base'
         self.ConfigDirectory='/home/JackrabbitRelay2/Config'
         self.DataDirectory="/home/JackrabbitRelay2/Data"
@@ -214,8 +214,10 @@ class JackrabbitRelay:
 
             if self.Framework!='virtual':
                 self.Login()
-        else:
+        elif self.Payload!=None:
             self.JRLog.Error("Login","An exchange and an account must be provided")
+        else:
+            self.JRLog.Error("Commad line","An exchange and an account must be provided as the first and second command line parameters")
 
     def GetExchange(self):
         return self.Exchange

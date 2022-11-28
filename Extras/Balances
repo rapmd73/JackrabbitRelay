@@ -20,38 +20,35 @@ if relay.GetArgsLen() > 2:
     exchangeName=relay.GetExchange()
     account=relay.GetAccount()
 else:
-    print("An exchange and a (sub)account must be provided.")
+    print("An exchange and an account must be provided.")
     sys.exit(1)
 
-markets=relay.GetMarkets()
+markets=relay.Markets
 
 if relay.GetFramework()=='ccxt':
     balances=relay.GetBalance()
     if balances!=None:
         coinList=balances['free']
         for coin in coinList:
-#            The below line is the best approach for reading the complete list
-            bal=float(balances['free'][coin])
+            fre=float(balances['free'][coin])
+            tot=float(balances['total'][coin])
+            if fre>0.0 and tot>0.0:
+                print(f"{coin:20} {fre:16.8f} {tot:16.8f}")
 
-            # This is the worst way as it calls the exchange and refetches ALL
-            # assets EVERY time, but its a good testing format.
-
-#            bal=relay.GetBalance(Base=coin)
-            if bal>0.0:
-                print(f"{coin:20} {bal:16.8f}")
-
-        positions=relay.GetPositions()
-        if positions!=None:
-            for pos in positions:
-                #bal=float(pos['contracts'])
-                bal=relay.GetPositions(symbols=pos['symbol'])
-                if bal==None:
-                    bal=0.0
-                if bal!=0.0 and 'symbol' in pos:
-                    side=pos['side']
-                    if side==None:
-                        side='unkn'
-                    print(f"{pos['symbol']:20} {abs(bal):16.8f} {side:5}")
+        if 'MarketType' in relay.Active \
+        and relay.Active['MarketType'].lower()!='spot':
+            positions=relay.GetPositions()
+            if positions!=None:
+                for pos in positions:
+                    bal=float(pos['contracts'])
+                    if bal==None:
+                        bal=0.0
+                    if bal!=0.0 and 'symbol' in pos:
+                        val=float(pos['contractSize'])
+                        side=pos['side']
+                        if side==None:
+                            side='unkn'
+                        print(f"{pos['symbol']:20} {abs(bal):16.8f} {side:5} {val:16.8f}")
 elif relay.GetFramework()=='oanda':
     balance=relay.GetBalance()
     if balance!=None:
@@ -63,4 +60,3 @@ elif relay.GetFramework()=='oanda':
                 asset=pos['instrument'].replace('_','/')
                 bal=relay.GetPositions(symbol=asset)
                 print(f"{asset:12} {bal:16.8f}")
-
