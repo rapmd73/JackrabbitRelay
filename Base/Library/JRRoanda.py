@@ -231,12 +231,12 @@ class oanda:
 
         return oList
 
-    # As references in GetPosition, a position may consist ofone or more actual
+    # As references in GetPosition, a position may consist of one or more actual
     # trades. This is NOT the same as an open list of limit orders.
 
     def GetOpenTrades(self,**kwargs):
         symbol=kwargs.get('symbol').replace('/','_')
-        params={"instruments":symbol }
+        params={"instrument":symbol }
 
         req=v20Trades.TradesList(accountID=self.AccountID,params=params)
         self.Results=self.API("GetOpenTrades",request=req)
@@ -472,5 +472,3 @@ class oanda:
 
             if type(IsLog)==bool and IsLog==True:
                 self.Log.Write(f"Ledgered: {sbOrder['Exchange']}:{id}",stdOut=False)
-
-
