@@ -59,4 +59,8 @@ elif relay.GetFramework()=='oanda':
             for pos in positions:
                 asset=pos['instrument'].replace('_','/')
                 bal=relay.GetPositions(symbol=asset)
-                print(f"{asset:12} {bal:16.8f}")
+                if bal>=0:
+                    side='long'
+                else:
+                    side='short'
+                print(f"{asset:12} {abs(bal):16.8f} {side}")

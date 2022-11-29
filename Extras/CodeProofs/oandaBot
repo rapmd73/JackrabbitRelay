@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+
+import JackrabbitRelay as JRR
+import JRRsupport
+
+###
+### Main code base. Place order on exchange
+###
+
+relay=JRR.JackrabbitRelay()
+if relay.GetArgsLen() > 3:
+    exchangeName=relay.GetExchange()
+    account=relay.GetAccount()
+    asset=relay.GetAsset()
+else:
+    print("An exchange, (sub)account, and an asset must be provided.")
+    sys.exit(1)
+
+count=3650
+
+# 30 pips = ~0.3%
+
+#pipStep=0.0010
+pipStep=0.0001
+
+markets=relay.Markets
+
+ticker=relay.GetTicker(symbol=asset)
+buy=ticker['Bid']-pipStep
+sell=ticker['Bid']+pipStep
+op=ticker['Bid']
+
+lotSize=1
+print(f"** Long - Buy {lotSize}")
+lotTotal=lotSize
+while True:
+    ticker=relay.GetTicker(symbol=asset)
+    pips=round((ticker['Bid']-op)*10000,4)
+
+    if ticker['Bid']>sell:
+        buy+=pipStep
+        sell+=pipStep
+        lotTotal-=lotSize
+        if lotTotal<0:
+            lotTotal=0
+        print(f"{' '*60",end='\r'}
+        print(f"** Long - Sell {lotSize}/{lotTotal}, Buy 1")
+        if lotSize>1:
+            lotSize-=1
+    elif ticker['Bid']<buy:
+        buy-=pipStep
+        sell-=pipStep
+        lotSize+=1
+        lotTotal+=lotSize
+        print(f"{' '*60",end='\r'}
+        print(f"** Long - Buy {lotSize}/{lotTotal}")
+    else:
+        pb=round(((ticker['Bid']-buy)*10000),4)
+        ps=round(((sell-ticker['Bid'])*10000),4)
+        print(f"{buy:7.5f}({pb:5.1f}) {ticker['Bid']:7.5f}({pips:5.1f}) {sell:7.5f}({ps:5.1f})",end='\r')
+
+    op=ticker['Bid']
+    JRRsupport.ElasticSleep(5)
+
+

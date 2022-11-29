@@ -16,21 +16,20 @@ relay=JRR.JackrabbitRelay()
 if relay.GetArgsLen() > 3:
     exchangeName=relay.GetExchange()
     account=relay.GetAccount()
-    pair=relay.GetAsset()
-    oid=relay.GetArgs(4)
+    asset=relay.GetAsset()
 else:
-    print("An exchange, (sub)account, an asset, and an order ID must be provided.")
+    print("An exchange, (sub)account, and an asset must be provided.")
     sys.exit(1)
 
 markets=relay.Markets
 
-if relay.Framework=='oanda':
-    oo=relay.GetOrderDetails(OrderID=oid)
-    if oo!=None:
-        for o in oo:
-            print(f'{o}\n')
+oo=relay.GetOpenTrades(symbol=asset)
+
+for o in oo:
+    iu=int(o['currentUnits'])
+    price=float(o['price'])
+    if iu>=0:
+        side='Long'
     else:
-        print("Order is still pending or is incomplete")
-elif relay.Framework=='ccxt':
-    oo=relay.GetOrderDetails(id=oid,symbol=pair)
-    print(json.dumps(oo,indent=2))
+        side='Shrt'
+    print(f"{o['instrument']:10} {o['id']} {side:4} {o['state']:7} {iu:16.8f} {price:16.8f}")
