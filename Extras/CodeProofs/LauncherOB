@@ -1,0 +1,9 @@
+#!/bin/bash
+
+cd /home/GitHub/JackrabbitRelay/Extras/CodeProofs
+
+while true ; do
+    /home/GitHub/JackrabbitRelay/Extras/CodeProofs/oandaBot $@
+    sleep 180
+done
+
