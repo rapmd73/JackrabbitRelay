@@ -290,7 +290,10 @@ class oanda:
 
             if 'orderCreateTransaction' in self.Results:
                 self.Log.Write("|- Order Confirmation ID: "+self.Results['orderCreateTransaction']['id'])
-
+            elif 'longOrderCreateTransaction' in self.Results:
+                self.Log.Write("|- Order Confirmation ID: "+self.Results['longOrderCreateTransaction']['id'])
+            elif 'shortOrderCreateTransaction' in self.Results:
+                self.Log.Write("|- Order Confirmation ID: "+self.Results['shortOrderCreateTransaction']['id'])
         elif (action=='sell'):
             params={}
             if ticket==None:
@@ -309,7 +312,9 @@ class oanda:
                 res=v20Positions.PositionClose(accountID=self.AccountID,instrument=pair,data=params)
                 self.Results=self.API("PositionClose",request=res)
 
-                if 'longOrderCreateTransaction' in self.Results or 'orderCreateTransaction' in self.Results:
+                if 'orderCreateTransaction' in self.Results:
+                    self.Log.Write("|- Order Confirmation ID: "+self.Results['orderCreateTransaction']['id'])
+                elif 'longOrderCreateTransaction' in self.Results:
                     self.Log.Write("|- Order Confirmation ID: "+self.Results['longOrderCreateTransaction']['id'])
                 elif 'shortOrderCreateTransaction' in self.Results:
                     self.Log.Write("|- Order Confirmation ID: "+self.Results['shortOrderCreateTransaction']['id'])
@@ -326,8 +331,10 @@ class oanda:
                         params['longUnits']="ALL"
                 res=v20Trades.TradeClose(accountID=self.AccountID,tradeID=ticket,data=params)
                 self.Results=self.API("TradeClose",request=res)
-`
-                if 'longOrderCreateTransaction' in self.Results or 'orderCreateTransaction' in self.Results:
+
+                if 'orderCreateTransaction' in self.Results:
+                    self.Log.Write("|- Order Confirmation ID: "+self.Results['orderCreateTransaction']['id'])
+                elif 'longOrderCreateTransaction' in self.Results:
                     self.Log.Write("|- Order Confirmation ID: "+self.Results['longOrderCreateTransaction']['id'])
                 elif 'shortOrderCreateTransaction' in self.Results:
                     self.Log.Write("|- Order Confirmation ID: "+self.Results['shortOrderCreateTransaction']['id'])
