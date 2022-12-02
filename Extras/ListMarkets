@@ -56,7 +56,7 @@ def main():
             marketType=relay.Markets[pair]['type']
             print(f"{pair:30} {marketType:8} {ticker['Ask']:18.8f} {ticker['Spread']:18.8f} {ticker['Bid']:18.8f}")
         elif relay.Framework=='oanda':
-            print(f"{pair:30} {ticker['Ask']:18.8f} {ticker['Spread']:18.8f} {ticker['Bid']:18.8f}")
+            print(f"{pair:30} {ticker['Ask']:9.5f} {ticker['Spread']:9.5f} {ticker['Bid']:9.5f}")
         else:
             print("Unrecognized framework")
             sys.exit(0)
