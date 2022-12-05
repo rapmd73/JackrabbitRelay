@@ -122,7 +122,12 @@ def OrphanUpdate(result):
         # At this stage, rData should NEVER be None or undefined. If it is, then
         # memory was thrashed.
 
-        rData=json.loads(result)
+        try:
+            rData=json.loads(result)
+        except:
+            JRLog.Write(f"OrphanUpdate ERROR: {result}",stdOut=False)
+            return
+
         orphanLock=JRRsupport.Locker("OliverTwist",ID=rData['lID'])
         OrphanMemory=JRRsupport.Locker(rData['Key'],ID=rData['mID'])
         orphanLock.Lock()
