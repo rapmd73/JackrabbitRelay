@@ -105,6 +105,7 @@ class JackrabbitRelay:
         self.ChartsDirectory='/home/JackrabbitRelay2/Statistics/Charts'
         self.LedgerDirectory="/home/JackrabbitRelay2/Ledger"
         self.StatisticsDirectory='/home/JackrabbitRelay2/Extras/Statistics'
+        self.Identity=None
 
         self.NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
 
@@ -178,6 +179,10 @@ class JackrabbitRelay:
         # OANDA.
 
         self.ForceRotateKeys=True
+
+        # Read global identty
+
+        self.ReadGlobalIdentity()
 
         # Process command line. Must be first function called
 
@@ -289,6 +294,20 @@ class JackrabbitRelay:
 
     def GetArgs(self,x):
         return self.args[x]
+
+    # Read global Identity
+
+    def ReadGlobalIdentity(self):
+        idf=self.ConfigDirectory+'/Identity.cfg'
+        if os.path.exists(idf):
+            cf=open(idf,'rt+')
+            try:
+                self.Identity=json.loads(cf.readline())
+            except:
+                self.JRLog.Error("Reading Configuration",'identity damaged')
+            cf.close()
+        else:
+            self.JRLog.Error("Reading Configuration",'Identity.cfg not found')
 
     # Webhook processing. This unified layer will communicate with Relay for
     # placing the order and return the results.
@@ -446,18 +465,6 @@ class JackrabbitRelay:
         if self.Account==None or self.Account.lower()=="none":
             return
 
-        idl=None
-        idf=self.ConfigDirectory+'/Identity.cfg'
-        if os.path.exists(idf):
-            cf=open(idf,'rt+')
-            try:
-                idl=json.loads(cf.readline())
-            except:
-                self.JRLog.Error("Reading Configuration",'identity damaged')
-            cf.close()
-        else:
-            self.JRLog.Error("Reading Configuration",'Identity.cfg not found')
-
         fn=self.ConfigDirectory+'/'+self.Exchange+'.cfg'
         if os.path.exists(fn):
             cf=open(fn,'rt+')
@@ -476,10 +483,8 @@ class JackrabbitRelay:
 
                         # Add the hooks for the logging process.
 
-                        if idl!=None and 'Identity' not in key:
-                            key={ **idl, **key, **logProcess }
-                        else:
-                            key={ **key, **logProcess }
+                        if 'Identity' not in key:
+                            key={ **key, **self.Identity, **logProcess }
                         self.Keys.append(key)
                 cf.close()
 

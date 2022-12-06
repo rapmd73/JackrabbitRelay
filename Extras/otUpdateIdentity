@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit OliverTwist identity update process
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+# If you change your identity, it WILL break any existing limit orers being watched by Oliver
+# Twist. All of these identies will have to be updated in place.
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import time
+import json
+import random
+import multiprocessing
+import subprocess
+
+import JRRsupport
+import JackrabbitRelay as JRR
+
+Version="0.0.0.1.0"
+BaseDirectory='/home/JackrabbitRelay2/Base'
+DataDirectory='/home/JackrabbitRelay2/Data'
+ConfigDirectory='/home/JackrabbitRelay2/Config'
+LogDirectory="/home/JackrabbitRelay2/Logs"
+
+OrphanReceiver=DataDirectory+'/OliverTwist.Receiver'
+OrphanStorehouse=DataDirectory+'/OliverTwist.Storehouse'
+
+# Set up the logging system
+
+JRLog=JRR.JackrabbitLog()
+
+# Compare orphan IDs
+
+def compareOrphan(node,dz):
+    nData=node.GetData()
+
+    d2=json.loads(nData)['Key']
+    d1=json.loads(dz)['Key']
+
+    if d1<d2:
+        r=-1
+    elif d1>d2:
+        r=1
+    else:
+        r=0
+
+    return r
+
+# The list of orphaned orders to track and manage. Must be global, but after
+# compare function declared.
+
+OrphanList=JRRsupport.DList(Compare=compareOrphan)
+
+# Read the complete list stored on disk, if it exists
+
+def ReadOrphanList():
+    global OrphanList
+    global JRLog
+
+    if os.path.exists(OrphanStorehouse):
+        buffer=JRRsupport.ReadFile(OrphanStorehouse)
+        if buffer!=None and buffer!='':
+            Orphans=buffer.split('\n')
+            for Entry in Orphans:
+                Entry=Entry.strip()
+                if Entry=='':
+                    continue
+                # Break down entry and set up memory locker
+                Orphan=json.loads(Entry)
+
+                OrphanList.insert(json.dumps(Orphan))
+
+# Write only when there are changes.
+
+def WriteOrphanList():
+    global OrphanList
+
+    buffer=''
+    cur=OrphanList.GetHead()
+    while cur!=None:
+        buffer+=cur.GetData()+'\n'
+        cur=cur.GetNext()
+    JRRsupport.WriteFile(OrphanStorehouse,buffer)
+
+# Read global Identity
+
+def ReadIdentity():
+    global JRLog
+
+    idl=None
+    idf=ConfigDirectory+'/Identity.cfg'
+    if os.path.exists(idf):
+        cf=open(idf,'rt+')
+        try:
+            idl=json.loads(cf.readline())
+        except:
+            JRLog.Error("Reading Configuration",'identity damaged')
+        cf.close()
+    else:
+        JRLog.Error("Reading Configuration",'Identity.cfg not found')
+    return idl
+
+###
+### Main driver
+###
+
+def main():
+    global OrphanList
+    global JRLog
+
+    identity=ReadIdentity()
+
+    # Load saved orphans into memory
+    ReadOrphanList()
+
+    cur=OrphanList.GetHead()
+    while cur!=None:
+        data=json.loads(cur.GetData())
+
+        Order=json.loads(data['Order'])
+        Order['Identity']=identity['Identity']
+        data['Order']=json.dumps(Order)
+
+        cur.SetData(json.dumps(data))
+
+        cur=cur.GetNext()
+
+    WriteOrphanList()
+
+if __name__ == '__main__':
+    main()
