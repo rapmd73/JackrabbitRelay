@@ -14,7 +14,7 @@ from datetime import datetime
 import subprocess
 import json
 
-Version="0.0.0.1.0"
+Version="0.0.0.1.15"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
 LogDirectory="/home/JackrabbitRelay2/Logs"
@@ -105,6 +105,7 @@ def ProcessTrade(addr,payload):
     except:
         trades=None
         WriteLog(addr,"Damaged payload: "+str(payload))
+        return res
 
     if trades!=None:
         if type(trades)==dict:
@@ -114,7 +115,9 @@ def ProcessTrade(addr,payload):
                 res+=str(ProcessSingleTrade(addr,trade))
         else:
             trades=None
-            WriteLog(addr,"Unreconized payload type: "+str(payload))
+            t=type(payload)
+            p=str(payload)
+            WriteLog(addr,f"Unrecognized payload type: {t}/{p}")
             return res
 
     if type(res)!=bytes:

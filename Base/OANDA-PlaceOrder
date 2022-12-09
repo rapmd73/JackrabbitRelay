@@ -234,6 +234,8 @@ def main():
     relay.JRLog.Write("Placing Order")
     relay.JRLog.Write(f"|- Asset: {relay.Order['Asset']}")
     relay.JRLog.Write(f"|- Action: {relay.Order['Action']}")
+    if 'Ticket' in relay.Order:
+        relay.JRLog.Write(f"|- Ticket: {relay.Order['Ticket']}")
     if type(amount)==int:
         relay.JRLog.Write(f"|- Units: {abs(amount):.8f} {dir}")
     else:
@@ -246,6 +248,9 @@ def main():
         lNote=None
         if 'LedgerNote' in relay.Order:
             lNote=relay.Order['LedgerNote']
+        ticket=None
+        if 'Ticket' in relay.Order:
+            ticket=relay.Order['Ticket']
 
         # Make sure short close is clearly marked negative for ALL
         if pBalance<0 and type(amount)==str and amount.upper()=='ALL':
@@ -256,6 +261,7 @@ def main():
             action=relay.Order['Action'], \
             amount=amount, \
             price=price, \
+            ticket=ticket, \
             ReduceOnly=False, \
             LedgerNote=lNote)
 

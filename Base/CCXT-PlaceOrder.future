@@ -185,7 +185,7 @@ def main():
     # Quick sanity check to optimize preformance
 
     if quote=='USD' and hasQuote:
-        hBase=False
+        hasBase=False
         hasQuote=False
         hasUSD=True
 
