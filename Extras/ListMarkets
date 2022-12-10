@@ -54,6 +54,8 @@ def main():
 
         if relay.Framework=='ccxt':
             marketType=relay.Markets[pair]['type']
+            if 'margin' in relay.Markets[pair] and relay.Markets[pair]:
+                marketType+='/margin'
             id=relay.Markets[pair]['id']
             print(f"{pair:30} {id:30} {marketType:8} {ticker['Ask']:18.8f} {ticker['Spread']:18.8f} {ticker['Bid']:18.8f}")
         elif relay.Framework=='oanda':
