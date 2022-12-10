@@ -1,0 +1,359 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# CCXT PlaceOrder - Cryptocurrency margin based markets
+
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+# Even though every framework can be tested in a single PlaceOrder process, its
+# simply too overbloated and unneccessarily complicated. The server core already
+# allows and perfers each exchange to have is own tailored PlaceOrder
+# functionality. Each PlaceOrder should be optimized according to these benifits
+# and should be considered time/mission critical.
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import json
+
+import JRRsupport
+import JackrabbitRelay as JRR
+
+# Figure out the PCT type. Needs to identify %B and B%, %Q and Q%
+# Default is previous functionality
+
+def GetPCTtype(currency):
+    c=currency.lower().replace(' ','')
+    if 'b%' in c or '%b' in c:
+        vs=c.replace('b%','').replace('%b','').strip()
+        PCTtype='B'
+        pct=float(vs)
+    elif 'q%' in c or '%q' in c:
+        vs=c.replace('q%','').replace('%q','').strip()
+        PCTtype='Q'
+        pct=float(vs)
+    else:
+        vs=c.replace('%','').strip()
+        PCTtype='B'
+        pct=float(vs)
+    return pct,PCTtype
+
+def GetPCTvalue(pct,close,bal):
+    volume=round(((pct/100)*bal),8)
+    amount=round(volume/close,8)
+
+    return amount,volume
+
+def GetPCTamount(relay,currency,quote,close):
+    fn=relay.DataDirectory+'/'+relay.Exchange+'.'+relay.Account+'.PCTtable'
+    PCTtable=JRRsupport.TimedList("PCTtable",fn,Log=relay.JRLog)
+    if relay.Order['Action']=='close':
+        expire=0
+    else:
+        expire=(3650*86400)
+
+    if "OverridePCTtable" not in relay.Active and "OverridePCTtable" not in relay.Order:
+        bal=relay.GetBalance(Base=quote)
+        pct,PCTtype=GetPCTtype(relay.Order[currency])
+        amount,volume=GetPCTvalue(pct,close,bal)
+
+        pctData={}
+        pctData['PCT']=pct
+        pctData['Type']=PCTtype
+        pctData['Volume']=volume
+        pctData['Amount']=amount
+        results=PCTtable.update(relay.Order['Asset'],json.dumps(pctData),expire)
+
+        # This is needed sd results is a NESTED dictionary, with the outer layer
+        # being from the timedList structure.
+
+        payload=json.loads(results['Payload']['Payload'],strict=False)
+        amount=payload['Amount']
+    else:
+        bal=relay.GetBalance(Base=quote)
+        amount=round(((float(relay.Order[currency].replace('%',''))/100)*bal)/close,8)
+    return amount
+
+###
+### Main code base. Place order on exchange
+###
+
+def main():
+    relay=JRR.JackrabbitRelay(None,sys.stdin.read())
+
+    # If we made it this far, give our header
+
+    relay.JRLog.Write('PlaceOrder MARGIN '+relay.Version)
+
+    # Now lets get down to business. The processed order is in:
+    #    relay.Order
+
+    relay.JRLog.Write('Order parsed')
+    for detail in relay.Order:
+        # Do NOT display identity
+        if detail=='Identity':
+            continue
+        relay.JRLog.Write(f'|- {detail}: {relay.Order[detail]}')
+
+    # Check to see if we need to remap a tradingview symbol to The Exchange
+    # symbol. Remapping must take place before market verification.
+
+    if "RemapSymbol" in relay.Active or "RemapSymbol" in relay.Order:
+        relay.TradingViewRemap()
+
+    # Verify market
+
+    # This may become a problem in the future as exchanges begin to ignore
+    # market type or provide incomplete/wrong information. One possible way of
+    # dealing with this is to add an overide that ignores market type
+    # verification. This issue only exists in the cryptocurrency markets.
+
+    if relay.Order['Asset'] not in relay.Markets:
+        relay.JRLog.Error(relay.Exchange, f"{relay.Order['Asset']}: Not a valid asset on this exchange")
+
+    marketType="spot"
+    if "type" in relay.Markets[relay.Order['Asset']]:
+        marketType=relay.Markets[relay.Order['Asset']]['type'].lower()
+    else:
+        if "permissions" in relay.Markets[relay.Order['Asset']]['info']:
+            marketType=' '.join(relay.Markets[relay.Order['Asset']]['info']['permissions']).lower()
+
+    if relay.Order['Market'] not in marketType:
+        relay.JRLog.Error(relay.Exchange, f"wrong market type: {relay.Order['Market']}, asset is {marketType}")
+
+    # Check for order type override
+
+    if "OrderTypeOverride" in relay.Active:
+        relay.Order['OrderType']=relay.Active['OrderTypeOverride'].lower()
+
+    ticker=relay.GetTicker(symbol=relay.Order['Asset'])
+
+    # Check the spreads
+
+    if 'Spread' in relay.Active:
+        if ticker['Spread']>=float(relay.Active['Spread']):
+            s=f"too large, {spread:.8f} > {relay.Active['Spread']:.8f}"
+            relay.JRLog.Error("Spread", s)
+
+    if 'Spread' in relay.Order:
+        if ticker['Spread']>=float(relay.Order['Spread']):
+            s=f"too large, {spread:.8f} > {relay.Order['Spread']:.8f}"
+            relay.JRLog.Error("Spread", s)
+
+    # Check for maximum allowed assets
+
+    if not "OverrideMaxAssets" in relay.Order:
+        if "MaxAssets" in relay.Active:
+            fn=relay.DataDirectory+'/'+relay.Exchange+'.'+relay.Account+'.MaxAssets'
+            maxAssetsList=JRRsupport.TimedList("MaxAssets",fn,maxsize=int(relay.Active['MaxAssets']),Log=relay.JRLog)
+            if relay.Order['Action']=='close':
+                expire=0
+            else:
+                expire=(7*86400)
+            results=maxAssetsList.update(relay.Order['Asset'],json.dumps(relay.Order),expire)
+            if results['Status']=='ErrorLimit' and relay.Order['Action']=='buy':
+                relay.JRLog.Error("MaxAssets","maximum limit exceeded")
+
+    # Check for reduce only in active config. This is a argin/futures only setting.
+
+    ReduceOnly=False
+    if "ReduceOnly" in relay.Active:
+        ReduceOnly=True
+
+    # Get Minimum allowed amount (units) and cost
+
+    isMinimum=False
+    minimum,mincost=relay.GetMinimum(symbol=relay.Order['Asset'])
+
+    # Handle various currencies and verifications
+
+    base=relay.Markets[relay.Order['Asset']]['base'].upper()
+    quote=relay.Markets[relay.Order['Asset']]['quote'].upper()
+
+    hasUSD=False
+    hasBase=False
+    hasQuote=False
+
+    # Begin breaking down different components of the order
+
+    if "USD" in relay.Order:
+        hasUSD=True
+
+    if "Base" in relay.Order:
+        hasBase=True
+
+    if "Quote" in relay.Order:
+        hasQuote=True
+
+    # Quick sanity check to optimize preformance
+
+    if quote=='USD' and hasQuote:
+        hasBase=False
+        hasQuote=False
+        hasUSD=True
+
+    # Verify only one currency type for the amount.
+
+    if (hasUSD and hasBase) or (hasUSD and hasQuote) or (hasQuote and hasBase):
+        relay.JRLog.Error("Quote validation","USD, Base, or Quote can be present, NOT a combination of two or more.")
+
+    price=ticker['Ask']
+
+    # No amount method so using exchange minimum
+    if (not hasUSD and not hasBase and not hasQuote):
+        isMinimum=True
+        amount=minimum
+        relay.JRLog.Write('Using minimum position amount/price')
+        relay.JRLog.Write(f'|- Minimum Amount: {minimum:.8f}')
+        relay.JRLog.Write(f'|- Minimum Cost:   {mincost:.8f}')
+    else:
+        # Figure out percentages. AMOUNT or VOLUME to buy/sell
+
+        if not isMinimum:
+            if hasUSD:
+                if '%' in relay.Order['USD']:
+                    amount=GetPCTamount(relay,'USD',quote,price)
+                else:
+                    amount=round(float(relay.Order['USD'])/price,8)
+            elif hasQuote:
+                if '%' in relay.Order['Quote']:
+                    amount=GetPCTamount(relay,'Quote',quote,price)
+                else:
+                    amount=round(float(relay.Order['Quote'])/price,8)
+            else: # hasBase
+                if '%' in relay.Order['Base']:
+                    amount=GetPCTamount(relay,'Base',base,price)
+                else:
+                    amount=round(float(relay.Order['Base']),8)
+
+            # Make sure minimum is enforced.
+            # KuCoin sub accounts do NOT verify or report correctly on this.
+            if abs(amount)<minimum:
+                amount=minimum
+
+    # Figure limit order pricing, minimum cost is ignored as limit orders can be
+    # anything.
+
+    if 'limit' in relay.Order['OrderType']:
+        if 'Price' in relay.Order:
+            o=relay.Order['Price'].lower()
+            if o=='bid':
+                price=round(float(ticker['Bid']),8)
+            elif o=='ask':
+                price=round(float(ticker['Ask']),8)
+            else:
+                price=round(float(relay.Order['Price']),8)
+        else:
+            price=round(ticker['Ask'],8)
+
+    # Get Previous Balance
+
+    # Should follow Version 1 and separate spot/future market to individual
+    # PlaceOrder programs. Shorts will be negative
+
+    pBalance=relay.GetPositions(symbols=[relay.Order['Asset']])
+    relay.JRLog.Write(f"Previous Balance: {abs(pBalance):.8f} {base}")
+
+    # Check if we close on sell
+
+    if ("CloseOnSell" in relay.Active or "CloseOnSell" in relay.Order) and relay.Order['Action']=='sell':
+        relay.Order['Action']='close'
+
+    # If the amount is less then the minimum and action is to close. Sell opens
+    # a short position.
+
+    if (abs(pBalance)<minimum or abs(pBalance*price)<mincost) \
+    and relay.Order['Action']=='close':
+        relay.JRLog.Error(relay.Exchange, "not enough to close position")
+
+    # Closing the position, with futures, we need to figure out the current
+    # direction and place an order opposite to it.
+
+    if relay.Order['Action']=='close':
+        if pBalance>0:    # Long Position
+            relay.Order['Action']='sell'
+        elif pBalance<0:  # Short Position
+            relay.Order['Action']='buy'
+        relay.JRLog.Write(f"Forcing direction to {relay.Order['Action']}")
+        amount=abs(pBalance)
+
+    # Check for reduction
+
+    if "Reduction" in relay.Active and relay.Order['Action']!="buy" and amount>=pBalance:
+        pct=float(relay.Active['Reduction'])/100
+        r=round((amount*pct),8)
+        relay.JRLog.Write("Reduction: "+str(r))
+        amount-=r
+    elif "Reduction" in relay.Order and relay.Order['Action']!="buy" and amount>=pBalance:
+        pct=float(relay.Order['Reduction'])/100
+        r=round((amount*pct),8)
+        relay.JRLog.Write("Reduction: "+str(r))
+        amount-=r
+
+    # Determine trade action and carry it out
+
+    total=round(amount*price,8)
+    relay.JRLog.Write("Placing Order")
+    relay.JRLog.Write(f"|- Asset: {relay.Order['Asset']}")
+    relay.JRLog.Write(f"|- Action: {relay.Order['Action']}")
+    relay.JRLog.Write(f"|- Contracts: {amount:.8f}")
+    relay.JRLog.Write(f"|- Price: {price:.8f}")
+    relay.JRLog.Write(f"|- Total: {total:.8f}")
+
+    # Set leverage
+
+    try:
+        if "set_leverage" in relay.Broker and "Leverage" in relay.Order:
+            relay.Broker.set_leverage(relay.Order['Leverage'],relay.Order['Asset'])
+            relay.JRLog.Write("|- Leverage: "+Order['Leverage'])
+    except:
+        pass
+
+    # Set margin
+
+    try: # Isolated or Crossed
+        if "set_margin_mode" in relay.Broker and "Margin" in relay.Order:
+            relay.Broker.set_margin_mode(relay.Order['Asset'],relay.Order['Margin'].upper())
+            relay.JRLog.Write("|- Margin: "+Order['Margin'])
+    except:
+        pass
+
+    if relay.Order['Action']=='close':
+        relay.Order['Action']='sell'
+    elif relay.Order['Action']=='long':
+        relay.Order['Action']='buy'
+    elif relay.Order['Action']=='short':
+        relay.Order['Action']='sell'
+
+    if amount>0:
+        lNote=None
+        if 'LedgerNote' in relay.Order:
+            lNote=relay.Order['LedgerNote']
+
+        order=relay.PlaceOrder(pair=relay.Order['Asset'], \
+            orderType=relay.Order['OrderType'], \
+            action=relay.Order['Action'], \
+            amount=amount, \
+            price=price, \
+            ReduceOnly=ReduceOnly, \
+            LedgerNote=lNote)
+
+        nBalance=relay.GetPositions(symbols=[relay.Order['Asset']])
+        relay.JRLog.Write(f"New Balance: {abs(nBalance):.8f} {base}")
+
+        if "Orphan" in relay.Active or "Orphan" in relay.Order \
+        and 'limit' in relay.Order['OrderType']:
+            relay.MakeOrphanOrder(order['id'],relay.Order)
+        elif 'market' in relay.Order['OrderType']:
+            relay.WriteLedger(Order=relay.Order,Response=order)
+    else: # logic fault, should never happen
+        relay.JRLog.Error(relay.Exchange, "can not buy/sell nothing")
+
+    # Close out the program with the elapsed time it ran
+
+    relay.JRLog.Elapsed()
+
+if __name__ == '__main__':
+    main()

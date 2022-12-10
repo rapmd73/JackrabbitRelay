@@ -10,6 +10,7 @@ cd $BaseDir
 
 fnSpot="CCXT-PlaceOrder.spot"
 fnFuture="CCXT-PlaceOrder.future"
+fnMargin="CCXT-PlaceOrder.margin"
 
 echo Updating / replacing PlaceOrder DSR
 cp $GitHubBase"/DSR-PlaceOrder" $BaseDir"/PlaceOrder.dsr"
@@ -27,10 +28,14 @@ if [ "x$1" != "x" ] ; then
   echo Updating / replacing PlaceOrder future
   cp $GitHubBase"/"$fnFuture $BaseDir"/"$fnFuture
 
+  echo Updating / replacing PlaceOrder margin
+  cp $GitHubBase"/"$fnMargin $BaseDir"/"$fnMargin
+
   for i in $@ ; do
       exchange=$1
-      echo Updating / replacing PlaceOrder.$exchange spot/future
+      echo Updating / replacing PlaceOrder.$exchange spot/future/margin
       cp $GitHubBase"/"$fnSpot PlaceOrder.$exchange.spot
+      cp $GitHubBase"/"$fnMargin PlaceOrder.$exchange.margin
       cp $GitHubBase"/"$fnFuture PlaceOrder.$exchange.future
       shift
   done
