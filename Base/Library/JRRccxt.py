@@ -80,6 +80,23 @@ class ccxtCrypto:
             x=str(e)
             self.Log.Error(function,JRRsupport.StopHTMLtags(x))
 
+        # Check for margin type and isolate certain functions specific to requiring a params
+        # type to be passed in as defaultType isn't enough.
+
+        marginType=['fetch_balance','create_order','fetch_positions','load_markets', \
+            'cancel_all_orders','fetch_orders_by_status','fetch_closed_orders','fetch_open_orders']
+
+        if 'defaultType' in self.Broker.options and self.Broker.options['defaultType']=='margin' \
+        and function in marginType:
+            params=kwargs.get('params')
+            if function=='fetch_balance':
+                if params!=None and 'type' not in params:
+                    params['type']='margin'
+            else:
+                if params!=None and 'tradeType' not in params:
+                    params['tradeType']='MARGIN_TRADE'
+            kwargs.update(params=params)
+
         # For kucoin only, 429000 errors are a mess. Not the best way to manage
         # them, but the onle way I know of currently to prevent losses.
 
