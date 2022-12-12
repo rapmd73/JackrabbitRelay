@@ -8,6 +8,7 @@
 import sys
 sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
 import os
+import json
 
 import JackrabbitRelay as JRR
 
@@ -27,6 +28,7 @@ markets=relay.Markets
 
 if relay.GetFramework()=='ccxt':
     balances=relay.GetBalance()
+    print(json.dumps(balances,indent=2))
     if balances!=None:
         coinList=balances['free']
         for coin in coinList:

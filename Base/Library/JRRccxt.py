@@ -92,6 +92,8 @@ class ccxtCrypto:
             if function=='fetch_balance':
                 if params!=None and 'type' not in params:
                     params['type']='margin'
+                if params!=None and 'marginMode' not in params:
+                    params['marginMode']='cross'
             else:
                 if params!=None and 'tradeType' not in params:
                     params['tradeType']='MARGIN_TRADE'
