@@ -13,7 +13,11 @@ API=os.environ["API"]
 SECRET=os.environ["SECRET"]
 PASS=os.environ["PASS"]
 
-exchange=apiKucoin.Broker(API=API,SECRET=SECRET,Passphrase=PASS,Sandbox=False)
+sb=False
+if len(sys.argv)>1:
+    sb=True
+
+exchange=apiKucoin.Broker(API=API,SECRET=SECRET,Passphrase=PASS,Sandbox=sb)
 
 #print(json.dumps(exchange.apiGetV1SubUser(),indent=2),'\n')
 #print(json.dumps(exchange.apiGetV2SubUser(),indent=2),'\n')
@@ -24,4 +28,6 @@ exchange=apiKucoin.Broker(API=API,SECRET=SECRET,Passphrase=PASS,Sandbox=False)
 #id=exchange.apiGetV1Accounts()[0]['id']
 #print(json.dumps(exchange.apiGetV1AccountsID(acctID=id),indent=2),'\n')
 
-print(json.dumps(exchange.apiGetV1AccountsLedgers(endAt=time.time()),indent=2),'\n')
+#print(json.dumps(exchange.apiGetV1AccountsLedgers(endAt=time.time()),indent=2),'\n')
+#print(json.dumps(exchange.apiGetV1UserInfo(),indent=2),'\n')
+#print(json.dumps(exchange.apiPostV1SubUser(subName="JackrabbitTest1",password="fuzzy3wuzzy7fluffy2pants",remarks="Test"),indent=2),'\n')
