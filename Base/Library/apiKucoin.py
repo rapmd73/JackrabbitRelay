@@ -141,6 +141,19 @@ class Broker:
         else:
             raise Exception(f"{response.status_code}-{response.text}")
 
+    # Validate pagenation
+
+    def ValidatePagenation(self,currentPage,pageSize):
+        if currentPage==None or currentPage<1:
+            currentPage=1
+
+        if pageSize==None or pageSize<10:
+            pageSize=10
+        elif pageSize>100:
+            pageSize=100
+
+        return currentPage,pageSize
+
     ###
     ### Actual API functionality
     ###
@@ -162,13 +175,7 @@ class Broker:
     def apiGetV2SubUser(self,currentPage=None,pageSize=None):
         params={}
 
-        if currentPage==None or currentPage<1:
-            currentPage=1
-
-        if pageSize==None or pageSize>100:
-            pageSize=100
-        elif pageSize<1:
-            pageSize=1
+        currentPage,pageSize=self.ValidatePagenation(currentPage,pageSize)
 
         params['currentPage']=currentPage
         params['pageSize']=pageSize
@@ -181,7 +188,7 @@ class Broker:
     # Please deposit funds to the main account firstly, then transfer the funds to the
     # trade account via [345]Inner Transfer before transaction.
 
-    def apiGetV1Accounts(self, accountType=None):
+    def apiGetV1Accounts(self,accountType=None):
         atypes=['main','trade','margin']
 
         params={}
@@ -198,7 +205,9 @@ class Broker:
 
     # Get an Account by ID
 
-    def apiGetV1AccountsID(self, acctID=None):
+    # Information for a single account. Use this endpoint when you know the accountId.
+
+    def apiGetV1AccountsID(self,acctID=None):
         if acctID==None:
             raise Exception("GetV1AccountsID: account ID required")
 
@@ -206,188 +215,47 @@ class Broker:
         self.Results=self.callAPI(method='GET',url=url)
         return self.Results
 
+    # Get Account Ledgers
+
+    # This interface is for the history of deposit/withdrawal of all accounts,
+    # supporting inquiry of various currencies.
+
+    # Items are paginated and sorted to show the latest first. See the Pagination
+    # section for retrieving additional entries after the first page.
+
+    def apiGetV1AccountsLedgers(self,currency=None,direction=None,bizType=None,startAt=None,endAt=None,currentPage=None,pageSize=None):
+        dirList=['in','out']
+        bizList=["DEPOSIT", "WITHDRAW", "TRANSFER", "SUB_TRANSFER", "TRADE_EXCHANGE", \
+            "MARGIN_EXCHANGE", "KUCOIN_BONUS"]
+
+        if direction!=None and direction.lower() not in dirList:
+            raise Exception("GetV1AccountsLedgers: invalid direction")
+
+        if bizType!=None and bizType.upper() not in bizList:
+            raise Exception("GetV1AccountsLedgers: invalid business type")
+
+        params={}
+
+        currentPage,pageSize=self.ValidatePagenation(currentPage,pageSize)
+
+        params['currentPage']=currentPage
+        params['pageSize']=pageSize
+
+        if currency!=None:
+            params['currency']=currency.upper()
+        if direction!=None:
+            params['direction']=direction.lower()
+        if bizType!=None:
+            params['bizType']=bizType.upper()
+        if startAt!=None:
+            params['startAt']=startAt
+        if endAt!=None:
+            params['endAt']=endAt
+
+        self.Results=self.callAPI(method='GET',url='/api/v1/accounts/ledgers',params=params)
+        return self.Results
 
 """
-
-
-{
-    "currency": "KCS",  //Currency
-    "balance": "1000000060.6299",  //Total assets of a currency
-    "available": "1000000060.6299",  //Available assets of a currency
-    "holds": "0" //Hold assets of a currency
-}
-
-   Information for a single account. Use this endpoint when you know the
-   accountId.
-
-HTTP REQUEST
-
-   GET /api/v1/accounts/{accountId}
-
-Example
-
-   GET /api/v1/accounts/5bd6e9286d99522a52e458de
-
-API KEY PERMISSIONS
-
-   This endpoint requires the General permission.
-
-PARAMETERS
-
-     Param    Type             Description
-   accountId String Path parameter. ID of the account
-
-RESPONSES
-
-     Field                Description
-   currency  The currency of the account
-   balance   Total funds in the account
-   holds     Funds on hold (not available for use)
-   available Funds available to withdraw or trade
-
-Get Account Ledgers
-
-   This interface is for the history of deposit/withdrawal of all
-   accounts, supporting inquiry of various currencies.
-
-   Items are paginated and sorted to show the latest first. See the
-   [347]Pagination section for retrieving additional entries after the
-   first page.
-{
-  "currentPage": 1,
-  "pageSize": 50,
-  "totalNum": 2,
-  "totalPage": 1,
-  "items": [
-    {
-      "id": "611a1e7c6a053300067a88d9",//unique key
-      "currency": "USDT", //Currency
-      "amount": "10.00059547", //Change amount of the funds
-      "fee": "0", //Deposit or withdrawal fee
-      "balance": "0", //Total assets of a currency
-      "accountType": "MAIN", //Account Type
-      "bizType": "Loans Repaid", //business type
-      "direction": "in", //side, in or out
-      "createdAt": 1629101692950, //Creation time
-      "context": "{\"borrowerUserId\":\"601ad03e50dc810006d242ea\",\"loanRepayDe
-tailNo\":\"611a1e7cc913d000066cf7ec\"}" //Business core parameters
-    },
-    {
-      "id": "611a18bc6a0533000671e1bf",
-      "currency": "USDT",
-      "amount": "10.00059547",
-      "fee": "0",
-      "balance": "0",
-      "accountType": "MAIN",
-      "bizType": "Loans Repaid",
-      "direction": "in",
-      "createdAt": 1629100220843,
-      "context": "{\"borrowerUserId\":\"5e3f4623dbf52d000800292f\",\"loanRepayDe
-tailNo\":\"611a18bc7255c200063ea545\"}"
-    }
-  ]
-}
-
-HTTP REQUEST
-
-   GET /api/v1/accounts/ledgers
-
-Example
-
-   GET /api/v1/accounts/ledgers?currency=BTC&startAt=1601395200000
-
-API KEY PERMISSIONS
-
-   This endpoint requires the "General" permission.
-
-REQUEST RATE LIMIT
-
-   This API is restricted for each account, the request rate limit is 18
-   times/3s.
-   This request is paginated.
-
-PARAMETERS
-
-   Param Type Description
-   currency String [Optional] Currency ( you can choose more than one
-   currency). You can specify 10 currencies at most for one time. If not
-   specified, all currencies will be inquired by default.
-   direction String [Optional] Side: in - Receive, out - Send
-   bizType String [Optional] Business type: DEPOSIT, WITHDRAW, TRANSFER,
-   SUB_TRANSFER,TRADE_EXCHANGE, MARGIN_EXCHANGE, KUCOIN_BONUS.
-   startAt long [Optional] Start time (milisecond)
-   endAt long [Optional] End time (milisecond)
-   the start and end time range cannot exceed 24 hours. An error will
-   occur if the specified time window exceeds the range. If you specify
-   the end time only, the system will automatically calculate the start
-   time as end time minus 24 hours, and vice versa.
-
-RESPONSES
-
-   Field Description
-   id unique key
-   currency The currency of an account
-   amount The total amount of assets (fees included) involved in assets
-   changes such as transaction, withdrawal and bonus distribution.
-   fee Fees generated in transaction, withdrawal, etc.
-   balance Remaining funds after the transaction.
-   accountType The account type of the master user: MAIN, TRADE, MARGIN or
-   CONTRACT.
-   bizType Business type leading to the changes in funds, such as
-   exchange, withdrawal, deposit, KUCOIN_BONUS, REFERRAL_BONUS, Lendings
-   etc.
-   direction Side, out or in
-   createdAt Time of the event
-   context Business related information such as order ID, serial No., etc.
-
-context
-
-   If the returned value under bizType is “trade exchange”, the additional
-   info. (such as order ID and trade ID, trading pair, etc.) of the trade
-   will be returned in field context.
-
-BizType Description
-
-   Field Description
-   Assets Transferred in After Upgrading Assets Transferred in After V1 to
-   V2 Upgrading
-   Deposit Deposit
-   Withdrawal Withdrawal
-   Transfer Transfer
-   Trade_Exchange Trade
-   Vote for Coin Vote for Coin
-   KuCoin Bonus KuCoin Bonus
-   Referral Bonus Referral Bonus
-   Rewards Activities Rewards
-   Distribution Distribution, such as get GAS by holding NEO
-   Airdrop/Fork Airdrop/Fork
-   Other rewards Other rewards, except Vote, Airdrop, Fork
-   Fee Rebate Fee Rebate
-   Buy Crypto Use credit card to buy crypto
-   Sell Crypto Use credit card to sell crypto
-   Public Offering Purchase Public Offering Purchase for Spotlight
-   Send red envelope Send red envelope
-   Open red envelope Open red envelope
-   Staking Staking
-   LockDrop Vesting LockDrop Vesting
-   Staking Profits Staking Profits
-   Redemption Redemption
-   Refunded Fees Refunded Fees
-   KCS Pay Fees KCS Pay Fees
-   Margin Trade Margin Trade
-   Loans Loans
-   Borrowings Borrowings
-   Debt Repayment Debt Repayment
-   Loans Repaid Loans Repaid
-   Lendings Lendings
-   Pool transactions Pool-X transactions
-   Instant Exchange Instant Exchange
-   Sub-account transfer Sub-account transfer
-   Liquidation Fees Liquidation Fees
-   Soft Staking Profits Soft Staking Profits
-   Voting Earnings Voting Earnings on Pool-X
-   Redemption of Voting Redemption of Voting on Pool-X
-   Convert to KCS Convert to KCS
 
 Get Account Summary Information
 
