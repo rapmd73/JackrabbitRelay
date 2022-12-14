@@ -5,6 +5,7 @@ import sys
 sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
 import os
 import json
+import time
 
 import apiKucoin
 
@@ -14,11 +15,13 @@ PASS=os.environ["PASS"]
 
 exchange=apiKucoin.Broker(API=API,SECRET=SECRET,Passphrase=PASS,Sandbox=False)
 
-print(json.dumps(exchange.apiGetV1SubUser(),indent=2),'\n')
-print(json.dumps(exchange.apiGetV2SubUser(),indent=2),'\n')
-print(json.dumps(exchange.apiGetV1Accounts(accountType='main'),indent=2),'\n')
-print(json.dumps(exchange.apiGetV1Accounts(),indent=2),'\n')
-print(json.dumps(exchange.apiGetV1Accounts(accountType='margin'),indent=2),'\n')
+#print(json.dumps(exchange.apiGetV1SubUser(),indent=2),'\n')
+#print(json.dumps(exchange.apiGetV2SubUser(),indent=2),'\n')
+#print(json.dumps(exchange.apiGetV1Accounts(accountType='main'),indent=2),'\n')
+#print(json.dumps(exchange.apiGetV1Accounts(),indent=2),'\n')
+#print(json.dumps(exchange.apiGetV1Accounts(accountType='margin'),indent=2),'\n')
 
-id=exchange.apiGetV1Accounts()[0]['id']
-print(json.dumps(exchange.apiGetV1AccountsID(acctID=id),indent=2),'\n')
+#id=exchange.apiGetV1Accounts()[0]['id']
+#print(json.dumps(exchange.apiGetV1AccountsID(acctID=id),indent=2),'\n')
+
+print(json.dumps(exchange.apiGetV1AccountsLedgers(endAt=time.time()),indent=2),'\n')
