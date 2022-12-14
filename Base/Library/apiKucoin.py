@@ -255,96 +255,64 @@ class Broker:
         self.Results=self.callAPI(method='GET',url='/api/v1/accounts/ledgers',params=params)
         return self.Results
 
+    # Get Account Summary Information
+
+    # This endpoint can be used to obtain account summary information.
+
+    def apiGetV1UserInfo(self):
+        self.Results=self.callAPI(method='GET',url='/api/v1/user-info')
+        return self.Results
+
+    # Create Sub-Account
+
+    # This endpoint can be used to create sub-accounts.
+
+    def apiPostV1SubUser(self,password=None,remarks=None,subName=None,access='All'):
+        aList=['All','Margin','Futures']
+
+        params={}
+
+        # subName and password need symbol verification, no symbols allowed.
+        # Numbers must in in password as well as letters.
+
+        if subName==None or len(subName)<7 or len(subName)>32 or ' ' in subName:
+            raise Exception("PostV1SubUser: invalid subName")
+        else:
+            params['subName']=subName
+
+        if password==None or len(password)<7 or len(password)>24 or ' ' in password:
+            raise Exception("PostV1SubUser: invalid password")
+        else:
+            params['password']=password
+
+        if remarks==None or len(remarks)>24:
+            raise Exception("PostV1SubUser: invalid remarks")
+        else:
+            params['remarks']=remarks
+
+        if access==None or access.capitalize() not in aList:
+            raise Exception("PostV1SubUser: invalid access")
+        else:
+            params['access']=access.capitalize()
+
+        self.Results=self.callAPI(method='POST',url='/api/v1/sub/user',params=params)
+        return self.Results
+
+
 """
-
-Get Account Summary Information
-
-{
-    "code": "200000",
-    "data": {
-        "level": 0,
-        "subQuantity": 11,
-        "subQuantityByType": {
-            "generalSubQuantity": 9,
-            "marginSubQuantity": 1,
-            "futuresSubQuantity": 1
-        },
-        "maxSubQuantity": 35,
-        "maxSubQuantityByType": {
-            "maxDefaultSubQuantity": 5,
-            "maxGeneralSubQuantity": 10,
-            "maxMarginSubQuantity": 10,
-            "maxFuturesSubQuantity": 10
-        }
-    }
-}
-
-   This endpoint can be used to obtain account summary information.
-
-HTTP REQUEST
-
-   GET /api/v1/user-info
-
-Example
-
-   GET /api/v1/user-info
-
-API KEY PERMISSIONS
-
-   This endpoint requires the General permission.
-
-PARAMETERS
-
-   N/A
-
-RESPONSES
-
-           Field                       Description
-   level                 User level
-   subQuantity           Number of sub-accounts
-   generalSubQuantity    General sub-account opened quantity
-   marginSubQuantity     Margin sub-account opened quantity
-   futuresSubQuantity    Futures sub-account opened quantity
-   maxSubQuantity        Max number of sub-accounts
-   maxDefaultSubQuantity Max number of default open sub-accounts
-   maxGeneralSubQuantity Max number of General sub-accounts
-   maxMarginSubQuantity  Max number of Margin sub-account
-   maxFuturesSubQuantity Max number of Futures sub-account
-
-Create Sub-Account
-
-{
-    "code": "200000",
-    "data": {
-        "uid": 9969082973,
-        "subName": "AAAAAAAAAA0007",
-        "remarks": "remark",
-        "access": "All"
-    }
-}
-
-   This endpoint can be used to create sub-accounts.
-
-HTTP REQUEST
-
-   POST /api/v1/sub/user
-
-Example
-
-   POST /api/v1/sub/user
-
-API KEY PERMISSIONS
-
-   This endpoint requires the General permission.
 
 PARAMETERS
 
    Param Type Mandatory Description
+
    password String Yes Password(7-24 characters, must contain letters and
    numbers, cannot only contain numbers or include special characters)
+
    remarks String No Remarks(1~24 characters)
+
    subName String Yes Sub-account name(must contain 7-32 characters, at
    least one number and one letter. Cannot contain any spaces.)
+
    access String No Permission (This can only be set to All, Futures, or
    Margin, default is All. All: unrestricted; Futures: cannot use margin
    features; Margin: cannot use futures features.)
