@@ -30,13 +30,16 @@ exchange=apiKucoin.Broker(API=API,SECRET=SECRET,Passphrase=PASS,Sandbox=sb)
 
 #print(json.dumps(exchange.apiGetV1AccountsLedgers(endAt=time.time()),indent=2),'\n')
 #print(json.dumps(exchange.apiGetV1UserInfo(),indent=2),'\n')
-#print(json.dumps(exchange.apiPostV1SubUser(subName="JackrabbitTest1",password="fuzzy3wuzzy7fluffy2pants",remarks="Test"),indent=2),'\n')
-
-#sn=exchange.apiGetV1SubUser()[-1]['subName']
-#print(json.dumps(exchange.apiPostV1SubApiKey(subName=sn,passphrase="fuzzy3wuzzy7fluffy2pants",remark="TestAPI"),indent=2),'\n')
-#print(json.dumps(exchange.apiGetV1SubApiKey(subName=sn),indent=2),'\n')
+#print(json.dumps(exchange.apiPostV1SubUser(subName="JackrabbitTest2",password="fuzzy3wuzzy7fluffy2pants",remarks="Test"),indent=2),'\n')
 
 sn=exchange.apiGetV1SubUser()[-1]['subName']
-print(json.dumps(exchange.apiPostV1SubApiKey(subName=sn,passphrase="fuzzy3wuzzy7fluffy2pants",remark="TestAPI2",permission="Trade"),indent=2),'\n')
+#print(json.dumps(exchange.apiPostV1SubApiKey(subName=sn,passphrase="fuzzy3wuzzy7fluffy2pants",remark="TestAPI"),indent=2),'\n')
+
+#print(json.dumps(exchange.apiPostV1SubApiKey(subName=sn,passphrase="fuzzy3wuzzy7fluffy2pants",remark="TestAPI2",permission="Trade"),indent=2),'\n')
+
+apk=exchange.apiGetV1SubApiKey(subName=sn)[0]['apiKey']
+#print(json.dumps(exchange.apiPostV1SubApiKeyUpdate(subName=sn,apiKey=apk,passphrase="fuzzy3wuzzy7fluffy2pants",ipWhitelist="127.0.0.17"),indent=2),'\n')
+print(json.dumps(exchange.apiDeleteV1SubApiKey(subName=sn,apiKey=apk,passphrase="fuzzy3wuzzy7fluffy2pants"),indent=2),'\n')
+
 print(json.dumps(exchange.apiGetV1SubApiKey(subName=sn),indent=2),'\n')
 
