@@ -357,53 +357,68 @@ class Broker:
         self.Results=self.callAPI(method='POST',url='/api/v1/sub/api-key',params=params)
         return self.Results
 
+    # Modify Sub-Account Spot APIs
+
+    # This endpoint can be used to modify sub-account Spot APIs.
+
+    def apiPostV1SubApiKeyUpdate(self,apiKey=None,passphrase=None,subName=None,permission=None,ipWhitelist=None):
+        pList=['General','Trade']
+
+        params={}
+
+        if apiKey==None:
+            raise Exception("apiPostV1SubApiKeyUpdate: invalid apiKey")
+        else:
+            params['apiKey']=apiKey
+
+        if passphrase==None:
+            raise Exception("apiPostV1SubApiKeyUpdate: invalid passphrase")
+        else:
+            params['passphrase']=passphrase
+
+        if subName==None:
+            raise Exception("apiPostV1SubApiKeyUpdate: invalid subName")
+        else:
+            params['subName']=subName
+
+        if permission!=None:
+            if permission.capitalize() not in pList:
+                raise Exception("apiPostV1SubApiKeyUpdate: invalid permission")
+            else:
+                params['permission']=permission.capitalize()
+
+        if ipWhitelist!=None:
+            params['ipWhitelist']=ipWhitelist
+
+        self.Results=self.callAPI(method='POST',url='/api/v1/sub/api-key/update',params=params)
+        return self.Results
+
+    # Delete Sub-Account Spot APIs
+
+    # This endpoint can be used to delete sub-account Spot APIs.
+
+    def apiDeleteV1SubApiKey(self,apiKey=None,passphrase=None,subName=None):
+        params={}
+
+        if apiKey==None:
+            raise Exception("apiDeleteV1SubApiKey: invalid apiKey")
+        else:
+            params['apiKey']=apiKey
+
+        if passphrase==None:
+            raise Exception("apiDeleteV1SubApiKey: invalid passphrase")
+        else:
+            params['passphrase']=passphrase
+
+        if subName==None:
+            raise Exception("apiDeleteV1SubApiKey: invalid subName")
+        else:
+            params['subName']=subName
+
+        self.Results=self.callAPI(method='DELETE',url='/api/v1/sub/api-key',params=params)
+        return self.Results
 
 """
-
-Modify Sub-Account Spot APIs
-
-{
-    "code": "200000",
-    "data": {
-        "subName": "AAAAAAAAAA0007",
-        "apiKey": "630329b4e7508700018298c5",
-        "permission": "General",
-        "ipWhitelist": "127.0.0.1",
-    }
-}
-
-   This endpoint can be used to modify sub-account Spot APIs.
-
-HTTP REQUEST
-
-   POST /api/v1/sub/api-key/update
-
-Example
-
-   POST /api/v1/sub/api-key/update
-
-API KEY PERMISSIONS
-
-   This endpoint requires the General permission.
-
-PARAMETERS
-
-   Param Type Mandatory Description
-   apiKey String Yes API-Key(Sub-account APIKey)
-   ipWhitelist String No IP whitelist(you may add up to 20 IPs. Use a
-   halfwidth comma to each IP.If modified, the IP will be reset.)
-   passphrase String Yes Password of API key
-   permission String No Permission list.If modified, permissions will be
-   reset.
-   subName String Yes Sub-account name
-
-RESPONSES
-
-      Field      Description
-   apiKey      API-Key
-   ipWhitelist IP whitelist
-   permission  Permissions
-   subName     Sub-account name
 
 Delete Sub-Account Spot APIs
 
@@ -433,7 +448,9 @@ PARAMETERS
 
    Param Type Mandatory Description
    apiKey String Yes API-Key(API key to be deleted)
+
    passphrase String Yes Password(Password of the API key)
+
    subName String Yes Sub-account name(The sub-account name corresponding
    to the API key)
 
