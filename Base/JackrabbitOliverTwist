@@ -316,7 +316,7 @@ def main():
 
         # This check must contain all possible expected values.
 
-        if status!='delete':
+        if status!='delete' and status!='running':
             if status=='done' \
             or status=='notfound' \
             or status=='notowner' \
