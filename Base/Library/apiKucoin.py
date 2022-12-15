@@ -11,6 +11,8 @@
 
 # This code is derived from Information on https://docs.kucoin.com
 
+# I tried to keep it as "matchy" as possible for ease of use and readability.
+
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
@@ -298,134 +300,65 @@ class Broker:
         self.Results=self.callAPI(method='POST',url='/api/v1/sub/user',params=params)
         return self.Results
 
+    # Get Sub-Account Spot API List
+
+    # This endpoint can be used to obtain a list of Spot APIs pertaining to a
+    # sub-account.
+
+    def apiGetV1SubApiKey(self,apiKey=None,subName=None):
+        params={}
+
+        if subName==None:
+            raise Exception("apiGetV1SubApiKey: missing subName")
+        else:
+            params['subName']=subName
+
+        if apiKey!=None:
+            params['apiKey']=apiKey
+
+        self.Results=self.callAPI(method='GET',url='/api/v1/sub/api-key',params=params)
+        return self.Results
+
+    # Create Spot APIs for Sub-Account
+
+    # This endpoint can be used to create Spot APIs for sub-accounts.
+
+    def apiPostV1SubApiKey(self,passphrase=None,remark=None,subName=None,permission='General',ipWhitelist=None):
+        pList=['General','Trade']
+
+        params={}
+
+        # subName and password need symbol verification, no symbols allowed.
+        # Numbers must in in password as well as letters.
+
+        if subName==None or len(subName)<7 or len(subName)>32 or ' ' in subName:
+            raise Exception("apiPostV1SubApiKey: invalid subName")
+        else:
+            params['subName']=subName
+
+        if passphrase==None or len(passphrase)<7 or len(passphrase)>24 or ' ' in passphrase:
+            raise Exception("apiPostV1SubApiKey: invalid passphrase")
+        else:
+            params['passphrase']=passphrase
+
+        if remark==None or len(remark)>24:
+            raise Exception("apiPostV1SubApiKey: invalid remarks")
+        else:
+            params['remark']=remark
+
+        if permission==None or permission.capitalize() not in pList:
+            raise Exception("apiPostV1SubApiKey: invalid permission")
+        else:
+            params['permission']=permission.capitalize()
+
+        if ipWhitelist!=None:
+            params['ipWhitelist']=ipWhitelist
+
+        self.Results=self.callAPI(method='POST',url='/api/v1/sub/api-key',params=params)
+        return self.Results
+
 
 """
-
-PARAMETERS
-
-   Param Type Mandatory Description
-
-   password String Yes Password(7-24 characters, must contain letters and
-   numbers, cannot only contain numbers or include special characters)
-
-   remarks String No Remarks(1~24 characters)
-
-   subName String Yes Sub-account name(must contain 7-32 characters, at
-   least one number and one letter. Cannot contain any spaces.)
-
-   access String No Permission (This can only be set to All, Futures, or
-   Margin, default is All. All: unrestricted; Futures: cannot use margin
-   features; Margin: cannot use futures features.)
-
-RESPONSES
-
-    Field    Description
-   remarks Remarks
-   subName Sub-account name
-   uid     Sub-account UID
-   access  Permission
-
-Get Sub-Account Spot API List
-
-{
-    "code": "200000",
-    "data": [
-        {
-            "subName": "AAAAAAAAAAAAA0022",
-            "remark": "hytest01-01",
-            "apiKey": "63032453e75087000182982b",
-            "permission": "General",
-            "ipWhitelist": "",
-            "createdAt": 1661150291000
-        }
-    ]
-}
-
-   This endpoint can be used to obtain a list of Spot APIs pertaining to a
-   sub-account.
-
-HTTP REQUEST
-
-   GET /api/v1/sub/api-key
-
-Example
-
-   GET /api/v1/sub/api-key
-
-API KEY PERMISSIONS
-
-   This endpoint requires the General permission.
-
-PARAMETERS
-
-    Param   Type  Mandatory    Description
-   apiKey  String No        API-Key.
-   subName String Yes       Sub-account name.
-
-RESPONSES
-
-      Field       Description
-   apiKey      API-Key
-   createdAt   Time of the event
-   ipWhitelist IP whitelist
-   permission  Permissions
-   remark      Remarks
-   subName     Sub-account name
-
-Create Spot APIs for Sub-Account
-
-{
-    "code": "200000",
-    "data": {
-        "subName": "AAAAAAAAAA0007",
-        "remark": "remark",
-        "apiKey": "630325e0e750870001829864",
-        "apiSecret": "110f31fc-61c5-4baf-a29f-3f19a62bbf5d",
-        "passphrase": "passphrase",
-        "permission": "General",
-        "ipWhitelist": "",
-        "createdAt": 1661150688000
-    }
-}
-
-   This endpoint can be used to create Spot APIs for sub-accounts.
-
-HTTP REQUEST
-
-   POST /api/v1/sub/api-key
-
-Example
-
-   POST /api/v1/sub/api-key
-
-API KEY PERMISSIONS
-
-   This endpoint requires the General permission.
-
-PARAMETERS
-
-   Param Type Mandatory Description
-   ipWhitelist String No IP whitelist(You may add up to 20 IPs. Use a
-   halfwidth comma to each IP)
-   passphrase String Yes Password(Must contain 7-32 characters. Cannot
-   contain any spaces.)
-   permission String No Permissions(Only "General" and "Trade" permissions
-   can be set, such as "General, Trade". The default is "General")
-   remark String Yes Remarks(1~24 characters)
-   subName String Yes Sub-account name, create sub account name of API
-   Key.
-
-RESPONSES
-
-      Field       Description
-   apiKey      API-Key
-   createdAt   Time of the event
-   ipWhitelist IP whitelist
-   permission  Permissions
-   remark      Remarks
-   subName     Sub-account name
-   apiSecret   API secret
-   passphrase  Password
 
 Modify Sub-Account Spot APIs
 
