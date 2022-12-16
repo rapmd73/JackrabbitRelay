@@ -20,12 +20,11 @@ if len(sys.argv)>1:
 exchange=apiKucoin.Broker(API=API,SECRET=SECRET,Passphrase=PASS,Sandbox=sb)
 
 #print(json.dumps(exchange.apiGetV1SubUser(),indent=2),'\n')
-#print(json.dumps(exchange.apiGetV2SubUser(),indent=2),'\n')
+#print(json.dumps(exchange.apiGetV2SubUser(pageSize=100),indent=2),'\n')
 #print(json.dumps(exchange.apiGetV1Accounts(accountType='main'),indent=2),'\n')
 #print(json.dumps(exchange.apiGetV1Accounts(),indent=2),'\n')
 #print(json.dumps(exchange.apiGetV1Accounts(accountType='margin'),indent=2),'\n')
 
-#id=exchange.apiGetV1Accounts()[0]['id']
 #print(json.dumps(exchange.apiGetV1AccountsID(acctID=id),indent=2),'\n')
 
 #print(json.dumps(exchange.apiGetV1AccountsLedgers(endAt=time.time()),indent=2),'\n')
@@ -34,12 +33,27 @@ exchange=apiKucoin.Broker(API=API,SECRET=SECRET,Passphrase=PASS,Sandbox=sb)
 
 sn=exchange.apiGetV1SubUser()[-1]['subName']
 #print(json.dumps(exchange.apiPostV1SubApiKey(subName=sn,passphrase="fuzzy3wuzzy7fluffy2pants",remark="TestAPI"),indent=2),'\n')
-
 #print(json.dumps(exchange.apiPostV1SubApiKey(subName=sn,passphrase="fuzzy3wuzzy7fluffy2pants",remark="TestAPI2",permission="Trade"),indent=2),'\n')
 
-apk=exchange.apiGetV1SubApiKey(subName=sn)[0]['apiKey']
+#apk=exchange.apiGetV1SubApiKey(subName=sn)[0]['apiKey']
 #print(json.dumps(exchange.apiPostV1SubApiKeyUpdate(subName=sn,apiKey=apk,passphrase="fuzzy3wuzzy7fluffy2pants",ipWhitelist="127.0.0.17"),indent=2),'\n')
-print(json.dumps(exchange.apiDeleteV1SubApiKey(subName=sn,apiKey=apk,passphrase="fuzzy3wuzzy7fluffy2pants"),indent=2),'\n')
+# --> CURRENTLY FAILS
+#print(json.dumps(exchange.apiDeleteV1SubApiKey(subName=sn,apiKey=apk,passphrase="fuzzy3wuzzy7fluffy2pants"),indent=2),'\n')
+#print(json.dumps(exchange.apiGetV1SubApiKey(subName=sn),indent=2),'\n')
 
-print(json.dumps(exchange.apiGetV1SubApiKey(subName=sn),indent=2),'\n')
+# main trading acct balances
+
+coinList=exchange.apiGetV1Accounts()
+for coin in coinList:
+    print(f"{'MAIN':20} {coin['currency']}")
+
+acctList=exchange.apiGetV2SubUser(pageSize=100)['items']
+for acct in acctList:
+    uid=acct['userId']
+    if uid==None:
+        continue
+    sn=acct['subName']
+    coinList=exchange.apiGetV1SubAccounts(subUserId=uid)['mainAccounts']
+    for coin in coinList:
+        print(f"{sn:20} {coin['currency']}")
 

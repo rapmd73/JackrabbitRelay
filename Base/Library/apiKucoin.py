@@ -418,47 +418,20 @@ class Broker:
         self.Results=self.callAPI(method='DELETE',url='/api/v1/sub/api-key',params=params)
         return self.Results
 
+    # Get Account Balance of a Sub-Account
+
+    # This endpoint returns the account info of a sub-user specified by the
+    # subUserId.
+
+    def apiGetV1SubAccounts(self,subUserId=None):
+        if subUserId==None:
+            raise Exception("apiGetV1SubSubAccounts: missing subUserId")
+
+        url=f'/api/v1/sub-accounts/{subUserId}'
+        self.Results=self.callAPI(method='GET',url=url)
+        return self.Results
+
 """
-
-Delete Sub-Account Spot APIs
-
-{
- "code": "200000",
- "data": {
-   "subName": "AAAAAAAAAA0007",
-   "apiKey": "630325e0e750870001829864"
- }
-}
-
-   This endpoint can be used to delete sub-account Spot APIs.
-
-HTTP REQUEST
-
-   DELETE /api/v1/sub/api-key
-
-Example
-
-   DELETE /api/v1/sub/api-key
-
-API KEY PERMISSIONS
-
-   This endpoint requires the General permission.
-
-PARAMETERS
-
-   Param Type Mandatory Description
-   apiKey String Yes API-Key(API key to be deleted)
-
-   passphrase String Yes Password(Password of the API key)
-
-   subName String Yes Sub-account name(The sub-account name corresponding
-   to the API key)
-
-RESPONSES
-
-    Field    Description
-   apiKey  API-Key
-   subName Sub-account name
 
 Get Account Balance of a Sub-Account
 
@@ -500,8 +473,6 @@ Get Account Balance of a Sub-Account
     ]
 }
 
-   This endpoint returns the account info of a sub-user specified by the
-   subUserId.
 
 HTTP REQUEST
 
