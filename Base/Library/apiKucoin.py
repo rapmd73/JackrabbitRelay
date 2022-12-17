@@ -64,6 +64,9 @@ class Broker:
     # are framework components.
 
     def callAPI(self,**kwargs):
+        # For API timing
+        StartTime=datetime.now()
+
         method=kwargs.get('method').upper()
         url=kwargs.get('url')
         params=kwargs.get('params')
@@ -119,6 +122,9 @@ class Broker:
         else:
             self.Results=requests.request(method,url,headers=headers,data=data_json,timeout=timeout)
 
+        EndTime=datetime.now()
+        Elapsed=(EndTime-StartTime)
+        print(f"{str(Elapsed)} {method} {url}")
         return self.ValidateRssponse(self.Results)
 
     # Validate Kucoin response
@@ -425,159 +431,13 @@ class Broker:
 
     def apiGetV1SubAccounts(self,subUserId=None):
         if subUserId==None:
-            raise Exception("apiGetV1SubSubAccounts: missing subUserId")
-
-        url=f'/api/v1/sub-accounts/{subUserId}'
+            url=f'/api/v1/sub-accounts'
+        else:
+            url=f'/api/v1/sub-accounts/{subUserId}'
         self.Results=self.callAPI(method='GET',url=url)
         return self.Results
 
 """
-
-Get Account Balance of a Sub-Account
-
-{
-    "subUserId":"5caefba7d9575a0688f83c45",
-    "subName":"sdfgsdfgsfd",
-    "mainAccounts":[
-        {
-            "currency":"BTC",
-            "balance":"8",
-            "available":"8",
-            "holds":"0",
-            "baseCurrency":"BTC",
-            "baseCurrencyPrice":"1",
-            "baseAmount":"1.1"
-        }
-    ],
-    "tradeAccounts":[
-        {
-            "currency":"BTC",
-            "balance":"1000",
-            "available":"1000",
-            "holds":"0",
-            "baseCurrency":"BTC",
-            "baseCurrencyPrice":"1",
-            "baseAmount":"1.1"
-        }
-    ],
-    "marginAccounts":[
-        {
-            "currency":"BTC",
-            "balance":"1.1",
-            "available":"1.1",
-            "holds":"0",
-            "baseCurrency":"BTC",
-            "baseCurrencyPrice":"1",
-            "baseAmount":"1.1"
-        }
-    ]
-}
-
-
-HTTP REQUEST
-
-   GET /api/v1/sub-accounts/{subUserId}
-
-Example
-
-   GET /api/v1/sub-accounts/5caefba7d9575a0688f83c45
-
-API KEY PERMISSIONS
-
-   This endpoint requires the "General" permission.
-
-PARAMETERS
-
-     Param    Type             Description
-   subUserId String the [348]user ID of a sub-account.
-
-RESPONSES
-
-         Field                    Description
-   subUserId         The user ID of a sub-user.
-   subName           The username of a sub-user.
-   currency          Currency
-   balance           Total funds in an account.
-   available         Funds available to withdraw or trade.
-   holds             Funds on hold (not available for use).
-   baseCurrency      Calculated on this currency.
-   baseCurrencyPrice The base currency price.
-   baseAmount        The base currency amount.
-
-Get the Aggregated Balance of all Sub-Accounts
-
-[
-    {
-        "subUserId":"5caefba7d9575a0688f83c45",
-        "subName":"kucoin1",
-        "mainAccounts":[
-            {
-                "currency":"BTC",
-                "balance":"6",
-                "available":"6",
-                "holds":"0",
-                "baseCurrency":"BTC",
-                "baseCurrencyPrice":"1",
-                "baseAmount":"1.1"
-            }
-        ],
-        "tradeAccounts":[
-            {
-                "currency":"BTC",
-                "balance":"1000",
-                "available":"1000",
-                "holds":"0",
-                "baseCurrency":"BTC",
-                "baseCurrencyPrice":"1",
-                "baseAmount":"1.1"
-            }
-        ],
-        "marginAccounts":[
-            {
-                "currency":"BTC",
-                "balance":"1.1",
-                "available":"1.1",
-                "holds":"0",
-                "baseCurrency":"BTC",
-                "baseCurrencyPrice":"1",
-                "baseAmount":"1.1"
-            }
-        ]
-    }
-]
-
-   This endpoint returns the account info of all sub-users.
-   It is recommended to use the GET /api/v2/sub-accounts interface for
-   paging query
-
-HTTP REQUEST
-
-   GET /api/v1/sub-accounts
-
-Example
-
-   GET /api/v1/sub-accounts
-
-API KEY PERMISSIONS
-
-   This endpoint requires the General permission.
-
-PARAMETERS
-
-   N/A
-
-RESPONSES
-
-         Field                    Description
-   subUserId         The user ID of the sub-user.
-   subName           The username of the sub-user.
-   currency          The currency of the account.
-   balance           Total funds in the account.
-   available         Funds available to withdraw or trade.
-   holds             Funds on hold (not available for use).
-   baseCurrency      Calculated on this currency.
-   baseCurrencyPrice The base currency price.
-   baseAmount        The base currency amount.
 
 Get Paginated Sub-Account Information.
 
