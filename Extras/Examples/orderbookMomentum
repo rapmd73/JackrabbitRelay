@@ -1,0 +1,193 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+from datetime import datetime
+
+import JackrabbitRelay as JRR
+import JRRsupport
+
+def ccxtProcessOrderBook(relay,asset,depth):
+    ticker=relay.GetTicker(symbol=asset)
+    BuyPrice=round(float(ticker['Ask']),8)
+    SellPrice=round(float(ticker['Bid']),8)
+
+    orderbook=relay.GetOrderBook(symbol=asset)
+
+    # Variables for order book
+
+    lp=0
+    sp=0
+    buyIDX=0
+    sellIDX=0
+    l=min(len(orderbook['asks']),len(orderbook['bids']))
+    if depth>l:
+        depth=l
+
+    obl=[]
+    oblB=[]
+    oblS=[]
+
+    idx=0
+    ppB=0
+    ppS=0
+    for ob in range(l):
+        bprice=round(orderbook['bids'][ob][0],8)
+        buy=orderbook['bids'][ob][1] #*bprice
+
+        sprice=round(orderbook['asks'][ob][0],8)
+        sell=orderbook['asks'][ob][1] #*sprice
+
+        cpB=bprice
+        if ppB<BuyPrice and BuyPrice<=cpB:
+            buyIDX=idx
+
+        cpS=sprice
+        if ppS<SellPrice and SellPrice<=cpS:
+            sellIDX=idx
+
+        lp+=buy
+        sp+=sell
+
+        oblB.append([buy,bprice])
+        oblS.append([sell,sprice])
+        ppB=cpB
+        ppS=cpS
+        idx+=1
+
+    c=1
+    maxBorders=0
+    maxSorders=0
+    maxBprice=0
+    maxSprice=0
+    for i in range(depth):
+        buy=oblB[buyIDX+i][0]
+        bprice=oblB[buyIDX+i][1]
+
+        sprice=oblS[sellIDX+i][1]
+        sell=oblS[sellIDX+i][0]
+
+        spread=sprice-bprice
+
+        if buy>maxBorders:
+            maxBorders=buy
+            maxBprice=bprice
+        if sell>maxSorders:
+            maxSorders=sell
+            maxSprice=sprice
+        c+=1
+    return maxBorders,maxBprice,maxSprice,maxSorders
+
+def oandaProcessOrderBook(relay,asset,depth):
+    ticker=relay.GetTicker(symbol=asset)
+    BuyPrice=ticker['Ask']
+    SellPrice=ticker['Bid']
+
+    orderbook=relay.GetOrderBook(symbol=asset)
+
+    lp=0
+    sp=0
+    l=len(orderbook)
+    if depth>l:
+        depth=l
+    buyIDX=0
+    sellIDX=0
+
+    obl=[]
+    pp=0
+    idx=0
+    for cur in orderbook:
+        buy=(float(cur['longCountPercent'])/100)*l
+        price=round(float(cur['price']),4)
+        sell=(float(cur['shortCountPercent'])/100)*l
+
+        cp=price
+        if pp<BuyPrice and BuyPrice<=cp:
+            buyIDX=idx-1
+        if pp<SellPrice and SellPrice<=cp:
+            sellIDX=idx
+
+        lp+=buy
+        sp+=sell
+
+        obl.append([buy,price,sell])
+        pp=cp
+        idx+=1
+
+    c=1
+    maxBorders=0
+    maxSorders=0
+    maxBprice=0
+    maxSprice=0
+    for i in range(depth):
+        buy=obl[buyIDX-i][0]
+        bprice=obl[buyIDX-i][1]
+        sprice=obl[sellIDX+i][1]
+        sell=obl[sellIDX+i][2]
+        spread=sprice-bprice
+        if buy>maxBorders:
+            maxBorders=buy
+            maxBprice=bprice
+        if sell>maxSorders:
+            maxSorders=sell
+            maxSprice=sprice
+        c+=1
+    return maxBorders,maxBprice,maxSprice,maxSorders
+
+###
+### Main code base. Place order on exchange
+###
+
+relay=JRR.JackrabbitRelay()
+if relay.GetArgsLen()>4:
+    exchangeName=relay.GetExchange()
+    account=relay.GetAccount()
+    asset=relay.GetAsset()
+    depth=int(relay.GetArgs(4))
+else:
+    print("An exchange, (sub)account, an asset, and depth must be provided.")
+    sys.exit(1)
+
+markets=relay.GetMarkets()
+
+OLDmaxBorders=0
+OLDmaxBprice=0
+OLDmaxSprice=0
+OLDmaxSorders=0
+
+while True:
+    time=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+
+    if relay.GetFramework()=='ccxt':
+        maxBorders,maxBprice,maxSprice,maxSorders=ccxtProcessOrderBook(relay,asset,depth)
+
+        if maxBorders!=OLDmaxBorders or maxBprice!=OLDmaxBprice \
+        or maxSprice!=OLDmaxSprice or maxSorders!=OLDmaxSorders:
+            OLDmaxBorders=maxBorders
+            OLDmaxBprice=maxBprice
+            OLDmaxSprice=maxSprice
+            OLDmaxSorders=maxSorders
+
+            spread=maxSprice-maxBprice
+            print(f"{time} {maxBorders:12.4f} {maxBprice:12.4f} {maxSprice:12.4f} {maxSorders:12.4f} {spread:12.4f}")
+    elif relay.GetFramework()=='oanda':
+        maxBorders,maxBprice,maxSprice,maxSorders=oandaProcessOrderBook(relay,asset,depth)
+
+        if maxBorders!=OLDmaxBorders or maxBprice!=OLDmaxBprice \
+        or maxSprice!=OLDmaxSprice or maxSorders!=OLDmaxSorders:
+            OLDmaxBorders=maxBorders
+            OLDmaxBprice=maxBprice
+            OLDmaxSprice=maxSprice
+            OLDmaxSorders=maxSorders
+
+            spread=maxSprice-maxBprice
+            print(f"{time} {maxBorders:12.4f} {maxBprice:12.4f} {maxSprice:12.4f} {maxSorders:12.4f} {spread:12.4f}")
+
+    JRRsupport.ElasticSleep(1)
