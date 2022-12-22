@@ -66,3 +66,5 @@ exchange=apiKucoin.Broker(API=API,SECRET=SECRET,Passphrase=PASS,Sandbox=sb)
 #        coinList=exchange.apiGetV1SubAccounts(subUserId=uid)[acct]
 #        for coin in coinList:
 #            print(f"{sn:20} {i:20} {coin['currency']}")
+
+#print(json.dumps(exchange.apiGetV2SubAccounts(pageSize=100),indent=2),'\n')
