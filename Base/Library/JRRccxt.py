@@ -244,9 +244,15 @@ class ccxtCrypto:
     # Fetch the balance(s) of a given BASE of a pair
 
     def GetBalance(self,**kwargs):
+        params={}
+
         base=kwargs.get('Base')
 
-        self.Results=self.API("fetch_balance")
+        if 'Market' in self.Active and self.Active['Market']=='margin':
+            params['type']='margin'
+            params['account_id']=self.Active['Account']
+
+        self.Results=self.API("fetch_balance",params=params)
 
         if base==None:
             return self.Results

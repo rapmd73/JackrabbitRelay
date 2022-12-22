@@ -437,71 +437,23 @@ class Broker:
         self.Results=self.callAPI(method='GET',url=url)
         return self.Results
 
+    # Get Paginated Sub-Account Information.
+
+    # This endpoint can be used to get paginated sub-account information.
+    # Pagination is required.
+
+    def apiGetV2SubAccounts(self,currentPage=None,pageSize=None):
+        params={}
+
+        currentPage,pageSize=self.ValidatePagenation(currentPage,pageSize)
+
+        params['currentPage']=currentPage
+        params['pageSize']=pageSize
+
+        self.Results=self.callAPI(method='GET',url='/api/v2/sub-accounts',params=params)
+        return self.Results
+
 """
-
-Get Paginated Sub-Account Information.
-
-{
-    "code": "200000",
-    "data": {
-        "currentPage": 1,
-        "pageSize": 10,
-        "totalNum": 14,
-        "totalPage": 2,
-        "items": [
-            {
-                "subUserId": "635002438793b80001dcc8b3",
-                "subName": "margin03",
-                "mainAccounts": [
-                    {
-                        "currency": "00",
-                        "balance": "0",
-                        "available": "0",
-                        "holds": "0",
-                        "baseCurrency": "BTC",
-                        "baseCurrencyPrice": "125.63",
-                        "baseAmount": "0"
-                    }
-                ]
-            }
-        ]
-    }
-}
-
-   This endpoint can be used to get paginated sub-account information.
-   Pagination is required.
-
-HTTP REQUEST
-
-   GET /api/v2/sub-accounts
-
-Example
-
-   GET /api/v2/sub-accounts
-
-API KEY PERMISSIONS
-
-   This endpoint requires the General permission.
-
-PARAMETERS
-
-   Param Type Mandatory Description
-   currentPage Int No Current request page. Default is 1
-   pageSize Int No Number of results per request. Minimum is 1, maximum is
-   100, default is 10.
-
-RESPONSES
-
-         Field                    Description
-   subUserId         The user ID of the sub-user.
-   subName           The username of the sub-user.
-   currency          The currency of the account.
-   balance           Total funds in the account.
-   available         Funds available to withdraw or trade.
-   holds             Funds on hold (not available for use).
-   baseCurrency      Calculated on this currency.
-   baseCurrencyPrice The base currency price.
-   baseAmount        The base currency amount.
 
 Get the Transferable
 
@@ -807,8 +759,7 @@ Get Deposit List
                 "isInner": false,
                 "amount": "20.50000000",
                 "fee": "0.00000000",
-                "walletTxId": "2[358][email protected]e8902757998fc352e6c9d8890d
-18a71c",
+                "walletTxId": "2[358][email protected]e8902757998fc352e6c9d8890d18a71c",
                 "createdAt": 1666600519000,
                 "updatedAt": 1666600549000,
                 "remark": "Deposit"
@@ -949,8 +900,7 @@ Get Withdrawals List
                 "isInner": false,
                 "amount": "20.50000000",
                 "fee": "0.50000000",
-                "walletTxId": "2C24A6D5B3E7D5B6AA6534025B9B107AC910309A98825BF55
-81E25BEC94AD83B",
+                "walletTxId": "2C24A6D5B3E7D5B6AA6534025B9B107AC910309A98825BF5581E25BEC94AD83B",
                 "createdAt": 1666600379000,
                 "updatedAt": 1666600511000,
                 "remark": "test"
@@ -1019,8 +969,7 @@ Get V1 Historical Withdrawals List
             "createAt":1526723468,
             "amount":"0.534",
             "address":"33xW37ZSW4tQvg443Pc7NLCAs167Yc2XUV",
-            "walletTxId":"aeacea864c020acf58e51606169240e96774838dcd4f7ce48acf38
-e3651323f4",
+            "walletTxId":"aeacea864c020acf58e51606169240e96774838dcd4f7ce48acf38e3651323f4",
             "isInner":false,
             "status":"SUCCESS"
         }
@@ -1346,13 +1295,19 @@ PARAMETERS
 
    Param type Description
    clientOid String Unique order id created by users to identify their
+
    orders, e.g. UUID.
    side String buy or sell
+
    symbol String a valid trading symbol code. e.g. ETH-BTC
+
    type String [Optional] limit or market (default is limit)
+
    remark String [Optional] remark for the order, length cannot exceed 100
    utf8 characters
+
    stp String [Optional] self trade prevention , CN, CO, CB or DC
+
    tradeType String [Optional] The type of trading : TRADE（Spot Trade）,
    MARGIN_TRADE (Margin Trade). Default is TRADE. Note: To improve the
    system performance and to accelerate order placing and processing,
@@ -1366,16 +1321,23 @@ LIMIT ORDER PARAMETERS
 
    Param type Description
    price String price per base currency
+
    size String amount of base currency to buy or sell
+
    timeInForce String [Optional] GTC, GTT, IOC, or FOK (default is GTC),
    read [369]Time In Force.
+
    cancelAfter long [Optional] cancel after n seconds, requires
    timeInForce to be GTT
+
    postOnly boolean [Optional] Post only flag, invalid when timeInForce is
    IOC or FOK
+
    hidden boolean [Optional] Order will not be displayed in the order book
+
    iceberg boolean [Optional] Only aportion of the order is displayed in
    the order book
+
    visibleSize String [Optional] The maximum visible size of an iceberg
    order
 
@@ -1383,7 +1345,9 @@ MARKET ORDER PARAMETERS
 
    Param  type                       Description
    size  String [Optional] Desired amount in base currency
+
    funds String [Optional] The desired amount of quote currency to use
+
      * It is required that you use one of the two parameters, size or
        funds.
 
