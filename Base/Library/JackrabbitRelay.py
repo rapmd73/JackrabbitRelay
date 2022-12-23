@@ -112,6 +112,9 @@ class JackrabbitRelay:
         # This will be the connector point to any exchange/broker
         self.Broker=None
 
+        # This is for the rate limiting sub-system
+        self.Limiter=None
+
         # Initialize The log to just the basename of the program.
         self.JRLog=JackrabbitLog(None)
 
@@ -551,6 +554,19 @@ class JackrabbitRelay:
         if self.Framework=='ccxt':
             self.ccxt=self.Broker.SetExchangeAPI()
 
+    # Carry out rate limit
+
+    def EnforceRateLimit(self):
+        if 'RateLimit' in self.Active:
+            ratelimit=int(self.Active['RateLimit'])
+        else:
+            ratelimit=1000
+
+        while self.Limiter.Lock()!='locked':
+            JRRsupport.ElasticSleep(ratelimit/1000)
+        JRRsupport.ElasticSleep(ratelimit/1000)
+        self.Limiter.Unlock()
+
     # Login to a given exchange
 
     # Active references must be passed as well.
@@ -563,6 +579,10 @@ class JackrabbitRelay:
                 self.Framework=self.Active['Framework'].lower()
             else:
                 self.JRLog.Error("Login",self.Exchange+' framework not given in configuration')
+
+        # Initialize rate limiting sub-system
+        ln="RateLimiter."+self.Exchange
+        self.Limiter=JRRsupport.Locker(ln,ID=ln)
 
         # Market data is loaded automatically. Pull it into the Relay object as
         # well.
@@ -579,6 +599,7 @@ class JackrabbitRelay:
     def GetMarkets(self):
         self.RotateKeys()
         self.Markets=self.Broker.GetMarkets()
+        self.EnforceRateLimit()
         return self.Markets
 
     # Get account balance(s)
@@ -586,6 +607,7 @@ class JackrabbitRelay:
     def GetBalance(self,**kwargs):
         self.RotateKeys()
         self.Results=self.Broker.GetBalance(**kwargs)
+        self.EnforceRateLimit()
         return self.Results
 
     # Get the exchange positions. For and non-spot market
@@ -593,6 +615,7 @@ class JackrabbitRelay:
     def GetPositions(self,**kwargs):
         self.RotateKeys()
         self.Results=self.Broker.GetPositions(**kwargs)
+        self.EnforceRateLimit()
         return self.Results
 
     # Get OHLCV data from exchange
@@ -600,6 +623,7 @@ class JackrabbitRelay:
     def GetOHLCV(self,**kwargs):
         self.RotateKeys()
         self.Results=self.Broker.GetOHLCV(**kwargs)
+        self.EnforceRateLimit()
         return self.Results
 
     # Get ticker data from exchange
@@ -607,12 +631,14 @@ class JackrabbitRelay:
     def GetTicker(self,**kwargs):
         self.RotateKeys()
         self.Results=self.Broker.GetTicker(**kwargs)
+        self.EnforceRateLimit()
         return self.Results
 
     # Get orderbook data from exchange
 
     def GetOrderBook(self,**kwargs):
         self.RotateKeys()
+        self.EnforceRateLimit()
         self.Results=self.Broker.GetOrderBook(**kwargs)
         return self.Results
 
@@ -621,6 +647,7 @@ class JackrabbitRelay:
     def GetOpenOrders(self,**kwargs):
         self.RotateKeys()
         self.Results=self.Broker.GetOpenOrders(**kwargs)
+        self.EnforceRateLimit()
         return self.Results
 
     # Get open Trades
@@ -628,6 +655,7 @@ class JackrabbitRelay:
     def GetOpenTrades(self,**kwargs):
         self.RotateKeys()
         self.Results=self.Broker.GetOpenTrades(**kwargs)
+        self.EnforceRateLimit()
         return self.Results
 
     # Place Order to exchange. Needs to handle buy, sell, close
@@ -644,11 +672,13 @@ class JackrabbitRelay:
     def PlaceOrder(self,**kwargs):
         self.RotateKeys()
         self.Results=self.Broker.PlaceOrder(**kwargs)
+        self.EnforceRateLimit()
         return self.Results
 
     def GetMinimum(self,**kwargs):
         self.RotateKeys()
         minimum,mincost=self.Broker.GetMinimum(**kwargs)
+        self.EnforceRateLimit()
         return minimum,mincost
 
     # Get the exact details of a specific order
@@ -656,14 +686,17 @@ class JackrabbitRelay:
     def GetOrderDetails(self,**kwargs):
         self.RotateKeys()
         self.Results=self.Broker.GetOrderDetails(**kwargs)
+        self.EnforceRateLimit()
         return self.Results
 
     # Process the orphan order
 
     def MakeOrphanOrder(self,id,Order):
         self.Results=self.Broker.MakeOrphanOrder(id,Order)
+        self.EnforceRateLimit()
 
     # Make ledger entry
 
     def WriteLedger(self,**kwargs):
         self.Results=self.Broker.WriteLedger(**kwargs,LedgerDirectory=self.LedgerDirectory)
+        self.EnforceRateLimit()
