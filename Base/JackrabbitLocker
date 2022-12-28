@@ -19,6 +19,7 @@
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
+import gc
 import time
 from datetime import datetime
 import socket
@@ -226,10 +227,6 @@ def main():
                         if fds in queue:
                             queue.pop(fds,None)
                         fds.close()
-                        now=time.time()
-                        for k in list(Locker):
-                            if now>Locker[k]['Expire']:
-                                Locker.pop(k,None)
                     else:
                         # Collect the entire line.
                         data=data.decode()
@@ -249,6 +246,15 @@ def main():
                             inputs.remove(fds)
                         fds.close()
                     queue.pop(fds,None)
+
+        # Clean up memory list
+
+        now=time.time()
+        for k in list(Locker):
+            if now>Locker[k]['Expire']:
+                Locker.pop(k,None)
+        # for testing memory leaks (Python 3.10)`
+        #gc.collect()
 
 if __name__ == '__main__':
     main()
