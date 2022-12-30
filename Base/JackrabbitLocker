@@ -221,8 +221,8 @@ def main():
 
                     # No data received, close connection, clean up and sleep
 
-                    if not data:
-                        if fds in inputs:
+                    if not data or data==None:
+`                        if fds in inputs:
                             inputs.remove(fds)
                         if fds in queue:
                             queue.pop(fds,None)
@@ -253,7 +253,7 @@ def main():
         for k in list(Locker):
             if now>Locker[k]['Expire']:
                 Locker.pop(k,None)
-        # for testing memory leaks (Python 3.10)`
+        # for testing memory leaks (Python 3.10)
         #gc.collect()
 
 if __name__ == '__main__':
