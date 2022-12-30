@@ -94,8 +94,13 @@ class oanda:
     # Register the exchange
 
     def Login(self,Notify=True,Sandbox=False):
+        if Sandbox==True or "Sandbox" in self.Active:
+            Sandbox=True
+            envTrade="practice"
+        else:
+            envTrade="live"
         try:
-            self.Broker=oandapyV20.API(access_token=self.AccessToken)
+            self.Broker=oandapyV20.API(access_token=self.AccessToken,environment=envTrade)
         except Exception as e:
             self.Log.Error("Login",JRRsupport.StopHTMLtags(str(e)))
 
