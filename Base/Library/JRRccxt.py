@@ -354,6 +354,9 @@ class ccxtCrypto:
         return self.Results
 
     def GetOpenOrders(self,**kwargs):
+        if self.Active['Market']=='margin':
+            kwargs['tradeType']='MARGIN_TRADE'
+
         self.Results=self.API("fetch_open_orders",**kwargs)
         return self.Results
 
@@ -384,12 +387,15 @@ class ccxtCrypto:
         action=kwargs.get('action').lower()
         price=kwargs.get('price')
         ro=kwargs.get('ReduceOnly')
-        ln=kwargs.get('LedgerNote')
+        # ln=kwargs.get('LedgerNote')
         # Shorts are stored as negative numbers, abs() is a safety catch
         amount=self.Broker.amount_to_precision(pair,abs(float(kwargs.get('amount'))))
 
         params = {}
         order=None
+
+        if self.Active['Market']=='margin':
+            params['tradeType']='MARGIN_TRADE'
 
         # Deal with special case order types
 
@@ -620,6 +626,9 @@ class ccxtCrypto:
     # Get details of a specific order by ID
 
     def GetOrderDetails(self,**kwargs):
+        if self.Active['Market']=='margin':
+            kwargs['tradeType']='MARGIN_TRADE'
+
         if self.Broker.has['fetchClosedOrders']:
             id=kwargs.get('id')
             kwargs.pop('id',None)
