@@ -68,6 +68,7 @@ def jsonStatus(str,Tag=None,Data=None):
 
 def ProcessPayload(data):
     global Locker
+    global dataStore
 
     try:
         dataDB=json.loads(data)
@@ -222,7 +223,9 @@ def main():
                     # No data received, close connection, clean up and sleep
 
                     if not data or data==None:
-`                        if fds in inputs:
+                        if fds in dataStore:
+                            dataStore.pop(fds,None)
+                        if fds in inputs:
                             inputs.remove(fds)
                         if fds in queue:
                             queue.pop(fds,None)
@@ -242,6 +245,8 @@ def main():
                     try:
                         fds.sendall(queue[fds].encode())
                     except:
+                        if fds in dataStore:
+                            dataStore.pop(fds,None)
                         if fds in inputs:
                             inputs.remove(fds)
                         fds.close()

@@ -335,8 +335,12 @@ class ccxtCrypto:
                 ask=ob['asks'][0][0]
 
         if (bid==None or ask==None):
-            bid=max(o,c)
-            ask=min(o,c)
+            if o!=None and c!=None:
+                bid=max(o,c)
+                ask=min(o,c)
+            else:
+                bid=0
+                ask=0
 
         Pair={}
         Pair['Ask']=ask
