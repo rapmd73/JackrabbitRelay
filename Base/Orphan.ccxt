@@ -43,7 +43,7 @@ def main():
     id=Orphan['ID']
 
     openOrders=relay.GetOpenOrders(symbol=relay.Order['Asset'])
-    relay.JRLog.Write(f"Orders: {len(openOrders)}",stdOut=False)
+    #relay.JRLog.Write(f"Orders: {len(openOrders)}",stdOut=False)
     for cur in openOrders:
         if cur['id']==id:
             rData={}
@@ -53,7 +53,7 @@ def main():
             rData['Status']=cur['status']
             print(json.dumps(rData))
             sys.stdout.flush()
-            relay.JRLog.Write(f"{id}: {cur['status']}",stdOut=False)
+            #relay.JRLog.Write(f"{id}: {cur['status']}",stdOut=False)
             sys.exit(0)
 
     # Order must be closed
