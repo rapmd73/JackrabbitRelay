@@ -354,7 +354,7 @@ class ccxtCrypto:
         return self.Results
 
     def GetOpenOrders(self,**kwargs):
-        if self.Active['Market']=='margin':
+        if 'Market' in self.Active and self.Active['Market']=='margin':
             kwargs['tradeType']='MARGIN_TRADE'
 
         self.Results=self.API("fetch_open_orders",**kwargs)
@@ -394,7 +394,7 @@ class ccxtCrypto:
         params = {}
         order=None
 
-        if self.Active['Market']=='margin':
+        if 'Market' in self.Active and self.Active['Market']=='margin':
             params['tradeType']='MARGIN_TRADE'
 
         # Deal with special case order types
@@ -626,7 +626,7 @@ class ccxtCrypto:
     # Get details of a specific order by ID
 
     def GetOrderDetails(self,**kwargs):
-        if self.Active['Market']=='margin':
+        if 'Market' in self.Active and self.Active['Market']=='margin':
             kwargs['tradeType']='MARGIN_TRADE'
 
         if self.Broker.has['fetchClosedOrders']:

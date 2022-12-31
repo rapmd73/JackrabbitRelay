@@ -36,7 +36,6 @@ LogDirectory="/home/JackrabbitRelay2/Logs"
 # Required global for the process to work
 
 Locker={}
-dataStore={}
 
 # Write pid in port file
 
@@ -68,7 +67,6 @@ def jsonStatus(str,Tag=None,Data=None):
 
 def ProcessPayload(data):
     global Locker
-    global dataStore
 
     try:
         dataDB=json.loads(data)
@@ -109,12 +107,22 @@ def ProcessPayload(data):
                 Locker[FileName]['ID']=dataDB['ID']
                 Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
                 return jsonStatus("Locked")
+            elif Locker[FileName]['ID']==dataDB['ID']:
+                Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
+                return jsonStatus("Locked")
             else:
-                if Locker[FileName]['ID']==dataDB['ID']:
-                    Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
-                    return jsonStatus("Locked")
-                else:
-                    return jsonStatus("Failure")
+                return jsonStatus("NotOwner")
+        # Unlock/Erase request
+        elif action=='unlock':
+            # Just pass through unlock
+            if FileName not in Locker:
+                return jsonStatus("Unlocked")
+            # Verify owner and unlock
+            elif Locker[FileName]['ID']==dataDB['ID']:
+                Locker[FileName]['Expire']=0
+                return jsonStatus("Unlocked")
+            else:
+                return jsonStatus("Failure")
         # Get memory reference
         elif action=='get':
             if FileName not in Locker:
@@ -143,17 +151,6 @@ def ProcessPayload(data):
             else:
                 return jsonStatus("NotOwner")
         # Unlock/Erase request
-        elif action=='unlock':
-            # Just pass through unlock
-            if FileName not in Locker:
-                return jsonStatus("Unlocked")
-            # Verify owner and unlock
-            elif Locker[FileName]['ID']==dataDB['ID']:
-                Locker[FileName]['Expire']=0
-                return jsonStatus("Unlocked")
-            else:
-                return jsonStatus("Failure")
-        # Unlock/Erase request
         elif action=='erase':
             # Just pass through unlock/erase
             if FileName not in Locker:
@@ -175,8 +172,8 @@ def ProcessPayload(data):
 
 def main():
     global Locker
-    global dataStore
 
+    dataStore={}
     port=37373
 
     WritePID(port)
@@ -256,6 +253,7 @@ def main():
 
         now=time.time()
         for k in list(Locker):
+            print(Locker[k])
             if now>Locker[k]['Expire']:
                 Locker.pop(k,None)
         # for testing memory leaks (Python 3.10)
