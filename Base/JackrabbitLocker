@@ -253,7 +253,6 @@ def main():
 
         now=time.time()
         for k in list(Locker):
-            print(Locker[k])
             if now>Locker[k]['Expire']:
                 Locker.pop(k,None)
         # for testing memory leaks (Python 3.10)
