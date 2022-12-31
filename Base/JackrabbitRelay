@@ -108,9 +108,9 @@ def ProcessTrade(addr,payload):
         return res
 
     if trades!=None:
-        if type(trades)==dict:
+        if type(trades) is dict:
             res=ProcessSingleTrade(addr,trades)
-        elif type(trades)==list:
+        elif type(trades) is list:
             for trade in trades:
                 res+=str(ProcessSingleTrade(addr,trade))
         else:
@@ -120,7 +120,7 @@ def ProcessTrade(addr,payload):
             WriteLog(addr,f"Unrecognized payload type: {t}/{p}")
             return res
 
-    if type(res)!=bytes:
+    if type(res)is not bytes:
         res=res.encode('utf-8')
     return res
 
@@ -175,7 +175,7 @@ class Handler(BaseHTTPRequestHandler):
         res=ProcessPageRead(addr,self.path)
 
         if res!=None:
-            if type(res)!=bytes:
+            if type(res)is not bytes:
                 res=res.encode('utf-8')
             self.wfile.write(res)
         return res

@@ -16,16 +16,34 @@ import JackrabbitRelay as JRR
 
 def main():
     data=sys.stdin.read().strip()
-    Orphan=json.loads(data)
+    try:
+        Orphan=json.loads(data,strict=False)
+    except:
+        # Emergency falthru to prevent damage to the orphan list.
+        rData={}
+        rData['Key']='Corrupted'
+        rData['lID']='Corrupted'
+        rData['mID']='Corrupted'
+        rData['Status']='open'
+        print(json.dumps(rData))
+        sys.stdout.flush()
+        sys.exit(0)
 
-    # Use Relay to process and validate the order
-    relay=JRR.JackrabbitRelay(Orphan['Framework'],Orphan['Order'])
+    # Use Relay to process and validate the order. Order MUST be a JSON string.
+
+    if type(Orphan['Order']) is dict:
+        order=json.dumps(Orphan['Order'])
+    else:
+        order=Orphan['Order']
+
+    relay=JRR.JackrabbitRelay(Orphan['Framework'],order)
     relay.JRLog.SetBaseName('OliverTwist')
 
     # Check to see if order is still open and return current state
     id=Orphan['ID']
 
     openOrders=relay.GetOpenOrders(symbol=relay.Order['Asset'])
+    relay.JRLog.Write(f"Orders: {len(openOrders)}",stdOut=False)
     for cur in openOrders:
         if cur['id']==id:
             rData={}
@@ -35,7 +53,7 @@ def main():
             rData['Status']=cur['status']
             print(json.dumps(rData))
             sys.stdout.flush()
-            #relay.JRLog.Write(f"{id}: {cur['status']}",stdOut=False)
+            relay.JRLog.Write(f"{id}: {cur['status']}",stdOut=False)
             sys.exit(0)
 
     # Order must be closed

@@ -225,15 +225,15 @@ def main():
 
     # Determine trade action and carry it out
 
-    if type(amount)==int:
+    if type(amount) is int:
         total=abs(round(amount*price,8))
     else:
         total=abs(pBalance)
-    if (type(amount)==str and amount.upper()=='ALL' and pBalance>=0) \
-    or (type(amount)==int and amount>=0):
+    if (type(amount) is str and amount.upper()=='ALL' and pBalance>=0) \
+    or (type(amount) is int and amount>=0):
         dir='Long'
-    elif (type(amount)==str and amount.upper()=='ALL' and pBalance<0) \
-    or (type(amount)==int and amount<0):
+    elif (type(amount) is str and amount.upper()=='ALL' and pBalance<0) \
+    or (type(amount) is int and amount<0):
         dir='Short'
 
     relay.JRLog.Write("Placing Order")
@@ -241,15 +241,15 @@ def main():
     relay.JRLog.Write(f"|- Action: {relay.Order['Action']}")
     if 'Ticket' in relay.Order:
         relay.JRLog.Write(f"|- Ticket: {relay.Order['Ticket']}")
-    if type(amount)==int:
+    if type(amount) is int:
         relay.JRLog.Write(f"|- Units: {abs(amount):.8f} {dir}")
     else:
         relay.JRLog.Write(f"|- Units: {amount} {dir}")
     relay.JRLog.Write(f"|- Price: {price:.8f}")
     relay.JRLog.Write(f"|- Total: {total:.8f}")
 
-    if (type(amount)==int and amount!=0) \
-    or (type(amount)==str and amount.upper()=='ALL'):
+    if (type(amount) is int and amount!=0) \
+    or (type(amount) is str and amount.upper()=='ALL'):
         lNote=None
         if 'LedgerNote' in relay.Order:
             lNote=relay.Order['LedgerNote']
@@ -258,7 +258,7 @@ def main():
             ticket=relay.Order['Ticket']
 
         # Make sure short close is clearly marked negative for ALL
-        if pBalance<0 and type(amount)==str and amount.upper()=='ALL':
+        if pBalance<0 and type(amount) is str and amount.upper()=='ALL':
             amount='-ALL'
 
         order=relay.PlaceOrder(pair=relay.Order['Asset'], \
