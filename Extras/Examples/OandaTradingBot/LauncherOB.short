@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# AUD/USD EUR/AUD EUR/GBP USD/CAD AUD/NZD
+# EUR/USD GBP/AUD         AUD/CAD EUR/NZD
+# GBP/USD                 EUR/CAD GBP/NZD
+# NZD/USD                 GBP/CAD
+#                         NDZ/CAD
+
+cd /home/Oanda
+
+while true ; do
+    /home/Oanda/oandaBot.short $@
+    sleep 180
+done
+
+
