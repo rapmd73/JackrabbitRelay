@@ -1,9 +1,0 @@
-#!/bin/bash
-
-cd /home/OandaTradingBot
-
-while true ; do
-    /home/OandaTradingBot/oandaBot $@
-    sleep 180
-done
-
