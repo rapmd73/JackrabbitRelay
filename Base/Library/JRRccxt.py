@@ -399,8 +399,8 @@ class ccxtCrypto:
 
         # Deal with special case order types
 
-        #if "createMarketBuyOrderRequiresPrice" in self.Broker.options and m=='market':
-        #`    m='limit'
+        if "createMarketBuyOrderRequiresPrice" in self.Broker.options and m=='market':
+            m='limit'
         if m=='limittaker':
             m='limit'
             params['timeInForce']='fok'
