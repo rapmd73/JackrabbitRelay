@@ -274,7 +274,7 @@ class ccxtCrypto:
     # Get positions
 
     def GetPositions(self,**kwargs):
-        self.Results=self.API("fetch_position")
+        self.Results=self.API("fetch_positions",**kwargs)
         symbol=kwargs.get('symbols')
         if symbol==None:
             return self.Results
