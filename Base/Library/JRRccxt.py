@@ -399,8 +399,8 @@ class ccxtCrypto:
 
         # Deal with special case order types
 
-        if "createMarketBuyOrderRequiresPrice" in self.Broker.options and m=='market':
-            m='limit'
+#        if "createMarketBuyOrderRequiresPrice" in self.Broker.options and m=='market':
+#            m='limit'
         if m=='limittaker':
             m='limit'
             params['timeInForce']='fok'
@@ -418,16 +418,16 @@ class ccxtCrypto:
 
         if 'binance' in self.Broker.id:
             params['quoteOrderQty']=amount
-        else:
-            amount=float(amount)
+#        else:
+#            amount=float(amount)
 
         # Pure market orders break (phemex) when price in included.
-
-        if m=='market':
+        if m=='market' and "createMarketBuyOrderRequiresPrice" not in self.Broker.options:
             if params!={}:
                 order=self.API("create_order",symbol=pair,type=m,side=action,amount=amount,params=params)
             else:
                 order=self.API("create_order",symbol=pair,type=m,side=action,amount=amount)
+        # Limit orders or market orders that require price
         else:
             if params!={}:
                 order=self.API("create_order",symbol=pair,type=m,side=action,amount=amount,price=price,params=params)
