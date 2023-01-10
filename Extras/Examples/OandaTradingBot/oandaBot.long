@@ -61,6 +61,22 @@ def LowestLotSize(relay,asset):
             return ls
     return ls+LotStep
 
+def HighestLotSize(relay,asset):
+    ot=relay.GetOpenTrades(symbol=asset)
+    ls=LotStart
+    done=False
+    while not done:
+        found=False
+        for o in ot:
+            iu=abs(int(o['currentUnits']))
+            if ls<iu:
+                ls+=LotStep
+                found=True
+                break
+        if not found:
+            return ls+LotStep
+    return ls+LotStep
+
 # Send the order to Relay
 
 def SendOrder(relay,**kwargs):
@@ -115,6 +131,8 @@ else:
     lotSize=LowestLotSize(relay,asset)
 
 while True:
+    # Get balance
+    balance=relay.GetBalance()
     # Get the margin used
     marginUsed=0
     positions=relay.GetPositions()
@@ -128,6 +146,9 @@ while True:
 
     # Get th ticker
     ticker=relay.GetTicker(symbol=asset)
+
+    # Get the highest lot size
+    unitPips=HighestLotSize(relay,asset)*0.0001
 
     lowestPrice=999999
     ot=relay.GetOpenTrades(symbol=asset)
@@ -144,13 +165,13 @@ while True:
 
         sellPrice=(price+pipStep+ticker['Spread'])
         if iu>0 and ticker['Bid']>=sellPrice:
-            relay.JRLog.Write(f"{id} Long - Sell @{sellPrice:7.5f} -> {iu}")
+            relay.JRLog.Write(f"{id} Long - Sell @{sellPrice:7.5f} -> {iu}/{balance:12.5f}")
 
             result=SendOrder(relay,Action="Close",Ticket=id)
 
             # Replaceent order
 
-            if not AlreadyBought(relay,asset,ticker['Bid'],pipStep+marginPips+ticker['Spread']):
+            if not AlreadyBought(relay,asset,ticker['Bid'],pipStep+marginPips+unitPips+ticker['Spread']):
                 if MarginLimit<0 or (MarinLimit>0 and marginUsed<MarginLimit):
                     lotSize=LowestLotSize(relay,asset)
                     details=relay.GetOrderDetails(OrderID=id)[-1]
@@ -160,12 +181,12 @@ while True:
 
     # Next buy price minus pip step
 
-    buy=round(lowestPrice-pipStep-marginPips-ticker['Spread'],5)
+    buy=round(lowestPrice-pipStep-marginPips-unitPips-ticker['Spread'],5)
     print(f"Buy -> {buy:7.5f}/{ticker['Bid']:7.5f} Margin: {marginUsed:8.5f}")
     lotSize=LowestLotSize(relay,asset)
 
     if ticker['Bid']<buy:
-        if not AlreadyBought(relay,asset,ticker['Bid'],pipStep+ticker['Spread']):
+        if not AlreadyBought(relay,asset,ticker['Bid'],pipStep+marginPips+unitPips+ticker['Spread']):
             if MarginLimit<0 or (MarginLimit>0 and marginUsed<MarginLimit):
                 # Long buy
                 relay.JRLog.Write(f"Long - Buy @{buy:7.5f} -> {lotSize}")
