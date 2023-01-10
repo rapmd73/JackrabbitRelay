@@ -28,7 +28,7 @@ import json
 
 import JRRsupport
 
-Version="0.0.0.1.15"
+Version="0.0.0.1.20"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
 LogDirectory="/home/JackrabbitRelay2/Logs"
@@ -56,6 +56,8 @@ def WriteLog(addr,msg):
     fh.write(s)
     fh.close()
 
+# Convience to build the status and a json payload
+
 def jsonStatus(str,Tag=None,Data=None):
     res={}
     res['Status']=str
@@ -64,6 +66,8 @@ def jsonStatus(str,Tag=None,Data=None):
         res[Tag]=Data
 
     return json.dumps(res)+'\n'
+
+# Process the payload and carry out each of the desired functionalities.
 
 def ProcessPayload(data):
     global Locker
@@ -93,9 +97,12 @@ def ProcessPayload(data):
         FileName=dataDB['FileName']
         action=dataDB['Action'].lower()
 
-        # Link this entry to the connected socket
+        # Handle the LOCK action. This allows an advisory locking method that should
+        # work on and platform. Locking/Unlocking can be used as a rate limiter as
+        # well.
+
         if action=='lock':
-            # New request
+            # New lock request
             if FileName not in Locker:
                 dataLock={}
                 dataLock['ID']=dataDB['ID']
@@ -107,9 +114,11 @@ def ProcessPayload(data):
                 Locker[FileName]['ID']=dataDB['ID']
                 Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
                 return jsonStatus("Locked")
+            # The current owner wwant the lock reset to a specific duration/held longer
             elif Locker[FileName]['ID']==dataDB['ID']:
                 Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
                 return jsonStatus("Locked")
+            # Lock access by a non-owner ID
             else:
                 return jsonStatus("NotOwner")
         # Unlock/Erase request
@@ -121,10 +130,13 @@ def ProcessPayload(data):
             elif Locker[FileName]['ID']==dataDB['ID']:
                 Locker[FileName]['Expire']=0
                 return jsonStatus("Unlocked")
+            # Unock access by a non-owner ID. This may seem idiotic, but its an
+            # absolute for keeping the lock from being hijacked.
             else:
                 return jsonStatus("Failure")
         # Get memory reference
         elif action=='get':
+            # Memory item doesn't exist
             if FileName not in Locker:
                 return jsonStatus("NotFound")
             # Verify owner and unlock/Erase memory
@@ -142,7 +154,7 @@ def ProcessPayload(data):
                 dStore['DataStore']=dataDB['DataStore']
                 Locker[FileName]=dStore
                 return jsonStatus("Done")
-            # Existing memory object, verify owner
+            # Existing memory object, verify owner and reset expiration timeout
             elif Locker[FileName]['ID']==dataDB['ID']:
                 Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
                 Locker[FileName]['DataStore']=dataDB['DataStore']
@@ -150,19 +162,21 @@ def ProcessPayload(data):
             # Not the rightful owner
             else:
                 return jsonStatus("NotOwner")
-        # Unlock/Erase request
+        # Erase request
         elif action=='erase':
-            # Just pass through unlock/erase
+            # Just pass through erase
             if FileName not in Locker:
                 return jsonStatus("Done")
-            # Verify owner and erase memory
+            # Verify owner and erase memory. Erase is just resetting expiration to 0.
+            # Will be remove in main function.
             elif Locker[FileName]['ID']==dataDB['ID']:
                 Locker[FileName]['Expire']=0
                 Locker[FileName]['DataStore']=None
                 return jsonStatus("Done")
+            # Not the rightful owner
             else:
                 return jsonStatus("NotOwner")
-            # Wrong key
+        # Wrong key
         else:
             return jsonStatus("BadAction")
 
@@ -173,10 +187,13 @@ def ProcessPayload(data):
 def main():
     global Locker
 
+    # Data storage for incoming payloads
     dataStore={}
     port=37373
 
     WritePID(port)
+
+    # Open the port.
 
     try:
         lockerSocket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -198,12 +215,15 @@ def main():
 
     queue={}
 
+    # The main loop of the program.
+
     while True:
         infds,outfds,errfds=select.select(inputs, inputs, [], 30)
 
         if len(infds)!=0:
             for fds in infds:
                 if fds is lockerSocket:
+                    # Get new connection
                     clientsock,clientaddr=fds.accept()
                     clientsock.setblocking(0)
                     if clientsock not in inputs:
