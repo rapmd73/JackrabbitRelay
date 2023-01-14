@@ -18,7 +18,7 @@ import JackrabbitRelay as JRR
 DataTTL=30*86400
 
 def main():
-    relay=JRR.JackrabbitRelay(None,sys.stdin.read())
+    relay=JRR.JackrabbitRelay(framework=None,payload=sys.stdin.read())
 
     # If we made it this far, give our header
 

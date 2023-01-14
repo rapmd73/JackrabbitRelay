@@ -95,9 +95,9 @@ class JackrabbitLog:
 # relay=JackrabbitRelay()
 
 class JackrabbitRelay:
-    def __init__(self,framework=None,payload=None,secondary=None):
+    def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,secondary=None):
         # All the default locations
-        self.Version="0.0.0.1.30"
+        self.Version="0.0.0.1.35"
         self.BaseDirectory='/home/JackrabbitRelay2/Base'
         self.ConfigDirectory='/home/JackrabbitRelay2/Config'
         self.DataDirectory="/home/JackrabbitRelay2/Data"
@@ -203,6 +203,16 @@ class JackrabbitRelay:
         if self.Secondary!=None:
             self.Secondary()
 
+        # Setup the exchange and account passed in to the method. At this point, if we dont have an exchange
+        # and account, the information has to have been force fed into the method.
+
+        if self.Exchange==None and exchange!=None:
+            self.Exchange=exchange.lower()
+        if self.Account==None and account!=None:
+            self.Account=account
+        if self.Asset==None and asset!=None:
+            self.Asset=asset.upper()
+
         # Process exchange/broker config file
 
         self.ProcessConfig()
@@ -225,7 +235,7 @@ class JackrabbitRelay:
         elif self.Payload!=None:
             self.JRLog.Error("Login","An exchange and an account must be provided")
         else:
-            self.JRLog.Error("Commad line","An exchange and an account must be provided as the first and second command line parameters")
+            self.JRLog.Error("Initialization","An exchange and an account must be provided")
 
     def GetExchange(self):
         return self.Exchange
@@ -277,6 +287,9 @@ class JackrabbitRelay:
 
     def GetAsset(self):
         return self.Asset
+
+    def SetAsset(self,asset):
+        self.Asset=asset
 
     def SetRotateKeys(self,rk):
         self.ForceRotateKeys=rk

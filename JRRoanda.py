@@ -294,20 +294,11 @@ class oanda:
             self.Results=self.API("OrderCreate",request=res)
 
             if 'orderCreateTransaction' in self.Results:
-                if 'orderCancelTransaction' in self.Results:
-                    self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
-                else:
-                    self.Log.Write("|- Order Confirmation ID: "+self.Results['orderCreateTransaction']['id'])
+                self.Log.Write("|- Order Confirmation ID: "+self.Results['orderCreateTransaction']['id'])
             elif 'longOrderCreateTransaction' in self.Results:
-                if 'orderCancelTransaction' in self.Results:
-                    self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
-                else:
-                    self.Log.Write("|- Order Confirmation ID: "+self.Results['longOrderCreateTransaction']['id'])
+                self.Log.Write("|- Order Confirmation ID: "+self.Results['longOrderCreateTransaction']['id'])
             elif 'shortOrderCreateTransaction' in self.Results:
-                if 'orderCancelTransaction' in self.Results:
-                    self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
-                else:
-                    self.Log.Write("|- Order Confirmation ID: "+self.Results['shortOrderCreateTransaction']['id'])
+                self.Log.Write("|- Order Confirmation ID: "+self.Results['shortOrderCreateTransaction']['id'])
         elif (action=='sell'):
             params={}
             if ticket==None:
@@ -327,20 +318,11 @@ class oanda:
                 self.Results=self.API("PositionClose",request=res)
 
                 if 'orderCreateTransaction' in self.Results:
-                    if 'orderCancelTransaction' in self.Results:
-                        self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
-                    else:
-                        self.Log.Write("|- Order Confirmation ID: "+self.Results['orderCreateTransaction']['id'])
+                    self.Log.Write("|- Order Confirmation ID: "+self.Results['orderCreateTransaction']['id'])
                 elif 'longOrderCreateTransaction' in self.Results:
-                    if 'orderCancelTransaction' in self.Results:
-                        self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
-                    else:
-                        self.Log.Write("|- Order Confirmation ID: "+self.Results['longOrderCreateTransaction']['id'])
+                    self.Log.Write("|- Order Confirmation ID: "+self.Results['longOrderCreateTransaction']['id'])
                 elif 'shortOrderCreateTransaction' in self.Results:
-                    if 'orderCancelTransaction' in self.Results:
-                        self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
-                    else:
-                        self.Log.Write("|- Order Confirmation ID: "+self.Results['shortOrderCreateTransaction']['id'])
+                    self.Log.Write("|- Order Confirmation ID: "+self.Results['shortOrderCreateTransaction']['id'])
             else:
                 if 'ALL' not in str(amount).upper():
                     # amount is STR, need float for abs()
@@ -356,20 +338,11 @@ class oanda:
                 self.Results=self.API("TradeClose",request=res)
 
                 if 'orderCreateTransaction' in self.Results:
-                    if 'orderCancelTransaction' in self.Results:
-                        self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
-                    else:
-                        self.Log.Write("|- Order Confirmation ID: "+self.Results['orderCreateTransaction']['id'])
+                    self.Log.Write("|- Order Confirmation ID: "+self.Results['orderCreateTransaction']['id'])
                 elif 'longOrderCreateTransaction' in self.Results:
-                    if 'orderCancelTransaction' in self.Results:
-                        self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
-                    else:
-                        self.Log.Write("|- Order Confirmation ID: "+self.Results['longOrderCreateTransaction']['id'])
+                    self.Log.Write("|- Order Confirmation ID: "+self.Results['longOrderCreateTransaction']['id'])
                 elif 'shortOrderCreateTransaction' in self.Results:
-                    if 'orderCancelTransaction' in self.Results:
-                        self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
-                    else:
-                        self.Log.Write("|- Order Confirmation ID: "+self.Results['shortOrderCreateTransaction']['id'])
+                    self.Log.Write("|- Order Confirmation ID: "+self.Results['shortOrderCreateTransaction']['id'])
         else:
             self.Log.Error("PlaceOrder","Action is neither BUY nor SELL")
 
