@@ -278,6 +278,7 @@ class oanda:
         ln=kwargs.get('LedgerNote')
         ticket=kwargs.get('ticket')
 
+        oid=None
         if(action=='buy'):
             order={}
             if m=='LIMIT':
@@ -294,20 +295,19 @@ class oanda:
             self.Results=self.API("OrderCreate",request=res)
 
             if 'orderCreateTransaction' in self.Results:
-                if 'orderCancelTransaction' in self.Results:
-                    self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
-                else:
-                    self.Log.Write("|- Order Confirmation ID: "+self.Results['orderCreateTransaction']['id'])
+                oid=self.Results['orderCreateTransaction']['id']
+                self.Results=self.GetOrderDetails(OrderID=str(oid))
             elif 'longOrderCreateTransaction' in self.Results:
-                if 'orderCancelTransaction' in self.Results:
-                    self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
-                else:
-                    self.Log.Write("|- Order Confirmation ID: "+self.Results['longOrderCreateTransaction']['id'])
+                oid=self.Results['longOrderCreateTransaction']['id']
             elif 'shortOrderCreateTransaction' in self.Results:
-                if 'orderCancelTransaction' in self.Results:
-                    self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
+                oid=self.Results['shortOrderCreateTransaction']['id']
+            if oid!=None:
+                self.Results=self.GetOrderDetails(OrderID=oid)
+                print(self.Results)
+                if self.Results['type']=='ORDER_CANCEL':
+                    self.Log.Write("|- Order FAILED: "+self.Results['reason'])
                 else:
-                    self.Log.Write("|- Order Confirmation ID: "+self.Results['shortOrderCreateTransaction']['id'])
+                    self.Log.Write("|- Order Confirmation ID: "+str(oid))
         elif (action=='sell'):
             params={}
             if ticket==None:
@@ -327,20 +327,17 @@ class oanda:
                 self.Results=self.API("PositionClose",request=res)
 
                 if 'orderCreateTransaction' in self.Results:
-                    if 'orderCancelTransaction' in self.Results:
-                        self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
-                    else:
-                        self.Log.Write("|- Order Confirmation ID: "+self.Results['orderCreateTransaction']['id'])
+                    oid=self.Results['orderCreateTransaction']['id']
                 elif 'longOrderCreateTransaction' in self.Results:
-                    if 'orderCancelTransaction' in self.Results:
-                        self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
-                    else:
-                        self.Log.Write("|- Order Confirmation ID: "+self.Results['longOrderCreateTransaction']['id'])
+                    oid=self.Results['longOrderCreateTransaction']['id']
                 elif 'shortOrderCreateTransaction' in self.Results:
-                    if 'orderCancelTransaction' in self.Results:
-                        self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
+                    oid=self.Results['shortOrderCreateTransaction']['id']
+                if oid!=None:
+                    self.Results=self.GetOrderDetails(OrderID=oid)[-1]
+                    if self.Results['type']=='ORDER_CANCEL':
+                        self.Log.Write("|- Order FAILED: "+self.Results['reason'])
                     else:
-                        self.Log.Write("|- Order Confirmation ID: "+self.Results['shortOrderCreateTransaction']['id'])
+                        self.Log.Write("|- Order Confirmation ID: "+str(oid))
             else:
                 if 'ALL' not in str(amount).upper():
                     # amount is STR, need float for abs()
@@ -356,20 +353,17 @@ class oanda:
                 self.Results=self.API("TradeClose",request=res)
 
                 if 'orderCreateTransaction' in self.Results:
-                    if 'orderCancelTransaction' in self.Results:
-                        self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
-                    else:
-                        self.Log.Write("|- Order Confirmation ID: "+self.Results['orderCreateTransaction']['id'])
+                    oid=self.Results['orderCreateTransaction']['id']
                 elif 'longOrderCreateTransaction' in self.Results:
-                    if 'orderCancelTransaction' in self.Results:
-                        self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
-                    else:
-                        self.Log.Write("|- Order Confirmation ID: "+self.Results['longOrderCreateTransaction']['id'])
+                    oid=self.Results['longOrderCreateTransaction']['id']
                 elif 'shortOrderCreateTransaction' in self.Results:
-                    if 'orderCancelTransaction' in self.Results:
-                        self.Log.Write("|- Order CANCELLED: "+self.Results['orderCancelTransaction']['reason'])
+                    oid=self.Results['shortOrderCreateTransaction']['id']
+                if oid!=None:
+                    self.Results=self.GetOrderDetails(OrderID=oid)[-1]
+                    if self.Results['type']=='ORDER_CANCEL':
+                        self.Log.Write("|- Order FAILED: "+self.Results['reason'])
                     else:
-                        self.Log.Write("|- Order Confirmation ID: "+self.Results['shortOrderCreateTransaction']['id'])
+                        self.Log.Write("|- Order Confirmation ID: "+str(oid))
         else:
             self.Log.Error("PlaceOrder","Action is neither BUY nor SELL")
 
