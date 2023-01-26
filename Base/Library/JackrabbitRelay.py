@@ -206,12 +206,14 @@ class JackrabbitRelay:
         # Setup the exchange and account passed in to the method. At this point, if we dont have an exchange
         # and account, the information has to have been force fed into the method.
 
-        if self.Exchange==None and exchange!=None:
-            self.Exchange=exchange.lower()
-        if self.Account==None and account!=None:
-            self.Account=account
-        if self.Asset==None and asset!=None:
-            self.Asset=asset.upper()
+        if self.Exchange==None and self.Account==None:
+            if self.Exchange==None and exchange!=None:
+                self.Exchange=exchange.lower()
+            if self.Account==None and account!=None:
+                self.Account=account
+            if self.Asset==None and asset!=None:
+                self.Asset=asset.upper()
+            self.SetupLogging()
 
         # Process exchange/broker config file
 
@@ -310,6 +312,20 @@ class JackrabbitRelay:
 
     def GetArgs(self,x):
         return self.args[x]
+
+    # Set up logging file to reference exchange, account, and asset
+
+    def SetupLogging(self):
+        lname=None
+        if self.Exchange!=None and self.Account!=None and self.Asset!=None:
+            lname=f"{self.Exchange}.{self.Account}.{self.Asset}"
+        elif self.Exchange!=None and self.Account!=None:
+            lname=f"{self.Exchange}.{self.Account}"
+        elif self.Exchange!=None:
+            lname=f"{self.Exchange}"
+
+        if lname!=None:
+            self.JRLog.SetLogName(lname)
 
     # Read global Identity
 
@@ -540,17 +556,7 @@ class JackrabbitRelay:
         if self.argslen>=4:
             self.Asset=self.args[3].upper()
 
-        # Set up logging file to reference exchange, account, and asset
-        lname=None
-        if self.Exchange!=None and self.Account!=None and self.Asset!=None:
-            lname=f"{self.Exchange}.{self.Account}.{self.Asset}"
-        elif self.Exchange!=None and self.Account!=None:
-            lname=f"{self.Exchange}.{self.Account}"
-        elif self.Exchange!=None:
-            lname=f"{self.Exchange}"
-
-        if lname!=None:
-            self.JRLog.SetLogName(lname)
+        self.SetupLogging()
 
     # This if where things get messy. The basic API must have calls to
     # each framework buy uniform to the Relay core.
