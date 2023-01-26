@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# ARG 1 is configfile
+
+cd /home/Oanda
+
+while true ; do
+    /home/Oanda/oandaGridBot $@
+    sleep 180
+done
+
+

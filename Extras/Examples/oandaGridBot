@@ -1,0 +1,442 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+# OANDA example unbounded grid bot.
+
+# This is a very simple grid bot using unbounded grids.
+
+# For demonstration purposes only.
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import json
+import time
+
+import JackrabbitRelay as JRR
+import JRRsupport
+
+# Forex sessions:
+#
+# Tokyo     00:00 to 09:00  T
+# London    08:00 to 17:00  L
+# New York  13:00 to 22:00  N
+# Sydney    20:00 to 05:00  S
+
+# Get forex session
+
+def GetForexSession():
+    cs=''
+    hour=time.localtime().tm_hour
+    if hour>=0 and hour<=9:
+        cs+='T'
+    if hour>=8 and hour<=17:
+        cs+='L'
+    if hour>=13 and hour<=22:
+        cs+='N'
+    if hour>=20 or hour<=5:
+        cs+='S'
+    return(cs)
+
+# Read the configuration file
+
+def ReadConfig(fname):
+    required=[ "Account","Asset","PipProfit","MarginPips","UnitPips","UnitStart","UnitStep","MarginLimit","Direction","Clustering","ClusterStyle" ]
+    Config={}
+    lines=JRRsupport.ReadFile(fname).split('\n')
+    for line in lines:
+        line=line.strip()
+        if line==None or line=='' or line[0]=='#':
+            continue
+        try:
+            cfg=json.loads(line)
+        except:
+            print(f'Config line damaged: {line}')
+            sys.exit(1)
+
+        for item in required:
+            if item not in cfg:
+                print(f'Item "{item}" is missing from this line:')
+                print(f'{line}')
+                sys.exit(1)
+
+        Config[cfg['Asset']]=cfg
+        Config[cfg['Asset']]['First']=True
+        Config[cfg['Asset']]['BuyPips']=0
+    return Config
+
+# Get the order ID. If there isn't an ID, the order FAILED.
+
+def GetOrderID(res):
+    if res.find('Order Confirmation ID')>-1:
+        s=res.find('ID:')+4
+        for e in range(s,len(res)):
+            if res[e]=='\n':
+                break
+        oid=res[s:e]
+
+        return oid
+    return None
+
+# We don't want any order "over-stacking", unless Clustering is set to yes, so we
+# verify that an order isn't within range of anothwer order. Its a lazy way of
+# creating an "unbounded" grid.
+
+def AlreadyBought(relay,asset,price,pipDistance):
+    openTrades=relay.GetOpenTrades(symbol=asset)
+    for trade in openTrades:
+        roundedPrice=round(price,5)
+        buyPrice=round(float(trade['price']),5)
+        if roundedPrice>=(buyPrice-pipDistance) and roundedPrice<=(buyPrice+pipDistance):
+            return True
+    return False
+
+# Apply some intelligence to the clustering functionality
+
+def AllowClustering(Config):
+    if Config['marginLimit']<=10:
+        return False
+
+    ml=Config['marginLimit']*0.73
+    if Config['marginUsed']<ml:
+        return True
+    return False
+
+# Determine the cluster style, defenseive oraggrssive
+
+def ClusterStyle(openTrades,relay,pair,Config):
+    if Config['ClusterStyle'].lower()=='aggressive':
+        lotSize=HighestLotSize(openTrades,relay,pair,Config)
+    else:
+        lotSize=LowestLotSize(openTrades,relay,pair,Config)
+
+    return lotSize
+
+# Find the closest rime number to the one provided
+
+def isPrime(n):
+    if n<=1:
+        return False
+    for i in range(2, int(n**0.5)+1):
+        if n%i==0:
+            return False
+    return True
+
+def ClosestPrime(n):
+    if n<=2:
+        return 2
+    if isPrime(n):
+        if n>2:
+            n-=1
+            while not isPrime(n):
+                n-=1
+        return n
+    if n%2==0:
+        n-=1
+    while not isPrime(n):
+        n-=2
+    return n
+
+# Find the lowest lot size used in the list of open trades. This is a good way to make
+# the entire process dynamic and fluid as lot size can be varied by any metric,
+# including but not limited to, the amount of margin used.
+
+def LowestLotSize(openTrades,relay,asset,Config):
+    # figure out the starting point and step size
+
+    if Config['UnitStart'].lower()=='prime':
+        lowestSize=ClosestPrime(int(Config['marginLimit']*0.2))
+    else:
+        lowestSize=int(Config['UnitStart'])
+
+    if Config['UnitStep'].lower()=='prime':
+        lotSize=ClosestPrime(int(lowestSize/2))
+    else:
+        lotSize=int(Config['UnitStep'])
+
+    done=False
+    while not done:
+        found=False
+        for trade in openTrades:
+            units=abs(int(trade['currentUnits']))
+            if units==lowestSize:
+                found=True
+                lowestSize=units+lotSize
+        if not found:
+            done=True
+    return lowestSize
+
+def HighestLotSize(openTrades,relay,asset,Config):
+    # figure out the starting point and step size
+
+    if Config['UnitStart'].lower()=='prime':
+        highestSize=ClosestPrime(int(Config['marginLimit']*0.2))
+    else:
+        highestSize=int(Config['UnitStart'])
+
+    if Config['UnitStep'].lower()=='prime':
+        lotSize=ClosestPrime(int(highestSize/2))
+    else:
+        lotSize=int(Config['UnitStep'])
+
+    for trade in openTrades:
+        units=abs(int(trade['currentUnits']))
+        if highestSize<=units:
+            highestSize=units+lotSize
+    return highestSize
+
+# Send the order to Relay
+
+def SendOrder(relay,**kwargs):
+    Order={}
+    Order['Identity']=relay.Identity['Identity']
+    Order['Exchange']=relay.GetExchange()
+    Order['Account']=relay.GetAccount()
+    Order['Asset']=relay.GetAsset()
+    Order['OrderType']="market"
+    Order['Action']=kwargs.get('Action')
+
+    if 'Units' in kwargs:
+        Order['Units']=str(kwargs.get('Units'))
+    if 'Ticket' in kwargs:
+        Order['Ticket']=kwargs.get('Ticket')
+
+    result=relay.SendWebhook(Order)
+    return result
+
+# Get the margin used
+
+def GetMarginUsed(relay,asset):
+    marginUsed=0
+    positions=relay.GetPositions()
+    if positions!=None:
+        for pos in positions:
+            srch=pos['instrument'].replace('_','/')
+            if srch==asset:
+                marginUsed=round(float(pos['marginUsed']),5)
+                break
+    return marginUsed
+
+# Manage Long positions
+
+def ManageLongs(relay,pair,Config,ticker):
+    # Get the list of open trades
+    openTrades=relay.GetOpenTrades(symbol=pair)
+
+    lowestPrice=999999
+    if len(openTrades)>0:
+        for trade in openTrades:
+            id=trade['id']
+            iu=int(trade['currentUnits'])
+            price=float(trade['price'])
+
+            if price<(lowestPrice+Config['pipStep']+ticker['Spread']):
+                lowestPrice=price;
+
+            # CLOSE any position below profit level
+
+            sellPrice=(price+Config['pipStep']+Config['BuyPips']+ticker['Spread'])
+            if iu>0 and ticker['Bid']>=sellPrice:
+                result=SendOrder(relay,Action="Close",Ticket=id)
+                oid=GetOrderID(result)
+                if oid!=None:
+                    relay.JRLog.Write(f"{GetForexSession():4} {id} Long - {oid} Sell @{sellPrice:7.5f} -> {abs(iu)} {Config['balance']:8.5f}/{Config['marginUsed']:.5f}")
+                    openTrades=relay.GetOpenTrades(symbol=pair)
+
+                # Replaceent order, start at bottom
+
+                if not AlreadyBought(relay,pair,ticker['Bid'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+ticker['Spread']) or AllowClustering(Config):
+                    if Config['marginLimit']<0 or (Config['marginLimit']>0 and Config['marginUsed']<Config['marginLimit']):
+                        details=relay.GetOrderDetails(OrderID=id)[-1]
+                        price=float(details['price'])
+                        lotSize=ClusterStyle(openTrades,relay,pair,Config)
+                        result=SendOrder(relay,Action="buy",Units=lotSize)
+                        oid=GetOrderID(result)
+                        if oid!=None:
+                            relay.JRLog.Write(f"{GetForexSession():4} Long - Replacement {oid} Buy @{price:7.5f} -> {lotSize}")
+                            openTrades=relay.GetOpenTrades(symbol=pair)
+                            Config['BuyPips']=ticker['Spread']
+    # No trades to scan
+    elif Config['First']==True and (Config['marginLimit']<0 or Config['marginLimit']>0):
+        lowestPrice=ticker['Bid']
+
+        lotSize=LowestLotSize(openTrades,relay,pair,Config)
+        buy=ticker['Bid']
+        result=SendOrder(relay,Action="buy",Units=lotSize)
+        oid=GetOrderID(result)
+        if oid!=None:
+            Config['BuyPips']=ticker['Spread']
+            Config['First']=False
+            relay.JRLog.Write(f"{GetForexSession():4} Long - {oid} Buy @{buy:7.5f} -> {lotSize}")
+            openTrades=relay.GetOpenTrades(symbol=pair)
+
+    # Next buy price minus pip step
+
+    buy=round(lowestPrice-Config['pipStep']-Config['BuyPips']-Config['marginPips']-Config['unitPips']-ticker['Spread'],5)
+    lotSize=LowestLotSize(openTrades,relay,pair,Config)
+
+    if ticker['Bid']<buy:
+        if not AlreadyBought(relay,pair,ticker['Bid'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+ticker['Spread']):
+            if Config['marginLimit']<0 or (Config['marginLimit']>0 and Config['marginUsed']<Config['marginLimit']):
+                details=relay.GetOrderDetails(OrderID=id)[-1]
+                price=float(details['price'])
+                lotSize=LowestLotSize(openTrades,relay,pair,Config)
+                result=SendOrder(relay,Action="buy",Units=lotSize)
+                oid=GetOrderID(result)
+                if oid!=None:
+                    relay.JRLog.Write(f"{GetForexSession():4} Long - {oid} Buy @{price:7.5f} -> {lotSize}")
+                    Config['BuyPips']=ticker['Spread']
+                    openTrades=relay.GetOpenTrades(symbol=pair)
+
+    return Config
+
+# Manage short positions
+
+def ManageShorts(relay,pair,Config,ticker):
+    # Get the list of open trades
+    openTrades=relay.GetOpenTrades(symbol=pair)
+
+    highestPrice=0
+    if len(openTrades)>0:
+        for trade in openTrades:
+            id=trade['id']
+            iu=int(trade['currentUnits'])
+            price=float(trade['price'])
+
+            if price>(highestPrice+Config['pipStep']+ticker['Spread']):
+                highestPrice=price;
+
+            # CLOSE any position below profit level
+
+            sellPrice=(price-Config['pipStep']-Config['BuyPips']-ticker['Spread'])
+            if iu<0 and ticker['Ask']<=sellPrice:
+                result=SendOrder(relay,Action="Close",Ticket=id)
+                oid=GetOrderID(result)
+                if oid!=None:
+                    relay.JRLog.Write(f"{GetForexSession():4} {id} Short - {oid} Sell @{sellPrice:7.5f} -> {abs(iu)} {Config['balance']:8.5f}/{Config['marginUsed']:.5f}")
+                    openTrades=relay.GetOpenTrades(symbol=pair)
+
+                # Replaceent order, start at bottom
+
+                if not AlreadyBought(relay,pair,ticker['Ask'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+ticker['Spread']) or AllowClustering(Config):
+                    if Config['marginLimit']<0 or (Config['marginLimit']>0 and Config['marginUsed']<Config['marginLimit']):
+                        details=relay.GetOrderDetails(OrderID=id)[-1]
+                        price=float(details['price'])
+                        lotSize=ClusterStyle(openTrades,relay,pair,Config)
+                        result=SendOrder(relay,Action="buy",Units=-lotSize)
+                        oid=GetOrderID(result)
+                        if oid!=None:
+                            relay.JRLog.Write(f"{GetForexSession():4} Short - Replacement {oid} Buy @{price:7.5f} -> {lotSize}")
+                            Config['BuyPips']=ticker['Spread']
+                            openTrades=relay.GetOpenTrades(symbol=pair)
+    # No trades to scan
+    elif Config['First']==True and (Config['marginLimit']<0 or Config['marginLimit']>0):
+        highestPrice=ticker['Ask']
+
+        lotSize=LowestLotSize(openTrades,relay,pair,Config)
+        buy=ticker['Ask']
+        result=SendOrder(relay,Action="buy",Units=-lotSize)
+        oid=GetOrderID(result)
+        if oid!=None:
+            Config['BuyPips']=ticker['Spread']
+            Config['First']=False
+            relay.JRLog.Write(f"{GetForexSession():4} Short - {oid} Buy @{buy:7.5f} -> {lotSize}")
+            openTrades=relay.GetOpenTrades(symbol=pair)
+
+    # Next buy price minus pip step
+
+    buy=round(highestPrice+Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+ticker['Spread'],5)
+    lotSize=LowestLotSize(openTrades,relay,pair,Config)
+
+    if ticker['Ask']>buy:
+        if not AlreadyBought(relay,pair,ticker['Ask'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+ticker['Spread']):
+            if Config['marginLimit']<0 or (Config['marginLimit']>0 and Config['marginUsed']<Config['marginLimit']):
+                # buy
+                result=SendOrder(relay,Action="buy",Units=-lotSize)
+                oid=GetOrderID(result)
+                if oid!=None:
+                    relay.JRLog.Write(f"{GetForexSession():4} Short - {oid} Buy @{buy:7.5f} -> {lotSize}")
+                    openTrades=relay.GetOpenTrades(symbol=pair)
+                    Config['BuyPips']=ticker['Spread']
+
+    return Config
+
+###
+### Main code base.
+###
+
+Config=ReadConfig(sys.argv[1])
+
+# Clear the config argument, otherwise the Relay method will try to process it.
+sys.argv.remove(sys.argv[1])
+
+while True:
+    for pair in Config:
+        startTime=time.time()
+
+        # Initialize this asset
+        relay=JRR.JackrabbitRelay(framework='oanda',exchange='oanda',account=Config[pair]['Account'],asset=pair)
+
+        # Get balance
+        Config[pair]['balance']=relay.GetBalance()
+
+        # Get the list of open trades
+        openTrades=relay.GetOpenTrades(symbol=pair)
+
+        # Iniial values fon configuration file
+
+        if '%' in Config[pair]['MarginLimit']:
+            Config[pair]['marginLimit']=(float(Config[pair]['MarginLimit'].replace('%',''))/100)*Config[pair]['balance']
+        else:
+            Config[pair]['marginLimit']=float(Config[pair]['MarginLimit'])
+
+        # Get the margin used
+        Config[pair]['marginUsed']=GetMarginUsed(relay,pair)
+        if Config[pair]['MarginPips'].lower()=='yes':
+            Config[pair]['marginPips']=Config[pair]['marginUsed']*0.0001
+        else:
+            Config[pair]['marginPips']=0
+
+        # Get the highest lot size and convert to pips
+        if Config[pair]['UnitPips'].lower()=='yes':
+            Config[pair]['unitPips']=HighestLotSize(openTrades,relay,pair,Config[pair])*0.0001
+        else:
+            Config[pair]['unitPips']=0
+
+        # The range of actual profit and distance from other orders. spread is added
+        # automatically.
+
+        Config[pair]['pipStep']=float(Config[pair]['PipProfit'])*0.0001
+
+        # Get th ticker
+        ticker=relay.GetTicker(symbol=pair)
+
+        # We need to track the spread at purchase to add into the selling limit. We want to be sure we get
+        # the above profits for each trade.
+
+        if 'BuyPips' not in Config[pair] or Config[pair]['BuyPips']==0:
+            Config[pair]['BuyPips']=ticker['Spread']
+
+        # Trade based on direction
+
+        if Config[pair]['Direction'].lower()=='long':
+            Config[pair]=ManageLongs(relay,pair,Config[pair],ticker)
+        elif Config[pair]['Direction'].lower()=='short':
+            Config[pair]=ManageShorts(relay,pair,Config[pair],ticker)
+
+        # End of the loop and this asset
+
+        endTime=time.time()-startTime
+        print(f"{endTime:7.4f} {Config[pair]['Direction'][0]} {GetForexSession():4} {pair:8} {len(openTrades):3.0f} {Config[pair]['BuyPips']:.5f} {Config[pair]['marginPips']:.5f} {Config[pair]['unitPips']:.5f} {ticker['Spread']:.5f} {Config[pair]['balance']:9.5f} {Config[pair]['marginUsed']:9.5f}/{Config[pair]['marginLimit']:9.5f}")
+        JRRsupport.ElasticSleep(1)
+
+    print('')
+
+###
+### End of program
+###
+
