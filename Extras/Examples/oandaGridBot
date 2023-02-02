@@ -16,6 +16,7 @@ sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
 import json
 import time
+import datetime
 
 import JackrabbitRelay as JRR
 import JRRsupport
@@ -42,10 +43,123 @@ def GetForexSession():
         cs+='S'
     return(cs)
 
+# Calculate price consolidation
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+
+import JRRsupport
+import JackrabbitRelay as JRR
+
+# Get orderbook direction or pressure
+
+def GetOrderBookDirection(relay,Config):
+    orderbook=relay.GetOrderBook(symbol=Config['Asset'])
+    lob=len(orderbook)
+    if lob==0:
+        return "closed"
+
+    m=lob/2
+    h=m+(m/2)
+    l=m-(m/2)
+
+    long=0
+    short=0
+
+    for idx in range(int(l),int(h)):
+        cur=orderbook[idx]
+        price=round(float(cur['price']),4)
+        long+=(float(cur['longCountPercent'])/100)*price
+        short+=(float(cur['shortCountPercent'])/100)*price
+
+    total=long+short
+    tl=(long/total)*100
+    ts=(short/total)*100
+
+    confirmation=abs(tl-ts)
+    if tl>=ts:
+        return 'long'
+    else:
+        return 'short'
+
+# Predict price consolidation
+
+def LoadPriceData(Config):
+    PriceList=[]
+    fn=Config['Account']+'.'+Config['Asset'].replace('/','')+'.price'
+    if os.path.exists(fn)==True:
+        lines=JRRsupport.ReadFile(fn).split('\n')
+        for line in lines:
+            line=line.strip()
+            if line!=None and line!='':
+                PriceList.append(float(line))
+    else:
+        ohlcv=relay.GetOHLCV(symbol=Config['Asset'],timeframe='S5', limit=5000)
+        for slice in ohlcv:
+            PriceList.append(slice[4])
+
+    return PriceList
+
+def SavePriceData(PriceList,Config):
+    fn=Config['Account']+'.'+Config['Asset'].replace('/','')+'.price'
+    fh=open(fn,"w")
+    for price in PriceList:
+        fh.write(str(price)+'\n')
+    fh.close()
+
+def PredictConsolidatedPrice(relay,Config,newPrice):
+    SaveData=False
+    closing_prices=LoadPriceData(Config)
+    if len(closing_prices)>0:
+        oldPrice=closing_prices[-1]
+
+        if oldPrice!=newPrice:
+            closing_prices.append(newPrice)
+            closing_prices=closing_prices[-86400:]
+            SaveData=True
+    else:
+        closing_prices.append(newPrice)
+
+    # Main algorithm
+
+    n = len(closing_prices)
+    sum_of_prices = 0
+    for price in closing_prices:
+        sum_of_prices += price
+    mean = sum_of_prices / n
+
+    sum_of_squared_differences = 0
+    for price in closing_prices:
+        sum_of_squared_differences += (price - mean) ** 2
+    standard_deviation = (sum_of_squared_differences / n) ** 0.5
+
+    predicted_price = mean
+    confidence = 100 * (1 - standard_deviation / mean)
+
+    if n<14400:
+        f=n/14400
+        confidence*=f
+
+    # Save data
+    if SaveData==True:
+        SavePriceData(closing_prices,Config)
+
+    return predicted_price, confidence
+
 # Read the configuration file
 
 def ReadConfig(fname):
-    required=[ "Account","Asset","PipProfit","MarginPips","UnitPips","UnitStart","UnitStep","MarginLimit","Direction","Clustering","ClusterStyle" ]
+    required=[ "Account","Asset","PipProfit","MarginPips","UnitPips","UnitStart","UnitStep","MarginLimit","Direction","Clustering","ClusterStyle","Confidence" ]
+
     Config={}
     lines=JRRsupport.ReadFile(fname).split('\n')
     for line in lines:
@@ -58,6 +172,11 @@ def ReadConfig(fname):
             print(f'Config line damaged: {line}')
             sys.exit(1)
 
+        if 'Confidence' not in cfg:
+            cfg['Confidence']=99.73
+        if 'Confirmation' not in cfg:
+            cfg['Confirmation']="Yes"
+
         for item in required:
             if item not in cfg:
                 print(f'Item "{item}" is missing from this line:')
@@ -65,6 +184,10 @@ def ReadConfig(fname):
                 sys.exit(1)
 
         Config[cfg['Asset']]=cfg
+
+        if type(Config[cfg['Asset']]['Confidence']) is not float:
+            Config[cfg['Asset']]['Confidence']=float(Config[cfg['Asset']]['Confidence'])
+
         Config[cfg['Asset']]['First']=True
         Config[cfg['Asset']]['BuyPips']=0
     return Config
@@ -97,20 +220,34 @@ def AlreadyBought(relay,asset,price,pipDistance):
 
 # Apply some intelligence to the clustering functionality
 
-def AllowClustering(Config):
-    if Config['marginLimit']<=10:
+def AllowClustering(relay,Config,price):
+    if Config['Clustering'].lower()!='yes':
         return False
+
+    if Config['marginLimit']<=30:
+        return False
+
+    price,confidence=PredictConsolidatedPrice(relay,Config,price)
+    if Config['Confirmation'].lower()=='yes':
+        dir=(GetOrderBookDirection(relay,Config)==Config['Direction'].lower())
+    else:
+        dir=True
 
     ml=Config['marginLimit']*0.73
     if Config['marginUsed']<ml:
-        return True
+        if confidence>=Config['Confidence'] and dir==True:
+            return True
     return False
 
 # Determine the cluster style, defenseive oraggrssive
 
 def ClusterStyle(openTrades,relay,pair,Config):
     if Config['ClusterStyle'].lower()=='aggressive':
-        lotSize=HighestLotSize(openTrades,relay,pair,Config)
+        ml=Config['marginLimit']*0.73
+        if Config['marginUsed']<ml:
+            lotSize=HighestLotSize(openTrades,relay,pair,Config)
+        else:
+            lotSize=LowestLotSize(openTrades,relay,pair,Config)
     else:
         lotSize=LowestLotSize(openTrades,relay,pair,Config)
 
@@ -163,7 +300,7 @@ def LowestLotSize(openTrades,relay,asset,Config):
         found=False
         for trade in openTrades:
             units=abs(int(trade['currentUnits']))
-            if units==lowestSize:
+            if lowestSize==units:
                 found=True
                 lowestSize=units+lotSize
         if not found:
@@ -226,6 +363,11 @@ def GetMarginUsed(relay,asset):
 def ManageLongs(relay,pair,Config,ticker):
     # Get the list of open trades
     openTrades=relay.GetOpenTrades(symbol=pair)
+    isClustering=AllowClustering(relay,Config,ticker['Bid'])
+    if isClustering==True:
+        clusterStr="Cluster "
+    else:
+        clusterStr=""
 
     lowestPrice=999999
     if len(openTrades)>0:
@@ -249,15 +391,17 @@ def ManageLongs(relay,pair,Config,ticker):
 
                 # Replaceent order, start at bottom
 
-                if not AlreadyBought(relay,pair,ticker['Bid'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+ticker['Spread']) or AllowClustering(Config):
-                    if Config['marginLimit']<0 or (Config['marginLimit']>0 and Config['marginUsed']<Config['marginLimit']):
+                if not AlreadyBought(relay,pair,ticker['Bid'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+ticker['Spread']) or isClustering:
+                    lotSize=ClusterStyle(openTrades,relay,pair,Config)
+                    newPos=Config['marginUsed']+(float(relay.Markets[pair]['marginRate'])*lotSize)
+
+                    if Config['marginLimit']<0 or (Config['marginLimit']>0 and newPos<Config['marginLimit']):
                         details=relay.GetOrderDetails(OrderID=id)[-1]
                         price=float(details['price'])
-                        lotSize=ClusterStyle(openTrades,relay,pair,Config)
                         result=SendOrder(relay,Action="buy",Units=lotSize)
                         oid=GetOrderID(result)
                         if oid!=None:
-                            relay.JRLog.Write(f"{GetForexSession():4} Long - Replacement {oid} Buy @{price:7.5f} -> {lotSize}")
+                            relay.JRLog.Write(f"{GetForexSession():4} Long - {clusterStr}Replacement {oid} Buy @{price:7.5f} -> {lotSize}")
                             openTrades=relay.GetOpenTrades(symbol=pair)
                             Config['BuyPips']=ticker['Spread']
     # No trades to scan
@@ -281,10 +425,12 @@ def ManageLongs(relay,pair,Config,ticker):
 
     if ticker['Bid']<buy:
         if not AlreadyBought(relay,pair,ticker['Bid'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+ticker['Spread']):
-            if Config['marginLimit']<0 or (Config['marginLimit']>0 and Config['marginUsed']<Config['marginLimit']):
+            lotSize=ClusterStyle(openTrades,relay,pair,Config)
+            newPos=Config['marginUsed']+(float(relay.Markets[pair]['marginRate'])*lotSize)
+
+            if Config['marginLimit']<0 or (Config['marginLimit']>0 and newPos<Config['marginLimit']):
                 details=relay.GetOrderDetails(OrderID=id)[-1]
                 price=float(details['price'])
-                lotSize=LowestLotSize(openTrades,relay,pair,Config)
                 result=SendOrder(relay,Action="buy",Units=lotSize)
                 oid=GetOrderID(result)
                 if oid!=None:
@@ -299,6 +445,11 @@ def ManageLongs(relay,pair,Config,ticker):
 def ManageShorts(relay,pair,Config,ticker):
     # Get the list of open trades
     openTrades=relay.GetOpenTrades(symbol=pair)
+    isClustering=AllowClustering(relay,Config,ticker['Ask'])
+    if isClustering==True:
+        clusterStr="Cluster "
+    else:
+        clusterStr=""
 
     highestPrice=0
     if len(openTrades)>0:
@@ -322,15 +473,17 @@ def ManageShorts(relay,pair,Config,ticker):
 
                 # Replaceent order, start at bottom
 
-                if not AlreadyBought(relay,pair,ticker['Ask'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+ticker['Spread']) or AllowClustering(Config):
-                    if Config['marginLimit']<0 or (Config['marginLimit']>0 and Config['marginUsed']<Config['marginLimit']):
+                if not AlreadyBought(relay,pair,ticker['Ask'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+ticker['Spread']) or isClustering:
+                    lotSize=ClusterStyle(openTrades,relay,pair,Config)
+                    newPos=Config['marginUsed']+(float(relay.Markets[pair]['marginRate'])*lotSize)
+
+                    if Config['marginLimit']<0 or (Config['marginLimit']>0 and newPos<Config['marginLimit']):
                         details=relay.GetOrderDetails(OrderID=id)[-1]
                         price=float(details['price'])
-                        lotSize=ClusterStyle(openTrades,relay,pair,Config)
                         result=SendOrder(relay,Action="buy",Units=-lotSize)
                         oid=GetOrderID(result)
                         if oid!=None:
-                            relay.JRLog.Write(f"{GetForexSession():4} Short - Replacement {oid} Buy @{price:7.5f} -> {lotSize}")
+                            relay.JRLog.Write(f"{GetForexSession():4} Short - {clusterStr}Replacement {oid} Buy @{price:7.5f} -> {lotSize}")
                             Config['BuyPips']=ticker['Spread']
                             openTrades=relay.GetOpenTrades(symbol=pair)
     # No trades to scan
@@ -354,12 +507,16 @@ def ManageShorts(relay,pair,Config,ticker):
 
     if ticker['Ask']>buy:
         if not AlreadyBought(relay,pair,ticker['Ask'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+ticker['Spread']):
-            if Config['marginLimit']<0 or (Config['marginLimit']>0 and Config['marginUsed']<Config['marginLimit']):
-                # buy
+            lotSize=ClusterStyle(openTrades,relay,pair,Config)
+            newPos=Config['marginUsed']+(float(relay.Markets[pair]['marginRate'])*lotSize)
+
+            if Config['marginLimit']<0 or (Config['marginLimit']>0 and newPos<Config['marginLimit']):
+                details=relay.GetOrderDetails(OrderID=id)[-1]
+                price=float(details['price'])
                 result=SendOrder(relay,Action="buy",Units=-lotSize)
                 oid=GetOrderID(result)
                 if oid!=None:
-                    relay.JRLog.Write(f"{GetForexSession():4} Short - {oid} Buy @{buy:7.5f} -> {lotSize}")
+                    relay.JRLog.Write(f"{GetForexSession():4} Short - {oid} Buy @{price:7.5f} -> {lotSize}")
                     openTrades=relay.GetOpenTrades(symbol=pair)
                     Config['BuyPips']=ticker['Spread']
 

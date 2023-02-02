@@ -68,6 +68,7 @@ class oanda:
 
     def API(self,function,**kwargs):
         req=kwargs.get('request')
+        noError=kwargs.get('noError')
         retry=0
 
         # Sanity check
@@ -82,9 +83,17 @@ class oanda:
                 self.Results=self.Broker.request(req)
             except Exception as e:
                 if retry<RetryLimit:
-                    self.Log.Error(function,JRRsupport.StopHTMLtags(str(e)))
+                    if noError==True:
+                        # Market is closed, no orders
+                        if function=='GetOrderBook':
+                            return []
+                        else:
+                            self.Log.Error(function,JRRsupport.StopHTMLtags(str(e)))
+                    else:
+                        self.Log.Error(function,JRRsupport.StopHTMLtags(str(e)))
                 else:
-                    self.Log.Write(function+' Retrying ('+str(retry+1)+'), '+JRRsupport.StopHTMLtags(str(e)))
+                    if noError==False:
+                        self.Log.Write(function+' Retrying ('+str(retry+1)+'), '+JRRsupport.StopHTMLtags(str(e)))
             else:
                 done=True
             retry+=1
@@ -214,8 +223,11 @@ class oanda:
         symbol=kwargs.get('symbol').replace('/','_')
 
         req=v20Instruments.InstrumentsOrderBook(instrument=symbol,params={})
-        self.Results=self.API("GetOrderBook",request=req)
-        return self.Results['orderBook']['buckets']
+        self.Results=self.API("GetOrderBook",request=req,noError=True)
+        if self.Results!=[]:
+            return self.Results['orderBook']['buckets']
+        else:
+            return self.Results
 
     # Get a list of pending (open) orders.
 
