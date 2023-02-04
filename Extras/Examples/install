@@ -1,0 +1,11 @@
+#!/bin/bash
+
+mkdir -p /home/Oanda 1>/dev/null 2>&1
+
+cd /home/GitHub/JackrabbitRelay/Extras/Examples
+
+echo Installing/Updating OANDA Grid Bot
+
+/usr/bin/cp oandaGridBot /home/Oanda/
+/usr/bin/cp Launcher.GridBot /home/Oanda/
+

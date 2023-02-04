@@ -118,40 +118,41 @@ def SavePriceData(PriceList,Config):
 
 def PredictConsolidatedPrice(relay,Config,newPrice):
     SaveData=False
-    closing_prices=LoadPriceData(Config)
-    if len(closing_prices)>0:
-        oldPrice=closing_prices[-1]
+    PriceList=LoadPriceData(Config)
+    if len(PriceList)>0:
+        oldPrice=PriceList[-1]
 
         if oldPrice!=newPrice:
-            closing_prices.append(newPrice)
-            closing_prices=closing_prices[-86400:]
+            PriceList.append(newPrice)
+            PriceList=PriceList[-86400:]
             SaveData=True
     else:
-        closing_prices.append(newPrice)
+        PriceList.append(newPrice)
 
     # Main algorithm
 
-    n = len(closing_prices)
+    n = len(PriceList)
     sum_of_prices = 0
-    for price in closing_prices:
+    for price in PriceList:
         sum_of_prices += price
     mean = sum_of_prices / n
 
     sum_of_squared_differences = 0
-    for price in closing_prices:
+    for price in PriceList:
         sum_of_squared_differences += (price - mean) ** 2
     standard_deviation = (sum_of_squared_differences / n) ** 0.5
 
     predicted_price = mean
     confidence = 100 * (1 - standard_deviation / mean)
 
+    # Set the minimum and rate the % appropriately
     if n<14400:
         f=n/14400
         confidence*=f
 
     # Save data
     if SaveData==True:
-        SavePriceData(closing_prices,Config)
+        SavePriceData(PriceList,Config)
 
     return predicted_price, confidence
 
@@ -176,6 +177,8 @@ def ReadConfig(fname):
             cfg['Confidence']=99.73
         if 'Confirmation' not in cfg:
             cfg['Confirmation']="Yes"
+        if 'Volatility' not in cfg:
+            cfg['Volatility']="Yes"
 
         for item in required:
             if item not in cfg:
@@ -238,6 +241,37 @@ def AllowClustering(relay,Config,price):
         if confidence>=Config['Confidence'] and dir==True:
             return True
     return False
+
+# Calculate volatility in pips
+
+def CalculateVolatilityPips(relay,Config,newPrice):
+    # if there is no clustering, then we need to do this here
+    if Config['Clustering'].lower()=='no':
+        SaveData=False
+        PriceList=LoadPriceData(Config)
+        if len(PriceList)>0:
+            oldPrice=PriceList[-1]
+
+            if oldPrice!=newPrice:
+                PriceList.append(newPrice)
+                PriceList=PriceList[-86400:]
+                SaveData=True
+        else:
+            PriceList.append(newPrice)
+
+        # Save data
+        if SaveData==True:
+            SavePriceData(PriceList,Config)
+    # Already done by clustering, just load data
+    else:
+        PriceList=LoadPriceData(Config)
+
+    mean = sum(PriceList) / len(PriceList)
+    deviations = [(price - mean) ** 2 for price in PriceList]
+    variance = sum(deviations) / len(deviations)
+    std_dev = variance ** 0.5
+
+    return ((std_dev / mean) * 100)*0.001
 
 # Determine the cluster style, defenseive oraggrssive
 
@@ -391,7 +425,7 @@ def ManageLongs(relay,pair,Config,ticker):
 
                 # Replaceent order, start at bottom
 
-                if not AlreadyBought(relay,pair,ticker['Bid'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+ticker['Spread']) or isClustering:
+                if not AlreadyBought(relay,pair,ticker['Bid'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+Config['VolatilityPips']+ticker['Spread']) or isClustering:
                     lotSize=ClusterStyle(openTrades,relay,pair,Config)
                     newPos=Config['marginUsed']+(float(relay.Markets[pair]['marginRate'])*lotSize)
 
@@ -420,11 +454,11 @@ def ManageLongs(relay,pair,Config,ticker):
 
     # Next buy price minus pip step
 
-    buy=round(lowestPrice-Config['pipStep']-Config['BuyPips']-Config['marginPips']-Config['unitPips']-ticker['Spread'],5)
+    buy=round(lowestPrice-Config['pipStep']-Config['BuyPips']-Config['marginPips']-Config['unitPips']-Config['VolatilityPips']-ticker['Spread'],5)
     lotSize=LowestLotSize(openTrades,relay,pair,Config)
 
     if ticker['Bid']<buy:
-        if not AlreadyBought(relay,pair,ticker['Bid'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+ticker['Spread']):
+        if not AlreadyBought(relay,pair,ticker['Bid'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+Config['VolatilityPips']+ticker['Spread']):
             lotSize=ClusterStyle(openTrades,relay,pair,Config)
             newPos=Config['marginUsed']+(float(relay.Markets[pair]['marginRate'])*lotSize)
 
@@ -473,7 +507,7 @@ def ManageShorts(relay,pair,Config,ticker):
 
                 # Replaceent order, start at bottom
 
-                if not AlreadyBought(relay,pair,ticker['Ask'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+ticker['Spread']) or isClustering:
+                if not AlreadyBought(relay,pair,ticker['Ask'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+Config['VolatilityPips']+ticker['Spread']) or isClustering:
                     lotSize=ClusterStyle(openTrades,relay,pair,Config)
                     newPos=Config['marginUsed']+(float(relay.Markets[pair]['marginRate'])*lotSize)
 
@@ -502,11 +536,11 @@ def ManageShorts(relay,pair,Config,ticker):
 
     # Next buy price minus pip step
 
-    buy=round(highestPrice+Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+ticker['Spread'],5)
+    buy=round(highestPrice+Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+Config['VolatilityPips']+ticker['Spread'],5)
     lotSize=LowestLotSize(openTrades,relay,pair,Config)
 
     if ticker['Ask']>buy:
-        if not AlreadyBought(relay,pair,ticker['Ask'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+ticker['Spread']):
+        if not AlreadyBought(relay,pair,ticker['Ask'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+Config['VolatilityPips']+ticker['Spread']):
             lotSize=ClusterStyle(openTrades,relay,pair,Config)
             newPos=Config['marginUsed']+(float(relay.Markets[pair]['marginRate'])*lotSize)
 
@@ -570,7 +604,18 @@ while True:
         Config[pair]['pipStep']=float(Config[pair]['PipProfit'])*0.0001
 
         # Get th ticker
+
         ticker=relay.GetTicker(symbol=pair)
+
+        # Calculate volatility pips
+
+        if Config[pair]['Volatility'].lower()=='yes':
+            if Config[pair]['Direction'].lower()=='long':
+                Config[pair]['VolatilityPips']=CalculateVolatilityPips(relay,Config[pair],ticker['Bid'])
+            else:
+                Config[pair]['VolatilityPips']=CalculateVolatilityPips(relay,Config[pair],ticker['Ask'])
+        else:
+            Config[pair]['VolatilityPips']=0
 
         # We need to track the spread at purchase to add into the selling limit. We want to be sure we get
         # the above profits for each trade.
@@ -588,7 +633,7 @@ while True:
         # End of the loop and this asset
 
         endTime=time.time()-startTime
-        print(f"{endTime:7.4f} {Config[pair]['Direction'][0]} {GetForexSession():4} {pair:8} {len(openTrades):3.0f} {Config[pair]['BuyPips']:.5f} {Config[pair]['marginPips']:.5f} {Config[pair]['unitPips']:.5f} {ticker['Spread']:.5f} {Config[pair]['balance']:9.5f} {Config[pair]['marginUsed']:9.5f}/{Config[pair]['marginLimit']:9.5f}")
+        print(f"{endTime:7.4f} {Config[pair]['Direction'][0]} {GetForexSession():4} {pair:8} {len(openTrades):3.0f} {Config[pair]['BuyPips']:.5f} {Config[pair]['marginPips']:.5f} {Config[pair]['unitPips']:.5f} {Config[pair]['VolatilityPips']:.5f} {ticker['Spread']:.5f} {Config[pair]['balance']:9.5f} {Config[pair]['marginUsed']:9.5f}/{Config[pair]['marginLimit']:9.5f}")
         JRRsupport.ElasticSleep(1)
 
     print('')
@@ -596,4 +641,3 @@ while True:
 ###
 ### End of program
 ###
-

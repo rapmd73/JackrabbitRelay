@@ -210,10 +210,15 @@ class oanda:
 
         # Build the forex pair dictionary
 
+        b=round(float(self.Results['prices'][0]['bids'][0]['price']),5)
+        a=round(float(self.Results['prices'][0]['asks'][0]['price']),5)
+        s=abs(b-a)
+
         Pair={}
-        Pair['Ask']=round(float(self.Results['prices'][0]['asks'][0]['price']),5)
-        Pair['Bid']=round(float(self.Results['prices'][0]['bids'][0]['price']),5)
-        Pair['Spread']=round(Pair['Ask']-Pair['Bid'],5)
+        Pair['DateTime']=datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+        Pair['Bid']=max(b,a)
+        Pair['Ask']=min(b,a)
+        Pair['Spread']=round(s,5)
 
         return Pair
 
