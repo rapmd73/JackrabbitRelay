@@ -21,6 +21,70 @@ import datetime
 import JackrabbitRelay as JRR
 import JRRsupport
 
+# Slash (/) at end is required
+
+oandaBotHome='/home/Oanda/TickerData/'
+
+# Send the order to Relay
+
+def SendOrder(relay,**kwargs):
+    Order={}
+    Order['Identity']=relay.Identity['Identity']
+    Order['Exchange']=relay.GetExchange()
+    Order['Account']=relay.GetAccount()
+    Order['Asset']=relay.GetAsset()
+    Order['OrderType']="market"
+    Order['Action']=kwargs.get('Action')
+
+    if 'Units' in kwargs:
+        Order['Units']=str(kwargs.get('Units'))
+    if 'Ticket' in kwargs:
+        Order['Ticket']=kwargs.get('Ticket')
+
+    result=relay.SendWebhook(Order)
+    return result
+
+# These functions are needed to load each ticker file set into the Config as each pair is loaded. This is done
+# to prevent multiple loads os the same data.
+
+# Load ticker data
+
+def LoadPriceData(Config):
+    PriceList=[]
+    fn=oandaBotHome+Config['Account']+'.'+Config['Asset'].replace('/','')+'.ticker'
+    if os.path.exists(fn)==True:
+        lines=JRRsupport.ReadFile(fn).split('\n')
+        for line in lines:
+            line=line.strip()
+            if line=='':
+                continue
+            try:
+                td=json.loads(line)
+                PriceList.append(td)
+            except: # damages, skip
+                pass
+
+    Config['TickerData']=PriceList[-86400:]
+    return Config
+
+# Save ticker data
+
+def SavePriceData(Config):
+    PriceList=Config['TickerData']
+    fn=oandaBotHome+Config['Account']+'.'+Config['Asset'].replace('/','')+'.ticker'
+    fh=open(fn,"w")
+    for ticker in PriceList:
+        fh.write(json.dumps(ticker)+'\n')
+    fh.close()
+
+# Append price Data
+
+def AppendPriceData(Config,ticker):
+    Config['TickerData'].append(ticker)
+    Config['TickerData']=Config['TickerData'][-86400:]
+
+    return Config
+
 # Forex sessions:
 #
 # Tokyo     00:00 to 09:00  T
@@ -42,23 +106,6 @@ def GetForexSession():
     if hour>=20 or hour<=5:
         cs+='S'
     return(cs)
-
-# Calculate price consolidation
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-#
-# Jackrabbit Relay
-# 2021 Copyright © Robert APM Darin
-# All rights reserved unconditionally.
-
-import sys
-sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
-import os
-import json
-
-import JRRsupport
-import JackrabbitRelay as JRR
 
 # Get orderbook direction or pressure
 
@@ -93,68 +140,90 @@ def GetOrderBookDirection(relay,Config):
 
 # Predict price consolidation
 
-def LoadPriceData(Config):
-    PriceList=[]
-    fn=Config['Account']+'.'+Config['Asset'].replace('/','')+'.price'
-    if os.path.exists(fn)==True:
-        lines=JRRsupport.ReadFile(fn).split('\n')
-        for line in lines:
-            line=line.strip()
-            if line!=None and line!='':
-                PriceList.append(float(line))
-    else:
-        ohlcv=relay.GetOHLCV(symbol=Config['Asset'],timeframe='S5', limit=5000)
-        for slice in ohlcv:
-            PriceList.append(slice[4])
-
-    return PriceList
-
-def SavePriceData(PriceList,Config):
-    fn=Config['Account']+'.'+Config['Asset'].replace('/','')+'.price'
-    fh=open(fn,"w")
-    for price in PriceList:
-        fh.write(str(price)+'\n')
-    fh.close()
-
-def PredictConsolidatedPrice(relay,Config,newPrice):
-    SaveData=False
-    PriceList=LoadPriceData(Config)
-    if len(PriceList)>0:
-        oldPrice=PriceList[-1]
-
-        if oldPrice!=newPrice:
-            PriceList.append(newPrice)
-            PriceList=PriceList[-86400:]
-            SaveData=True
-    else:
-        PriceList.append(newPrice)
+def PredictConsolidatedPrice(relay,Config):
+    PriceList=Config['TickerData']
 
     # Main algorithm
 
-    n = len(PriceList)
-    sum_of_prices = 0
+    n=len(PriceList)
+    sum_of_prices=0
     for price in PriceList:
-        sum_of_prices += price
-    mean = sum_of_prices / n
+        if Config['Direction'].lower()=='long':
+            sum_of_prices+=price['Bid']
+        else:
+            sum_of_prices+=price['Ask']
+    mean=sum_of_prices/n
 
-    sum_of_squared_differences = 0
+    sum_of_squared_differences=0
     for price in PriceList:
-        sum_of_squared_differences += (price - mean) ** 2
-    standard_deviation = (sum_of_squared_differences / n) ** 0.5
+        if Config['Direction'].lower()=='long':
+            sum_of_squared_differences+=(price['Bid']-mean)**2
+        else:
+            sum_of_squared_differences+=(price['Ask']-mean)**2
+    standard_deviation=(sum_of_squared_differences/n)**0.5
 
-    predicted_price = mean
-    confidence = 100 * (1 - standard_deviation / mean)
+    predicted_price=mean
+    confidence=100*(1-standard_deviation/mean)
 
     # Set the minimum and rate the % appropriately
     if n<14400:
         f=n/14400
         confidence*=f
 
-    # Save data
-    if SaveData==True:
-        SavePriceData(PriceList,Config)
+    return predicted_price,confidence
 
-    return predicted_price, confidence
+# Calculate additive pip profits based upon ticker spread
+
+def CalculatePipPprofits(relay,Config):
+    PriceList=Config['TickerData']
+
+    if len(PriceList)<2:
+        return 0
+
+    spread = []
+    for price in PriceList:
+        spread.append(price['Spread'])
+
+    window_size=int(len(spread)/10)+1
+    ema = [0.0]*(window_size - 1)
+    ema_sum=0
+    for i in range(window_size):
+        ema_sum+=spread[i]
+    ema.append(round(ema_sum/window_size,5))
+    for i in range(window_size,len(spread)):
+        ema.append(round((spread[i]-ema[-1])*2/(window_size+1)+ema[-1],5))
+
+    return round(sum(ema)/len(ema),5)
+
+# Calculate volatility in pips
+
+def CalculateVolatilityPips(relay,Config):
+    PriceList=Config['TickerData']
+
+    if Config['Direction'].lower()=='long':
+        s=0
+        for price in PriceList:
+            s+=price['Bid']
+
+        mean=s/len(PriceList)
+
+        deviations=[]
+        for price in PriceList:
+            deviations.append((price['Bid']-mean)**2)
+    else:
+        s=0
+        for price in PriceList:
+            s+=price['Ask']
+        mean=s/len(PriceList)
+
+        deviations=[]
+        for price in PriceList:
+            deviations.append((price['Bid']-mean)**2)
+
+    variance=sum(deviations)/len(deviations)
+    std_dev=variance**0.5
+
+    return ((std_dev/mean)*100)*0.001
 
 # Read the configuration file
 
@@ -223,14 +292,16 @@ def AlreadyBought(relay,asset,price,pipDistance):
 
 # Apply some intelligence to the clustering functionality
 
-def AllowClustering(relay,Config,price):
+def AllowClustering(relay,Config):
     if Config['Clustering'].lower()!='yes':
         return False
 
     if Config['marginLimit']<=30:
         return False
 
-    price,confidence=PredictConsolidatedPrice(relay,Config,price)
+    price,confidence=PredictConsolidatedPrice(relay,Config)
+
+# Replace with ticker data
     if Config['Confirmation'].lower()=='yes':
         dir=(GetOrderBookDirection(relay,Config)==Config['Direction'].lower())
     else:
@@ -242,38 +313,7 @@ def AllowClustering(relay,Config,price):
             return True
     return False
 
-# Calculate volatility in pips
-
-def CalculateVolatilityPips(relay,Config,newPrice):
-    # if there is no clustering, then we need to do this here
-    if Config['Clustering'].lower()=='no':
-        SaveData=False
-        PriceList=LoadPriceData(Config)
-        if len(PriceList)>0:
-            oldPrice=PriceList[-1]
-
-            if oldPrice!=newPrice:
-                PriceList.append(newPrice)
-                PriceList=PriceList[-86400:]
-                SaveData=True
-        else:
-            PriceList.append(newPrice)
-
-        # Save data
-        if SaveData==True:
-            SavePriceData(PriceList,Config)
-    # Already done by clustering, just load data
-    else:
-        PriceList=LoadPriceData(Config)
-
-    mean = sum(PriceList) / len(PriceList)
-    deviations = [(price - mean) ** 2 for price in PriceList]
-    variance = sum(deviations) / len(deviations)
-    std_dev = variance ** 0.5
-
-    return ((std_dev / mean) * 100)*0.001
-
-# Determine the cluster style, defenseive oraggrssive
+# Determine the cluster style, defenseive or aggrssive
 
 def ClusterStyle(openTrades,relay,pair,Config):
     if Config['ClusterStyle'].lower()=='aggressive':
@@ -292,7 +332,7 @@ def ClusterStyle(openTrades,relay,pair,Config):
 def isPrime(n):
     if n<=1:
         return False
-    for i in range(2, int(n**0.5)+1):
+    for i in range(2,int(n**0.5)+1):
         if n%i==0:
             return False
     return True
@@ -360,25 +400,6 @@ def HighestLotSize(openTrades,relay,asset,Config):
             highestSize=units+lotSize
     return highestSize
 
-# Send the order to Relay
-
-def SendOrder(relay,**kwargs):
-    Order={}
-    Order['Identity']=relay.Identity['Identity']
-    Order['Exchange']=relay.GetExchange()
-    Order['Account']=relay.GetAccount()
-    Order['Asset']=relay.GetAsset()
-    Order['OrderType']="market"
-    Order['Action']=kwargs.get('Action')
-
-    if 'Units' in kwargs:
-        Order['Units']=str(kwargs.get('Units'))
-    if 'Ticket' in kwargs:
-        Order['Ticket']=kwargs.get('Ticket')
-
-    result=relay.SendWebhook(Order)
-    return result
-
 # Get the margin used
 
 def GetMarginUsed(relay,asset):
@@ -397,7 +418,7 @@ def GetMarginUsed(relay,asset):
 def ManageLongs(relay,pair,Config,ticker):
     # Get the list of open trades
     openTrades=relay.GetOpenTrades(symbol=pair)
-    isClustering=AllowClustering(relay,Config,ticker['Bid'])
+    isClustering=AllowClustering(relay,Config)
     if isClustering==True:
         clusterStr="Cluster "
     else:
@@ -479,7 +500,7 @@ def ManageLongs(relay,pair,Config,ticker):
 def ManageShorts(relay,pair,Config,ticker):
     # Get the list of open trades
     openTrades=relay.GetOpenTrades(symbol=pair)
-    isClustering=AllowClustering(relay,Config,ticker['Ask'])
+    isClustering=AllowClustering(relay,Config)
     if isClustering==True:
         clusterStr="Cluster "
     else:
@@ -578,7 +599,21 @@ while True:
         # Get the list of open trades
         openTrades=relay.GetOpenTrades(symbol=pair)
 
-        # Iniial values fon configuration file
+        # Get the ticker
+
+        ticker=relay.GetTicker(symbol=pair)
+        Config[pair]=LoadPriceData(Config[pair])
+        # Only update if the current ticker is different then the previous
+        if len(Config[pair]['TickerData'])>1:
+            if ticker['Bid']!=Config[pair]['TickerData'][-1]['Bid'] \
+            or ticker['Ask']!=Config[pair]['TickerData'][-1]['Ask']:
+                AppendPriceData(Config[pair],ticker)
+                SavePriceData(Config[pair])
+        else:
+            Config[pair]=Config[pair]=AppendPriceData(Config[pair],ticker)
+            SavePriceData(Config[pair])
+
+       # Iniial values fon configuration file
 
         if '%' in Config[pair]['MarginLimit']:
             Config[pair]['marginLimit']=(float(Config[pair]['MarginLimit'].replace('%',''))/100)*Config[pair]['balance']
@@ -601,19 +636,15 @@ while True:
         # The range of actual profit and distance from other orders. spread is added
         # automatically.
 
-        Config[pair]['pipStep']=float(Config[pair]['PipProfit'])*0.0001
-
-        # Get th ticker
-
-        ticker=relay.GetTicker(symbol=pair)
+        if Config[pair]['PipProfit'].lower()=='auto':
+            Config[pair]['pipStep']=CalculatePipPprofits(relay,Config[pair])
+        else:
+            Config[pair]['pipStep']=float(Config[pair]['PipProfit'])*0.0001
 
         # Calculate volatility pips
 
         if Config[pair]['Volatility'].lower()=='yes':
-            if Config[pair]['Direction'].lower()=='long':
-                Config[pair]['VolatilityPips']=CalculateVolatilityPips(relay,Config[pair],ticker['Bid'])
-            else:
-                Config[pair]['VolatilityPips']=CalculateVolatilityPips(relay,Config[pair],ticker['Ask'])
+            Config[pair]['VolatilityPips']=CalculateVolatilityPips(relay,Config[pair])
         else:
             Config[pair]['VolatilityPips']=0
 
@@ -633,7 +664,7 @@ while True:
         # End of the loop and this asset
 
         endTime=time.time()-startTime
-        print(f"{endTime:7.4f} {Config[pair]['Direction'][0]} {GetForexSession():4} {pair:8} {len(openTrades):3.0f} {Config[pair]['BuyPips']:.5f} {Config[pair]['marginPips']:.5f} {Config[pair]['unitPips']:.5f} {Config[pair]['VolatilityPips']:.5f} {ticker['Spread']:.5f} {Config[pair]['balance']:9.5f} {Config[pair]['marginUsed']:9.5f}/{Config[pair]['marginLimit']:9.5f}")
+        print(f"{endTime:7.4f} {Config[pair]['Direction'][0]} {GetForexSession():4} {pair:8} {len(openTrades):3.0f} {Config[pair]['BuyPips']:.5f} {Config[pair]['pipStep']:.5f} {Config[pair]['marginPips']:.5f} {Config[pair]['unitPips']:.5f} {Config[pair]['VolatilityPips']:.5f} {ticker['Spread']:.5f} {Config[pair]['balance']:9.5f} {Config[pair]['marginUsed']:9.5f}/{Config[pair]['marginLimit']:9.5f}")
         JRRsupport.ElasticSleep(1)
 
     print('')
@@ -641,3 +672,4 @@ while True:
 ###
 ### End of program
 ###
+
