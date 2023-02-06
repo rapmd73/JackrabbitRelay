@@ -23,7 +23,29 @@ import JRRsupport
 
 # Slash (/) at end is required
 
-oandaBotHome='/home/Oanda/TickerData/'
+oandaBotTickerData='/home/Oanda/TickerData/'
+
+# Forex sessions:
+#
+# Tokyo     00:00 to 09:00  T
+# London    08:00 to 17:00  L
+# New York  13:00 to 22:00  N
+# Sydney    20:00 to 05:00  S
+
+# Get forex session
+
+def GetForexSession():
+    cs=''
+    hour=time.localtime().tm_hour
+    if hour>=0 and hour<=9:
+        cs+='T'
+    if hour>=8 and hour<=17:
+        cs+='L'
+    if hour>=13 and hour<=22:
+        cs+='N'
+    if hour>=20 or hour<=5:
+        cs+='S'
+    return(cs)
 
 # Send the order to Relay
 
@@ -49,9 +71,9 @@ def SendOrder(relay,**kwargs):
 
 # Load ticker data
 
-def LoadPriceData(Config):
-    PriceList=[]
-    fn=oandaBotHome+Config['Account']+'.'+Config['Asset'].replace('/','')+'.ticker'
+def LoadTickerData(Config,ticker):
+    TickerList=[]
+    fn=oandaBotTickerData+Config['Account']+'.'+Config['Asset'].replace('/','')+'.ticker'
     if os.path.exists(fn)==True:
         lines=JRRsupport.ReadFile(fn).split('\n')
         for line in lines:
@@ -60,52 +82,33 @@ def LoadPriceData(Config):
                 continue
             try:
                 td=json.loads(line)
-                PriceList.append(td)
+                TickerList.append(td)
             except: # damages, skip
                 pass
 
-    Config['TickerData']=PriceList[-86400:]
+    Config['TickerData']=TickerList[-86400:]
+
+    # Only update if the current ticker is different then the previous
+    if len(Config['TickerData'])>1:
+        if ticker['Bid']!=Config['TickerData'][-1]['Bid'] \
+        and ticker['Ask']!=Config['TickerData'][-1]['Ask']:
+            Config['TickerData'].append(ticker)
+            SaveTickerData(Config)
+    else:
+        Config['TickerData'].append(ticker)
+        SaveTickerData(Config)
+
     return Config
 
 # Save ticker data
 
-def SavePriceData(Config):
-    PriceList=Config['TickerData']
-    fn=oandaBotHome+Config['Account']+'.'+Config['Asset'].replace('/','')+'.ticker'
+def SaveTickerData(Config):
+    TickerList=Config['TickerData']
+    fn=oandaBotTickerData+Config['Account']+'.'+Config['Asset'].replace('/','')+'.ticker'
     fh=open(fn,"w")
-    for ticker in PriceList:
+    for ticker in TickerList:
         fh.write(json.dumps(ticker)+'\n')
     fh.close()
-
-# Append price Data
-
-def AppendPriceData(Config,ticker):
-    Config['TickerData'].append(ticker)
-    Config['TickerData']=Config['TickerData'][-86400:]
-
-    return Config
-
-# Forex sessions:
-#
-# Tokyo     00:00 to 09:00  T
-# London    08:00 to 17:00  L
-# New York  13:00 to 22:00  N
-# Sydney    20:00 to 05:00  S
-
-# Get forex session
-
-def GetForexSession():
-    cs=''
-    hour=time.localtime().tm_hour
-    if hour>=0 and hour<=9:
-        cs+='T'
-    if hour>=8 and hour<=17:
-        cs+='L'
-    if hour>=13 and hour<=22:
-        cs+='N'
-    if hour>=20 or hour<=5:
-        cs+='S'
-    return(cs)
 
 # Get orderbook direction or pressure
 
@@ -141,13 +144,13 @@ def GetOrderBookDirection(relay,Config):
 # Predict price consolidation
 
 def PredictConsolidatedPrice(relay,Config):
-    PriceList=Config['TickerData']
+    TickerList=Config['TickerData']
 
     # Main algorithm
 
-    n=len(PriceList)
+    n=len(TickerList)
     sum_of_prices=0
-    for price in PriceList:
+    for price in TickerList:
         if Config['Direction'].lower()=='long':
             sum_of_prices+=price['Bid']
         else:
@@ -155,7 +158,7 @@ def PredictConsolidatedPrice(relay,Config):
     mean=sum_of_prices/n
 
     sum_of_squared_differences=0
-    for price in PriceList:
+    for price in TickerList:
         if Config['Direction'].lower()=='long':
             sum_of_squared_differences+=(price['Bid']-mean)**2
         else:
@@ -175,17 +178,17 @@ def PredictConsolidatedPrice(relay,Config):
 # Calculate additive pip profits based upon ticker spread
 
 def CalculatePipPprofits(relay,Config):
-    PriceList=Config['TickerData']
+    TickerList=Config['TickerData']
 
-    if len(PriceList)<2:
+    if len(TickerList)<2:
         return 0
 
     spread = []
-    for price in PriceList:
+    for price in TickerList:
         spread.append(price['Spread'])
 
     window_size=int(len(spread)/10)+1
-    ema = [0.0]*(window_size - 1)
+    ema=[0.0]*(window_size-1)
     ema_sum=0
     for i in range(window_size):
         ema_sum+=spread[i]
@@ -198,26 +201,26 @@ def CalculatePipPprofits(relay,Config):
 # Calculate volatility in pips
 
 def CalculateVolatilityPips(relay,Config):
-    PriceList=Config['TickerData']
+    TickerList=Config['TickerData']
 
     if Config['Direction'].lower()=='long':
         s=0
-        for price in PriceList:
+        for price in TickerList:
             s+=price['Bid']
 
-        mean=s/len(PriceList)
+        mean=s/len(TickerList)
 
         deviations=[]
-        for price in PriceList:
+        for price in TickerList:
             deviations.append((price['Bid']-mean)**2)
     else:
         s=0
-        for price in PriceList:
+        for price in TickerList:
             s+=price['Ask']
-        mean=s/len(PriceList)
+        mean=s/len(TickerList)
 
         deviations=[]
-        for price in PriceList:
+        for price in TickerList:
             deviations.append((price['Bid']-mean)**2)
 
     variance=sum(deviations)/len(deviations)
@@ -602,16 +605,7 @@ while True:
         # Get the ticker
 
         ticker=relay.GetTicker(symbol=pair)
-        Config[pair]=LoadPriceData(Config[pair])
-        # Only update if the current ticker is different then the previous
-        if len(Config[pair]['TickerData'])>1:
-            if ticker['Bid']!=Config[pair]['TickerData'][-1]['Bid'] \
-            or ticker['Ask']!=Config[pair]['TickerData'][-1]['Ask']:
-                AppendPriceData(Config[pair],ticker)
-                SavePriceData(Config[pair])
-        else:
-            Config[pair]=Config[pair]=AppendPriceData(Config[pair],ticker)
-            SavePriceData(Config[pair])
+        Config[pair]=LoadTickerData(Config[pair],ticker)
 
        # Iniial values fon configuration file
 
