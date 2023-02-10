@@ -86,7 +86,7 @@ def LoadTickerData(Config,ticker):
             except: # damages, skip
                 pass
 
-    Config['TickerData']=TickerList[-86400:]
+    Config['TickerData']=TickerList[-172800:]
 
     # Only update if the current ticker is different then the previous
     if len(Config['TickerData'])>1:
@@ -97,6 +97,8 @@ def LoadTickerData(Config,ticker):
     else:
         Config['TickerData'].append(ticker)
         SaveTickerData(Config)
+
+    Config['TickerData']=TickerList[-86400:]
 
     return Config
 
@@ -231,7 +233,8 @@ def CalculateVolatilityPips(relay,Config):
 # Read the configuration file
 
 def ReadConfig(fname):
-    required=[ "Account","Asset","PipProfit","MarginPips","UnitPips","UnitStart","UnitStep","MarginLimit","Direction","Clustering","ClusterStyle","Confidence" ]
+    required=[ "Account","Asset","PipProfit","MarginPips","UnitPips","UnitStart","UnitStep","MarginLimit", \
+               "Direction","Clustering","ClusterStyle","Confidence","Confirmation","Volatility" ]
 
     Config={}
     lines=JRRsupport.ReadFile(fname).split('\n')
@@ -654,6 +657,10 @@ while True:
             Config[pair]=ManageLongs(relay,pair,Config[pair],ticker)
         elif Config[pair]['Direction'].lower()=='short':
             Config[pair]=ManageShorts(relay,pair,Config[pair],ticker)
+
+        # Memory purge
+
+        Config[pair]['TickerData']=None
 
         # End of the loop and this asset
 

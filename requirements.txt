@@ -3,4 +3,3 @@ oandapyV20
 plotly
 pandas
 numpy
-statsmodel
