@@ -517,6 +517,8 @@ class JackrabbitRelay:
 
                         if 'Identity' not in key:
                             key={ **key, **self.Identity, **logProcess }
+                        else:
+                            key={ **key, **logProcess }
                         self.Keys.append(key)
                 cf.close()
 
