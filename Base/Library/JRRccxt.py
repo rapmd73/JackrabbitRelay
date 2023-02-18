@@ -389,7 +389,7 @@ class ccxtCrypto:
         ro=kwargs.get('ReduceOnly')
         # ln=kwargs.get('LedgerNote')
         # Shorts are stored as negative numbers, abs() is a safety catch
-        amount=self.Broker.amount_to_precision(pair,abs(float(kwargs.get('amount'))))
+        amount=float(self.Broker.amount_to_precision(pair,abs(float(kwargs.get('amount')))))
 
         params = {}
         order=None
