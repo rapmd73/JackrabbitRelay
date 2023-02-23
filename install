@@ -23,6 +23,8 @@ cp * /home/JackrabbitRelay2 > /dev/null 2>&1
 # Do NOT copy the Config folder
 mkdir -p $BaseDir/Config > /dev/null 2>&1
 
+git pull https://github.com/rapmd73/JackrabbitRelay
+
 for d in Base Base/Library Data Extras Extras/CodeProofs Logs Ledger ; do
     mkdir -p $BaseDir/$d > /dev/null 2>&1
     cp -r /home/GitHub/JackrabbitRelay/$d/* $BaseDir/$d > /dev/null 2>&1
@@ -39,8 +41,6 @@ if [ x$1 != 'xnopull' ] ; then
         $BaseDir/Extras/TV2Exchange $N $A
     done
 fi
-
-git pull https://github.com/rapmd73/JackrabbitRelay
 
 NFS=`stat --printf="%s" install`
 
