@@ -45,6 +45,10 @@ LogDirectory="/home/JackrabbitRelay2/Logs"
 OrphanReceiver=DataDirectory+'/OliverTwist.Receiver'
 OrphanStorehouse=DataDirectory+'/OliverTwist.Storehouse'
 
+# Set up signal interceptor
+
+interceptor=JRRsupport.SignalInterceptor()
+
 # The timeout setting for the memory locks. If it takes longer then 15 minutes to
 # check the status of an order, there is a major problem with the exchange/broker.
 # Testing has show that only a few seconds is actually requred. The extended amount
@@ -233,6 +237,7 @@ def WriteOrphanList():
     global orphanLock
     global OrphanList
 
+    interceptor.Critical(True)
     orphanLock.Lock()
     buffer=''
     cur=OrphanList.GetHead()
@@ -241,6 +246,10 @@ def WriteOrphanList():
         cur=cur.GetNext()
     JRRsupport.WriteFile(OrphanStorehouse,buffer)
     orphanLock.Unlock()
+    interceptor.Critical(False)
+
+    # Process any signals received during critical section
+    interceptor.SafeExit()
 
 # Check the receiver file for new orders.
 
