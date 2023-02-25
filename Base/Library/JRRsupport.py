@@ -8,10 +8,59 @@
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
+import signal
 import time
 import random
 import socket
 import json
+
+# Signal Interceptor for critical areas
+
+class SignalInterceptor():
+    def __init__(self):
+        self.critical=0
+        self.original={}
+        self.triggered={}
+
+        for sig in signal.valid_signals():
+            self.triggered[sig]=False
+            try:
+                self.original[sig]=signal.getsignal(sig)
+                signal.signal(sig,self.ProcessSignal)
+            except:
+                pass
+
+    def Critical(self,IsCrit=False):
+        if IsCrit==True:
+            self.critical+=1
+        elif self.critical>0:
+            self.critical-=1
+
+    def ProcessSignal(self,signum,frame):
+        if self.critical>0:
+            self.triggered[signum]=True
+        else:
+            self.original[signum](signum,frame)
+
+    def ResetSignals(self):
+        for sig in signal.valid_signals():
+            self.triggered[sig]=False
+
+    def RestoreOriginalSignals(self):
+        for sig in signal.valid_signals():
+            try:
+                signal.signal(sig,self.original[sig])
+            except:
+                pass
+
+    def Triggered(self,signum):
+        return self.triggered[signum]
+
+    def SafeExit(self):
+        for sig in signal.valid_signals():
+            if self.triggered[sig]==True:
+                self.RestoreOriginalSignals()
+                sys.exit(sig)
 
 # Reusable file locks, using atomic operations
 # NOT suitable for distributed systems or
