@@ -39,7 +39,7 @@ class Broker:
     # Initialize everything for this broker.
 
     def __init__(self,API=None, SECRET=None, Passphrase=None, Sandbox=False):
-        self.Version='0.0.0.0.1'
+        self.Version='0.0.0.0.5'
         self.APIkey=API
         self.SECRET=SECRET
         self.Passphrase=Passphrase
