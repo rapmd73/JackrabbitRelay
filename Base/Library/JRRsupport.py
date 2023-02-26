@@ -40,7 +40,8 @@ class SignalInterceptor():
         if self.critical>0:
             self.triggered[signum]=True
         else:
-            self.original[signum](signum,frame)
+            if callable(self.original[signum]):
+                self.original[signum](signum,frame)
 
     def ResetSignals(self):
         for sig in signal.valid_signals():

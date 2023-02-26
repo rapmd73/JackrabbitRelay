@@ -8,6 +8,7 @@
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
+import signal
 import json
 from datetime import datetime
 
