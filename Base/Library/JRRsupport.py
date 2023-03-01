@@ -505,13 +505,25 @@ class DList:
 # Dirty support function to block HTML exchange payloads
 
 def StopHTMLtags(txt):
-    try:
-        p=txt.find('<')
-        if p>-1:
-            return txt[:p]
-    except:
-        pass
-    return txt
+    clean_text=""
+    in_tag=False
+    i=0
+
+    while i<len(txt):
+        char=txt[i]
+        if char=="<":
+            # Check if this is the start of an HTML tag
+            if i==0 or txt[i-1] not in ('\\',"'",'"'):
+                in_tag=True
+        elif char==">":
+            # Check if this is the end of an HTML tag
+            if i==len(txt)-1 or txt[i+1] not in ('\\',"'",'"'):
+                in_tag=False
+        elif not in_tag:
+            clean_text+=char
+        i+=1
+
+    return clean_text
 
 # Filter end of line and hard spaces
 
@@ -734,3 +746,4 @@ class TimedList():
             self.fw.Unlock()
         except:
             self.fw.Unlock()
+
