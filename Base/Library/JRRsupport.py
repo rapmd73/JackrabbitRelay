@@ -9,6 +9,7 @@ import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
 import signal
+import datetime
 import time
 import random
 import socket
@@ -501,6 +502,16 @@ class DList:
             while current:
                 self.dump(current)
                 current=current.GetNext()
+
+# Get Yesterday's date
+
+def Yesterday(ds=None):
+    if ds!=None:
+        date=datetime.datetime.strptime(date_str,'%Y-%m-%d')
+    else:
+        date=datetime.datetime.now()
+    yesterday=date-datetime.timedelta(days=1)
+    return yesterday.strftime('%Y-%m-%d')
 
 # Dirty support function to block HTML exchange payloads
 
