@@ -2,6 +2,9 @@
 
 mkdir -p /home/Oanda 1>/dev/null 2>&1
 mkdir -p /home/Oanda/TickerData 1>/dev/null 2>&1
+mkdir -p /home/Oanda/Charts/Tickers 1>/dev/null 2>&1
+mkdir -p /home/Oanda/Charts/Frequency 1>/dev/null 2>&1
+mkdir -p /home/Oanda/Charts/Balances 1>/dev/null 2>&1
 
 cd /home/GitHub/JackrabbitRelay/Extras/Examples
 

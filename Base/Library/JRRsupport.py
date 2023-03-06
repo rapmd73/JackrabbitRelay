@@ -534,7 +534,7 @@ def StopHTMLtags(txt):
             clean_text+=char
         i+=1
 
-    return clean_text
+    return clean_text.strip().replace('  ',' ').replace(' \n','').replace('\n\n','')
 
 # Filter end of line and hard spaces
 
