@@ -14,6 +14,7 @@
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
+import gc
 import json
 import time
 import datetime
@@ -24,6 +25,10 @@ import JRRsupport
 # Slash (/) at end is required
 
 oandaBotTickerData='/home/Oanda/TickerData/'
+
+# Initialize global signal interceptor. prevent file trashing on CTRL-C
+
+interceptor=JRRsupport.SignalInterceptor()
 
 # Forex sessions:
 #
@@ -96,7 +101,7 @@ def LoadTickerData(Config,ticker):
             try:
                 td=json.loads(line)
                 TickerList.append(td)
-            except: # damages, skip
+            except: # damaged, skip
                 pass
 
     Config['TickerData']=TickerList[-172800:]
@@ -118,12 +123,16 @@ def LoadTickerData(Config,ticker):
 # Save ticker data
 
 def SaveTickerData(Config):
+    interceptor.Critical(True)
     TickerList=Config['TickerData']
     fn=oandaBotTickerData+Config['Account']+'.'+Config['Asset'].replace('/','')+'.ticker'
     fh=open(fn,"w")
     for ticker in TickerList:
         fh.write(json.dumps(ticker)+'\n')
     fh.close()
+    interceptor.Critical(False)
+
+    interceptor.SafeExit()
 
 # Find the closest rime number to the one provided
 
@@ -177,9 +186,11 @@ def GetOrderBookDirection(relay,Config):
 
     confirmation=abs(tl-ts)
     if tl>=ts:
-        return 'long'
+        Config['obDirection']='long'
     else:
-        return 'short'
+        Config['obDirection']='short'
+
+    return Config
 
 # Predict price consolidation
 
@@ -270,13 +281,14 @@ def CalculateVolatilityPips(relay,Config):
         variance=sum(deviations)/len(deviations)
         std_dev=variance**0.5
 
-        return ((std_dev/mean)*100)*0.001
+        return round(((std_dev/mean)*100)*0.001,5)
     return 0
 
-# Frequency count the Bid/Ask price
+# Frequency count the Bid/Ask price. This is used as a multiplier for extremely aggressive position sizes.
 
 def FrequencyCount(Config,ticker):
     Config['FrequencyCount']=1
+    Config['Frequency']={}
     TickerList=Config['TickerData']
     if len(TickerList)>1:
         dir=Config['Direction'].lower()
@@ -298,10 +310,12 @@ def FrequencyCount(Config,ticker):
                     ask[td['Ask']]+=1
 
         if dir=='long':
+            Config['Frequency']=bid
             mb=max(bid,key=bid.get)
             if ticker['Bid']==mb:
                 Config['FrequencyCount']=2
         if dir=='short':
+            Config['Frequency']=ask
             ma=max(ask,key=ask.get)
             if ticker['Ask']==ma:
                 Config['FrequencyCount']=2
@@ -312,7 +326,7 @@ def FrequencyCount(Config,ticker):
 
 def ReadConfig(fname):
     required=[ "Account","Asset","PipProfit","MarginPips","UnitPips","UnitStart","UnitStep","MarginLimit", \
-               "Direction","Clustering","ClusterStyle","Confidence","Confirmation","Volatility" ]
+               "Direction","Clustering","ClusterStyle","Confidence","Confirmation","Volatility","FrequencyBoost" ]
 
     Config={}
     lines=JRRsupport.ReadFile(fname).split('\n')
@@ -332,6 +346,8 @@ def ReadConfig(fname):
             cfg['Confirmation']="Yes"
         if 'Volatility' not in cfg:
             cfg['Volatility']="Yes"
+        if 'FrequencyBoost' not in cfg:
+            cfg['FrequencyBoost']="No"
 
         for item in required:
             if item not in cfg:
@@ -373,9 +389,8 @@ def AllowClustering(relay,Config):
 
     price,confidence=PredictConsolidatedPrice(relay,Config)
 
-# Replace with ticker data
     if Config['Confirmation'].lower()=='yes':
-        dir=(GetOrderBookDirection(relay,Config)==Config['Direction'].lower())
+        dir=(Config['obDirection']==Config['Direction'].lower())
     else:
         dir=True
 
@@ -404,17 +419,30 @@ def ClusterStyle(openTrades,relay,pair,Config):
 # including but not limited to, the amount of margin used.
 
 def LowestLotSize(openTrades,relay,asset,Config):
+    # Frequency Boost
+
+    if Config['Confirmation'].lower()=='yes':
+        dir=(Config['obDirection']==Config['Direction'].lower())
+    else:
+        dir=True
+
+    fb=1
+    ml=Config['marginLimit']*0.37
+    if Config['FrequencyBoost'].lower()=='yes' and Config['marginUsed']<ml:
+        if Config['Price'] in Config['Frequency'] and dir==True:
+            fb=Config['Frequency'][Config['Price']]
+
     # figure out the starting point and step size
 
     if Config['UnitStart'].lower()=='prime':
-        lowestSize=ClosestPrime(int(Config['marginLimit']*0.2)*Config['FrequencyCount'])
+        lowestSize=ClosestPrime(int(Config['marginLimit']*0.2)*Config['FrequencyCount']*fb)
     else:
-        lowestSize=int(Config['UnitStart'])*Config['FrequencyCount']
+        lowestSize=int(Config['UnitStart'])*Config['FrequencyCount']*fb
 
     if Config['UnitStep'].lower()=='prime':
-        lotSize=ClosestPrime(int(lowestSize/2)*Config['FrequencyCount'])
+        lotSize=ClosestPrime(int(lowestSize/2)*Config['FrequencyCount']*fb)
     else:
-        lotSize=int(Config['UnitStep'])*Config['FrequencyCount']
+        lotSize=int(Config['UnitStep'])*Config['FrequencyCount']*fb
 
     done=False
     while not done:
@@ -430,17 +458,30 @@ def LowestLotSize(openTrades,relay,asset,Config):
     return lowestSize
 
 def HighestLotSize(openTrades,relay,asset,Config):
+    # Frequency Boost
+
+    if Config['Confirmation'].lower()=='yes':
+        dir=(Config['obDirection']==Config['Direction'].lower())
+    else:
+        dir=True
+
+    fb=1
+    ml=Config['marginLimit']*0.37
+    if Config['FrequencyBoost'].lower()=='yes' and Config['marginUsed']<ml:
+        if Config['Price'] in Config['Frequency'] and dir==True:
+            fb=Config['Frequency'][Config['Price']]
+
     # figure out the starting point and step size
 
     if Config['UnitStart'].lower()=='prime':
-        highestSize=ClosestPrime(int(Config['marginLimit']*0.2)*Config['FrequencyCount'])
+        highestSize=ClosestPrime(int(Config['marginLimit']*0.2)*Config['FrequencyCount']*fb)
     else:
-        highestSize=int(Config['UnitStart'])*Config['FrequencyCount']
+        highestSize=int(Config['UnitStart'])*Config['FrequencyCount']*fb
 
     if Config['UnitStep'].lower()=='prime':
-        lotSize=ClosestPrime(int(highestSize/2)*Config['FrequencyCount'])
+        lotSize=ClosestPrime(int(highestSize/2)*Config['FrequencyCount']*fb)
     else:
-        lotSize=int(Config['UnitStep'])*Config['FrequencyCount']
+        lotSize=int(Config['UnitStep'])*Config['FrequencyCount']*fb
 
     for trade in openTrades:
         units=abs(int(trade['currentUnits']))
@@ -465,8 +506,17 @@ def GetMarginUsed(relay,asset):
 # Manage Long positions
 
 def ManageLongs(relay,pair,Config,ticker):
+    # Get the margin used
+    Config['marginUsed']=GetMarginUsed(relay,pair)
+
     # Get the list of open trades
+
     openTrades=relay.GetOpenTrades(symbol=pair)
+
+    # Figure out orderbook direction
+
+    Config['obDirection']=GetOrderBookDirection(relay,Config)
+
     isClustering=AllowClustering(relay,Config)
     if isClustering==True:
         clusterStr="Cluster "
@@ -476,6 +526,11 @@ def ManageLongs(relay,pair,Config,ticker):
     lowestPrice=999999
     if len(openTrades)>0:
         for trade in openTrades:
+
+            # Figure out orderbook direction
+
+            Config['obDirection']=GetOrderBookDirection(relay,Config)
+
             id=trade['id']
             iu=int(trade['currentUnits'])
             price=float(trade['price'])
@@ -496,6 +551,9 @@ def ManageLongs(relay,pair,Config,ticker):
                 # Replaceent order, start at bottom
 
                 if not AlreadyBought(relay,pair,ticker['Bid'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+Config['VolatilityPips']+ticker['Spread']) or isClustering:
+                    # Get the margin used
+                    Config['marginUsed']=GetMarginUsed(relay,pair)
+
                     lotSize=ClusterStyle(openTrades,relay,pair,Config)
                     newPos=Config['marginUsed']+(float(relay.Markets[pair]['marginRate'])*lotSize)
 
@@ -511,7 +569,6 @@ def ManageLongs(relay,pair,Config,ticker):
     # No trades to scan
     elif Config['First']==True and (Config['marginLimit']<0 or Config['marginLimit']>0):
         lowestPrice=ticker['Bid']
-
         lotSize=LowestLotSize(openTrades,relay,pair,Config)
         buy=ticker['Bid']
         result=SendOrder(relay,Action="buy",Units=lotSize)
@@ -547,8 +604,17 @@ def ManageLongs(relay,pair,Config,ticker):
 # Manage short positions
 
 def ManageShorts(relay,pair,Config,ticker):
-    # Get the list of open trades
+    # Get the margin used
+    Config['marginUsed']=GetMarginUsed(relay,pair)
+
     openTrades=relay.GetOpenTrades(symbol=pair)
+
+    # Figure out orderbook direction
+
+    Config['obDirection']=GetOrderBookDirection(relay,Config)
+
+    # Get the list of open trades
+
     isClustering=AllowClustering(relay,Config)
     if isClustering==True:
         clusterStr="Cluster "
@@ -558,6 +624,10 @@ def ManageShorts(relay,pair,Config,ticker):
     highestPrice=0
     if len(openTrades)>0:
         for trade in openTrades:
+            # Figure out orderbook direction
+
+            Config['obDirection']=GetOrderBookDirection(relay,Config)
+
             id=trade['id']
             iu=int(trade['currentUnits'])
             price=float(trade['price'])
@@ -578,6 +648,9 @@ def ManageShorts(relay,pair,Config,ticker):
                 # Replaceent order, start at bottom
 
                 if not AlreadyBought(relay,pair,ticker['Ask'],Config['pipStep']+Config['BuyPips']+Config['marginPips']+Config['unitPips']+Config['VolatilityPips']+ticker['Spread']) or isClustering:
+                    # Get the margin used
+                    Config['marginUsed']=GetMarginUsed(relay,pair)
+
                     lotSize=ClusterStyle(openTrades,relay,pair,Config)
                     newPos=Config['marginUsed']+(float(relay.Markets[pair]['marginRate'])*lotSize)
 
@@ -657,6 +730,13 @@ while True:
         ticker=relay.GetTicker(symbol=pair)
         Config[pairAccount]=LoadTickerData(Config[pairAccount],ticker)
 
+        # Set up Price element
+
+        if Config[pairAccount]['Direction'].lower()=='long':
+            Config[pairAccount]['Price']=ticker['Bid']
+        elif Config[pairAccount]['Direction'].lower()=='short':
+            Config[pairAccount]['Price']=ticker['Ask']
+
         # Frequency count the Bid/Ask price against the current ticker.
 
         Config[pairAccount]=FrequencyCount(Config[pairAccount],ticker)
@@ -677,6 +757,7 @@ while True:
 
         # Get the highest lot size and convert to pips
         if Config[pairAccount]['UnitPips'].lower()=='yes':
+            Config[pairAccount]['obDirection']=GetOrderBookDirection(relay,Config[pairAccount])
             Config[pairAccount]['unitPips']=HighestLotSize(openTrades,relay,pair,Config[pairAccount])*0.0001
         else:
             Config[pairAccount]['unitPips']=0
@@ -712,6 +793,9 @@ while True:
         # Memory purge
 
         Config[pairAccount]['TickerData']=None
+        Config[pairAccount]['Frequency']=None
+
+        gc.collect()
 
         # End of the loop and this asset
 
@@ -724,4 +808,3 @@ while True:
 ###
 ### End of program
 ###
-
