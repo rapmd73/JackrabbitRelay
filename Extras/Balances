@@ -36,8 +36,8 @@ if relay.GetFramework()=='ccxt':
             if fre>0.0 and tot>0.0:
                 print(f"{coin:20} {fre:16.8f} {tot:16.8f}")
 
-        if 'MarketType' in relay.Active \
-        and relay.Active['MarketType'].lower()!='spot':
+        if 'Market' in relay.Active \
+        and relay.Active['Market'].lower()!='spot':
             positions=relay.GetPositions()
             if positions!=None:
                 for pos in positions:
