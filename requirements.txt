@@ -1,6 +1,6 @@
 requests
-ccxt
-oandapyV20
 plotly
 pandas
 numpy
+ccxt
+oandapyV20

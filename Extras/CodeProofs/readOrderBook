@@ -84,7 +84,7 @@ if relay.GetFramework()=='ccxt':
         idx+=1
 
     print(f"{Blank:4} {'Volume':>12} {'Buy':>12} {'Sell':>12} {'Volume':>12} {'Spread':>12}")
-    print(f"{Blank:4} {Blank:12} {BuyPrice:12.4f} {SellPrice:12.4f} {Blank:12} {BuyPrice-SellPrice:12.4f}")
+    print(f"{Blank:4} {Blank:12} {BuyPrice:12.5f} {SellPrice:12.5f} {Blank:12} {BuyPrice-SellPrice:12.5f}")
     print(f"{'-'*4:4} {'-'*12:12} {'-'*12:12} {'-'*12:12} {'-'*12:12} {'-'*12:12}")
 
     c=1
@@ -107,15 +107,15 @@ if relay.GetFramework()=='ccxt':
         if sell>maxSorders:
             maxSorders=sell
             maxSprice=sprice
-        print(f"{c:4} {buy:12.4f} {bprice:12.4f} {sprice:12.4f} {sell:12.4f} {spread:12.4f}")
+        print(f"{c:4} {buy:12.5f} {bprice:12.5f} {sprice:12.5f} {sell:12.5f} {spread:12.5f}")
         c+=1
 
     spread=maxSprice-maxBprice
     print(f"{'-'*4:4} {'-'*12:12} {'-'*12:12} {'-'*12:12} {'-'*12:12} {'-'*12:12}")
-    print(f"MAX  {maxBorders:12.4f} {maxBprice:12.4f} {maxSprice:12.4f} {maxSorders:12.4f} {spread:12.4f}")
+    print(f"MAX  {maxBorders:12.5f} {maxBprice:12.5f} {maxSprice:12.5f} {maxSorders:12.5f} {spread:12.5f}")
 elif relay.GetFramework()=='oanda':
-    BuyPrice=ticker['Ask']
-    SellPrice=ticker['Bid']
+    BuyPrice=ticker['Bid']
+    SellPrice=ticker['Ask']
 
     # Get order book
 
@@ -147,7 +147,7 @@ elif relay.GetFramework()=='oanda':
         idx+=1
 
     print(f"{Blank:3} {'Volume':>12} {'Buy':>12} {'Sell':>12} {'Volume':>12} {'Spread':>12}")
-    print(f"{Blank:3} {Blank:12} {BuyPrice:12.4f} {SellPrice:12.4f} {Blank:12} {BuyPrice-SellPrice:12.4f}")
+    print(f"{Blank:3} {Blank:12} {BuyPrice:12.5f} {SellPrice:12.5f} {Blank:12} {BuyPrice-SellPrice:12.5f}")
     print(f"{'-'*3:3} {'-'*12:12} {'-'*12:12} {'-'*12:12} {'-'*12:12} {'-'*12:12}")
 
     c=1
@@ -167,9 +167,9 @@ elif relay.GetFramework()=='oanda':
         if sell>maxSorders:
             maxSorders=sell
             maxSprice=sprice
-        print(f"{c:3} {buy:12.4f} {bprice:12.4f} {sprice:12.4f} {sell:12.4f} {spread:12.4f}")
+        print(f"{c:3} {buy:12.5f} {bprice:12.5f} {sprice:12.5f} {sell:12.5f} {spread:12.5f}")
         c+=1
 
     spread=maxSprice-maxBprice
     print(f"{'-'*3:3} {'-'*12:12} {'-'*12:12} {'-'*12:12} {'-'*12:12} {'-'*12:12}")
-    print(f"MAX {maxBorders:12.4f} {maxBprice:12.4f} {maxSprice:12.4f} {maxSorders:12.4f} {spread:12.4f}")
+    print(f"MAX {maxBorders:12.5f} {maxBprice:12.5f} {maxSprice:12.5f} {maxSorders:12.5f} {spread:12.5f}")
