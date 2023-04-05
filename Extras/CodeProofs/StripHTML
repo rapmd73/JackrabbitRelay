@@ -12,6 +12,8 @@ import time
 
 import JRRsupport
 
+inp=sys.stdin.read()
 
-print(JRRsupport.StopHTMLtags(sys.stdin.read()))
+print("1st:",JRRsupport.StopHTMLtags(inp))
+print(JRRsupport.StopHTMLtags(inp,full=True))
 

@@ -515,26 +515,31 @@ def Yesterday(ds=None):
 
 # Dirty support function to block HTML exchange payloads
 
-def StopHTMLtags(txt):
+def StopHTMLtags(text,full=False):
     clean_text=""
     in_tag=False
     i=0
 
-    while i<len(txt):
-        char=txt[i]
+    while i<len(text):
+        char=text[i]
         if char=="<":
             # Check if this is the start of an HTML tag
-            if i==0 or txt[i-1] not in ('\\',"'",'"'):
+            if i==0 or text[i-1] not in ('\\',"'",'"'):
                 in_tag=True
         elif char==">":
             # Check if this is the end of an HTML tag
-            if i==len(txt)-1 or txt[i+1] not in ('\\',"'",'"'):
+            if i==len(text)-1 or text[i+1] not in ('\\',"'",'"'):
                 in_tag=False
         elif not in_tag:
             clean_text+=char
         i+=1
 
-    return clean_text.strip().replace('  ',' ').replace(' \n','').replace('\n\n','')
+    clean_text=clean_text.strip()
+
+    if full==True:
+        return clean_text
+    else:
+        return clean_text[:clean_text.find('\n')]
 
 # Filter end of line and hard spaces
 
