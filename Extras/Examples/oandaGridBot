@@ -273,6 +273,8 @@ def CalculatePipProfits(relay,Config):
     for price in TickerList:
         spread.append(price['Spread'])
 
+    """
+    # EMA
     window_size=int(len(spread)/10)+1
     ema=[0.0]*(window_size-1)
     ema_sum=0
@@ -283,6 +285,10 @@ def CalculatePipProfits(relay,Config):
         ema.append(round((spread[i]-ema[-1])*2/(window_size+1)+ema[-1],5))
 
     return round(sum(ema)/len(ema),5)
+    """
+    # SMA
+    return round(sum(spread)/len(spread),5)
+
 
 # Calculate volatility in pips
 
@@ -767,6 +773,7 @@ while True:
         relay=JRR.JackrabbitRelay(framework='oanda',exchange='oanda',account=Config[pairAccount]['Account'],asset=pair)
 
         # Get balance
+        # OANDA has a 50% margin call rule, so cut balance in half for what is actually useable.
         Config[pairAccount]['balance']=relay.GetBalance()
 
         # Get the list of open trades
@@ -790,18 +797,39 @@ while True:
 
         # Iniial values fon configuration file
 
+        # Get the margin used
+        Config[pairAccount]['marginUsed']=GetMarginUsed(relay,pair)
+
+        # Figure out margin limit and take into account the current NAV
+
         if '%' in Config[pairAccount]['MarginLimit']:
             Config[pairAccount]['marginLimit']=(float(Config[pairAccount]['MarginLimit'].replace('%',''))/100)*Config[pairAccount]['balance']
         else:
             Config[pairAccount]['marginLimit']=float(Config[pairAccount]['MarginLimit'])
 
-        # Get the margin used
-        Config[pairAccount]['marginUsed']=GetMarginUsed(relay,pair)
+        # If margin limit greater the 0, calculate the net asset value (NAV) and substract it from the allowable limit.
+        # This provides a true assessment of what is really available for consumption. The goal with this approach is to
+        # prevent a margin call by keeping the bot with the allowable true amount available for purhasing.
+        # A marginit limit of 0 means buying is disabled.
 
-        # Set maegin pips
+        if Config[pairAccount]['marginLimit']>0:
+            nav=0
+            for trade in openTrades:
+                nav+=round(float(trade['unrealizedPL']),5)
+            # nav will be expressed as a negative value
+            # marginLimit-(nav+marginUsed)=marginFree
+            # Margin limit will be less than balance, this ensures that when trading multiple pairs, the account will be stable,
+            # providing the marginit limit total of ALL pairs remains below 100% usage. Not perfect, but at least better then
+            # nothing.
+            Config[pairAccount]['marginLimit']-=round(abs(nav)+Config[pairAccount]['marginUsed'],5)
+            if Config[pairAccount]['marginLimit']<0:
+                Config[pairAccount]['marginLimit']=0
+
+        # Set margin pips
         ml=Config[pairAccount]['marginLimit']*0.67
         if Config[pairAccount]['MarginPips'].lower()=='yes' \
-        or (Config[pairAccount]['MarginPips'].lower()=='auto' and Config[pairAccount]['marginLimit']>0 and Config[pairAccount]['marginUsed']>=ml):
+        or (Config[pairAccount]['MarginPips'].lower()=='auto' \
+        and Config[pairAccount]['marginLimit']>=0 and Config[pairAccount]['marginUsed']>=ml):
             Config[pairAccount]['marginPips']=Config[pairAccount]['marginUsed']*0.0001
         else:
             Config[pairAccount]['marginPips']=0
@@ -809,7 +837,7 @@ while True:
         # Get the highest lot size and convert to pips
         ml=Config[pairAccount]['marginLimit']*0.73
         if Config[pairAccount]['UnitPips'].lower()=='yes' \
-        or (Config[pairAccount]['UnitPips'].lower()=='auto' and Config[pairAccount]['marginLimit']>0 \
+        or (Config[pairAccount]['UnitPips'].lower()=='auto' and Config[pairAccount]['marginLimit']>=0 \
         and Config[pairAccount]['marginUsed']>=ml):
             Config[pairAccount]['obDirection']=GetOrderBookDirection(relay,Config[pairAccount])
             Config[pairAccount]['unitPips']=HighestLotSize(openTrades,relay,pair,Config[pairAccount])*0.0001
@@ -836,7 +864,7 @@ while True:
 
         ml=Config[pairAccount]['marginLimit']*0.37
         if Config[pairAccount]['Volatility'].lower()=='yes' \
-        or (Config[pairAccount]['Volatility'].lower()=='auto' and Config[pairAccount]['marginLimit']>0 \
+        or (Config[pairAccount]['Volatility'].lower()=='auto' and Config[pairAccount]['marginLimit']>=0 \
         and Config[pairAccount]['marginUsed']>=ml):
             Config[pairAccount]['VolatilityPips']=CalculateVolatilityPips(relay,Config[pairAccount])
         else:
