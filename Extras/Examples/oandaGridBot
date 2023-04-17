@@ -9,7 +9,9 @@
 
 # This is a very simple grid bot using unbounded grids.
 
-# For demonstration purposes only.
+# For demonstration purposes only. 
+# FREE VERSION, NOT SUPPORTED BEYOUND SCOPE OF Jackrabbit Relay.
+# See aponsored version.
 
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
@@ -807,6 +809,9 @@ while True:
         else:
             Config[pairAccount]['marginLimit']=float(Config[pairAccount]['MarginLimit'])
 
+        if Config[pairAccount]['marginLimit']>Config[pairAccount]['balance']:
+            Config[pairAccount]['marginLimit']=Config[pairAccount]['balance']
+
         # If margin limit greater the 0, calculate the net asset value (NAV) and substract it from the allowable limit.
         # This provides a true assessment of what is really available for consumption. The goal with this approach is to
         # prevent a margin call by keeping the bot with the allowable true amount available for purhasing.
@@ -826,49 +831,28 @@ while True:
                 Config[pairAccount]['marginLimit']=0
 
         # Set margin pips
-        ml=Config[pairAccount]['marginLimit']*0.67
-        if Config[pairAccount]['MarginPips'].lower()=='yes' \
-        or (Config[pairAccount]['MarginPips'].lower()=='auto' \
-        and Config[pairAccount]['marginLimit']>=0 and Config[pairAccount]['marginUsed']>=ml):
-            Config[pairAccount]['marginPips']=Config[pairAccount]['marginUsed']*0.0001
-        else:
-            Config[pairAccount]['marginPips']=0
+        Config[pairAccount]['marginPips']=Config[pairAccount]['marginUsed']*0.0001
 
         # Get the highest lot size and convert to pips
-        ml=Config[pairAccount]['marginLimit']*0.73
-        if Config[pairAccount]['UnitPips'].lower()=='yes' \
-        or (Config[pairAccount]['UnitPips'].lower()=='auto' and Config[pairAccount]['marginLimit']>=0 \
-        and Config[pairAccount]['marginUsed']>=ml):
-            Config[pairAccount]['obDirection']=GetOrderBookDirection(relay,Config[pairAccount])
-            Config[pairAccount]['unitPips']=HighestLotSize(openTrades,relay,pair,Config[pairAccount])*0.0001
-        else:
-            Config[pairAccount]['unitPips']=0
+        Config[pairAccount]['obDirection']=GetOrderBookDirection(relay,Config[pairAccount])
+        Config[pairAccount]['unitPips']=HighestLotSize(openTrades,relay,pair,Config[pairAccount])*0.0001
 
         # The range of actual profit and distance from other orders. spread is added
         # automatically.
 
-        if Config[pairAccount]['PipProfit'].lower()=='auto':
-            Config[pairAccount]['pipStep']=CalculatePipProfits(relay,Config[pairAccount])
+        Config[pairAccount]['pipStep']=CalculatePipProfits(relay,Config[pairAccount])
 
-            # Use a 100 step basis to optimize profit based on rolling market history.
-            # The larger the distance between high and low, the greater the potential is for profit.
+        # Use a 100 step basis to optimize profit based on rolling market history.
+        # The larger the distance between high and low, the greater the potential is for profit.
 
-            if 'MaxBA' in Config[pairAccount]['TickerData'][-1] and 'MinBA' in Config[pairAccount]['TickerData'][-1]:
-                mh=Config[pairAccount]['TickerData'][-1]['MaxBA']
-                ml=Config[pairAccount]['TickerData'][-1]['MinBA']
-                Config[pairAccount]['pipStep']+=round((mh-ml)/100,5)
-        else:
-            Config[pairAccount]['pipStep']=round(float(Config[pairAccount]['PipProfit'])*0.0001,5)
+        if 'MaxBA' in Config[pairAccount]['TickerData'][-1] and 'MinBA' in Config[pairAccount]['TickerData'][-1]:
+            mh=Config[pairAccount]['TickerData'][-1]['MaxBA']
+            ml=Config[pairAccount]['TickerData'][-1]['MinBA']
+            Config[pairAccount]['pipStep']+=round((mh-ml)/100,5)
 
         # Calculate volatility pips
 
-        ml=Config[pairAccount]['marginLimit']*0.37
-        if Config[pairAccount]['Volatility'].lower()=='yes' \
-        or (Config[pairAccount]['Volatility'].lower()=='auto' and Config[pairAccount]['marginLimit']>=0 \
-        and Config[pairAccount]['marginUsed']>=ml):
-            Config[pairAccount]['VolatilityPips']=CalculateVolatilityPips(relay,Config[pairAccount])
-        else:
-            Config[pairAccount]['VolatilityPips']=0
+        Config[pairAccount]['VolatilityPips']=CalculateVolatilityPips(relay,Config[pairAccount])
 
         # We need to track the spread at purchase to add into the selling limit. We want to be sure we get
         # the above profits for each trade.

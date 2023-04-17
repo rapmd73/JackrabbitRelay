@@ -543,10 +543,15 @@ def StopHTMLtags(text,full=False):
 
 # Filter end of line and hard spaces
 
-def pFilter(s):
+def pFilter(s,FilterSpace=True):
     d=s.replace("\\n","").replace("\\t","").replace("\\r","")
 
-    for c in '\t\r\n \u00A0':
+    if FilterSpace==True:
+        filterText='\t\r\n \u00A0'
+    else:
+        filterText='\t\r\n\u00A0'
+
+    for c in filterText:
         d=d.replace(c,'')
 
     return(d)
