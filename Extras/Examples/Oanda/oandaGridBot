@@ -9,7 +9,7 @@
 
 # This is a very simple grid bot using unbounded grids.
 
-# For demonstration purposes only. 
+# For demonstration purposes only.
 # FREE VERSION, NOT SUPPORTED BEYOUND SCOPE OF Jackrabbit Relay.
 # See aponsored version.
 
@@ -338,49 +338,11 @@ def CalculateVolatilityPips(relay,Config):
         return round(((std_dev/mean)*100)*0.001,5)
     return 0
 
-# Frequency count the Bid/Ask price. This is used as a multiplier for extremely aggressive position sizes.
-
-def FrequencyCount(Config,ticker):
-    Config['FrequencyCount']=1
-    Config['Frequency']={}
-    TickerList=Config['TickerData']
-    if len(TickerList)>1:
-        dir=Config['Direction'].lower()
-
-        bid={}
-        ask={}
-
-        for td in TickerList:
-            if dir=='long':
-                if not td['Bid'] in bid:
-                    bid[td['Bid']]=1
-                else:
-                    bid[td['Bid']]+=1
-
-            if dir=='short':
-                if not td['Ask'] in ask:
-                    ask[td['Ask']]=1
-                else:
-                    ask[td['Ask']]+=1
-
-        if dir=='long':
-            Config['Frequency']=bid
-            mb=max(bid,key=bid.get)
-            if ticker['Bid']==mb:
-                Config['FrequencyCount']=2
-        if dir=='short':
-            Config['Frequency']=ask
-            ma=max(ask,key=ask.get)
-            if ticker['Ask']==ma:
-                Config['FrequencyCount']=2
-
-    return Config
-
 # Read the configuration file
 
 def ReadConfig(fname):
     required=[ "Account","Asset","PipProfit","MarginPips","UnitPips","UnitStart","UnitStep","MarginLimit", \
-               "Direction","Clustering","ClusterStyle","Confidence","Confirmation","Volatility","FrequencyBoost" ]
+               "Direction","Clustering","ClusterStyle","Confidence","Confirmation","Volatility" ]
 
     Config={}
     lines=JRRsupport.ReadFile(fname).split('\n')
@@ -410,8 +372,6 @@ def ReadConfig(fname):
             cfg['Confirmation']="Yes"
         if 'Volatility' not in cfg:
             cfg['Volatility']="Yes"
-        if 'FrequencyBoost' not in cfg:
-            cfg['FrequencyBoost']="No"
 
         for item in required:
             if item not in cfg:
@@ -483,30 +443,17 @@ def ClusterStyle(openTrades,relay,pair,Config):
 # including but not limited to, the amount of margin used.
 
 def LowestLotSize(openTrades,relay,asset,Config):
-    # Frequency Boost
-
-    if Config['Confirmation'].lower()=='yes':
-        dir=(Config['obDirection']==Config['Direction'].lower())
-    else:
-        dir=True
-
-    fb=1
-    ml=Config['marginLimit']*0.37
-    if (Config['FrequencyBoost'].lower()=='yes' and Config['marginUsed']<ml) or Config['FrequencyBoost'].lower()=='always':
-        if Config['Price'] in Config['Frequency'] and (dir==True or Config['FrequencyBoost'].lower()=='always'):
-            fb=Config['Frequency'][Config['Price']]
-
     # figure out the starting point and step size
 
     if Config['UnitStart'].lower()=='prime':
-        lowestSize=ClosestPrime(int(Config['marginLimit']*0.2)*Config['FrequencyCount']*fb)
+        lowestSize=ClosestPrime(int(Config['marginLimit']*0.2))
     else:
-        lowestSize=int(Config['UnitStart'])*Config['FrequencyCount']*fb
+        lowestSize=int(Config['UnitStart'])
 
     if Config['UnitStep'].lower()=='prime':
-        lotSize=ClosestPrime(int(lowestSize/2)*Config['FrequencyCount']*fb)
+        lotSize=ClosestPrime(int(lowestSize/2))
     else:
-        lotSize=int(Config['UnitStep'])*Config['FrequencyCount']*fb
+        lotSize=int(Config['UnitStep'])
 
     done=False
     while not done:
@@ -522,30 +469,17 @@ def LowestLotSize(openTrades,relay,asset,Config):
     return lowestSize
 
 def HighestLotSize(openTrades,relay,asset,Config):
-    # Frequency Boost
-
-    if Config['Confirmation'].lower()=='yes':
-        dir=(Config['obDirection']==Config['Direction'].lower())
-    else:
-        dir=True
-
-    fb=1
-    ml=Config['marginLimit']*0.37
-    if (Config['FrequencyBoost'].lower()=='yes' and Config['marginUsed']<ml) or Config['FrequencyBoost'].lower()=='always':
-        if Config['Price'] in Config['Frequency'] and (dir==True or Config['FrequencyBoost'].lower()=='always'):
-            fb=Config['Frequency'][Config['Price']]
-
     # figure out the starting point and step size
 
     if Config['UnitStart'].lower()=='prime':
-        highestSize=ClosestPrime(int(Config['marginLimit']*0.2)*Config['FrequencyCount']*fb)
+        highestSize=ClosestPrime(int(Config['marginLimit']*0.2))
     else:
-        highestSize=int(Config['UnitStart'])*Config['FrequencyCount']*fb
+        highestSize=int(Config['UnitStart'])
 
     if Config['UnitStep'].lower()=='prime':
-        lotSize=ClosestPrime(int(highestSize/2)*Config['FrequencyCount']*fb)
+        lotSize=ClosestPrime(int(highestSize/2))
     else:
-        lotSize=int(Config['UnitStep'])*Config['FrequencyCount']*fb
+        lotSize=int(Config['UnitStep'])
 
     for trade in openTrades:
         units=abs(int(trade['currentUnits']))
@@ -793,10 +727,6 @@ while True:
         elif Config[pairAccount]['Direction'].lower()=='short':
             Config[pairAccount]['Price']=ticker['Ask']
 
-        # Frequency count the Bid/Ask price against the current ticker.
-
-        Config[pairAccount]=FrequencyCount(Config[pairAccount],ticker)
-
         # Iniial values fon configuration file
 
         # Get the margin used
@@ -870,7 +800,6 @@ while True:
         # Memory purge
 
         Config[pairAccount]['TickerData']=None
-        Config[pairAccount]['Frequency']=None
 
         gc.collect()
 

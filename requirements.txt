@@ -4,5 +4,5 @@ pandas
 numpy
 ccxt
 oandapyV20
-simplefix
-
+quickfix
+kalshi_python

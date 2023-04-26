@@ -11,6 +11,8 @@ if [ "x$stat" == "x" ] ; then
     exit 1
 fi
 
+python3 -m pip install --upgrade pip
+
 OFS=`stat --printf="%s" install`
 
 BaseDir="/home/JackrabbitRelay2"

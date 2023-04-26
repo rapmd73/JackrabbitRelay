@@ -159,7 +159,7 @@ def main():
     # Check for reduce only in active config. This is a futures only setting.
 
     ReduceOnly=False
-    if "ReduceOnly" in relay.Active:
+    if "ReduceOnly" in relay.Active or "ReduceOnly" in relay.Order:
         ReduceOnly=True
 
     # Get Minimum allowed amount (units) and cost
