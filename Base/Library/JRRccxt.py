@@ -191,7 +191,9 @@ class ccxtCrypto:
             # test for the requiremnt and try to satisfy it
             if self.Broker.requiredCredentials[rf]==True:
                 if jf in self.Active:
-                    self.Broker.__dict__[rf]=self.Active[jf]
+                    # Check if this is a public access point
+                    if self.Active[jf].lower()!='public':
+                        self.Broker.__dict__[rf]=self.Active[jf]
                 else:
                     self.Log.Error("Connecting to exchange",self.Exchange+" requires a(n) '+jf+' as well")
 
