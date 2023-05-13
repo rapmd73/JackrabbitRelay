@@ -275,22 +275,7 @@ def CalculatePipProfits(relay,Config):
     for price in TickerList:
         spread.append(price['Spread'])
 
-    """
-    # EMA
-    window_size=int(len(spread)/10)+1
-    ema=[0.0]*(window_size-1)
-    ema_sum=0
-    ema_sum=sum(spread[i] for i in range(window_size))
-
-    ema.append(round(ema_sum/window_size,5))
-    for i in range(window_size,len(spread)):
-        ema.append(round((spread[i]-ema[-1])*2/(window_size+1)+ema[-1],5))
-
-    return round(sum(ema)/len(ema),5)
-    """
-    # SMA
     return round(sum(spread)/len(spread),5)
-
 
 # Calculate volatility in pips
 

@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay conditional orders through Oliver Twist
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import json
+
+import JRRsupport
+import JackrabbitRelay as JRR
+
+###
+### Main driver
+###
+
+def main():
+    # Read the conditional order
+    relay=JRR.JackrabbitRelay(framework=None,payload=sys.stdin.read())
+
+    # If we made it this far, give our header
+
+    relay.JRLog.Write('PlaceOrder OliverTwist '+relay.Version)
+
+    # Make sure the webhook is available
+
+    if 'Webhook' not in relay.Active:
+        relay.JRLog.Error(relay.Exchange, f"{self.Exchange}: no webhook, can't process order")
+    if 'Direction' not in relay.Active:
+        relay.JRLog.Error(relay.Exchange, f"{self.Exchange}: no trade direction, can't process order")
+
+    # Now lets get down to business. The processed order is in:
+    #    relay.Order
+
+    relay.JRLog.Write('Order parsed')
+    for detail in relay.Order:
+        # Do NOT display identity
+        if detail=='Identity':
+            continue
+        relay.JRLog.Write(f'|- {detail}: {relay.Order[detail]}')
+
+    # Validate these items in the order
+
+    if 'SellAction' not in relay.Order:
+        relay.JRLog.Error("OliverTwist","SellAction missing")
+    if 'TakeProfit' not in relay.Order:
+        relay.JRLog.Error("OliverTwist","TakeProfit missing")
+
+    # Prepare to send this order to the next exchange in the chain.
+
+    relay.Order['Exchange']=relay.GetExchangeList()
+    relay.Order['Account']=relay.GetAccountList()
+
+    # Write to Oliver Twist's conditional receiving file.
+
+    # Tidy up
+
+    relay.JRLog.Write(f"Dispatching to OliverTwist")
+
+    # Close out the program with the elapsed time it ran
+
+    relay.JRLog.Elapsed()
+
+if __name__ == '__main__':
+    main()
+
+"""
+    # Process DSR inforation
+
+    # We are using GetExchangeLast and GetAccountLast in order to get the reference
+    # to the PlaceOrder function, since placing the order has to be the last thing
+    # done.
+
+    fn=relay.DataDirectory+'/'+relay.GetExchangeLast()+'.'+relay.GetAccountLast()+'.'+relay.Order['Asset']+'.DSR'
+    dsrList=JRRsupport.TimedList("DSR",fn,Log=relay.JRLog)
+    if relay.Order['Action']=='close':
+        expire=0
+    else:
+        expire=DataTTL
+    key=relay.Order['Recipe'].replace(" ","")+relay.GetExchangeLast()+relay.GetAccountLast()+relay.Order['Asset']+relay.Order['TCycles']+relay.Order['TBuys']
+    results=dsrList.update(key,json.dumps(relay.Order),expire)
+
+    # Replaced is a special case where the itwem in the list expired, but is not unique.
+    # Orders must be unique to be processed as legitimate.
+
+    if (results['Status']=='Found' or results['Status']=='Replaced') and relay.Order['Action']=='buy':
+        relay.JRLog.Error("DSR","Duplicate order")
+
+"""
+
