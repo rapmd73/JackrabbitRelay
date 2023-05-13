@@ -104,9 +104,9 @@ def oandaProcessOrderBook(relay,asset,depth):
     pp=0
     idx=0
     for cur in orderbook:
-        buy=(float(cur['longCountPercent'])/100)*l
+        buy=float(cur['longCountPercent'])
         price=round(float(cur['price']),4)
-        sell=(float(cur['shortCountPercent'])/100)*l
+        sell=float(cur['shortCountPercent'])
 
         cp=price
         if pp<BuyPrice and BuyPrice<=cp:

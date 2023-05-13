@@ -41,7 +41,6 @@ def main():
 
     # Check to see if order is still open and return current state
     id=Orphan['ID']
-
     openOrders=relay.GetOpenOrders(symbol=relay.Order['Asset'])
     #relay.JRLog.Write(f"Orders: {len(openOrders)}",stdOut=False)
     for cur in openOrders:
@@ -50,6 +49,7 @@ def main():
             rData['Key']=Orphan['Key']
             rData['lID']=Orphan['lID']
             rData['mID']=Orphan['mID']
+            rData['Class']=Orphan['Class']
             rData['Status']=cur['status']
             print(json.dumps(rData))
             sys.stdout.flush()
@@ -61,6 +61,7 @@ def main():
     rData['Key']=Orphan['Key']
     rData['lID']=Orphan['lID']
     rData['mID']=Orphan['mID']
+    rData['Class']=Orphan['Class']
     rData['Status']='Delete'
     print(json.dumps(rData))
     sys.stdout.flush()

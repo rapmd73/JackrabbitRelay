@@ -32,13 +32,14 @@ class SignalInterceptor():
                 pass
 
     def Critical(self,IsCrit=False):
-        if IsCrit==True:
-            self.critical+=1
-        elif self.critical>0:
-            self.critical-=1
+        self.critical=IsCrit
+#        if IsCrit==True:
+#            self.critical+=1
+#        elif self.critical>0:
+#            self.critical-=1
 
     def ProcessSignal(self,signum,frame):
-        if self.critical>0:
+        if self.critical==True:
             self.triggered[signum]=True
         else:
             if callable(self.original[signum]):

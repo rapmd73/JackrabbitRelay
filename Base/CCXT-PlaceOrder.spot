@@ -318,8 +318,7 @@ def main():
         nBalance=relay.GetBalance(Base=base)
         relay.JRLog.Write(f"New Balance: {nBalance:.8f} {base}")
 
-        if "Orphan" in relay.Active or "Orphan" in relay.Order \
-        and 'limit' in relay.Order['OrderType']:
+        if "Orphan" in relay.Active or "Orphan" in relay.Order and 'limit' in relay.Order['OrderType']:
             relay.MakeOrphanOrder(order['id'],relay.Order)
         elif 'market' in relay.Order['OrderType'] and "NoLedger" not in relay.Active:
             relay.WriteLedger(Order=relay.Order,Response=order)
