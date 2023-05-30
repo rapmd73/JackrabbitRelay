@@ -717,6 +717,12 @@ class JackrabbitRelay:
         self.Results=self.Broker.MakeOrphanOrder(id,Order)
         self.EnforceRateLimit()
 
+    # Process the conditional order
+
+    def MakeConditionalOrder(self,id,Order):
+        self.Results=self.Broker.MakeConditionalOrder(id,Order)
+        self.EnforceRateLimit()
+
     # Make ledger entry
 
     def WriteLedger(self,**kwargs):

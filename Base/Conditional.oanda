@@ -1,26 +1,163 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# OANDA PlaceOrder - Forex markets
+# OANDA Conditional Orders - OliverTwist
 
 # Jackrabbit Relay
 # 2021 Copyright © Robert APM Darin
 # All rights reserved unconditionally.
 
-# Even though every framework can be tested in a single PlaceOrder process, its
-# simply too overbloated and unneccessarily complicated. The server core already
-# allows and perfers each exchange to have is own tailored PlaceOrder
-# functionality. Each PlaceOrder should be optimized according to these benifits
-# and should be considered time/mission critical.
+# This is the framework used by OliverTwist to process conditional orders.
+
+# Pull the actual fill price from Order['Response']
 
 import sys
-sys.path.append('/home/JackrabbitRelay2/Base/Library')
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
 import os
 import json
+import time
 
 import JRRsupport
 import JackrabbitRelay as JRR
 
+# Get the order ID. If there isn't an ID, the order FAILED.
+
+def GetOrderID(res):
+    if res.find('Order Confirmation ID')>-1:
+        s=res.find('ID:')+4
+        for e in range(s,len(res)):
+            if res[e]=='\n':
+                break
+        oid=res[s:e]
+
+        return oid
+    return None
+
+###
+### Main driver
+###
+
+def main():
+    data=sys.stdin.read().strip()
+    Orphan=json.loads(data)
+
+    # Use Relay to process and validate the order
+    if type(Orphan['Order']) is dict:
+        order=json.dumps(Orphan['Order'])
+    else:
+        order=Orphan['Order']
+
+    relay=JRR.JackrabbitRelay(framework=Orphan['Framework'],payload=order)
+    relay.JRLog.SetBaseName('OliverTwist')
+
+    # Check to see if order is still open and return current state
+    id=Orphan['ID']
+    openTrades=relay.GetOpenTrades(order['Asset'])
+    for cur in openTrades:
+        if cur['id']==id:
+            # We need to check TakeProfit and StopLoss. If one of them is hit, we need to build and order and backfeed it in
+            # to Relay. It will place a new order.
+
+            # Get the fill price from the response entry
+            price=cur['price']
+            # Get the direction of the trade, long/short
+            dir=order['Direction'].lower()
+            # Get Ticker
+            ticker=relay.GetTicker(symbol=order['Asset'])
+
+            # Figure out TakeProfit
+            if '%' in order['TakeProfit']:
+                if dir=='long':
+                    tp=price+((float(order['TakeProfit'].replace('%','').strip())/100)*price)
+                else:
+                    tp=price-((float(order['TakeProfit'].replace('%','').strip())/100)*price)
+            else:
+                tp=float(order['TakeProfit'])
+
+            # Figure out StopLoss, if there is one
+            if 'StopLoss' in order:
+                if '%' in order['StopLoss']:
+                    if dir=='long':
+                        sl=price-((float(order['StopLoss'].replace('%','').strip())/100)*price)
+                    else:
+                        sl=price+((float(order['StopLoss'].replace('%','').strip())/100)*price)
+                else:
+                    sl=float(order['StopLoss'])
+
+            # Get the "strikePrice". This handles both TakeProfit and StopLoss. It doesn't matter which as both are processed
+            # the same way.
+
+            StrikeHappened=False
+            if dir=='long':
+                if ticker['Bid']>tp or ticker['Bid']<sl:
+                    strikePrice=ticker['Bid']
+                    StrikeHappened=True
+            else:
+                if ticker['Ask']<tp or ticker['Ask']>sl:
+                    strikePrice=ticker['Ask']
+                    StrikeHappened=True
+
+            if StrikeHappened==True:
+                # Build "strike" order. TakeProfit or StopLoss has been triggered
+                newOrder={}
+                newOrder['OliverTwist']='Conditional'
+                newOrder['Exchange']=cur['Exchange']
+                newOrder['Account']=cur['Account']
+                newOrder['Asset']=cur['Asset']
+                newOrder['Action']=cur['SellAction']
+                newOrder['Price']=str(StrikePrice)
+                newOrder['Units']=cur['Units']
+                if 'OrderType' in cur:
+                    newOrder['OrderType]=cur['OrderType']
+                else:
+                    newOrder['OrderType]="market"
+                if 'Ticket' in cur:
+                    newOrder['Ticket']=ID
+                if 'RemapSymbol' in cur:
+                    nwewOrder['RemapSymbol']='Yes'
+                newOrder['Identity']=cur['Idenitty']
+
+                # Feed the new order to Relay
+                result=relay.SendWebhook(newOrder)
+                oid=GetOrderID(result)
+                if oid!=None:
+                    # Order must be closed as it succedded
+                    rData={}
+                    rData['Key']=Orphan['Key']
+                    rData['lID']=Orphan['lID']
+                    rData['mID']=Orphan['mID']
+                    rData['Class']=Orphan['Class']
+                    rData['Status']='Delete'
+                    print(json.dumps(rData))
+                    relay.WriteLedger(Order=newOrder,Response=result,Log=True)
+                else:
+                    # Give OliverTwist a response
+                    rData={}
+                    rData['Key']=Orphan['Key']
+                    rData['lID']=Orphan['lID']
+                    rData['mID']=Orphan['mID']
+                    rData['Class']=Orphan['Class']
+                    rData['Status']=Orphan['state']
+                    print(json.dumps(rData))
+                    #relay.JRLog.Write(f"{id}: {cur['state']}",stdOut=False)
+                # Flush and exit
+                sys.stdout.flush()
+                sys.exit(0)
+    # No order matching thwe ID.
+    rData={}
+    rData['Key']=Orphan['Key']
+    rData['lID']=Orphan['lID']
+    rData['mID']=Orphan['mID']
+    rData['Class']=Orphan['Class']
+    rData['Status']="Delete"
+    print(json.dumps(rData))
+    sys.stdout.flush()
+    #relay.JRLog.Write(f"{id}: {cur['state']}",stdOut=False)
+
+if __name__ == '__main__':
+    main()
+
+"""
 # Figure out the PCT type. Needs to identify %.
 
 def GetPCTtype(currency):
@@ -292,3 +429,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+"""

@@ -60,7 +60,7 @@ interceptor=JRRsupport.SignalInterceptor()
 # Testing has show that only a few seconds is actually requred. The extended amount
 # is just to compensate for an overloaded server.
 
-OliverTwistTimeout=(1*60)
+OliverTwistTimeout=(15*60)
 
 # Set up the logging system
 
@@ -476,7 +476,7 @@ def main():
 
     # Establish the process pool to handle the orphans
     multiprocessing.set_start_method("spawn")
-    ProcessPool=multiprocessing.Pool(processes=multiprocessing.cpu_count()*4,maxtasksperchild=73)
+    ProcessPool=multiprocessing.Pool(processes=multiprocessing.cpu_count()*2,maxtasksperchild=73)
 
     # Load saved orphans into memory
     ReadOrphanList('Orphan')

@@ -14,6 +14,8 @@ import time
 import random
 import socket
 import json
+import psutil
+import signal
 
 # Signal Interceptor for critical areas
 
@@ -23,6 +25,8 @@ class SignalInterceptor():
         self.original={}
         self.triggered={}
 
+        self.parent_id=os.getpid()
+
         for sig in signal.valid_signals():
             self.triggered[sig]=False
             try:
@@ -31,19 +35,28 @@ class SignalInterceptor():
             except:
                 pass
 
+    def SignalInterrupt(self,signal_num,frame):
+        print('signal:', signal_num)
+        parent = psutil.Process(self.parent_id)
+        for child in parent.children():
+            if child.pid != os.getpid():
+                print("Killing child:", child.pid)
+                child.kill()
+        print("Killing parent:", self.parent_id)
+        parent.kill()
+        print("Killing self:", os.getpid())
+        psutil.Process(os.getpid()).kill()
+
     def Critical(self,IsCrit=False):
         self.critical=IsCrit
-#        if IsCrit==True:
-#            self.critical+=1
-#        elif self.critical>0:
-#            self.critical-=1
 
     def ProcessSignal(self,signum,frame):
         if self.critical==True:
             self.triggered[signum]=True
         else:
             if callable(self.original[signum]):
-                self.original[signum](signum,frame)
+                #self.original[signum](signum,frame)
+                self.SignalInterrupt(signum,frame)
 
     def ResetSignals(self):
         for sig in signal.valid_signals():
@@ -62,8 +75,9 @@ class SignalInterceptor():
     def SafeExit(self):
         for sig in signal.valid_signals():
             if self.triggered[sig]==True:
-                self.RestoreOriginalSignals()
-                sys.exit(sig)
+                #self.RestoreOriginalSignals()
+                #sys.exit(sig)
+                self.SignalInterrupt(sig,None)
 
 # Reusable file locks, using atomic operations
 # NOT suitable for distributed systems or
