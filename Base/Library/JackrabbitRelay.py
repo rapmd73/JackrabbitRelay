@@ -75,13 +75,13 @@ class JackrabbitLog:
         msg=f+' failed with: '+s
         self.Write(msg)
         self.Elapsed()
-        sys.exit(3)
+        ForceExit(3)
 
     def Success(self,f,s):
         msg=f+' successful with: '+s
         self.Write(msg)
         self.Elapsed()
-        sys.exit(0)
+        ForceExit(0)
 
 # The main class for the system. This IS going to be a royal pain in the ass to
 # type, but it also prevent mistakes as the system grows and developes. This
