@@ -39,6 +39,10 @@ import subprocess
 import JRRsupport
 import JackrabbitRelay as JRR
 
+# Chnge the behavor of exiting to handle multiprocessing
+
+JRRsupport.mprocessing=True
+
 Version="0.0.0.1.100"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'

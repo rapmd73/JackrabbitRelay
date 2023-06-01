@@ -17,6 +17,27 @@ import json
 import psutil
 import signal
 
+# Brute fore exit a program. Needed for multiprocessing programs that have sub-processes which can exit on a broker error.
+
+parent_id=os.getpid()
+mprocessing=False
+
+def ForceExit(val):
+    if mprocessing==False:
+        sys.exit(val)
+    else:
+        parent = psutil.Process(parent_id)
+        for child in parent.children():
+            if child.pid != os.getpid():
+                print("Killing child:", child.pid)
+                child.kill()
+
+        print("Killing parent:", parent_id)
+        parent.kill()
+
+        print("Killing self:", os.getpid())
+        psutil.Process(os.getpid()).kill()
+
 # Signal Interceptor for critical areas
 
 class SignalInterceptor():
@@ -37,15 +58,7 @@ class SignalInterceptor():
 
     def SignalInterrupt(self,signal_num,frame):
         print('signal:', signal_num)
-        parent = psutil.Process(self.parent_id)
-        for child in parent.children():
-            if child.pid != os.getpid():
-                print("Killing child:", child.pid)
-                child.kill()
-        print("Killing parent:", self.parent_id)
-        parent.kill()
-        print("Killing self:", os.getpid())
-        psutil.Process(os.getpid()).kill()
+        ForceExit(signal_num)
 
     def Critical(self,IsCrit=False):
         self.critical=IsCrit
@@ -72,11 +85,11 @@ class SignalInterceptor():
     def Triggered(self,signum):
         return self.triggered[signum]
 
-    def SafeExit(self):
+    def SafeExit(self,now=False):
         for sig in signal.valid_signals():
-            if self.triggered[sig]==True:
-                #self.RestoreOriginalSignals()
-                #sys.exit(sig)
+            if self.triggered[sig]==True or now==True:
+                if now==True:
+                    sig=9
                 self.SignalInterrupt(sig,None)
 
 # Reusable file locks, using atomic operations
@@ -164,7 +177,7 @@ class Locker:
                         self.Log.Error("Locker",f"{self.filename}: {action} request failed")
                     else:
                         print("Locker",f"{self.filename}: {action} request failed")
-                        sys.exit(1)
+                        ForceExit(1)
                 retry+=1
                 time.sleep(1)
             else:
@@ -199,7 +212,7 @@ class Locker:
                         self.Log.Error("Locker",f"{self.filename}: {action} request failed")
                     else:
                         print("Locker",f"{self.filename}: {action} request failed")
-                        sys.exit(1)
+                        ForceExit(1)
                 retry+=1
                 time.sleep(1)
             else:
@@ -225,7 +238,7 @@ class Locker:
                         self.Log.Error("Locker",f"{self.filename}: lock request failed")
                     else:
                         print("Locker",f"{self.filename}/{os.getpid()}: lock request failed")
-                        sys.exit(1)
+                        ForceExit(1)
             # Prevent race conditions
             time.sleep(0.1)
         return resp
