@@ -502,7 +502,7 @@ class oanda:
         Conditional['Response']=resp
 
         orphanLock.Lock()
-        JRRsupport.AppendFile(OrphanReceiver,json.dumps(Conditional))
+        JRRsupport.AppendFile(ConditionalReceiver,json.dumps(Conditional))
         orphanLock.Unlock()
 
     # Make ledger entry with every detail.
@@ -513,6 +513,8 @@ class oanda:
         IsLog=kwargs.get('Log')
         LedgerDirectory=kwargs.get('LedgerDirectory')
 
+        if 'ID' in Order:
+            id=Order['ID']
         if Response!=None:
             if 'orderCreateTransaction' in Response:
                 id=Response['orderCreateTransaction']['id']
@@ -520,8 +522,6 @@ class oanda:
                 id=Response['longOrderCreateTransaction']['id']
             elif 'shortOrderCreateTransaction' in Response:
                 id=Response['shortOrderCreateTransaction']['id']
-        else:
-            id=Order['ID']
 
         detail=self.GetOrderDetails(OrderID=id)
 
@@ -549,4 +549,4 @@ class oanda:
             ledgerLock.Unlock()
 
             if type(IsLog)==bool and IsLog==True:
-                self.Log.Write(f"Ledgered: {sbOrder['Exchange']}:{id}",stdOut=False)
+                self.Log.Write(f"Ledgered: {subOrder['Exchange']}:{id}",stdOut=False)
