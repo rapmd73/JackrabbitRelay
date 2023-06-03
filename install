@@ -11,8 +11,6 @@ if [ "x$stat" == "x" ] ; then
     exit 1
 fi
 
-python3 -m pip install --upgrade pip
-
 OFS=`stat --printf="%s" install`
 
 BaseDir="/home/JackrabbitRelay2"
@@ -33,6 +31,8 @@ for d in Base Base/Library Data Extras Extras/CodeProofs Logs Ledger ; do
 done
 
 if [ x$1 != 'xnopull' ] ; then
+    python3 -m pip install --upgrade pip
+
     for i in `cat requirements.txt` ; do
         $pip3 install -U $i
     done

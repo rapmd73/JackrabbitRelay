@@ -64,7 +64,7 @@ interceptor=JRRsupport.SignalInterceptor()
 # Testing has show that only a few seconds is actually requred. The extended amount
 # is just to compensate for an overloaded server.
 
-OliverTwistTimeout=(15*60)
+OliverTwistTimeout=(1*60)
 
 # Set up the logging system
 
@@ -200,7 +200,10 @@ def ProcessOrphan(Orphan):
 
         try:
             payload=json.dumps(Orphan).encode()
-            #JRLog.Write(f"{payload}",stdOut=False)
+#            if Orphan['Class']=='Conditional':
+#                JRRsupport.WriteFile('x9',json.dumps(Orphan))
+#                JRRsupport.ForceExit(3)
+#            JRLog.Write(f"{payload}",stdOut=False)
 
             subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
             subp.stdin.write(payload)
@@ -290,7 +293,10 @@ def ReadOrphanList(cl=None):
 
                     ConditionalListChanged=True
 
-            JRLog.Write(f"{OrphanList.size} {cl.lower()}(s) read")
+            if cl=='Orphan':
+                JRLog.Write(f"{OrphanList.size} {cl.lower()}(s) read")
+            else:
+                JRLog.Write(f"{ConditionalList.size} {cl.lower()}(s) read")
     OliverTwistLock.Unlock()
 
 # Write only when there are changes.
@@ -494,7 +500,6 @@ def main():
         cor=ConditionalList.GetHead()
         while cor!=None:
             ProcessPool,ConditionalList,cor,ConditionalListChanged=ProcessChild(ProcessPool,ConditionalList,cor,ConditionalMemory,ConditionalListChanged)
-            cor=ConditionalList.GetNext()
 
         # Update Conditional storehouse, if needed
         if ConditionalListChanged==True:
@@ -515,7 +520,7 @@ def main():
         if cur==None:
            cur=OrphanList.GetHead()
 
-        ProcessPool,OrphanList,cur,OrphanListChanged=ProcessChild(ProcessPool,OrphanList,cur,OrphanMemory,OrphanListChanged)
+        #ProcessPool,OrphanList,cur,OrphanListChanged=ProcessChild(ProcessPool,OrphanList,cur,OrphanMemory,OrphanListChanged)
 
         # Save the orphan list to disk, ONLY IF it actually changed
 
