@@ -520,7 +520,7 @@ def main():
         if cur==None:
            cur=OrphanList.GetHead()
 
-        #ProcessPool,OrphanList,cur,OrphanListChanged=ProcessChild(ProcessPool,OrphanList,cur,OrphanMemory,OrphanListChanged)
+        ProcessPool,OrphanList,cur,OrphanListChanged=ProcessChild(ProcessPool,OrphanList,cur,OrphanMemory,OrphanListChanged)
 
         # Save the orphan list to disk, ONLY IF it actually changed
 
