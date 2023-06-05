@@ -42,7 +42,10 @@ def ForceExit(val):
 
 class SignalInterceptor():
     def __init__(self):
-        self.critical=0
+        global mprocessing
+
+        mprocessing=True
+        self.critical=False
         self.original={}
         self.triggered={}
 

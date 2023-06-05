@@ -66,6 +66,23 @@ def GetPCTamount(relay,close):
         amount=round(((float(relay.Order[currency].replace('%',''))/100)*bal)/close,8)
     return amount
 
+def HighestLotSize(relay,asset,units,step):
+    openTrades=relay.GetOpenTrades(symbol=asset)
+    highestSize=abs(units)
+
+    for trade in openTrades:
+        cunits=abs(int(trade['currentUnits']))
+        if highestSize<=cunits:
+            highestSize=cunits+step
+
+    # Shorts are negative so check direction
+    if highestSize<0:
+        sign=-1
+    else:
+        sign=1
+
+    return highestSize*sign
+
 ###
 ### Main code base. Place order on exchange
 ###
@@ -169,6 +186,14 @@ def main():
                 amount=minimum
             else:
                 amount=-minimum
+
+    # Check and manage FIFO rule
+    if 'EnforceFIFO' in relay.Active or 'EnforceFIFO' in relay.Order:
+        if 'Step' in relay.Order:
+            step=int(relay.Order['Step'])
+        else:
+            step=1
+        amount=HighestLotSize(relay,relay.Order['Asset'],amount,step)
 
     # Figure limit order pricing, minimum cost is ignored as limit orders can be
     # anything.
