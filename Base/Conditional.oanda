@@ -39,19 +39,34 @@ def GetOrderID(res):
 
 def CalculatePriceExit(order,ts,dir,price):
     # Figure out TakeProfit or Stoploss
-    if '%' in order[ts]:
-        if dir=='long':
-            val=price+((float(order[ts].replace('%','').strip())/100)*price)
+    if ts=='TakeProfit':
+        if '%' in order[ts]:
+            if dir=='long':
+                val=price+((float(order[ts].replace('%','').strip())/100)*price)
+            else:
+                val=price-((float(order[ts].replace('%','').strip())/100)*price)
+        # Pips
+        elif 'p' in order[ts].lower():
+            if dir=='long':
+                val=price+(float(order[ts].lower().replace('p','').strip())*0.0001)
+            else:
+                val=price-(float(order[ts].lower().replace('p','').strip())*0.0001)
         else:
-            val=price-((float(order[ts].replace('%','').strip())/100)*price)
-    # Pips
-    elif 'p' in order['TakeProfit'].lower():
-        if dir=='long':
-            val=price+(float(order[ts].lower().replace('p','').strip())*0.0001)
+            val=float(order[ts])
+    elif ts=='StopLoss':
+        if '%' in order[ts]:
+            if dir=='long':
+                val=price-((float(order[ts].replace('%','').strip())/100)*price)
+            else:
+                val=price+((float(order[ts].replace('%','').strip())/100)*price)
+        # Pips
+        elif 'p' in order[ts].lower():
+            if dir=='long':
+                val=price-(float(order[ts].lower().replace('p','').strip())*0.0001)
+            else:
+                val=price+(float(order[ts].lower().replace('p','').strip())*0.0001)
         else:
-            val=price-(float(order[ts].lower().replace('p','').strip())*0.0001)
-    else:
-        val=float(order[ts])
+            val=float(order[ts])
 
     return val
 
