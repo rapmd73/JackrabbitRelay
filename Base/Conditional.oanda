@@ -159,7 +159,11 @@ def main():
             newOrder['Action']=relay.Order['SellAction']
             newOrder['Price']=str(strikePrice)
             if saction=='close':
-                newOrder['Units']='ALL'
+                # Set trade polarity
+                if dir=='long':
+                    newOrder['Units']='ALL'
+                else:
+                    newOrder['Units']='-ALL'
             else:
                 newOrder['Units']=relay.Order['Units']
                 newOrder['Ticket']=str(cid)
@@ -167,10 +171,10 @@ def main():
                 newOrder['OrderType']=relay.Order['OrderType']
             else:
                 newOrder['OrderType']='market'
-            if 'RemapSymbol' in relay.Order:
-                newOrder['RemapSymbol']='Yes'
+#            if 'RemapSymbol' in relay.Order:
+#                newOrder['RemapSymbol']='Yes'
 
-#             relay.JRLog.Write(f"{id}: {json.dumps(newOrder)}",stdOut=False)
+#            relay.JRLog.Write(f"{id}: {json.dumps(newOrder)}",stdOut=False)
 
             newOrder['Identity']=relay.Order['Identity']
 
