@@ -76,7 +76,7 @@ def HighestLotSize(relay,asset,units,step):
             highestSize=cunits+step
 
     # Shorts are negative so check direction
-    if highestSize<0:
+    if units<0:
         sign=-1
     else:
         sign=1
