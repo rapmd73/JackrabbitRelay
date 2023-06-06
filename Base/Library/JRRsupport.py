@@ -19,21 +19,20 @@ import signal
 
 # Brute fore exit a program. Needed for multiprocessing programs that have sub-processes which can exit on a broker error.
 
-parent_id=os.getpid()
-mprocessing=False
-
-def ForceExit(val):
-    if mprocessing==False:
+def ForceExit(val,Parent=None):
+    if Parent==None:
+        print("No Parent")
         sys.exit(val)
     else:
-        parent = psutil.Process(parent_id)
+        print("Parent:",Parent)
+        parent = psutil.Process(Parent)
         for child in parent.children():
             if child.pid != os.getpid():
-                print("Killing child:", child.pid)
-                child.kill()
+                print("Signalling child:", child.pid)
+                os.kill(child.pid,2)
 
-        print("Killing parent:", parent_id)
-        parent.kill()
+        print("Killing parent:", Parent)
+        os.kill(Parent,2)
 
         print("Killing self:", os.getpid())
         psutil.Process(os.getpid()).kill()
@@ -42,14 +41,11 @@ def ForceExit(val):
 
 class SignalInterceptor():
     def __init__(self):
-        global mprocessing
-
-        mprocessing=True
         self.critical=False
         self.original={}
         self.triggered={}
 
-        self.parent_id=os.getpid()
+        self.parent_id=os.getppid()
 
         for sig in signal.valid_signals():
             self.triggered[sig]=False
@@ -61,7 +57,7 @@ class SignalInterceptor():
 
     def SignalInterrupt(self,signal_num,frame):
         print('signal:', signal_num)
-        ForceExit(signal_num)
+        ForceExit(signal_num,Parent=self.parent_id)
 
     def Critical(self,IsCrit=False):
         self.critical=IsCrit
@@ -71,7 +67,6 @@ class SignalInterceptor():
             self.triggered[signum]=True
         else:
             if callable(self.original[signum]):
-                #self.original[signum](signum,frame)
                 self.SignalInterrupt(signum,frame)
 
     def ResetSignals(self):
@@ -92,7 +87,7 @@ class SignalInterceptor():
         for sig in signal.valid_signals():
             if self.triggered[sig]==True or now==True:
                 if now==True:
-                    sig=9
+                    sig=2
                 self.SignalInterrupt(sig,None)
 
 # Reusable file locks, using atomic operations

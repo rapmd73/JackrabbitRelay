@@ -41,8 +41,6 @@ import JackrabbitRelay as JRR
 
 # Chnge the behavor of exiting to handle multiprocessing
 
-JRRsupport.mprocessing=True
-
 Version="0.0.0.1.210"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
@@ -462,6 +460,8 @@ def ProcessChild(ProcessPool,CurList,cur,memData,CurListChanged):
             data['mID']=memData[data['Key']].ID
             memData[data['Key']].Put(OliverTwistTimeout,"Running")
             ProcessPool.apply_async(ProcessOrphan,args=(data,),callback=OrphanUpdate)
+            # Process any signals received during critical section
+            interceptor.SafeExit()
 
         cur=cur.GetNext()
         OliverTwistLock.Unlock()
@@ -500,6 +500,8 @@ def main():
         cor=ConditionalList.GetHead()
         while cor!=None:
             ProcessPool,ConditionalList,cor,ConditionalListChanged=ProcessChild(ProcessPool,ConditionalList,cor,ConditionalMemory,ConditionalListChanged)
+            # Process any signals received during critical section
+            interceptor.SafeExit()
 
         # Update Conditional storehouse, if needed
         if ConditionalListChanged==True:
@@ -507,9 +509,9 @@ def main():
             WriteOrphanList('Conditional')
             ConditionalListChanged=False
             OliverTwistLock.Unlock()
-        else:
-            # Process any signals received during critical section
-            interceptor.SafeExit()
+
+        # Process any signals received during critical section
+        interceptor.SafeExit()
 
         # Outter loop, cycles orphans
 
@@ -529,9 +531,9 @@ def main():
             WriteOrphanList('Orphan')
             OrphanListChanged=False
             OliverTwistLock.Unlock()
-        else:
-            # Process any signals received during critical section
-            interceptor.SafeExit()
+
+        # Process any signals received during critical section
+        interceptor.SafeExit()
 
         # Brief rest to maintain control over server
         JRRsupport.ElasticSleep(1)
