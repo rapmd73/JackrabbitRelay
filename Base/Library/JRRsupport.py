@@ -33,6 +33,7 @@ def ForceExit(val):
 
 class SignalInterceptor():
     def __init__(self):
+        noTrap=[17,18,20]
         self.critical=False
         self.original={}
         self.triggered={}
@@ -42,7 +43,7 @@ class SignalInterceptor():
             self.triggered[sig]=False
             try:
                 self.original[sig]=signal.getsignal(sig)
-                if sig!=17:
+                if sig not in noTrap:
                     signal.signal(sig,self.ProcessSignal)
             except:
                 pass
@@ -51,14 +52,15 @@ class SignalInterceptor():
         print('signal:', signal_num)
         print("Parent:",self.parent_id)
         parent = psutil.Process(self.parent_id)
-        for child in parent.children():
-            if child.pid!=os.getpid():
-                print("Signalling child:", child.pid)
-                # send signal to children
-                os.kill(child.pid,9)
+        if len(parent.children())>1:
+            for child in parent.children():
+                if child.pid!=os.getpid():
+                    print("Signalling child:", child.pid)
+                    # send signal to children
+                    os.kill(child.pid,9)
 
-        print("Killing parent:", self.parent_id)
-        os.kill(self.parent_id,9)
+            print("Killing parent:", self.parent_id)
+            os.kill(self.parent_id,9)
 
         print("Killing self:", os.getpid())
         os.kill(os.getpid(),9)
