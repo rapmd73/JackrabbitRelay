@@ -19,23 +19,15 @@ import signal
 
 # Brute fore exit a program. Needed for multiprocessing programs that have sub-processes which can exit on a broker error.
 
-def ForceExit(val,Parent=None):
-    if Parent==None:
-        print("No Parent")
-        sys.exit(val)
-    else:
-        print("Parent:",Parent)
-        parent = psutil.Process(Parent)
-        for child in parent.children():
-            if child.pid != os.getpid():
-                print("Signalling child:", child.pid)
-                os.kill(child.pid,2)
+def ForceExit(val):
+    # Tell interceptor to kill off this program, if loaded
+    os.kill(os.getpid(),2)
 
-        print("Killing parent:", Parent)
-        os.kill(Parent,2)
+    # Give interceptor time to do its job
+    ElasticSleep(3)
 
-        print("Killing self:", os.getpid())
-        psutil.Process(os.getpid()).kill()
+    # Exit of if interceptor is not loaded
+    sys.exit(val)
 
 # Signal Interceptor for critical areas
 
@@ -44,30 +36,41 @@ class SignalInterceptor():
         self.critical=False
         self.original={}
         self.triggered={}
-
         self.parent_id=os.getppid()
 
         for sig in signal.valid_signals():
             self.triggered[sig]=False
             try:
                 self.original[sig]=signal.getsignal(sig)
-                signal.signal(sig,self.ProcessSignal)
+                if sig!=17:
+                    signal.signal(sig,self.ProcessSignal)
             except:
                 pass
 
-    def SignalInterrupt(self,signal_num,frame):
+    def SignalInterrupt(self,signal_num):
         print('signal:', signal_num)
-        ForceExit(signal_num,Parent=self.parent_id)
+        print("Parent:",self.parent_id)
+        parent = psutil.Process(self.parent_id)
+        for child in parent.children():
+            if child.pid!=os.getpid():
+                print("Signalling child:", child.pid)
+                # send signal to children
+                os.kill(child.pid,9)
+
+        print("Killing parent:", self.parent_id)
+        os.kill(self.parent_id,9)
+
+        print("Killing self:", os.getpid())
+        os.kill(os.getpid(),9)
 
     def Critical(self,IsCrit=False):
         self.critical=IsCrit
 
     def ProcessSignal(self,signum,frame):
-        if self.critical==True:
-            self.triggered[signum]=True
-        else:
-            if callable(self.original[signum]):
-                self.SignalInterrupt(signum,frame)
+        print("Received:",signum,"Crit:",self.critical)
+        self.triggered[signum]=True
+        if self.critical==False:
+            self.SafeExit()
 
     def ResetSignals(self):
         for sig in signal.valid_signals():
@@ -85,10 +88,10 @@ class SignalInterceptor():
 
     def SafeExit(self,now=False):
         for sig in signal.valid_signals():
-            if self.triggered[sig]==True or now==True:
+            if (self.triggered[sig]==True and self.critical==False) or now==True:
                 if now==True:
-                    sig=2
-                self.SignalInterrupt(sig,None)
+                    sig=9
+                self.SignalInterrupt(sig)
 
 # Reusable file locks, using atomic operations
 # NOT suitable for distributed systems or
