@@ -172,6 +172,8 @@ def main():
             newOrder['Account']=relay.Order['Account']
             newOrder['Asset']=relay.Order['Asset']
             newOrder['Action']=relay.Order['SellAction']
+            if 'EnforceFIFO' in relay.Order:
+                newOrder['EnforceFIFO']=relay.Order['EnforceFIFO']
             newOrder['Price']=str(strikePrice)
             if saction=='close':
                 # Set trade polarity
@@ -186,8 +188,6 @@ def main():
                 newOrder['OrderType']=relay.Order['OrderType']
             else:
                 newOrder['OrderType']='market'
-#            if 'RemapSymbol' in relay.Order:
-#                newOrder['RemapSymbol']='Yes'
 
 #            relay.JRLog.Write(f"{id}: {json.dumps(newOrder)}",stdOut=False)
 
