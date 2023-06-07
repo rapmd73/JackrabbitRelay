@@ -83,6 +83,15 @@ def HighestLotSize(relay,asset,units,step):
 
     return highestSize*sign
 
+def GetTicket(relay,asset,tid,amount):
+    openTrades=relay.GetOpenTrades(symbol=asset)
+
+    for trade in openTrades:
+        if trade['id']==tid:
+            return int(trade['currentUnits'])
+
+    return amount
+
 ###
 ### Main code base. Place order on exchange
 ###
@@ -193,7 +202,10 @@ def main():
             step=int(relay.Order['Step'])
         else:
             step=1
-        amount=HighestLotSize(relay,relay.Order['Asset'],amount,step)
+        if relay.Order['Action']=='buy':
+            amount=HighestLotSize(relay,relay.Order['Asset'],amount,step)
+        elif 'Ticket' in relay.Order:
+            amount=GetTicket(relay,relay.Order['Asset'],relay.Order['Ticket'],amount)
 
     # Figure limit order pricing, minimum cost is ignored as limit orders can be
     # anything.

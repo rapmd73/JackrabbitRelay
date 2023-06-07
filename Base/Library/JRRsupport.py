@@ -33,7 +33,7 @@ def ForceExit(val):
 
 class SignalInterceptor():
     def __init__(self):
-        noTrap=[17,18,20]
+        noTrap=[17,18,20,28]
         self.critical=False
         self.original={}
         self.triggered={}
