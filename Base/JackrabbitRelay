@@ -14,11 +14,17 @@ from datetime import datetime
 import subprocess
 import json
 
+import JRRsupport
+
 Version="0.0.0.1.110"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
 LogDirectory="/home/JackrabbitRelay2/Logs"
 NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
+
+# Set up signal interceptor
+
+interceptor=JRRsupport.SignalInterceptor()
 
 # Filter end of line and hard spaces
 

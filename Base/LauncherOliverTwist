@@ -5,7 +5,7 @@ BaseDir="/home/JackrabbitRelay2/Base"
 cd $BaseDir
 
 while true ; do
-    $BaseDir/JackrabbitOliverTwist
+    $BaseDir/JackrabbitOliverTwist $@
     sleep 180
 done
 

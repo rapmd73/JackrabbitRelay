@@ -59,8 +59,10 @@ class SignalInterceptor():
                     # send signal to children
                     os.kill(child.pid,9)
 
-            print("Killing parent:", self.parent_id)
-            os.kill(self.parent_id,9)
+            # Don't touch INIT
+            if self.parent_id!=1:
+                print("Killing parent:", self.parent_id)
+                os.kill(self.parent_id,9)
 
         print("Killing self:", os.getpid())
         os.kill(os.getpid(),9)
