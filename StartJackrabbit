@@ -4,6 +4,8 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 BaseDir="/home/JackrabbitRelay2/Base"
 
+cd $BaseDir
+
 Port=$1
 
 if [ -z $Port ] ; then
@@ -11,12 +13,27 @@ if [ -z $Port ] ; then
     exit 1
 fi
 
-kPids=`ps xaf | egrep "LauncherRelay|LauncherOliverTwist|LauncherLocker|JackrabbitRelay|JackrabbitOliverTwist|JackrabbitLocker" | grep -v StartJackrabbit | cut -b-8`
-kill -s 9 $kPids > /dev/null 2>&1
+otProc=5
+if [ "x$2" != "x" ] ; then
+    otProc=$2
+fi
+
+# Kill launchers
+kPids=`ps xaf | egrep "LauncherRelay|LauncherOliverTwist|LauncherLocker" | grep -v StartJackrabbit | cut -b-8`
+if [ "x$kPids" != "x" ] ; then
+    kill -s 9 $kPids > /dev/null 2>&1
+fi
+
+# Tell Jackrabbit to gracefully exit, no zobies wanted
+kPids=`ps xaf | egrep "JackrabbitRelay|JackrabbitOliverTwist|JackrabbitLocker" | grep -v StartJackrabbit | cut -b-8`
+if [ "x$kPids" != "x" ] ; then
+    kill -s 2 $kPids > /dev/null 2>&1
+fi
 
 sleep 3
 ( $BaseDir/LauncherLocker & ) > /dev/null 2>&1
 sleep 3
-( $BaseDir/LauncherOliverTwist & ) > /dev/null 2>&1
+( $BaseDir/LauncherOliverTwist $otProc & ) > /dev/null 2>&1
 sleep 3
 ( $BaseDir/LauncherRelay $Port & ) > /dev/null 2>&1
+

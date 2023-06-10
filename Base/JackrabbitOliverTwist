@@ -39,8 +39,6 @@ import subprocess
 import JRRsupport
 import JackrabbitRelay as JRR
 
-# Chnge the behavor of exiting to handle multiprocessing
-
 Version="0.0.0.1.210"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
@@ -484,9 +482,14 @@ def main():
 
     JRLog.Write('OliverTwist '+Version)
 
+    NumberProcesses=multiprocessing.cpu_count()
+    if len(sys.argv)>1:
+        NumberProcesses=int(sys.argv[1])
+        JRLog.Write(f'Spawning {NumberProcesses} sub-processes')
+
     # Establish the process pool to handle the orphans
     multiprocessing.set_start_method("spawn")
-    ProcessPool=multiprocessing.Pool(processes=multiprocessing.cpu_count()*2,maxtasksperchild=73)
+    ProcessPool=multiprocessing.Pool(processes=NumberProcesses,maxtasksperchild=73)
 
     # Load saved orphans into memory
     ReadOrphanList('Orphan')
