@@ -110,6 +110,9 @@ class ccxtCrypto:
             rlvSave=self.Broker.rateLimit
             self.Broker.enableRateLimit=True
             self.Broker.rateLimit=372+JRRsupport.ElasticDelay()
+        else:
+            self.Broker.enableRateLimit=False
+            self.Broker.rateLimit=int(self.Active['RateLimit'])+JRRsupport.ElasticDelay()
 
         done=False
         while not done:
@@ -140,6 +143,9 @@ class ccxtCrypto:
         if 'kucoin' in self.Exchange:
             self.Broker.enableRateLimit=rleSave
             self.Broker.rateLimit=rlvSave
+        else:
+            self.Broker.enableRateLimit=False
+            self.Broker.rateLimit=int(self.Active['RateLimit'])+JRRsupport.ElasticDelay()
 
         return self.Results
 
@@ -216,11 +222,12 @@ class ccxtCrypto:
 
         # Logging the rate limit is an absolute nightmare as it is so frequent
 
-        if "RateLimit" in self.Active:
-            self.Broker.enableRateLimit=True
-            self.Broker.rateLimit=int(self.Active['RateLimit'])+JRRsupport.ElasticDelay()
-        else:
-            self.Broker.enableRateLimit=False
+#        if "RateLimit" in self.Active:
+#            self.Broker.enableRateLimit=True
+#            self.Broker.rateLimit=int(self.Active['RateLimit'])+JRRsupport.ElasticDelay()
+#        else:
+#            self.Broker.enableRateLimit=False
+        self.Broker.enableRateLimit=False
 
     # Get the market list. Notifications is a waste of logging.
 
@@ -637,8 +644,12 @@ class ccxtCrypto:
             kwargs.pop('id',None)
             self.Results=self.API("fetchClosedOrders",**kwargs)
             for c in range(len(self.Results)):
-                if self.Results[c]['id']==id:
-                    self.Results=(self.Results[c])
+                try:
+                    if self.Results[c]['id']==id:
+                        self.Results=(self.Results[c])
+                        break
+                except:
+                    pass
         else:
             self.Results=self.API("fetchOrder",**kwargs)
         return self.Results
@@ -678,7 +689,7 @@ class ccxtCrypto:
         Conditional['Response']=resp
 
         orphanLock.Lock()
-        JRRsupport.AppendFile(OrphanReceiver,json.dumps(Conditional))
+        JRRsupport.AppendFile(ConditionalReceiver,json.dumps(Conditional))
         orphanLock.Unlock()
 
     # Make ledger entry. Record everything for accounting purposes
