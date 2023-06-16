@@ -87,129 +87,149 @@ def main():
     relay=JRR.JackrabbitRelay(framework=Orphan['Framework'],payload=order)
     relay.JRLog.SetBaseName('OliverTwist')
 
-    # Check to see if order is still open and return current state
-    # Handle OANDa's weird order id sequencing
-    id=Orphan['ID']
-    cid=relay.GetOrderDetails(OrderID=Orphan['ID'])[-1]['id']
-    saction=relay.Order['SellAction'].lower()
+    try:
+        # Check to see if order is still open and return current state
+        # Handle OANDa's weird order id sequencing
+        id=Orphan['ID']
+        cid=relay.GetOrderDetails(OrderID=Orphan['ID'])[-1]['id']
+        saction=relay.Order['SellAction'].lower()
 
-    # Used to determin if the asset/poition has been found
-    foundPrice=False
+        # Used to determin if the asset/poition has been found
+        foundPrice=False
 
-    # Manage average and close extire position
-    if saction=='close':
-        positions=relay.GetPositions()
-        if positions!=None:
-            for pos in positions:
-                if pos['instrument'].replace('_','/')==relay.Order['Asset']:
-                    foundPrice=True
-                    price=float(pos[dir]['averagePrice'])
-                    break
-    else:
-        # Manage a single ticket
-        openTrades=relay.GetOpenTrades(symbol=relay.Order['Asset'])
-
-        for cur in openTrades:
-            if cur['id']==cid:
-                # Get the fill price from the response entry
-                foundPrice=True
-                price=float(cur['price'])
-                break
-
-    # Process the position
-    if foundPrice==True:
-        # We need to check TakeProfit and StopLoss. If one of them is hit, we need to build and order and backfeed it in
-        # to Relay. It will place a new order.
-
-        # Get the direction of the trade, long/short
-        dir=relay.Order['Direction'].lower()
-        # Get Ticker
-        ticker=relay.GetTicker(symbol=relay.Order['Asset'])
-
-        # Fsilsafe, in the WORST way possible. Do NOT leave a take profit out of the order. At this stage, the whole thing is
-        # an absolute nightmare to fix. The is a very brutal way of dealing with poor user choices.
-        if 'TakeProfit' not in relay.Order:
-            relay.Order['TakeProfit']='10p'
-        # Calculate Take Profit
-        tp=round(CalculatePriceExit(relay.Order,'TakeProfit',dir,price),5)
-
-        # Figure out StopLoss, if there is one
-        if 'StopLoss' in relay.Order:
-            sl=round(CalculatePriceExit(relay.Order,'StopLoss',dir,price),5)
-
-        # Get the "strikePrice". This handles both TakeProfit and StopLoss. It doesn't matter which as both are processed
-        # the same way.
-
-        StrikeHappened=False
-        if dir=='long':
-#           relay.JRLog.Write(f"{id}: {dir} Bid: {ticker['Bid']} TP: {tp}, SL {sl}",stdOut=False)
-
-            if ticker['Bid']>tp:
-                relay.JRLog.Write(f"{id}: TP {dir} hit: {tp}",stdOut=False)
-            if 'StopLoss' in relay.Order and ticker['Bid']<sl:
-                relay.JRLog.Write(f"{id}: SL {dir} hit: {sl}",stdOut=False)
-
-            if ticker['Bid']>tp or ('StopLoss' in relay.Order and ticker['Bid']<sl):
-                strikePrice=ticker['Bid']
-                StrikeHappened=True
+        # Manage average and close extire position
+        if saction=='close':
+            positions=relay.GetPositions()
+            if positions!=None:
+                for pos in positions:
+                    if pos['instrument'].replace('_','/')==relay.Order['Asset']:
+                        foundPrice=True
+                        price=float(pos[dir]['averagePrice'])
+                        units=abs(float(pos[dir]['units']))
+                        break
         else:
-#           relay.JRLog.Write(f"{id}: {dir} Ask: {ticker['Ask']} TP: {tp}, SL {sl}",stdOut=False)
+            # Manage a single ticket
+            openTrades=relay.GetOpenTrades(symbol=relay.Order['Asset'])
 
-            if ticker['Ask']<tp:
-                relay.JRLog.Write(f"{id}: TP {dir} hit: {tp}",stdOut=False)
-            if 'StopLoss' in relay.Order and ticker['Ask']>sl:
-                relay.JRLog.Write(f"{id}: SL {dir} hit: {sl}",stdOut=False)
+            for cur in openTrades:
+                if cur['id']==cid:
+                    # Get the fill price from the response entry
+                    foundPrice=True
+                    price=float(cur['price'])
+                    units=abs(float(cur['currentUnits']))
+                    break
 
-            if ticker['Ask']<tp or ('StopLoss' in relay.Order and ticker['Ask']>sl):
-                strikePrice=ticker['Ask']
-                StrikeHappened=True
+        # Process the position
+        if foundPrice==True:
+            # We need to check TakeProfit and StopLoss. If one of them is hit, we need to build and order and backfeed it in
+            # to Relay. It will place a new order.
 
-        if StrikeHappened==True:
-            # Build "strike" order. TakeProfit or StopLoss has been triggered
-            newOrder={}
-            newOrder['OliverTwist']='Conditional'
-            newOrder['Exchange']=relay.Order['Exchange']
-            newOrder['Account']=relay.Order['Account']
-            newOrder['Asset']=relay.Order['Asset']
-            newOrder['Action']=relay.Order['SellAction']
-            if 'EnforceFIFO' in relay.Order:
-                newOrder['EnforceFIFO']=relay.Order['EnforceFIFO']
-            newOrder['Price']=str(strikePrice)
-            if saction=='close':
-                # Set trade polarity
-                if dir=='long':
-                    newOrder['Units']='ALL'
+            # Get the direction of the trade, long/short
+            dir=relay.Order['Direction'].lower()
+            # Get Ticker
+            ticker=relay.GetTicker(symbol=relay.Order['Asset'])
+
+            # Fsilsafe, in the WORST way possible. Do NOT leave a take profit out of the order. At this stage, the whole thing is
+            # an absolute nightmare to fix. The is a very brutal way of dealing with poor user choices.
+            if 'TakeProfit' not in relay.Order:
+                relay.Order['TakeProfit']='10p'
+            # Calculate Take Profit
+            tp=round(CalculatePriceExit(relay.Order,'TakeProfit',dir,price),5)
+
+            # Figure out StopLoss, if there is one
+            if 'StopLoss' in relay.Order:
+                sl=round(CalculatePriceExit(relay.Order,'StopLoss',dir,price),5)
+
+            # Get the "strikePrice". This handles both TakeProfit and StopLoss. It doesn't matter which as both are processed
+            # the same way.
+
+            StrikeHappened=False
+            if dir=='long':
+    #           relay.JRLog.Write(f"{id}: {dir} Bid: {ticker['Bid']} TP: {tp}, SL {sl}",stdOut=False)
+
+                if ticker['Bid']>tp:
+                    profit=(units*ticker['Bid'])-(units*price)
+                    relay.JRLog.Write(f"{id}: TP {dir} hit: {tp}, {units}: {price:.5f} -> {ticker['Bid']:5f}/{profit}",stdOut=False)
+                if 'StopLoss' in relay.Order and ticker['Bid']<sl:
+                    loss=(units*price)-(units*ticker['Bid'])
+                    relay.JRLog.Write(f"{id}: SL {dir} hit: {sl}, {units}: {price:.5f} -> {ticker['Bid']:5f}/{loss}",stdOut=False)
+
+                if ticker['Bid']>tp or ('StopLoss' in relay.Order and ticker['Bid']<sl):
+                    strikePrice=ticker['Bid']
+                    StrikeHappened=True
+            else:
+    #           relay.JRLog.Write(f"{id}: {dir} Ask: {ticker['Ask']} TP: {tp}, SL {sl}",stdOut=False)
+
+                if ticker['Ask']<tp:
+                    profit=(units*price)-(units*ticker['Ask'])
+                    relay.JRLog.Write(f"{id}: TP {dir} hit: {tp}, {units}: {price:.5f} -> {ticker['Ask']:5f}/{profit}",stdOut=False)
+                if 'StopLoss' in relay.Order and ticker['Ask']>sl:
+                    loss=(units*ticker['Ask'])-(units*price)
+                    relay.JRLog.Write(f"{id}: SL {dir} hit: {sl}, {units}: {price:.5f} -> {ticker['Ask']:5f}/{loss}",stdOut=False)
+
+                if ticker['Ask']<tp or ('StopLoss' in relay.Order and ticker['Ask']>sl):
+                    strikePrice=ticker['Ask']
+                    StrikeHappened=True
+
+            if StrikeHappened==True:
+                # Build "strike" order. TakeProfit or StopLoss has been triggered
+                newOrder={}
+                newOrder['OliverTwist']='Conditional'
+                newOrder['Exchange']=relay.Order['Exchange']
+                newOrder['Account']=relay.Order['Account']
+                newOrder['Asset']=relay.Order['Asset']
+                newOrder['Action']=relay.Order['SellAction']
+                if 'EnforceFIFO' in relay.Order:
+                    newOrder['EnforceFIFO']=relay.Order['EnforceFIFO']
+                newOrder['Price']=str(strikePrice)
+                if saction=='close':
+                    # Set trade polarity
+                    if dir=='long':
+                        newOrder['Units']='ALL'
+                    else:
+                        newOrder['Units']='-ALL'
                 else:
-                    newOrder['Units']='-ALL'
-            else:
-                newOrder['Units']=relay.Order['Units']
-                newOrder['Ticket']=str(cid)
-            if 'OrderType' in relay.Order:
-                newOrder['OrderType']=relay.Order['OrderType']
-            else:
-                newOrder['OrderType']='market'
+                    newOrder['Units']=relay.Order['Units']
+                    newOrder['Ticket']=str(cid)
+                if 'OrderType' in relay.Order:
+                    newOrder['OrderType']=relay.Order['OrderType']
+                else:
+                    newOrder['OrderType']='market'
 
-#            relay.JRLog.Write(f"{id}: {json.dumps(newOrder)}",stdOut=False)
+    #            relay.JRLog.Write(f"{id}: {json.dumps(newOrder)}",stdOut=False)
 
-            newOrder['Identity']=relay.Order['Identity']
+                newOrder['Identity']=relay.Order['Identity']
 
-            # Feed the new order to Relay
-            result=relay.SendWebhook(newOrder)
-            oid=GetOrderID(result)
-            if oid!=None:
-                resp=relay.GetOrderDetails(OrderID=oid)
-                # Order must be closed as it succedded
-                newOrder['ID']=oid
-                rData={}
-                rData['Key']=Orphan['Key']
-                rData['lID']=Orphan['lID']
-                rData['mID']=Orphan['mID']
-                rData['Class']=Orphan['Class']
-                rData['Status']='Delete'
-                print(json.dumps(rData))
-                relay.WriteLedger(Order=newOrder,Response=resp,Log=True)
+                # Feed the new order to Relay
+                result=relay.SendWebhook(newOrder)
+                oid=GetOrderID(result)
+                if oid!=None:
+                    resp=relay.GetOrderDetails(OrderID=oid)
+                    # Order must be closed as it succedded
+                    newOrder['ID']=oid
+                    rData={}
+                    rData['Key']=Orphan['Key']
+                    rData['lID']=Orphan['lID']
+                    rData['mID']=Orphan['mID']
+                    rData['Class']=Orphan['Class']
+                    rData['Status']='Delete'
+                    print(json.dumps(rData))
+                    relay.WriteLedger(Order=newOrder,Response=resp,Log=True)
+                else:
+                    # Give OliverTwist a response
+                    rData={}
+                    rData['Key']=Orphan['Key']
+                    rData['lID']=Orphan['lID']
+                    rData['mID']=Orphan['mID']
+                    rData['Class']=Orphan['Class']
+                    rData['Status']=Orphan['Status']
+                    print(json.dumps(rData))
+                    #relay.JRLog.Write(f"{id}: {cur['state']}",stdOut=False)
+                # Flush and exit
+                sys.stdout.flush()
+                sys.exit(0)
             else:
-                # Give OliverTwist a response
+                # Strike did not happen
                 rData={}
                 rData['Key']=Orphan['Key']
                 rData['lID']=Orphan['lID']
@@ -218,33 +238,35 @@ def main():
                 rData['Status']=Orphan['Status']
                 print(json.dumps(rData))
                 #relay.JRLog.Write(f"{id}: {cur['state']}",stdOut=False)
-            # Flush and exit
-            sys.stdout.flush()
-            sys.exit(0)
-        else:
-            # Strike did not happen
-            rData={}
-            rData['Key']=Orphan['Key']
-            rData['lID']=Orphan['lID']
-            rData['mID']=Orphan['mID']
-            rData['Class']=Orphan['Class']
-            rData['Status']=Orphan['Status']
-            print(json.dumps(rData))
-            #relay.JRLog.Write(f"{id}: {cur['state']}",stdOut=False)
-            # Flush and exit
-            sys.stdout.flush()
-            sys.exit(0)
+                # Flush and exit
+                sys.stdout.flush()
+                sys.exit(0)
 
-    # Fall through. No order matching the ID.
-    rData={}
-    rData['Key']=Orphan['Key']
-    rData['lID']=Orphan['lID']
-    rData['mID']=Orphan['mID']
-    rData['Class']=Orphan['Class']
-    rData['Status']="Delete"
-    print(json.dumps(rData))
-    sys.stdout.flush()
-    #relay.JRLog.Write(f"{id}: {cur['state']}",stdOut=False)
+        # Fall through. No order matching the ID.
+        rData={}
+        rData['Key']=Orphan['Key']
+        rData['lID']=Orphan['lID']
+        rData['mID']=Orphan['mID']
+        rData['Class']=Orphan['Class']
+        rData['Status']="Delete"
+        print(json.dumps(rData))
+        sys.stdout.flush()
+        sys.exit(0)
+        #relay.JRLog.Write(f"{id}: {cur['state']}",stdOut=False)
+    except Exception as e:
+        # Something broke or went horrible wrong
+        rData={}
+        rData['Key']=Orphan['Key']
+        rData['lID']=Orphan['lID']
+        rData['mID']=Orphan['mID']
+        rData['Class']=Orphan['Class']
+        rData['Status']=Orphan['Status']
+        rData['Error']=str(e)
+        print(json.dumps(rData))
+        relay.JRLog.Write(f"{Orphan['Key']}: Code Error",stdOut=False)
+        # Flush and exit
+        sys.stdout.flush()
+        sys.exit(0)
 
 if __name__ == '__main__':
     main()

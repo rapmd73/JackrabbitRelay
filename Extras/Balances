@@ -58,7 +58,6 @@ elif relay.GetFramework()=='oanda':
         positions=relay.GetPositions()
         if positions!=None:
             for pos in positions:
-                print(pos)
                 asset=pos['instrument'].replace('_','/')
                 bal=relay.GetPositions(symbol=asset)
                 margin=round(float(pos['marginUsed']),2)

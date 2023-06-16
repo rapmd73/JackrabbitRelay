@@ -189,6 +189,11 @@ def ProcessOrphan(Orphan):
     else:
         OrphanManager=BaseDirectory+'/Conditional.'+Orphan['Framework']
 
+    # Diagnostics only
+    # fn=f"/tmp/{Orphan['Framework']},{Orphan['Key']}.OliverTwist"
+    # if not os.path.exists(fn):
+    #     JRRsupport.WriteFile(fn,json.dumps(Orphan)+'\n')
+
     if os.path.exists(OrphanManager):
         transactor=[ OrphanManager ]
 

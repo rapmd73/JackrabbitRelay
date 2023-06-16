@@ -17,6 +17,8 @@ import json
 import psutil
 import signal
 
+from multiprocessing import parent_process
+
 # Brute fore exit a program. Needed for multiprocessing programs that have sub-processes which can exit on a broker error.
 
 def ForceExit(val):
@@ -37,7 +39,11 @@ class SignalInterceptor():
         self.critical=False
         self.original={}
         self.triggered={}
-        self.parent_id=os.getppid()
+
+        if parent_process()==None:
+            self.parent_id=os.getpid()
+        else:
+            self.parent_id=os.getppid()
 
         for sig in signal.valid_signals():
             self.triggered[sig]=False
@@ -49,23 +55,25 @@ class SignalInterceptor():
                 pass
 
     def SignalInterrupt(self,signal_num):
+        mypid=os.getpid()
+
         print('signal:', signal_num)
         print("Parent:",self.parent_id)
         parent = psutil.Process(self.parent_id)
         if len(parent.children())>1:
             for child in parent.children():
-                if child.pid!=os.getpid():
+                if child.pid!=mypid:
                     print("Signalling child:", child.pid)
                     # send signal to children
                     os.kill(child.pid,9)
 
             # Don't touch INIT
-            if self.parent_id!=1:
+            if self.parent_id!=1 and self.parent_id!=mypid:
                 print("Killing parent:", self.parent_id)
                 os.kill(self.parent_id,9)
 
-        print("Killing self:", os.getpid())
-        os.kill(os.getpid(),9)
+        print("Killing self:",mypid)
+        os.kill(mypid,9)
 
     def Critical(self,IsCrit=False):
         self.critical=IsCrit
