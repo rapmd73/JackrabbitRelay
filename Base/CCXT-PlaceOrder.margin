@@ -346,9 +346,11 @@ def main():
         if ("Orphan" in relay.Active or "Orphan" in relay.Order) and 'limit' in relay.Order['OrderType']:
             relay.MakeOrphanOrder(order['id'],relay.Order)
         elif ("Conditional" in relay.Active or "Conditional" in relay.Order) and 'market' in relay.Order['OrderType']:
-            relay,Order['Response']=order
+            relay.Order['Response']=order
             relay.MakeConditionalOrder(order['id'],relay.Order)
             relay.WriteLedger(Order=relay.Order,Response=order)
+        elif ("Conditional" in relay.Active or "Conditional" in relay.Order) and 'OrderType' not in relay.Order:
+            relay.JRLog.Error(relay.Exchange, "OrderType must be explicitly stated for conditional orders")
         elif ("Conditional" in relay.Active or "Conditional" in relay.Order) and 'limit' in relay.Order['OrderType']:
             relay.JRLog.Error(relay.Exchange, "conditional limit orders are not yet supported")
         elif 'market' in relay.Order['OrderType'] and "NoLedger" not in relay.Active:
