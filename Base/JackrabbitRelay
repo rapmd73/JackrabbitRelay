@@ -76,7 +76,7 @@ def ProcessSingleTrade(addr,trades):
     ts=BaseDirectory+'/PlaceOrder.'
 
     if "Exchange" in trades and "Market" in trades:
-        market=trades['Market'].lower()
+        market=trades['Market'].lower().strip()
         fn=ts+exchange+'.'+market
         # if market not part of place order program, revert to exchange only
         if not os.path.exists(fn):
