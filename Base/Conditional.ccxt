@@ -136,10 +136,10 @@ def main():
     #           relay.JRLog.Write(f"{id}: {dir} Bid: {ticker['Bid']} TP: {tp}, SL {sl}",stdOut=False)
 
                 if ticker['Bid']>tp:
-                    profit=(amount*ticker['Bid'])-(amount*price)
+                    profit=round((amount*ticker['Bid'])-(amount*price),8)
                     relay.JRLog.Write(f"{id}: TP {dir} hit: {tp}, {amount}: {price:.5f} -> {ticker['Bid']:5f}/{profit}",stdOut=False)
                 if 'StopLoss' in relay.Order and ticker['Bid']<sl:
-                    loss=(amount*price)-(amount*ticker['Bid'])
+                    loss=round((amount*price)-(amount*ticker['Bid']),8)
                     relay.JRLog.Write(f"{id}: SL {dir} hit: {sl}, {amount}: {price:.5f} -> {ticker['Bid']:5f}/{loss}",stdOut=False)
 
                 if ticker['Bid']>tp or ('StopLoss' in relay.Order and ticker['Bid']<sl):
@@ -149,10 +149,10 @@ def main():
     #           relay.JRLog.Write(f"{id}: {dir} Ask: {ticker['Ask']} TP: {tp}, SL {sl}",stdOut=False)
 
                 if ticker['Ask']<tp:
-                    profit=(amount*price)-(amount*ticker['Ask'])
+                    profit=round((amount*price)-(amount*ticker['Ask']),8)
                     relay.JRLog.Write(f"{id}: TP {dir} hit: {tp}, {amount}: {price:.5f} -> {ticker['Ask']:5f}/{profit}",stdOut=False)
                 if 'StopLoss' in relay.Order and ticker['Ask']>sl:
-                    loss=(amount*ticker['Ask'])-(amounts*price)
+                    loss=round((amount*ticker['Ask'])-(amounts*price),8)
                     relay.JRLog.Write(f"{id}: SL {dir} hit: {sl}, {amount}: {price:.5f} -> {ticker['Ask']:5f}/{loss}",stdOut=False)
 
                 if ticker['Ask']<tp or ('StopLoss' in relay.Order and ticker['Ask']>sl):

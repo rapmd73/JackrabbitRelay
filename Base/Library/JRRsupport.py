@@ -34,11 +34,12 @@ def ForceExit(val):
 # Signal Interceptor for critical areas
 
 class SignalInterceptor():
-    def __init__(self):
+    def __init__(self,Log=None):
         noTrap=[17,18,20,28]
         self.critical=False
         self.original={}
         self.triggered={}
+        self.Log=Log
 
         if parent_process()==None:
             self.parent_id=os.getpid()
@@ -54,26 +55,34 @@ class SignalInterceptor():
             except:
                 pass
 
+    def ShowSignalMessage(self,lm):
+        if self.Log!=None:
+            self.Log.Write(lm)
+        else:
+            print(lm)
+
     def SignalInterrupt(self,signal_num):
         mypid=os.getpid()
 
-        print('signal:', signal_num)
-        print("Parent:",self.parent_id)
+        self.ShowSignalMessage(f'Interceptor Signal: {signal_num}')
         parent = psutil.Process(self.parent_id)
         if len(parent.children())>1:
             for child in parent.children():
                 if child.pid!=mypid:
-                    print("Signalling child:", child.pid)
+                    self.ShowSignalMessage(f'Exiting child: {child.pid}')
                     # send signal to children
                     os.kill(child.pid,9)
 
             # Don't touch INIT
             if self.parent_id!=1 and self.parent_id!=mypid:
-                print("Killing parent:", self.parent_id)
+                self.ShowSignalMessage(f'Exiting parent: {self.parent_id}')
                 os.kill(self.parent_id,9)
 
-        print("Killing self:",mypid)
+        self.ShowSignalMessage(f'Exiting self: {mypid}')
         os.kill(mypid,9)
+
+    def SetLog(self,Log=None):
+        self.Log=Log
 
     def Critical(self,IsCrit=False):
         self.critical=IsCrit

@@ -51,9 +51,13 @@ OrphanReceiver=DataDirectory+'/OliverTwist.Orphan.Receiver'
 ConditionalStorehouse=DataDirectory+'/OliverTwist.Conditional.Storehouse'
 OrphanStorehouse=DataDirectory+'/OliverTwist.Orphans.Storehouse'
 
+# Set up the logging system
+
+JRLog=JRR.JackrabbitLog()
+
 # Set up signal interceptor
 
-interceptor=JRRsupport.SignalInterceptor()
+interceptor=JRRsupport.SignalInterceptor(Log=JRLog)
 
 # The timeout setting for the memory locks. If it takes longer then 15 minutes to
 # check the status of an order, there is a major problem with the exchange/broker.
@@ -61,10 +65,6 @@ interceptor=JRRsupport.SignalInterceptor()
 # is just to compensate for an overloaded server.
 
 OliverTwistTimeout=(1*60)
-
-# Set up the logging system
-
-JRLog=JRR.JackrabbitLog()
 
 # This lock guards the lists. Both PlaceOrder.olivertwist and
 # JackrabbitOliverTwist will access this file. Collisions must not be allowed to
