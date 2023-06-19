@@ -96,7 +96,7 @@ def main():
         saction=relay.Order['SellAction'].lower()
         oDetail=relay.GetOrderDetails(id=id,symbol=relay.Order['Asset'])
 
-        if oDetail!=None:
+        if oDetail!=None and oDetail['status']=='open':
             foundPrice=True
 
             # Manage average and close extire position
@@ -204,6 +204,7 @@ def main():
                     relay.WriteLedger(Order=newOrder,Response=resp,Log=True)
                 else:
                     # Give OliverTwist a response
+                    relay.JRLog.Write(f"{id}: Order failed",stdOut=False)
                     rData={}
                     rData['Key']=Orphan['Key']
                     rData['lID']=Orphan['lID']
@@ -211,7 +212,6 @@ def main():
                     rData['Class']=Orphan['Class']
                     rData['Status']=Orphan['Status']
                     print(json.dumps(rData))
-                    #relay.JRLog.Write(f"{id}: {cur['state']}",stdOut=False)
                 # Flush and exit
                 sys.stdout.flush()
                 sys.exit(0)
@@ -229,7 +229,7 @@ def main():
                 sys.stdout.flush()
                 sys.exit(0)
 
-        # Fall through. No order matching the ID.
+        # Fall through. No order matching the ID or the order is closed.
         rData={}
         rData['Key']=Orphan['Key']
         rData['lID']=Orphan['lID']

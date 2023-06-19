@@ -111,7 +111,7 @@ class ccxtCrypto:
             self.Broker.enableRateLimit=True
             self.Broker.rateLimit=372+JRRsupport.ElasticDelay()
         else:
-            self.Broker.enableRateLimit=False
+            self.Broker.enableRateLimit=True
             self.Broker.rateLimit=int(self.Active['RateLimit'])+JRRsupport.ElasticDelay()
 
         done=False
