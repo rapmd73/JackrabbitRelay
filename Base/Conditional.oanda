@@ -217,6 +217,7 @@ def main():
                     relay.WriteLedger(Order=newOrder,Response=resp,Log=True)
                 else:
                     # Give OliverTwist a response
+                    relay.JRLog.Write(f"{id}: Order failed",stdOut=False)
                     rData={}
                     rData['Key']=Orphan['Key']
                     rData['lID']=Orphan['lID']
