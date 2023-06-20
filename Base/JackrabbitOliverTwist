@@ -39,7 +39,7 @@ import subprocess
 import JRRsupport
 import JackrabbitRelay as JRR
 
-Version="0.0.0.1.305"
+Version="0.0.0.1.310"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -500,6 +500,8 @@ def main():
     ReadOrphanList('Orphan')
     ReadOrphanList('Conditional')
 
+    # Outter loop, cycles orphans
+
     cur=None
     while True:
         # Inner loop cycles conditional orders for every single orphan
@@ -508,20 +510,16 @@ def main():
         cor=ConditionalList.GetHead()
         while cor!=None:
             ProcessPool,ConditionalList,cor,ConditionalListChanged=ProcessChild(ProcessPool,ConditionalList,cor,ConditionalMemory,ConditionalListChanged)
-            # Process any signals received during critical section
-            interceptor.SafeExit()
 
-        # Update Conditional storehouse, if needed
-        if ConditionalListChanged==True:
-            OliverTwistLock.Lock()
-            WriteOrphanList('Conditional')
-            ConditionalListChanged=False
-            OliverTwistLock.Unlock()
+            # Update Conditional storehouse, if needed
+            if ConditionalListChanged==True:
+                OliverTwistLock.Lock()
+                WriteOrphanList('Conditional')
+                ConditionalListChanged=False
+                OliverTwistLock.Unlock()
 
         # Process any signals received during critical section
         interceptor.SafeExit()
-
-        # Outter loop, cycles orphans
 
         # Check for new orphans
         ReceiveOrphans('Orphan')

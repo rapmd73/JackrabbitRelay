@@ -370,12 +370,12 @@ class ccxtCrypto:
         self.Results=self.API("fetch_open_orders",**kwargs)
         return self.Results
 
-    # Most brokers track individual trades, as well as the average.
-    # Cryptocurrency exchanges track only averages, but this is needed for
-    # conformity with the main Relay structure.
-
     def GetOpenTrades(self,**kwargs):
-        return None
+        if 'Market' in self.Active and self.Active['Market']=='margin':
+            kwargs['tradeType']='MARGIN_TRADE'
+
+        self.Results=self.API("fetch_trades",**kwargs)
+        return self.Results
 
     # Place order. Return order ID and DON'T wait on limit orders. That needs to
     # be a separate functionality.
@@ -445,6 +445,10 @@ class ccxtCrypto:
                 order=self.API("create_order",symbol=pair,type=m,side=action,amount=amount,price=price)
 
         if order['id']!=None:
+            # Required bewcause most crypto exchanges don't retain order details after a certain length of time.
+            # The details will be embedded into the response. This is CRITICAL for getting the strike price of
+            # market orders.
+            order['Details']=self.GetOrderDetails(id=order['id'],symbol=pair)
             self.Log.Write("|- Order Confirmation ID: "+order['id'])
 
             #JRRledger.WriteLedger(pair, m, action, amount, price, order, ln)
@@ -639,11 +643,12 @@ class ccxtCrypto:
         if 'Market' in self.Active and self.Active['Market']=='margin':
             kwargs['tradeType']='MARGIN_TRADE'
 
+        self.Results=None
         if self.Broker.has['fetchClosedOrders']:
             id=kwargs.get('id')
             kwargs.pop('id',None)
-            self.Results=self.API("fetchClosedOrders",**kwargs)
-            for c in range(len(self.Results)):
+            res=self.API("fetchClosedOrders",**kwargs)
+            for c in range(len(res)):
                 try:
                     if self.Results[c]['id']==id:
                         self.Results=(self.Results[c])
