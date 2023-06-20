@@ -21,15 +21,16 @@ from multiprocessing import parent_process
 
 # Brute fore exit a program. Needed for multiprocessing programs that have sub-processes which can exit on a broker error.
 
-def ForceExit(val):
-    # Tell interceptor to kill off this program, if loaded
-    os.kill(os.getpid(),2)
-
-    # Give interceptor time to do its job
-    ElasticSleep(3)
-
-    # Exit of if interceptor is not loaded
-    sys.exit(val)
+def ForceExit(val=0):
+    if parent_process()==None:
+        # Exit of if interceptor is not loaded
+        sys.exit(val)
+    else:
+        while True:
+            # Tell interceptor to kill off this program, if loaded
+            os.kill(os.getppid(),2)
+            # Give interceptor time to do its job
+            ElasticSleep(1)
 
 # Signal Interceptor for critical areas
 
@@ -64,7 +65,6 @@ class SignalInterceptor():
     def SignalInterrupt(self,signal_num):
         mypid=os.getpid()
 
-        self.ShowSignalMessage(f'Interceptor Signal: {signal_num}')
         parent = psutil.Process(self.parent_id)
         if len(parent.children())>1:
             for child in parent.children():
@@ -88,7 +88,7 @@ class SignalInterceptor():
         self.critical=IsCrit
 
     def ProcessSignal(self,signum,frame):
-        print("Received:",signum,"Crit:",self.critical)
+        self.ShowSignalMessage(f'Interceptor Signal: {signal_num} Crit: {self.critical}')
         self.triggered[signum]=True
         if self.critical==False:
             self.SafeExit()
