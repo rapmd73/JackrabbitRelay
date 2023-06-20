@@ -64,19 +64,20 @@ class SignalInterceptor():
 
     def SignalInterrupt(self,signal_num):
         mypid=os.getpid()
+        self.ShowSignalMessage(f'Parent: {self.parent_id} self: {mypid}')
 
         parent = psutil.Process(self.parent_id)
         if len(parent.children())>1:
             for child in parent.children():
                 if child.pid!=mypid:
-                    self.ShowSignalMessage(f'Exiting child: {child.pid}')
+                    self.ShowSignalMessage(f'Signal child: {child.pid}')
                     # send signal to children
-                    os.kill(child.pid,9)
+                    os.kill(child.pid,2)
 
             # Don't touch INIT
             if self.parent_id!=1 and self.parent_id!=mypid:
-                self.ShowSignalMessage(f'Exiting parent: {self.parent_id}')
-                os.kill(self.parent_id,9)
+                self.ShowSignalMessage(f'Signal parent: {self.parent_id}')
+                os.kill(self.parent_id,2)
 
         self.ShowSignalMessage(f'Exiting self: {mypid}')
         os.kill(mypid,9)
@@ -88,7 +89,7 @@ class SignalInterceptor():
         self.critical=IsCrit
 
     def ProcessSignal(self,signum,frame):
-        self.ShowSignalMessage(f'Interceptor Signal: {signal_num} Crit: {self.critical}')
+        self.ShowSignalMessage(f'Interceptor Signal: {signum} Crit: {self.critical}')
         self.triggered[signum]=True
         if self.critical==False:
             self.SafeExit()
