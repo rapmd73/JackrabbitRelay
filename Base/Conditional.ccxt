@@ -160,10 +160,9 @@ def main():
             newOrder['OliverTwist']='Conditional'
             newOrder['Exchange']=relay.Order['Exchange']
             newOrder['Account']=relay.Order['Account']
+            newOrder['Market']=relay.Order['Market']
             newOrder['Asset']=relay.Order['Asset']
             newOrder['Action']=relay.Order['SellAction']
-            if 'EnforceFIFO' in relay.Order:
-                newOrder['EnforceFIFO']=relay.Order['EnforceFIFO']
             newOrder['Price']=str(strikePrice)
             if saction=='close':
                 # Set trade polarity
