@@ -116,7 +116,7 @@ def main():
 
                 tp=round(CalculatePriceExit(Order,'TakeProfit',dir,price),8)
                 sl=round(CalculatePriceExit(Order,'StopLoss',dir,price),8)
-                print(f"{Order['Asset']:20} {sl:.8f} {tprice:.8f}({price:.8f}) {tp:.8f} {amount:.8f} {dir`}")
+                print(f"{Order['Asset']:20} {sl:.8f} {tprice:.8f}({price:.8f}) {tp:.8f} {amount:.8f} {dir}")
             elif Data['Framework']=='oanda':
                 Resp=Data['Response']
                 id=Data['ID']
