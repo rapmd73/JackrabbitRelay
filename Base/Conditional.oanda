@@ -35,7 +35,7 @@ def GetOrderID(res):
         return oid
     return None
 
-# Calculate Proce Exit
+# Calculate Price
 
 def CalculatePriceExit(order,ts,dir,price):
     # Figure out TakeProfit or Stoploss
