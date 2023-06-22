@@ -40,13 +40,13 @@ def GetOrderID(res):
 def CalculatePriceExit(order,ts,dir,price):
     # Figure out TakeProfit or Stoploss
     if ts=='TakeProfit':
-        if '%' in order[ts]:
+        if '%' in str(order[ts]):
             if dir=='long':
                 val=price+((float(order[ts].replace('%','').strip())/100)*price)
             else:
                 val=price-((float(order[ts].replace('%','').strip())/100)*price)
         # Pips
-        elif 'p' in order[ts].lower():
+        elif 'p' in str(order[ts].lower()):
             if dir=='long':
                 val=price+(float(order[ts].lower().replace('p','').strip())*0.0001)
             else:
@@ -54,13 +54,13 @@ def CalculatePriceExit(order,ts,dir,price):
         else:
             val=float(order[ts])
     elif ts=='StopLoss':
-        if '%' in order[ts]:
+        if '%' in str(order[ts]):
             if dir=='long':
                 val=price-((float(order[ts].replace('%','').strip())/100)*price)
             else:
                 val=price+((float(order[ts].replace('%','').strip())/100)*price)
         # Pips
-        elif 'p' in order[ts].lower():
+        elif 'p' in str(order[ts].lower()):
             if dir=='long':
                 val=price-(float(order[ts].lower().replace('p','').strip())*0.0001)
             else:
@@ -101,6 +101,28 @@ def main():
         else:
             price=float(oDetail['price'])
             amount=float(oDetail['amount'])
+
+        # Check to see if we have enough balance, if not then delete this order. Deal with futures as well.
+
+        base=relay.Markets[relay.Order['Asset']]['base'].upper()
+        if relay.Order['Market']=='spot':
+            bal=relay.GetBalance(Base=base)
+        else:
+            bal=relay.GetPositions(symbols=[relay.Order['Asset']])
+#        relay.JRLog.Write(f"{id}: Amount {amount:.8f}, Balance {bal:.8f}",stdOut=False)
+        if amount>bal:
+#            JRRsupport.AppendFile('/tmp/x9',json.dumps(newOrder)+'\n')
+            relay.JRLog.Write(f"{id}: Amount {amount:.8f} > Balance {bal:.8f}, purge",stdOut=False)
+            rData={}
+            rData['Key']=Orphan['Key']
+            rData['lID']=Orphan['lID']
+            rData['mID']=Orphan['mID']
+            rData['Class']=Orphan['Class']
+            rData['Status']='Delete'
+            print(json.dumps(rData))
+            # Flush and exit
+            sys.stdout.flush()
+            sys.exit(0)
 
         # Process the position
 
@@ -164,14 +186,7 @@ def main():
             newOrder['Asset']=relay.Order['Asset']
             newOrder['Action']=relay.Order['SellAction']
             newOrder['Price']=str(strikePrice)
-            if saction=='close':
-                # Set trade polarity
-                if dir=='long':
-                    newOrder['USD']=float(oDetail['cost'])
-                else:
-                    newOrder['USD']=-float(oDetail['cost'])
-            else:
-                newOrder['USD']=Orphan['Response']['cost']
+            newOrder['Base']=str(amount)
             if 'OrderType' in relay.Order:
                 newOrder['OrderType']=relay.Order['OrderType']
             else:
@@ -185,7 +200,7 @@ def main():
             result=relay.SendWebhook(newOrder)
             oid=GetOrderID(result)
             if oid!=None:
-                resp=relay.GetOrderDetails(OrderID=oid)
+                resp=relay.GetOrderDetails(id=oid,symbol=relay.Order['Asset'])
                 # Order must be closed as it succedded
                 newOrder['ID']=oid
                 rData={}
@@ -230,9 +245,8 @@ def main():
         rData['mID']=Orphan['mID']
         rData['Class']=Orphan['Class']
         rData['Status']=Orphan['Status']
-        rData['Error']=str(e)
         print(json.dumps(rData))
-        relay.JRLog.Write(f"{Orphan['Key']}: Code Error - {data}",stdOut=False)
+        relay.JRLog.Write(f"{Orphan['Key']}: Code Error - {str(e)}",stdOut=False)
         # Flush and exit
         sys.stdout.flush()
         sys.exit(0)

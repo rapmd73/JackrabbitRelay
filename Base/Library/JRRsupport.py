@@ -7,6 +7,7 @@
 
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
+from multiprocessing import current_process
 import os
 import signal
 import datetime
@@ -17,12 +18,10 @@ import json
 import psutil
 import signal
 
-from multiprocessing import parent_process
-
 # Brute fore exit a program. Needed for multiprocessing programs that have sub-processes which can exit on a broker error.
 
 def ForceExit(val=0):
-    if parent_process()==None:
+    if current_process().name=='MainProcess':
         # Exit of if interceptor is not loaded
         sys.exit(val)
     else:
@@ -34,18 +33,25 @@ def ForceExit(val=0):
 
 # Signal Interceptor for critical areas
 
+# This is a contorted and twisted hot mess as the multiprocessor package parent_process() does NOT funtion properly for
+# identifying the parent process. There are MANY other headaches here as well. if the parent is INIT, all hell breaks loose
+# and things go south real quick. Extra care MUST BE and IS taken to stay away from INIT.
+
 class SignalInterceptor():
     def __init__(self,Log=None):
-        noTrap=[17,18,20,28]
+        noTrap=[13,17,18,20,28]
         self.critical=False
         self.original={}
         self.triggered={}
         self.Log=Log
 
-        if parent_process()==None:
+        if current_process().name=='MainProcess':
             self.parent_id=os.getpid()
         else:
             self.parent_id=os.getppid()
+            # Stay away from INIT
+            if self.parent_id==1:
+                self.parent_id=os.getpid()
 
         for sig in signal.valid_signals():
             self.triggered[sig]=False
@@ -74,18 +80,31 @@ class SignalInterceptor():
                     # send signal to children
                     os.kill(child.pid,2)
 
-            # Don't touch INIT
-            if self.parent_id!=1 and self.parent_id!=mypid:
-                self.ShowSignalMessage(f'Signal parent: {self.parent_id}')
-                os.kill(self.parent_id,2)
+        # Don't touch INIT
+        if self.parent_id!=1 and self.parent_id!=mypid:
+            self.ShowSignalMessage(f'Signal parent: {self.parent_id}')
+            os.kill(self.parent_id,2)
 
-        self.ShowSignalMessage(f'Exiting self: {mypid}')
+        # If I am the parent, give the children time to wrap it up
+        if self.parent_id==mypid:
+            JRRsupport.ElasticSleep(3)
+
+        # Shut it all down
+        if self.parent_id==mypid:
+            self.ShowSignalMessage(f'Exiting parent: {mypid}')
+        else:
+            self.ShowSignalMessage(f'Exiting child: {mypid}')
         os.kill(mypid,9)
 
     def SetLog(self,Log=None):
         self.Log=Log
 
     def Critical(self,IsCrit=False):
+        # Check is there is a trigger. If a signal is triggered, safely exit BEFORE critical event
+        if IsCrit==True and self.critical==False:
+            for sig in signal.valid_signals():
+                if self.triggered[sig]==True:
+                    self.SafeExit()
         self.critical=IsCrit
 
     def ProcessSignal(self,signum,frame):
