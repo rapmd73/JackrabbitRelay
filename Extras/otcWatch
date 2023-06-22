@@ -108,10 +108,10 @@ def main():
                 amount=Detail['amount']
 
                 if Resp['side']=='buy':
-                    dir='Long'
+                    dir='long'
                     tprice=ticker['Bid']
                 else:
-                    dir='Short'
+                    dir='short'
                     tprice=ticker['Ask']
 
                 tp=round(CalculatePriceExit(Order,'TakeProfit',dir,price),8)
@@ -132,10 +132,10 @@ def main():
                         break
 
                 if amount>=0:
-                    dir='Long'
+                    dir='long'
                     tprice=ticker['Bid']
                 else:
-                    dir='Short'
+                    dir='short'
                     tprice=ticker['Ask']
 
                 tp=round(CalculatePriceExit(Order,'TakeProfit',dir,price),5)

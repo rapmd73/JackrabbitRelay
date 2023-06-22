@@ -262,9 +262,8 @@ def main():
         rData['mID']=Orphan['mID']
         rData['Class']=Orphan['Class']
         rData['Status']=Orphan['Status']
-        rData['Error']=str(e)
         print(json.dumps(rData))
-        relay.JRLog.Write(f"{Orphan['Key']}: Code Error",stdOut=False)
+        relay.JRLog.Write(f"{Orphan['Key']}: Code Error - {str(e)}",stdOut=False)
         # Flush and exit
         sys.stdout.flush()
         sys.exit(0)
