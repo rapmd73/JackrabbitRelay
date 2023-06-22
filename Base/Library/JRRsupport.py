@@ -87,7 +87,7 @@ class SignalInterceptor():
 
         # If I am the parent, give the children time to wrap it up
         if self.parent_id==mypid:
-            JRRsupport.ElasticSleep(3)
+            ElasticSleep(3)
 
         # Shut it all down
         if self.parent_id==mypid:
