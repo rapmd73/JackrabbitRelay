@@ -732,7 +732,7 @@ class ccxtCrypto:
             if "Market" in subOrder:
                 fname=subOrder['Exchange']+'.'+subOrder['Market']+'.'+subOrder['Account']+'.'+subOrder['Asset']
             else:
-                fname=sbOrder['Exchange']+'.'+subOrder['Account']+'.'+subOrder['Market']+'.'+subOrder['Asset']
+                fname=subOrder['Exchange']+'.'+subOrder['Account']+'.'+subOrder['Market']+'.'+subOrder['Asset']
             fname=fname.replace('/','').replace('-','').replace(':','').replace(' ','')
             lname=LedgerDirectory+'/'+fname+'.ledger'
 
@@ -742,4 +742,4 @@ class ccxtCrypto:
             ledgerLock.Unlock()
 
             if type(IsLog)==bool and IsLog==True:
-                self.Log.Write(f"Ledgered: {sbOrder['Exchange']}/{subOrder['Account']}:{id}",stdOut=False)
+                self.Log.Write(f"Ledgered: {subOrder['Exchange']}/{subOrder['Account']}:{id}",stdOut=False)
