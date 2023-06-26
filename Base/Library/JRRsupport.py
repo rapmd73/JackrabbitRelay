@@ -21,6 +21,9 @@ import signal
 # Brute fore exit a program. Needed for multiprocessing programs that have sub-processes which can exit on a broker error.
 
 def ForceExit(val=0):
+    sys.stdout.flush()
+    sys.exit(val)
+    """
     if current_process().name=='MainProcess':
         # Exit of if interceptor is not loaded
         sys.exit(val)
@@ -30,6 +33,7 @@ def ForceExit(val=0):
             os.kill(os.getppid(),2)
             # Give interceptor time to do its job
             ElasticSleep(1)
+    """
 
 # Signal Interceptor for critical areas
 
@@ -39,7 +43,9 @@ def ForceExit(val=0):
 
 class SignalInterceptor():
     def __init__(self,Log=None):
-        noTrap=[13,17,18,20,28]
+        # Signals not to trap
+        noTrap=[signal.SIGCHLD,signal.SIGCONT,signal.SIGTSTP,signal.SIGWINCH]
+        # list(signal.Signals)
         self.critical=False
         self.original={}
         self.triggered={}
@@ -57,8 +63,11 @@ class SignalInterceptor():
             self.triggered[sig]=False
             try:
                 self.original[sig]=signal.getsignal(sig)
-                if sig not in noTrap:
-                    signal.signal(sig,self.ProcessSignal)
+                if current_process().name=='MainProcess':
+                    if sig not in noTrap:
+                        signal.signal(sig,self.ProcessSignal)
+                else:
+                    signal.signal(sig,signal.SIG_DFL)
             except:
                 pass
 
@@ -72,26 +81,36 @@ class SignalInterceptor():
         mypid=os.getpid()
         self.ShowSignalMessage(f'Parent: {self.parent_id} self: {mypid}')
 
-        parent = psutil.Process(self.parent_id)
-        if len(parent.children())>1:
-            for child in parent.children():
-                if child.pid!=mypid:
-                    self.ShowSignalMessage(f'Signal child: {child.pid}')
-                    # send signal to children
-                    os.kill(child.pid,2)
+        # Only parent takes to children
+        if self.parent_id==mypid and len(parent.children())>1:
+            parent = psutil.Process(self.parent_id)
+            while active_children():
+                if len(parent.children(recursive=True))>1:
+                    for child in parent.children(recursive=True):
+                        if child.pid!=mypid:
+                            self.ShowSignalMessage(f'Exiting child: {child.pid}')
+                            # send signal to children
+                            os.kill(child.pid,9)
+                    JRRsupport.ElasticSleep(0)
 
-        # Don't touch INIT
+        # Don't touch INIT. Child tells parent there is a problem
         if self.parent_id!=1 and self.parent_id!=mypid:
             self.ShowSignalMessage(f'Signal parent: {self.parent_id}')
             os.kill(self.parent_id,2)
 
         # If I am the parent, give the children time to wrap it up
-        if self.parent_id==mypid:
-            ElasticSleep(3)
+        if current_process().name!='MainProcess':
+            c=0
+            while c<3:
+                active_children()
+                ElasticSleep(1)
+                c+=1
 
         # Shut it all down
-        if self.parent_id==mypid:
+        if self.parent_id==mypid and len(parent.children())>1:
             self.ShowSignalMessage(f'Exiting parent: {mypid}')
+        elif self.parent_id==mypid:
+            self.ShowSignalMessage(f'Exiting self: {mypid}')
         else:
             self.ShowSignalMessage(f'Exiting child: {mypid}')
         os.kill(mypid,9)

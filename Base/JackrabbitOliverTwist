@@ -39,7 +39,7 @@ import subprocess
 import JRRsupport
 import JackrabbitRelay as JRR
 
-Version="0.0.0.1.325"
+Version="0.0.0.1.330"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -463,6 +463,8 @@ def ProcessChild(ProcessPool,CurList,cur,memData,CurListChanged):
             data['mID']=memData[data['Key']].ID
             memData[data['Key']].Put(OliverTwistTimeout,"Running")
             ProcessPool.apply_async(ProcessOrphan,args=(data,),callback=OrphanUpdate)
+            # Clean up dead processes
+            multiprocessing.active_children()
             # Process any signals received during critical section
             interceptor.SafeExit()
 
