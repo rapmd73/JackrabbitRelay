@@ -65,7 +65,7 @@ def main():
     rData['Status']='Delete'
     print(json.dumps(rData))
     sys.stdout.flush()
-    relay.WriteLedger(Order=Orphan,Response=None,Log=True)
+    relay.WriteLedger(Order=Orphan,Response=None)
 
 if __name__ == '__main__':
     main()

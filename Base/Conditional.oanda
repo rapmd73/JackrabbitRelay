@@ -214,7 +214,7 @@ def main():
                     rData['Class']=Orphan['Class']
                     rData['Status']='Delete'
                     print(json.dumps(rData))
-                    relay.WriteLedger(Order=newOrder,Response=resp,Log=True)
+                    relay.WriteLedger(Order=newOrder,Response=resp)
                 else:
                     # Give OliverTwist a response
                     relay.JRLog.Write(f"{id}: Order failed",stdOut=False)

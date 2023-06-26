@@ -736,6 +736,9 @@ class ccxtCrypto:
             fname=fname.replace('/','').replace('-','').replace(':','').replace(' ','')
             lname=LedgerDirectory+'/'+fname+'.ledger'
 
+            # Strip Identity
+            ledger.pop('Identity',None)
+
             ledgerLock=JRRsupport.Locker(lname)
             ledgerLock.Lock()
             JRRsupport.AppendFile(lname,json.dumps(ledger)+'\n')
