@@ -7,7 +7,7 @@
 
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
-from multiprocessing import current_process
+from multiprocessing import current_process, active_children
 import os
 import signal
 import datetime
@@ -66,7 +66,7 @@ class SignalInterceptor():
                 if current_process().name=='MainProcess':
                     if sig not in noTrap:
                         signal.signal(sig,self.ProcessSignal)
-                else:
+                else: # Reset child process
                     signal.signal(sig,signal.SIG_DFL)
             except:
                 pass
@@ -82,16 +82,15 @@ class SignalInterceptor():
         self.ShowSignalMessage(f'Parent: {self.parent_id} self: {mypid}')
 
         # Only parent takes to children
+        parent = psutil.Process(self.parent_id)
         if self.parent_id==mypid and len(parent.children())>1:
-            parent = psutil.Process(self.parent_id)
-            while active_children():
-                if len(parent.children(recursive=True))>1:
-                    for child in parent.children(recursive=True):
-                        if child.pid!=mypid:
-                            self.ShowSignalMessage(f'Exiting child: {child.pid}')
-                            # send signal to children
-                            os.kill(child.pid,9)
-                    JRRsupport.ElasticSleep(0)
+            if len(parent.children(recursive=True))>1:
+                for child in parent.children(recursive=True):
+                    if child.pid!=mypid:
+                        self.ShowSignalMessage(f'Exiting child: {child.pid}')
+                        # send signal to children
+                        os.kill(child.pid,9)
+                        active_children()
 
         # Don't touch INIT. Child tells parent there is a problem
         if self.parent_id!=1 and self.parent_id!=mypid:
