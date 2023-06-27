@@ -18,23 +18,6 @@ import json
 import psutil
 import signal
 
-# Brute fore exit a program. Needed for multiprocessing programs that have sub-processes which can exit on a broker error.
-
-def ForceExit(val=0):
-    sys.stdout.flush()
-    sys.exit(val)
-    """
-    if current_process().name=='MainProcess':
-        # Exit of if interceptor is not loaded
-        sys.exit(val)
-    else:
-        while True:
-            # Tell interceptor to kill off this program, if loaded
-            os.kill(os.getppid(),2)
-            # Give interceptor time to do its job
-            ElasticSleep(1)
-    """
-
 # Signal Interceptor for critical areas
 
 # This is a contorted and twisted hot mess as the multiprocessor package parent_process() does NOT funtion properly for
@@ -59,6 +42,7 @@ class SignalInterceptor():
             if self.parent_id==1:
                 self.parent_id=os.getpid()
 
+        # Set all signals to myself.
         for sig in signal.valid_signals():
             self.triggered[sig]=False
             try:
@@ -67,9 +51,13 @@ class SignalInterceptor():
                     if sig not in noTrap:
                         signal.signal(sig,self.ProcessSignal)
                 else: # Reset child process
-                    signal.signal(sig,signal.SIG_DFL)
+                    signal.signal(sig,signal.SIG_IGN)
             except:
                 pass
+        # Prent gets task of killing dead child processes
+        if current_process().name=='MainProcess':
+            signal.signal(signal.SIGALRM,self.mpCleaner)
+            signal.alarm(3)
 
     def ShowSignalMessage(self,lm):
         if self.Log!=None:
@@ -104,6 +92,7 @@ class SignalInterceptor():
                 active_children()
                 ElasticSleep(1)
                 c+=1
+            self.ZombieHunter()
 
         # Shut it all down
         if self.parent_id==mypid and len(parent.children())>1:
@@ -125,8 +114,25 @@ class SignalInterceptor():
                     self.SafeExit()
         self.critical=IsCrit
 
+    # There HAS TO BE better ways then this brute force way of cleaning up after multiprocessing for crashed/exited/dead child
+    # processes.
+
+    def ZombieHunter(self):
+        init=psutil.Process(1)
+        for child in init.children():
+            cmd=child.cmdline()
+            for i in range(len(cmd)):
+                if 'from multiprocessing.resource_tracker import main;main' in cmd[i] \
+                or 'from multiprocessing.spawn import spawn_main; spawn_main' in cmd[i]:
+                    os.kill(child.pid,9)
+
+    def mpCleaner(self,signum,frame):
+        active_children()
+        self.ZombieHunter()
+        signal.alarm(13)
+
     def ProcessSignal(self,signum,frame):
-        self.ShowSignalMessage(f'Interceptor Signal: {signum} Crit: {self.critical}')
+        self.ShowSignalMessage(f'Interceptor Signal: {signum} In Critical: {self.critical}')
         self.triggered[signum]=True
         if self.critical==False:
             self.SafeExit()
@@ -237,7 +243,7 @@ class Locker:
                         self.Log.Error("Locker",f"{self.filename}: {action} request failed")
                     else:
                         print("Locker",f"{self.filename}: {action} request failed")
-                        ForceExit(1)
+                        sys.exit(1)
                 retry+=1
                 time.sleep(1)
             else:
@@ -272,7 +278,7 @@ class Locker:
                         self.Log.Error("Locker",f"{self.filename}: {action} request failed")
                     else:
                         print("Locker",f"{self.filename}: {action} request failed")
-                        ForceExit(1)
+                        sys.exit(1)
                 retry+=1
                 time.sleep(1)
             else:
@@ -298,7 +304,7 @@ class Locker:
                         self.Log.Error("Locker",f"{self.filename}: lock request failed")
                     else:
                         print("Locker",f"{self.filename}/{os.getpid()}: lock request failed")
-                        ForceExit(1)
+                        sys.eit(1)
             # Prevent race conditions
             time.sleep(0.1)
         return resp

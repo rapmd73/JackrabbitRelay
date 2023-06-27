@@ -39,7 +39,7 @@ import subprocess
 import JRRsupport
 import JackrabbitRelay as JRR
 
-Version="0.0.0.1.330"
+Version="0.0.0.1.335"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -203,7 +203,7 @@ def ProcessOrphan(Orphan):
             payload=json.dumps(Orphan).encode()
 #            if Orphan['Class']=='Conditional':
 #                JRRsupport.WriteFile('x9',json.dumps(Orphan))
-#                JRRsupport.ForceExit(3)
+#                sys.exit(3)
 #            JRLog.Write(f"{payload}",stdOut=False)
 
             subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -266,7 +266,11 @@ def ReadOrphanList(cl=None):
                 if Entry=='':
                     continue
                 # Break down entry and set up memory locker
-                Orphan=json.loads(Entry)
+                try:
+                    Orphan=json.loads(Entry)
+                except:
+#                    JRLog.Write(f"Bad orphan: {Entry}")
+                    continue
 
                 if 'Order' in Orphan:
                     if type(Orphan['Order'])==str:
@@ -368,7 +372,11 @@ def ReceiveOrphans(cl):
                 if Entry.strip()=='':
                     continue
 
-                Orphan=json.loads(Entry)
+                try:
+                    Orphan=json.loads(Entry)
+                except:
+#                    JRLog.Write(f"Bad orphan: {Entry}")
+                    continue
 
                 if 'Order' in Orphan:
                     if type(Orphan['Order'])==str:
@@ -496,7 +504,7 @@ def main():
 
     # Establish the process pool to handle the orphans
     multiprocessing.set_start_method("spawn")
-    ProcessPool=multiprocessing.Pool(processes=NumberProcesses,maxtasksperchild=73)
+    ProcessPool=multiprocessing.Pool(processes=NumberProcesses,maxtasksperchild=1)
 
     # Load saved orphans into memory
     ReadOrphanList('Orphan')

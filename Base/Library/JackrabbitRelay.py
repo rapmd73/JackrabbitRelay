@@ -75,13 +75,13 @@ class JackrabbitLog:
         msg=f+' failed with: '+s
         self.Write(msg)
         self.Elapsed()
-        JRRsupport.ForceExit(3)
+        sys.exit(3)
 
     def Success(self,f,s):
         msg=f+' successful with: '+s
         self.Write(msg)
         self.Elapsed()
-        JRRsupport.ForceExit(0)
+        sys.exit(0)
 
 # The main class for the system. This IS going to be a royal pain in the ass to
 # type, but it also prevent mistakes as the system grows and developes. This
@@ -98,7 +98,7 @@ class JackrabbitLog:
 class JackrabbitRelay:
     def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,secondary=None):
         # All the default locations
-        self.Version="0.0.0.1.330"
+        self.Version="0.0.0.1.335"
         self.BaseDirectory='/home/JackrabbitRelay2/Base'
         self.ConfigDirectory='/home/JackrabbitRelay2/Config'
         self.DataDirectory="/home/JackrabbitRelay2/Data"

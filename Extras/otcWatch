@@ -70,6 +70,7 @@ def main():
         buffer=JRRsupport.ReadFile(ConditionalStorehouse)
     OliverTwistLock.Unlock()
 
+    oldAsset=None
     relay=None
     openTrades=None
     ticker=None
@@ -84,6 +85,9 @@ def main():
                 Order=Data['Order']
             elif Data['Framework']=='oanda':
                 Order=Data['Order']
+            else:
+                print("Framework not supported (yet)...")
+                sys.exit(1)
 
             if Order['Exchange']!=exchange or Order['Account']!=account:
                 continue
@@ -94,10 +98,10 @@ def main():
             # Cache and remember these data points. Exchanges like phemex will draw the program into oblivion otherwise from
             # the rtelimits. This only works because we are filtering based upon exchange and account.
 
-            if relay==None:
-                relay=JRR.JackrabbitRelay(framework=Data['Framework'],payload=json.dumps(Order))
-            if ticker==None:
+            relay=JRR.JackrabbitRelay(framework=Data['Framework'],payload=json.dumps(Order))
+            if oldAsset==None or oldAsset!=relay.Order['Asset']:
                 ticker=relay.GetTicker(symbol=relay.Order['Asset'])
+                oldAsset=relay.Order['Asset']
 
             # Handle each framework type
 
@@ -141,8 +145,6 @@ def main():
                 tp=round(CalculatePriceExit(Order,'TakeProfit',dir,price),5)
                 sl=round(CalculatePriceExit(Order,'StopLoss',dir,price),5)
                 print(f"{Order['Asset']:10} {sl:.5f} {tprice:.5f}({price:.5f}) {tp:.5f} {abs(amount):9.5f} {dir}")
-            else:
-                print("Unrecognized framework:",Data['Framework'])
     else:
         print("No conditional orders yet.")
         sys.exit(0)
