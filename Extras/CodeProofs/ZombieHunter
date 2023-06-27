@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import psutil
+
+init=psutil.Process(1)
+for child in init.children():
+    cmd=child.cmdline()
+    for i in range(len(cmd)):
+        if 'from multiprocessing.resource_tracker import main;main' in cmd[i] \
+        or 'from multiprocessing.spawn import spawn_main; spawn_main' in cmd[i]:
+            print(child.pid)
+            os.kill(child.pid,9)
