@@ -72,6 +72,8 @@ def jsonStatus(str,Tag=None,Data=None):
     return json.dumps(res)+'\n'
 
 # Process the payload and carry out each of the desired functionalities.
+#
+# Lockand DataStore MUST be different. Unlock REMOVES data is the same.
 
 def ProcessPayload(data):
     global Locker
@@ -145,7 +147,10 @@ def ProcessPayload(data):
                 return jsonStatus("NotFound")
             # Verify owner and unlock/Erase memory
             elif Locker[FileName]['ID']==dataDB['ID']:
-                return jsonStatus("Done",Tag="DataStore",Data=Locker[FileName]['DataStore'])
+                if 'DataStore' in Locker[FileName]:
+                    return jsonStatus("Done",Tag="DataStore",Data=Locker[FileName]['DataStore'])
+                else:
+                    return jsonStatus("NoData")
             # Not the rightful owner
             else:
                 return jsonStatus("NotOwner")
