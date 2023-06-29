@@ -103,6 +103,14 @@ def main():
 
     relay.JRLog.Write('PlaceOrder OANDA '+relay.Version)
 
+    # Make sure conditional orders with any action other the BUY are ignored
+    # This is neccessary for TradingView strategies or any framework where 1 alret handles both buying and selling.
+
+    # This works bcause OANDA allows buying short with negative unit numbers.
+
+    if ("Conditional" in relay.Active or "Conditional" in relay.Order) and relay.Order['Action']!='buy':
+        relay.JRLog.Error("Conditional", f"{relay.Order['Action']}: ignored")
+
     # Now lets get down to business. The processed order is in:
     #    relay.Order
 

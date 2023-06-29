@@ -84,7 +84,7 @@ def main():
     else:
         order=Orphan['Order']
 
-    relay=JRR.JackrabbitRelay(framework=Orphan['Framework'],payload=order)
+    relay=JRR.JackrabbitRelay(framework=Orphan['Framework'],payload=order,NoIdentityVerification=True)
     relay.JRLog.SetBaseName('OliverTwist')
 
     try:
@@ -145,7 +145,8 @@ def main():
 
             StrikeHappened=False
             if dir=='long':
-    #           relay.JRLog.Write(f"{id}: {dir} Bid: {ticker['Bid']} TP: {tp}, SL {sl}",stdOut=False)
+                if 'Diagnostics' in relay.Active:
+                    relay.JRLog.Write(f"{id}: {dir} Price: {price}, Bid: {ticker['Bid']} TP: {tp}/{relay.Order['TakeProfit']}, SL {sl}/{relay.Order['StopLoss']}",stdOut=False)
 
                 if ticker['Bid']>tp:
                     profit=round((units*ticker['Bid'])-(units*price),5)
@@ -158,7 +159,8 @@ def main():
                     strikePrice=ticker['Bid']
                     StrikeHappened=True
             else:
-    #           relay.JRLog.Write(f"{id}: {dir} Ask: {ticker['Ask']} TP: {tp}, SL {sl}",stdOut=False)
+                if 'Diagnostics' in relay.Active:
+                    relay.JRLog.Write(f"{id}: {dir} Price: {price}, Ask: {ticker['Ask']} TP: {tp}/{relay.Order['TakeProfit']}, SL {sl}/{relay.Order['StopLoss']}",stdOut=False)
 
                 if ticker['Ask']<tp:
                     profit=round((units*price)-(units*ticker['Ask']),5)
@@ -198,7 +200,7 @@ def main():
 
     #            relay.JRLog.Write(f"{id}: {json.dumps(newOrder)}",stdOut=False)
 
-                newOrder['Identity']=relay.Order['Identity']
+                newOrder['Identity']=relay.Identity['Identity']
 
                 # Feed the new order to Relay
                 result=relay.SendWebhook(newOrder)

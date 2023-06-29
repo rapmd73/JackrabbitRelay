@@ -24,7 +24,9 @@ def main():
     else:
         order=Orphan['Order']
 
-    relay=JRR.JackrabbitRelay(framework=Orphan['Framework'],payload=order)
+    # Insert Identity
+
+    relay=JRR.JackrabbitRelay(framework=Orphan['Framework'],payload=order,NoIdentityVerification=True)
     relay.JRLog.SetBaseName('OliverTwist')
 
     # Check to see if order is still open and return current state

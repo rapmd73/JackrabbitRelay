@@ -26,16 +26,22 @@ import JRRsupport
 #   -> spot.kucoin.adausdt
 
 class JackrabbitLog:
-    def __init__(self,filename=None,Base=None):
-        self.LogDirectory="/home/JackrabbitRelay2/Logs"
+    def __init__(self,filename=None,Base=None,Directory=None):
+        if Directory==None:
+            self.LogDirectory="/home/JackrabbitRelay2/Logs"
+        else:
+            self.LogDirectory=Directory
         self.StartTime=datetime.now()
         self.logfile=None
         self.filename=filename
         self.basename=Base
         if self.basename==None:
             self.basename=os.path.basename(sys.argv[0])
-
         self.SetLogName(filename)
+
+    def SetLogDirectory(self,dirname):
+        if dirname!=None:
+            self.LogDirectory=dirname
 
     def SetBaseName(self,basename):
         if basename==None:
@@ -96,9 +102,9 @@ class JackrabbitLog:
 # relay=JackrabbitRelay()
 
 class JackrabbitRelay:
-    def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,secondary=None):
+    def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,secondary=None,NoIdentityVerification=False):
         # All the default locations
-        self.Version="0.0.0.1.335"
+        self.Version="0.0.0.1.340"
         self.BaseDirectory='/home/JackrabbitRelay2/Base'
         self.ConfigDirectory='/home/JackrabbitRelay2/Config'
         self.DataDirectory="/home/JackrabbitRelay2/Data"
@@ -109,6 +115,13 @@ class JackrabbitRelay:
         self.Identity=None
 
         self.NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
+
+        # Turn off Identity verification
+
+        if NoIdentityVerification==True:
+            self.IdentityVerification=False
+        else:
+            self.IdentityVerification=True
 
         # This will be the connector point to any exchange/broker
         self.Broker=None
@@ -475,14 +488,17 @@ class JackrabbitRelay:
 
         # Verify the Identity within the payload. Identity now REQUIRED.
 
-        if "Identity" in self.Active:
-            if "Identity" in self.Order:
-                if self.Order['Identity']!=self.Active['Identity']:
-                    self.JRLog.Error("Identity verification","FAILED: Identity does not match")
+        # self.Active['Identity'] will either be the global identity of the account identity.
+
+        if self.IdentityVerification==True:
+            if "Identity" in self.Active:
+                if "Identity" in self.Order:
+                    if self.Order['Identity']!=self.Active['Identity']:
+                        self.JRLog.Error("Identity verification","FAILED: Identity does not match")
+                else:
+                    self.JRLog.Error("Identity verification","FAILED: Identity not in payload")
             else:
-                self.JRLog.Error("Identity verification","FAILED: Identity not in payload")
-        else:
-            self.JRLog.Error("Identity verification","FAILED: Identity.cfg not found")
+                self.JRLog.Error("Identity verification","FAILED: Identity.cfg not found")
 
     # Read the exchange config file and load API/SECRET for a given (sub)account.
     # MAIN is reserved for the main account

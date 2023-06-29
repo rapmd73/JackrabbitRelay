@@ -665,6 +665,10 @@ class ccxtCrypto:
         OrphanReceiver=self.DataDirectory+'/OliverTwist.Orphan.Receiver'
         orphanLock=JRRsupport.Locker("OliverTwist")
 
+        # Strip Identity
+
+        Order.pop('Identity',None)
+
         Orphan={}
         Orphan['Status']='Open'
         Orphan['Framework']='ccxt'
@@ -684,6 +688,10 @@ class ccxtCrypto:
 
         resp=Order['Response']
         Order.pop('Response',None)
+
+        # Strip Identity
+
+        Order.pop('Identity',None)
 
         Conditional={}
         Conditional['Status']='Open'

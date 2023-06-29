@@ -39,7 +39,7 @@ import subprocess
 import JRRsupport
 import JackrabbitRelay as JRR
 
-Version="0.0.0.1.335"
+Version="0.0.0.1.340"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -50,6 +50,10 @@ OrphanReceiver=DataDirectory+'/OliverTwist.Orphan.Receiver'
 
 ConditionalStorehouse=DataDirectory+'/OliverTwist.Conditional.Storehouse'
 OrphanStorehouse=DataDirectory+'/OliverTwist.Orphans.Storehouse'
+
+# This keeps track of all sub-processes for cleanup
+
+PoolResults=[]
 
 # Set up the logging system
 
@@ -275,6 +279,7 @@ def ReadOrphanList(cl=None):
                 if 'Order' in Orphan:
                     if type(Orphan['Order'])==str:
                         order=json.loads(Orphan['Order'])
+                        order.pop('Identity',None)
                         Orphan['Order']=order
                 if 'Response' in Orphan:
                     if type(Orphan['Response'])==str:
@@ -381,6 +386,7 @@ def ReceiveOrphans(cl):
                 if 'Order' in Orphan:
                     if type(Orphan['Order'])==str:
                         order=json.loads(Orphan['Order'])
+                        order.pop('Identity',None)
                         Orphan['Order']=order
                 if 'Response' in Orphan:
                     if type(Orphan['Response'])==str:
@@ -413,6 +419,8 @@ def ReceiveOrphans(cl):
 # memData will be eithewr OrphanMemory or ConfitionalMemory
 
 def ProcessChild(ProcessPool,CurList,cur,memData,CurListChanged):
+    global PoolResults
+
     data=json.loads(cur.GetData())
 
     OliverTwistLock.Lock()
@@ -470,11 +478,12 @@ def ProcessChild(ProcessPool,CurList,cur,memData,CurListChanged):
             data['lID']=OliverTwistLock.ID
             data['mID']=memData[data['Key']].ID
             memData[data['Key']].Put(OliverTwistTimeout,"Running")
-            ProcessPool.apply_async(ProcessOrphan,args=(data,),callback=OrphanUpdate)
-            # Clean up dead processes
-            multiprocessing.active_children()
+            PoolResults.append(ProcessPool.apply_async(ProcessOrphan,args=(data,),callback=OrphanUpdate))
+
             # Process any signals received during critical section
             interceptor.SafeExit()
+        # Clean up dead processes
+        multiprocessing.active_children()
 
         cur=cur.GetNext()
         OliverTwistLock.Unlock()
@@ -550,6 +559,13 @@ def main():
 
         # Process any signals received during critical section
         interceptor.SafeExit()
+
+        # every cycle, try to clean up any completed processes.
+
+        for res in list(PoolResults):
+            if not res.ready():
+                res.get(timeout=None)
+                PoolResults.remove(res)
 
         # Brief rest to maintain control over server
         JRRsupport.ElasticSleep(1)
