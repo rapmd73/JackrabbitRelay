@@ -14,20 +14,45 @@ import time
 import JRRsupport
 import JackrabbitRelay as JRR
 
+# Timeout before Locker auto-deletes this order result
+
+OliverTwistTimeout=(15*60)
+
+# Write the result to Locker memory so parent knows we are finished.
+
+def FinishOrphan(Key,lID,mID,State):
+    # Get the lock read and set up the memory key. Locker doesn't care and which class this order belongs to. OliverTwist will
+    # match the ID to the right class list, orphan or conditional.
+
+    OliverTwistLock=JRRsupport.Locker("OliverTwist",ID=lID)
+    Memory=JRRsupport.Locker(Key,ID=mID)
+
+    OliverTwistLock.Lock()
+
+    State=State.lower()
+
+    if State!='delete':
+        # Return this order to a waiting state
+        Memory.Put(OliverTwistTimeout*100,"Waiting")
+    elif State=='delete':
+        # This order has been processed and needs to be removed from the system.
+        Memory.Put(OliverTwistTimeout*100,"Delete")
+
+    OliverTwistLock.Unlock()
+
+    # We're done. This child has completed its task
+    sys.exit(0)
+
+###
+### Main driver
+###
+
 def main():
     data=sys.stdin.read().strip()
     try:
         Orphan=json.loads(data,strict=False)
     except:
-        # Emergency falthru to prevent damage to the orphan list.
-        rData={}
-        rData['Key']='Corrupted'
-        rData['lID']='Corrupted'
-        rData['mID']='Corrupted'
-        rData['Status']='open'
-        print(json.dumps(rData))
-        sys.stdout.flush()
-        sys.exit(0)
+        FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],'open')
 
     # Use Relay to process and validate the order. Order MUST be a JSON string.
 
@@ -45,27 +70,11 @@ def main():
     #relay.JRLog.Write(f"Orders: {len(openOrders)}",stdOut=False)
     for cur in openOrders:
         if cur['id']==id:
-            rData={}
-            rData['Key']=Orphan['Key']
-            rData['lID']=Orphan['lID']
-            rData['mID']=Orphan['mID']
-            rData['Class']=Orphan['Class']
-            rData['Status']=cur['status']
-            print(json.dumps(rData))
-            sys.stdout.flush()
-            #relay.JRLog.Write(f"{id}: {cur['status']}",stdOut=False)
-            sys.exit(0)
+            FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],cur['state'])
 
     # Order must be closed
-    rData={}
-    rData['Key']=Orphan['Key']
-    rData['lID']=Orphan['lID']
-    rData['mID']=Orphan['mID']
-    rData['Class']=Orphan['Class']
-    rData['Status']='Delete'
-    print(json.dumps(rData))
-    sys.stdout.flush()
     relay.WriteLedger(Order=Orphan,Response=None)
+    FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],'Delete')
 
 if __name__ == '__main__':
     main()

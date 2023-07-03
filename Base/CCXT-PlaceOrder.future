@@ -87,6 +87,13 @@ def main():
 
     relay.JRLog.Write('PlaceOrder FUTURE '+relay.Version)
 
+    # Check for OneShot situation
+
+    if ("Conditional" in relay.Active or "Conditional" in relay.Order) \
+    and ("ConditionalOneShot" in relay.Active or "ConditionalOneShot" in relay.Order):
+        if relay.OliverTwistOneShot(relay.Order)==True:
+            relay.JRLog.Error("Conditional OneShot", f"{relay.Order['Exchange']}/{relay.Order['Account']}/{relay.Order['Asset']} already being managed by OliverTwist ")
+
     # Now lets get down to business. The processed order is in:
     #    relay.Order
 
