@@ -677,7 +677,7 @@ class ccxtCrypto:
         Orphan['Order']=json.dumps(Order)
 
         orphanLock.Lock()
-        JRRsupport.AppendFile(OrphanReceiver,json.dumps(Orphan))
+        JRRsupport.AppendFile(OrphanReceiver,json.dumps(Orphan)+'\n')
         orphanLock.Unlock()
 
     # Create a conditional order and deliver to OliverTwist
@@ -686,7 +686,10 @@ class ccxtCrypto:
         ConditionalReceiver=self.DataDirectory+'/OliverTwist.Conditional.Receiver'
         orphanLock=JRRsupport.Locker("OliverTwist")
 
-        resp=Order['Response']
+        if type(Order['Response'])==dict:
+            resp=json.dumps(Order['Response'])
+        else:
+            resp=Order['Response']
         Order.pop('Response',None)
 
         # Strip Identity
@@ -702,7 +705,7 @@ class ccxtCrypto:
         Conditional['Response']=resp
 
         orphanLock.Lock()
-        JRRsupport.AppendFile(ConditionalReceiver,json.dumps(Conditional))
+        JRRsupport.AppendFile(ConditionalReceiver,json.dumps(Conditional)+'\n')
         orphanLock.Unlock()
 
     # Make ledger entry. Record everything for accounting purposes

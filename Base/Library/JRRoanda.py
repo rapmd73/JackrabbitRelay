@@ -470,6 +470,8 @@ class oanda:
 
         return None
 
+    # Make an orphan order
+
     def MakeOrphanOrder(self,id,Order):
         OrphanReceiver=self.DataDirectory+'/OliverTwist.Orphan.Receiver'
         orphanLock=JRRsupport.Locker("OliverTwist")
@@ -486,7 +488,7 @@ class oanda:
         Orphan['Order']=json.dumps(Order)
 
         orphanLock.Lock()
-        JRRsupport.AppendFile(OrphanReceiver,json.dumps(Orphan))
+        JRRsupport.AppendFile(OrphanReceiver,json.dumps(Orphan)+'\n')
         orphanLock.Unlock()
 
     # Create a conditional order and deliver to OliverTwist
@@ -511,7 +513,7 @@ class oanda:
         Conditional['Response']=resp
 
         orphanLock.Lock()
-        JRRsupport.AppendFile(ConditionalReceiver,json.dumps(Conditional))
+        JRRsupport.AppendFile(ConditionalReceiver,json.dumps(Conditional)+'\n')
         orphanLock.Unlock()
 
     # Make ledger entry with every detail.

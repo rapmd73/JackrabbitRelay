@@ -65,6 +65,10 @@ def main():
         print("Exchange/Broker and account must be provided.")
         sys.exit(0)
 
+    srch=None
+    if len(sys.argv)>3:
+        srch=sys.argv[3]
+
     OliverTwistLock.Lock()
     if os.path.exists(ConditionalStorehouse):
         buffer=JRRsupport.ReadFile(ConditionalStorehouse)
@@ -92,13 +96,19 @@ def main():
             if Order['Exchange']!=exchange or Order['Account']!=account:
                 continue
 
+            if srch!=None and Order['Asset']!=srch:
+                continue
+
             price=0
             amount=0
 
             # Cache and remember these data points. Exchanges like phemex will draw the program into oblivion otherwise from
             # the rtelimits. This only works because we are filtering based upon exchange and account.
 
-            relay=JRR.JackrabbitRelay(framework=Data['Framework'],payload=json.dumps(Order))
+            if relay==None:
+                relay=JRR.JackrabbitRelay(framework=Data['Framework'],payload=json.dumps(Order),NoIdentityVerification=True)
+            else:
+                relay.ProcessPayload(NewPayload=json.dumps(Order))
             if oldAsset==None or oldAsset!=relay.Order['Asset']:
                 ticker=relay.GetTicker(symbol=relay.Order['Asset'])
                 oldAsset=relay.Order['Asset']
@@ -106,7 +116,11 @@ def main():
             # Handle each framework type
 
             if Data['Framework']=='ccxt':
-                Resp=Data['Response']
+                id=Data['ID']
+                if type(Data['Response'])==str:
+                    Resp=json.loads(Data['Response'])
+                else:
+                    Resp=Data['Response']
                 Detail=Resp['Details']
                 price=Detail['price']
                 amount=Detail['amount']
@@ -120,7 +134,7 @@ def main():
 
                 tp=round(CalculatePriceExit(Order,'TakeProfit',dir,price),8)
                 sl=round(CalculatePriceExit(Order,'StopLoss',dir,price),8)
-                print(f"{Order['Asset']:20} {sl:.8f} {tprice:.8f}({price:.8f}) {tp:.8f} {amount:.8f} {dir}")
+                print(f"{id} {Order['Asset']:14} {sl:.8f} {tprice:.8f}({price:.8f}) {tp:.8f} {amount:.8f} {dir}")
             elif Data['Framework']=='oanda':
                 Resp=Data['Response']
                 id=Data['ID']

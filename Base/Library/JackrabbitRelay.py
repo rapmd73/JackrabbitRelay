@@ -104,7 +104,7 @@ class JackrabbitLog:
 class JackrabbitRelay:
     def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,secondary=None,NoIdentityVerification=False):
         # All the default locations
-        self.Version="0.0.0.1.340"
+        self.Version="0.0.0.1.370"
         self.BaseDirectory='/home/JackrabbitRelay2/Base'
         self.ConfigDirectory='/home/JackrabbitRelay2/Config'
         self.DataDirectory="/home/JackrabbitRelay2/Data"
@@ -412,7 +412,9 @@ class JackrabbitRelay:
 
     # Process and validate the order payload
 
-    def ProcessPayload(self):
+    def ProcessPayload(self,NewPayload=None):
+        if NewPayload!=None:
+            self.Payload=NewPayload
         if self.Payload==None or self.Payload.strip()=='':
             self.JRLog.Error('Processing Payload','Empty payload')
 
@@ -744,3 +746,41 @@ class JackrabbitRelay:
     def WriteLedger(self,**kwargs):
         self.Results=self.Broker.WriteLedger(**kwargs,LedgerDirectory=self.LedgerDirectory)
         self.EnforceRateLimit()
+
+    # See if an order is already in Oliver Twist for Exchange/Account/Pair. This is to allow ONLY ONE order at a time.
+
+    def OliverTwistOneShot(self,CompareOrder):
+        fList=[self.DataDirectory+'/OliverTwist.Conditional.Receiver',self.DataDirectory+'/OliverTwist.Conditional.Storehouse']
+        orphanLock=JRRsupport.Locker("OliverTwist")
+
+        orphanLock.Lock()
+        for fn in fList:
+            if os.path.exists(fn):
+                buffer=JRRsupport.ReadFile(fn)
+                if buffer!=None and buffer!='':
+                    Orphans=buffer.split('\n')
+                    for Entry in Orphans:
+                        # Force set InMotion to False
+                        Entry=Entry.strip()
+                        if Entry=='':
+                            continue
+                        # Break down entry and set up memory locker
+                        try:
+                            Orphan=json.loads(Entry)
+                        except:
+                            continue
+
+                        if 'Order' in Orphan:
+                            if type(Orphan['Order'])==str:
+                                order=json.loads(Orphan['Order'])
+                            else:
+                                order=Orphan['Order']
+                            if CompareOrder['Exchange']==order['Exchange'] \
+                            and CompareOrder['Account']==order['Account'] \
+                            and CompareOrder['Asset']==order['Asset']:
+                                orphanLock.Unlock()
+                                return True
+
+        # Not Found
+        orphanLock.Unlock()
+        return False

@@ -7,16 +7,23 @@
 
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
-from multiprocessing import current_process, active_children
 import os
 import signal
+import psutil
 import datetime
 import time
 import random
 import socket
 import json
-import psutil
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import sys
+import os
 import signal
+import time
+import random
 
 # Signal Interceptor for critical areas
 
@@ -25,39 +32,52 @@ import signal
 # and things go south real quick. Extra care MUST BE and IS taken to stay away from INIT.
 
 class SignalInterceptor():
-    def __init__(self,Log=None):
-        # Signals not to trap
+    def __init__(self,Log=None,IsMain=True):
+        # Signals not to trap, list(signal.Signals)
         noTrap=[signal.SIGCHLD,signal.SIGCONT,signal.SIGTSTP,signal.SIGWINCH]
-        # list(signal.Signals)
+
         self.critical=False
+        self.IsParent=False
+        self.IsChild=False
         self.original={}
         self.triggered={}
         self.Log=Log
 
-        if current_process().name=='MainProcess':
+        if IsMain==True:
+            self.IsParent=True
             self.parent_id=os.getpid()
         else:
+            self.IsChild=True
             self.parent_id=os.getppid()
             # Stay away from INIT
             if self.parent_id==1:
                 self.parent_id=os.getpid()
 
         # Set all signals to myself.
+
         for sig in signal.valid_signals():
             self.triggered[sig]=False
             try:
                 self.original[sig]=signal.getsignal(sig)
-                if current_process().name=='MainProcess':
+                if IsMain==True:
                     if sig not in noTrap:
                         signal.signal(sig,self.ProcessSignal)
                 else: # Reset child process
                     signal.signal(sig,signal.SIG_IGN)
             except:
                 pass
+
         # Prent gets task of killing dead child processes
-        if current_process().name=='MainProcess':
-            signal.signal(signal.SIGALRM,self.mpCleaner)
-            signal.alarm(3)
+
+        if IsMain==True:
+            signal.signal(signal.SIGCHLD,self.SignalChild)
+
+    # For use with Jackrabbit Relay
+
+    def SetLog(self,Log=None):
+        self.Log=Log
+
+    # If a logging has ben set, use it. Otherwise, just print to screen.
 
     def ShowSignalMessage(self,lm):
         if self.Log!=None:
@@ -65,71 +85,47 @@ class SignalInterceptor():
         else:
             print(lm)
 
+    # Exit the program. If parent, exit child processes. If Child, signal siblings and parent
+
     def SignalInterrupt(self,signal_num):
         mypid=os.getpid()
         self.ShowSignalMessage(f'Parent: {self.parent_id} self: {mypid}')
 
-        # Only parent takes to children
         parent = psutil.Process(self.parent_id)
-        if self.parent_id==mypid and len(parent.children())>1:
-            if len(parent.children(recursive=True))>1:
-                for child in parent.children(recursive=True):
-                    if child.pid!=mypid:
-                        self.ShowSignalMessage(f'Exiting child: {child.pid}')
-                        # send signal to children
-                        os.kill(child.pid,9)
-                        active_children()
+        nChildren=len(parent.children(recursive=False))
+
+        # Only parent takes to children
+        if self.parent_id==mypid and nChildren>0:
+            for child in parent.children(recursive=False):
+                if child.pid!=mypid:
+                    self.ShowSignalMessage(f'Signaling child: {child.pid}')
+                    # send signal to children
+                    os.kill(child.pid,2)
 
         # Don't touch INIT. Child tells parent there is a problem
         if self.parent_id!=1 and self.parent_id!=mypid:
             self.ShowSignalMessage(f'Signal parent: {self.parent_id}')
             os.kill(self.parent_id,2)
 
-        # If I am the parent, give the children time to wrap it up
-        if current_process().name!='MainProcess':
-            c=0
-            while c<3:
-                active_children()
-                ElasticSleep(1)
-                c+=1
-            self.ZombieHunter()
-
         # Shut it all down
-        if self.parent_id==mypid and len(parent.children())>1:
+        if self.parent_id==mypid and self.IsParent and nChildren>0:
             self.ShowSignalMessage(f'Exiting parent: {mypid}')
-        elif self.parent_id==mypid:
-            self.ShowSignalMessage(f'Exiting self: {mypid}')
-        else:
+        elif self.parent_id==mypid and self.IsChild:
             self.ShowSignalMessage(f'Exiting child: {mypid}')
+        else:
+            self.ShowSignalMessage(f'Exiting self: {mypid}')
         os.kill(mypid,9)
 
-    def SetLog(self,Log=None):
-        self.Log=Log
+    # Signal handler for child process exit
 
-    def Critical(self,IsCrit=False):
-        # Check is there is a trigger. If a signal is triggered, safely exit BEFORE critical event
-        if IsCrit==True and self.critical==False:
-            for sig in signal.valid_signals():
-                if self.triggered[sig]==True:
-                    self.SafeExit()
-        self.critical=IsCrit
+    def SignalChild(self,signum,frame):
+        try:
+            # Check if any child processes have exited
+            pid, exit_code=os.waitpid(-1,os.WNOHANG)
+        except:
+            pass
 
-    # There HAS TO BE better ways then this brute force way of cleaning up after multiprocessing for crashed/exited/dead child
-    # processes.
-
-    def ZombieHunter(self):
-        init=psutil.Process(1)
-        for child in init.children():
-            cmd=child.cmdline()
-            for i in range(len(cmd)):
-                if 'from multiprocessing.resource_tracker import main;main' in cmd[i] \
-                or 'from multiprocessing.spawn import spawn_main; spawn_main' in cmd[i]:
-                    os.kill(child.pid,9)
-
-    def mpCleaner(self,signum,frame):
-        active_children()
-        self.ZombieHunter()
-        signal.alarm(13)
+    # We received a signal, process it.
 
     def ProcessSignal(self,signum,frame):
         self.ShowSignalMessage(f'Interceptor Signal: {signum} In Critical: {self.critical}')
@@ -137,9 +133,13 @@ class SignalInterceptor():
         if self.critical==False:
             self.SafeExit()
 
+    # Force reset all signal statess
+
     def ResetSignals(self):
         for sig in signal.valid_signals():
             self.triggered[sig]=False
+
+    # Restore the original signal handlers
 
     def RestoreOriginalSignals(self):
         for sig in signal.valid_signals():
@@ -148,8 +148,29 @@ class SignalInterceptor():
             except:
                 pass
 
+    # Ignore all signals, for child process
+
+    def IgnoreSignals(self):
+        for sig in signal.valid_signals():
+            try:
+                signal.signal(sig,signal.SIG_IGN)
+            except:
+                pass
+
+    # Has a single signal been triggered?
+
     def Triggered(self,signum):
         return self.triggered[signum]
+
+    # Has ANY supported signal been triggered?
+
+    def AnyTriggered(self):
+        for sig in signal.valid_signals():
+            if self.triggered[sig]==True:
+                return True
+        return False
+
+    # A safe way to exit the program is it is not in a critical situation.
 
     def SafeExit(self,now=False):
         for sig in signal.valid_signals():
@@ -157,6 +178,55 @@ class SignalInterceptor():
                 if now==True:
                     sig=9
                 self.SignalInterrupt(sig)
+
+    # Set whether we are entering a critical area where signals will be ignored, like writing file data.
+
+    def Critical(self,IsCrit=False):
+        # Check is there is a trigger. If a signal is triggered, safely exit BEFORE critical event
+        if IsCrit==True and self.critical==False and self.AnyTriggered()==True:
+            self.SafeExit()
+        self.critical=IsCrit
+
+    # Return the number of child processes. Needed for large lists of tasks to be completed.
+
+    def GetChildren(self):
+        parent = psutil.Process(self.parent_id)
+        return len(parent.children(recursive=False))
+
+    # Crude way to tell if this process or function is a child or the parent
+
+    def WhoAmI(self):
+        if self.IsParent:
+            return "Parent"
+        elif self.IsChild:
+            return "Child"
+        else:
+            return "Orphan"
+
+    # Very simple multiprocessing methodology.
+
+    def StartProcess(self,func,args=None,kwargs=None):
+        if args==None:
+            args=[]
+        if kwargs==None:
+            kwargs={}
+
+        pid=os.fork()
+        if pid==0:
+            self.IsParent=False
+            self.IsChild=True
+            self.IgoreSignals()
+            # Child process
+            try:
+                # Call the function with the provided arguments
+                func(*args, **kwargs)
+                sys.exit(0)
+            except Exception as e:
+                # Handle child process error
+                sys.exit(1)
+
+        # Parent process
+        return pid
 
 # Reusable file locks, using atomic operations
 # NOT suitable for distributed systems or
@@ -861,4 +931,8 @@ class TimedList():
             self.fw.Unlock()
         except:
             self.fw.Unlock()
+
+###
+### End of module
+###
 

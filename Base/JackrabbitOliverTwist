@@ -33,13 +33,12 @@ import os
 import time
 import json
 import random
-import multiprocessing
 import subprocess
 
 import JRRsupport
 import JackrabbitRelay as JRR
 
-Version="0.0.0.1.340"
+Version="0.0.0.1.370"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -51,24 +50,23 @@ OrphanReceiver=DataDirectory+'/OliverTwist.Orphan.Receiver'
 ConditionalStorehouse=DataDirectory+'/OliverTwist.Conditional.Storehouse'
 OrphanStorehouse=DataDirectory+'/OliverTwist.Orphans.Storehouse'
 
-# This keeps track of all sub-processes for cleanup
-
-PoolResults=[]
-
 # Set up the logging system
 
 JRLog=JRR.JackrabbitLog()
 
 # Set up signal interceptor
 
-interceptor=JRRsupport.SignalInterceptor(Log=JRLog)
+if __name__=='__main__':
+    interceptor=JRRsupport.SignalInterceptor(Log=JRLog,IsMain=True)
+else:
+    interceptor=JRRsupport.SignalInterceptor(Log=JRLog,IsMain=False)
 
 # The timeout setting for the memory locks. If it takes longer then 15 minutes to
 # check the status of an order, there is a major problem with the exchange/broker.
 # Testing has show that only a few seconds is actually requred. The extended amount
 # is just to compensate for an overloaded server.
 
-OliverTwistTimeout=(1*60)
+OliverTwistTimeout=(15*60)
 
 # This lock guards the lists. Both PlaceOrder.olivertwist and
 # JackrabbitOliverTwist will access this file. Collisions must not be allowed to
@@ -129,112 +127,6 @@ def GetID():
         pw+=oc
     return pw
 
-# Receive an update on an orphan and update, delete, or add to the main list. This is NOT part of the
-# main process, but rather a child process. NONE o the global or main variables are available. The ONLY
-# information know is what is EXPLICTLY given.
-
-def OrphanUpdate(result):
-    global JRLog
-
-    if result!=None:
-        # result in JSON format
-        # Locking required to protect memory structures
-
-        # At this stage, rData should NEVER be None or undefined. If it is, then
-        # memory was thrashed.
-
-        try:
-            rData=json.loads(result)
-        except:
-            #JRLog.Write(f"OrphanUpdate ERROR: |{result}|",stdOut=False)
-            return
-
-        OliverTwistLock=JRRsupport.Locker("OliverTwist",ID=rData['lID'])
-        if rData['Class']=='Orphan':
-            OrphanMemory=JRRsupport.Locker(rData['Key'],ID=rData['mID'])
-        else:
-            ConditionalMemory=JRRsupport.Locker(rData['Key'],ID=rData['mID'])
-        OliverTwistLock.Lock()
-
-        # if returned status is open, replace the response, if it has
-        # changed or the orphan record doesn't have a response
-
-        rStatus=rData['Status'].lower()
-        if rStatus!='delete': # open/pnding
-            # Nothing changed, go back to waiting
-            if rData['Class']=='Orphan':
-                OrphanMemory.Put(OliverTwistTimeout,"Waiting")
-            else:
-                ConditionalMemory.Put(OliverTwistTimeout,"Waiting")
-        # if the status returnd is delete, flag for parent
-        # do NOT delete here, will trash orphan list.
-        elif rStatus=='delete': # or closed
-            if rData['Class']=='Orphan':
-                OrphanMemory.Put(OliverTwistTimeout,"Delete")
-            else:
-                ConditionalMemory.Put(OliverTwistTimeout,"Delete")
-        else:
-            JRLog.Write(f"ERROR: {rStatus}/rdata['Class']/{rData['Key']}",stdOut=False)
-        OliverTwistLock.Unlock()
-
-# This spins up the orphan manager to ensure each orphan is handled. This is NOT part of the main process, but rather a child
-# process. NONE o the global or main variables are available. The ONLY information know is what is EXPLICTLY given.
-
-# An Orphan transactor will process orphans. A relatively easy process compared to the Conditional transactor. The Condiional
-# transactor will need to back feed orders into Relay, usingsimilat techniques compared to the PlaceOrder system. The
-# Conditional framework will be a logistical nightmare. Emphasis has to be on speed in processing the conditions.
-
-def ProcessOrphan(Orphan):
-    global JRLog
-
-    # Figure out which transactor is needed
-    if Orphan['Class']=='Orphan':
-        OrphanManager=BaseDirectory+'/Orphan.'+Orphan['Framework']
-    else:
-        OrphanManager=BaseDirectory+'/Conditional.'+Orphan['Framework']
-
-    # Diagnostics only
-    # fn=f"/tmp/{Orphan['Framework']},{Orphan['Key']}.OliverTwist"
-    # if not os.path.exists(fn):
-    #     JRRsupport.WriteFile(fn,json.dumps(Orphan)+'\n')
-
-    if os.path.exists(OrphanManager):
-        transactor=[ OrphanManager ]
-
-        # Time to get down to business
-
-        try:
-            payload=json.dumps(Orphan).encode()
-#            if Orphan['Class']=='Conditional':
-#                JRRsupport.WriteFile('x9',json.dumps(Orphan))
-#                sys.exit(3)
-#            JRLog.Write(f"{payload}",stdOut=False)
-
-            subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-            subp.stdin.write(payload)
-            res=subp.communicate()[0].decode().strip()
-
-            # response will be proper json
-            return res
-        except:
-            # This should never happen, but if it dowes, go back to waiting state
-            if rdata['Class']=='Orphan':
-                OrphanMemory=JRRsupport.Locker(Orphan['Key'],ID=Orphan['mID'])
-                OrphanMemory.Put(OliverTwistTimeout,"Waiting")
-            else:
-                ConditionalMemory=JRRsupport.Locker(Orphan['Key'],ID=Orphan['mID'])
-                ConditionalMemory.Put(OliverTwistTimeout,"Waiting")
-            return None
-
-    # This should never happen, but if it dowes, go back to waiting state
-    if rdata['Class']=='Orphan':
-        OrphanMemory=JRRsupport.Locker(Orphan['Key'],ID=Orphan['mID'])
-        OrphanMemory.Put(OliverTwistTimeout,"Waiting")
-    else:
-        ConditionalMemory=JRRsupport.Locker(Orphan['Key'],ID=Orphan['mID'])
-        ConditionalMemory.Put(OliverTwistTimeout,"Waiting")
-    return None
-
 # Read the complete list stored on disk, if it exists. Supports both orphans and conditionals.
 
 def ReadOrphanList(cl=None):
@@ -291,7 +183,7 @@ def ReadOrphanList(cl=None):
                     OrphanList.insert(json.dumps(Orphan))
 
                     OrphanMemory[Orphan['Key']]=JRRsupport.Locker(Orphan['Key'])
-                    OrphanMemory[Orphan['Key']].Put(OliverTwistTimeout,"Waiting")
+                    OrphanMemory[Orphan['Key']].Put(OliverTwistTimeout*100,"Waiting")
 
                     OrphanListChanged=True
                 else:
@@ -299,7 +191,7 @@ def ReadOrphanList(cl=None):
                     ConditionalList.insert(json.dumps(Orphan))
 
                     ConditionalMemory[Orphan['Key']]=JRRsupport.Locker(Orphan['Key'])
-                    ConditionalMemory[Orphan['Key']].Put(OliverTwistTimeout,"Waiting")
+                    ConditionalMemory[Orphan['Key']].Put(OliverTwistTimeout*100,"Waiting")
 
                     ConditionalListChanged=True
 
@@ -380,7 +272,7 @@ def ReceiveOrphans(cl):
                 try:
                     Orphan=json.loads(Entry)
                 except:
-#                    JRLog.Write(f"Bad orphan: {Entry}")
+                    JRLog.Write(f"Broken: {Entry}")
                     continue
 
                 if 'Order' in Orphan:
@@ -400,28 +292,82 @@ def ReceiveOrphans(cl):
                     OrphanList.insert(json.dumps(Orphan))
 
                     OrphanMemory[Orphan['Key']]=JRRsupport.Locker(Orphan['Key'])
-                    OrphanMemory[Orphan['Key']].Put(OliverTwistTimeout,"Waiting")
+                    OrphanMemory[Orphan['Key']].Put(OliverTwistTimeout*100,"Waiting")
                     OrphanListChanged=True
                 else:
                     Orphan['Class']='Conditional'
                     ConditionalList.insert(json.dumps(Orphan))
 
                     ConditionalMemory[Orphan['Key']]=JRRsupport.Locker(Orphan['Key'])
-                    ConditionalMemory[Orphan['Key']].Put(OliverTwistTimeout,"Waiting")
+                    ConditionalMemory[Orphan['Key']].Put(OliverTwistTimeout*100,"Waiting")
                     ConditionalListChanged=True
 
                 rc+=1
-            JRLog.Write(f"{rc} {cl.lower()}n(s) received")
+            if rc>0:
+                JRLog.Write(f"{rc} {cl.lower()}n(s) received")
     OliverTwistLock.Unlock()
+
+# This spins up the orphan manager to ensure each orphan is handled. This is NOT part of the main process, but rather a child
+# process. NONE o the global or main variables are available. The ONLY information know is what is EXPLICTLY given.
+
+# An Orphan transactor will process orphans. A relatively easy process compared to the Conditional transactor. The Condiional
+# transactor will need to back feed orders into Relay, usingsimilat techniques compared to the PlaceOrder system. The
+# Conditional framework will be a logistical nightmare. Emphasis has to be on speed in processing the conditions.
+
+def ProcessOrphan(**kwargs):
+    global JRLog
+
+    # The entire kwargs payload is the orphan JSON...
+    Orphan=kwargs
+
+    # Figure out which transactor is needed
+    if Orphan['Class']=='Orphan':
+        OrphanManager=BaseDirectory+'/Orphan.'+Orphan['Framework']
+    else:
+        OrphanManager=BaseDirectory+'/Conditional.'+Orphan['Framework']
+
+    # Diagnostics only
+    # fn=f"/tmp/{Orphan['Framework']},{Orphan['Key']}.OliverTwist"
+    # if not os.path.exists(fn):
+    #     JRRsupport.WriteFile(fn,json.dumps(Orphan)+'\n')
+
+    if os.path.exists(OrphanManager):
+        transactor=[ OrphanManager ]
+
+        # Time to get down to business
+
+        try:
+            payload=json.dumps(Orphan).encode()
+#            if Orphan['Class']=='Conditional':
+#                JRRsupport.WriteFile('x9',json.dumps(Orphan))
+#                sys.exit(3)
+#            JRLog.Write(f"{payload}",stdOut=False)
+
+            subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            subp.stdin.write(payload)
+            subp.communicate() # [0].decode().strip()
+
+            # response will be in Jackrabbit Locker as a memory element
+            return None
+        except Exception as e:
+            # This should never happen, but if it dowes, go back to waiting state. Class doesn't matter here
+            Memory=JRRsupport.Locker(Orphan['Key'],ID=Orphan['mID'])
+            Memory.Put(OliverTwistTimeout*100,"Waiting")
+            return None
+
+    # This should never happen, but if it dowes, go back to waiting state. Class doesn't matter here
+    Memory=JRRsupport.Locker(Orphan['Key'],ID=Orphan['mID'])
+    Memory.Put(OliverTwistTimeout*100,"Waiting")
+    return None
 
 # Process each child. Handles both orphans and conditionals
 #
 # memData will be eithewr OrphanMemory or ConfitionalMemory
 
-def ProcessChild(ProcessPool,CurList,cur,memData,CurListChanged):
-    global PoolResults
-
+def ProcessChild(CurList,cur,memData,CurListChanged):
     data=json.loads(cur.GetData())
+
+    # Get result from Locker
 
     OliverTwistLock.Lock()
     sData=json.loads(memData[data['Key']].Get())
@@ -477,18 +423,18 @@ def ProcessChild(ProcessPool,CurList,cur,memData,CurListChanged):
         if status=='waiting':
             data['lID']=OliverTwistLock.ID
             data['mID']=memData[data['Key']].ID
-            memData[data['Key']].Put(OliverTwistTimeout,"Running")
-            PoolResults.append(ProcessPool.apply_async(ProcessOrphan,args=(data,),callback=OrphanUpdate))
-
-            # Process any signals received during critical section
-            interceptor.SafeExit()
-        # Clean up dead processes
-        multiprocessing.active_children()
-
+            memData[data['Key']].Put(OliverTwistTimeout*100,"Running")
+#            PoolResults.append(ProcessPool.apply_async(ProcessOrphan,args=(data,),callback=OrphanUpdate))
+            interceptor.StartProcess(ProcessOrphan,kwargs=data)
         cur=cur.GetNext()
         OliverTwistLock.Unlock()
 
-    return ProcessPool,CurList,cur,CurListChanged
+        # Process any signals received during critical section
+        interceptor.SafeExit()
+
+    # Return the updated list information
+
+    return CurList,cur,CurListChanged
 
 ###
 ### Main driver
@@ -506,14 +452,10 @@ def main():
 
     JRLog.Write('OliverTwist '+Version)
 
-    NumberProcesses=multiprocessing.cpu_count()
+    NumberProcesses=os.cpu_count()
     if len(sys.argv)>1:
         NumberProcesses=int(sys.argv[1])
         JRLog.Write(f'Spawning {NumberProcesses} sub-processes')
-
-    # Establish the process pool to handle the orphans
-    multiprocessing.set_start_method("spawn")
-    ProcessPool=multiprocessing.Pool(processes=NumberProcesses,maxtasksperchild=1)
 
     # Load saved orphans into memory
     ReadOrphanList('Orphan')
@@ -528,7 +470,7 @@ def main():
         ReceiveOrphans('Conditional')
         cor=ConditionalList.GetHead()
         while cor!=None:
-            ProcessPool,ConditionalList,cor,ConditionalListChanged=ProcessChild(ProcessPool,ConditionalList,cor,ConditionalMemory,ConditionalListChanged)
+            ConditionalList,cor,ConditionalListChanged=ProcessChild(ConditionalList,cor,ConditionalMemory,ConditionalListChanged)
 
             # Update Conditional storehouse, if needed
             if ConditionalListChanged==True:
@@ -536,6 +478,11 @@ def main():
                 WriteOrphanList('Conditional')
                 ConditionalListChanged=False
                 OliverTwistLock.Unlock()
+
+            # Only allow "NumberProcesses" children to run as once.
+
+            while interceptor.GetChildren()>(NumberProcesses-1):
+                JRRsupport.ElasticSleep(1)
 
         # Process any signals received during critical section
         interceptor.SafeExit()
@@ -547,7 +494,7 @@ def main():
         if cur==None:
            cur=OrphanList.GetHead()
 
-        ProcessPool,OrphanList,cur,OrphanListChanged=ProcessChild(ProcessPool,OrphanList,cur,OrphanMemory,OrphanListChanged)
+        OrphanList,cur,OrphanListChanged=ProcessChild(OrphanList,cur,OrphanMemory,OrphanListChanged)
 
         # Save the orphan list to disk, ONLY IF it actually changed
 
@@ -557,15 +504,13 @@ def main():
             OrphanListChanged=False
             OliverTwistLock.Unlock()
 
+        # Only allow "NumberProcesses" children to run as once.
+
+        while interceptor.GetChildren()>(NumberProcesses-1):
+            JRRsupport.ElasticSleep(1)
+
         # Process any signals received during critical section
         interceptor.SafeExit()
-
-        # every cycle, try to clean up any completed processes.
-
-        for res in list(PoolResults):
-            if not res.ready():
-                res.get(timeout=None)
-                PoolResults.remove(res)
 
         # Brief rest to maintain control over server
         JRRsupport.ElasticSleep(1)
