@@ -215,7 +215,7 @@ class SignalInterceptor():
         if pid==0:
             self.IsParent=False
             self.IsChild=True
-            self.IgoreSignals()
+            self.IgnoreSignals()
             # Child process
             try:
                 # Call the function with the provided arguments
