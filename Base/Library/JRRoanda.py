@@ -14,6 +14,7 @@ import json
 from datetime import datetime
 
 import oandapyV20
+import oandapyV20.definitions as V20Definitions
 import oandapyV20.endpoints
 import oandapyV20.contrib
 import oandapyV20.endpoints.accounts as v20Accounts
@@ -55,6 +56,7 @@ class oanda:
         self.AccessToken=self.Active['API']
         self.Log=self.Active['JRLog']
 
+        self.timeframes=V20Definitions.instruments.definitions['CandlestickGranularity']
         self.Notify=True
         self.Sandbox=False
         self.Results=None

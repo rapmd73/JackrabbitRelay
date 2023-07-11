@@ -38,7 +38,7 @@ import subprocess
 import JRRsupport
 import JackrabbitRelay as JRR
 
-Version="0.0.0.1.370"
+Version="0.0.0.1.375"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -49,6 +49,8 @@ OrphanReceiver=DataDirectory+'/OliverTwist.Orphan.Receiver'
 
 ConditionalStorehouse=DataDirectory+'/OliverTwist.Conditional.Storehouse'
 OrphanStorehouse=DataDirectory+'/OliverTwist.Orphans.Storehouse'
+
+NumberProcesses=os.cpu_count()
 
 # Set up the logging system
 
@@ -424,8 +426,8 @@ def ProcessChild(CurList,cur,memData,CurListChanged):
             data['lID']=OliverTwistLock.ID
             data['mID']=memData[data['Key']].ID
             memData[data['Key']].Put(OliverTwistTimeout*100,"Running")
-#            PoolResults.append(ProcessPool.apply_async(ProcessOrphan,args=(data,),callback=OrphanUpdate))
             interceptor.StartProcess(ProcessOrphan,kwargs=data)
+
         cur=cur.GetNext()
         OliverTwistLock.Unlock()
 
@@ -441,6 +443,7 @@ def ProcessChild(CurList,cur,memData,CurListChanged):
 ###
 
 def main():
+    global NumberProcesses
     global OliverTwistLock
     global OrphanList
     global OrphanMemory
@@ -452,10 +455,9 @@ def main():
 
     JRLog.Write('OliverTwist '+Version)
 
-    NumberProcesses=os.cpu_count()
     if len(sys.argv)>1:
         NumberProcesses=int(sys.argv[1])
-        JRLog.Write(f'Spawning {NumberProcesses} sub-processes')
+    JRLog.Write(f'Spawning {NumberProcesses} sub-processes')
 
     # Load saved orphans into memory
     ReadOrphanList('Orphan')
@@ -479,13 +481,13 @@ def main():
                 ConditionalListChanged=False
                 OliverTwistLock.Unlock()
 
+            # Process any signals received during critical section
+            interceptor.SafeExit()
+
             # Only allow "NumberProcesses" children to run as once.
 
             while interceptor.GetChildren()>(NumberProcesses-1):
                 JRRsupport.ElasticSleep(1)
-
-        # Process any signals received during critical section
-        interceptor.SafeExit()
 
         # Check for new orphans
         ReceiveOrphans('Orphan')

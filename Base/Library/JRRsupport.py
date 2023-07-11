@@ -173,6 +173,7 @@ class SignalInterceptor():
     # A safe way to exit the program is it is not in a critical situation.
 
     def SafeExit(self,now=False):
+        self.SignalChild(None,None)
         for sig in signal.valid_signals():
             if (self.triggered[sig]==True and self.critical==False) or now==True:
                 if now==True:
@@ -190,6 +191,7 @@ class SignalInterceptor():
     # Return the number of child processes. Needed for large lists of tasks to be completed.
 
     def GetChildren(self):
+        self.SignalChild(None,None)
         parent = psutil.Process(self.parent_id)
         return len(parent.children(recursive=False))
 
@@ -225,7 +227,7 @@ class SignalInterceptor():
                 # Handle child process error
                 sys.exit(1)
 
-        # Parent process
+        self.SignalChild(None,None)
         return pid
 
 # Reusable file locks, using atomic operations
