@@ -26,6 +26,8 @@ else:
 # Already loaded from login
 
 markets=relay.Markets
+timeframes=relay.Timeframes
+print(timeframes)
 
 if relay.GetFramework()=='oanda':
     for cur in markets:

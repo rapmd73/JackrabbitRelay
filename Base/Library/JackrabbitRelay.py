@@ -104,7 +104,7 @@ class JackrabbitLog:
 class JackrabbitRelay:
     def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,secondary=None,NoIdentityVerification=False):
         # All the default locations
-        self.Version="0.0.0.1.370"
+        self.Version="0.0.0.1.375"
         self.BaseDirectory='/home/JackrabbitRelay2/Base'
         self.ConfigDirectory='/home/JackrabbitRelay2/Config'
         self.DataDirectory="/home/JackrabbitRelay2/Data"
@@ -177,6 +177,9 @@ class JackrabbitRelay:
         # This is the Active API set for rotation and rotation count
         self.Active=[]
         self.CurrentKey=-1
+
+        # List of available timeframes on this exchange/broker. Will ne filled in be login process.
+        self.Timeframes=None
 
         # The current order being processed
         self.Order=None
@@ -629,8 +632,10 @@ class JackrabbitRelay:
 
         if self.Framework=='ccxt':
             self.Broker=JRRccxt.ccxtCrypto(self.Exchange,self.Config,self.Active,DataDirectory=self.DataDirectory)
+            self.Timeframes=list(self.Broker.Broker.timeframes.keys())
         elif self.Framework=='oanda':
             self.Broker=JRRoanda.oanda(self.Exchange,self.Config,self.Active,DataDirectory=self.DataDirectory)
+            self.Timeframes=list(self.Broker.timeframes.keys())
 
         self.Markets=self.Broker.Markets
 
