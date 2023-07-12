@@ -16,14 +16,9 @@ import random
 import socket
 import json
 
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# Get the starting nice value to measure and control OS load.
 
-import sys
-import os
-import signal
-import time
-import random
+MasterNice=os.getpriority(os.PRIO_PROCESS,0)
 
 # Signal Interceptor for critical areas
 
@@ -735,12 +730,25 @@ def GetLoadAVG():
 
 # Convert load average to seconds
 
+def renice(n):
+    try:
+        os.setpriority(os.PRIO_PROCESS,0,n)
+    except:
+        pass
+
 def ElasticSleep(s):
     throttle=0
     LoadAVG=GetLoadAVG()
     d=float(max(LoadAVG[0],LoadAVG[1],LoadAVG[2]))
-
     c=os.cpu_count()
+    n=os.getpriority(os.PRIO_PROCESS,0)
+
+    # if load is greater then the number of cpus, the renice to the lowest priority
+    if d>c:
+        renice(n+1)
+    else:
+        if n>MasterNice:
+            renice(n-1)
 
     # Convert lo into seconds
 

@@ -44,7 +44,7 @@ if [ x$1 != 'xnopull' ] ; then
     done
 fi
 
-NFS=`stat --printf="%s" install`
+NFS=`stat --printf="%s" /home/GitHub/JackrabbitRelay/install`
 
 if [ "$NFS" != "$OFS" ] ; then
     echo Running update again...
