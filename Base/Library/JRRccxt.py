@@ -314,47 +314,54 @@ class ccxtCrypto:
         return self.Results
 
     def GetTicker(self,**kwargs):
-        self.Results=self.API("fetch_ticker",**kwargs)
-        bid=self.Results['bid']
-        ask=self.Results['ask']
-        # Last resort
-        o=self.Results['open']
-        c=self.Results['close']
-
-        # Kucoin/Binance  system doesn't always give complete data
-        # This is an absolute crap way of faking it, but the only way I've come up with.
-
-        if (bid==None or ask==None):
-            # Worst case situation, pull the orderbook. takes at least 5 seconds.
+        if self.Broker.has['fetchTickers']==False:
             symbol=kwargs.get('symbol')
-            ob=self.GetOrderBook(symbol=symbol)
-            if (ob['bids']==None or ob['bids']==[]):
-                if (ob['asks']==None or ob['asks']==[]):
-                    bid=None
-                else:
-                    bid=ob['asks'][0][0]
-            else:
-                bid=ob['bids'][0][0]
+            tf=list(self.Broker.timeframes.keys())[0]
+            ohlcv=self.GetOHLCV(symbol=symbol,timeframe=tf,limit=1)
+            bid=ohlcv[0][4]
+            ask=ohlcv[0][1]
+        else:
+            self.Results=self.API("fetch_ticker",**kwargs)
+            bid=self.Results['bid']
+            ask=self.Results['ask']
+            # Last resort
+            o=self.Results['open']
+            c=self.Results['close']
 
-            if (ob['asks']==None or ob['asks']==[]):
+            # Kucoin/Binance  system doesn't always give complete data
+            # This is an absolute crap way of faking it, but the only way I've come up with.
+
+            if (bid==None or ask==None):
+                # Worst case situation, pull the orderbook. takes at least 5 seconds.
+                symbol=kwargs.get('symbol')
+                ob=self.GetOrderBook(symbol=symbol)
                 if (ob['bids']==None or ob['bids']==[]):
-                    ask=None
+                    if (ob['asks']==None or ob['asks']==[]):
+                        bid=None
+                    else:
+                        bid=ob['asks'][0][0]
                 else:
-                    ask=ob['bids'][0][0]
-            else:
-                ask=ob['asks'][0][0]
+                    bid=ob['bids'][0][0]
 
-        if (bid==None or ask==None):
-            if o!=None and c!=None:
-                bid=max(o,c)
-                ask=min(o,c)
-            else:
-                bid=0
-                ask=0
+                if (ob['asks']==None or ob['asks']==[]):
+                    if (ob['bids']==None or ob['bids']==[]):
+                        ask=None
+                    else:
+                        ask=ob['bids'][0][0]
+                else:
+                    ask=ob['asks'][0][0]
+
+            if (bid==None or ask==None):
+                if o!=None and c!=None:
+                    bid=max(o,c)
+                    ask=min(o,c)
+                else:
+                    bid=0
+                    ask=0
 
         Pair={}
-        Pair['Ask']=ask
-        Pair['Bid']=bid
+        Pair['Ask']=max(ask,bid)
+        Pair['Bid']=min(bid,ask)
         Pair['Spread']=Pair['Ask']-Pair['Bid']
 
         return Pair
