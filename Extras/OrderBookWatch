@@ -1,0 +1,268 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+# OANDA example unbounded grid bot.
+
+# This is a very simple grid bot using unbounded grids.
+
+# For demonstration purposes only.
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import gc
+import json
+import time
+import datetime
+import curses
+
+import JackrabbitRelay as JRR
+import JRRsupport
+
+interceptor=JRRsupport.SignalInterceptor()
+
+def ccxtOrderBook(screen,curses,orderbook,ticker,direction):
+        Blank=" "
+        xpos=0
+
+        BuyPrice=round(float(ticker['Ask']),8)
+        SellPrice=round(float(ticker['Bid']),8)
+
+        # Variables for order book
+
+        lp=0
+        sp=0
+        buyIDX=0
+        sellIDX=0
+        l=min(len(orderbook['asks']),len(orderbook['bids']))
+
+        obl=[]
+        oblB=[]
+        oblS=[]
+
+        # This table denotes the order book prices by volume. Prices are rounded to pips.
+        # 0 price
+        # 1 volume at given price
+        # 2 count
+        # 3 depth of market
+
+        BuyTable=[]
+
+        idx=0
+        ppB=0
+        ppS=0
+        for ob in range(l):
+            bprice=round(orderbook['bids'][ob][0],8)
+            buy=orderbook['bids'][ob][1] #*bprice
+
+            sprice=round(orderbook['asks'][ob][0],8)
+            sell=orderbook['asks'][ob][1] #*sprice
+
+            cpB=bprice
+            if ppB<BuyPrice and BuyPrice<=cpB:
+                buyIDX=idx
+
+            cpS=sprice
+            if ppS<SellPrice and SellPrice<=cpS:
+                sellIDX=idx
+
+            lp+=buy
+            sp+=sell
+
+            oblB.append([buy,bprice])
+            oblS.append([sell,sprice])
+            ppB=cpB
+            ppS=cpS
+            idx+=1
+
+        print(f"{Blank:4} {'Volume':>12} {'Buy':>12} {'Sell':>12} {'Volume':>12} {'Spread':>12}")
+        print(f"{Blank:4} {Blank:12} {BuyPrice:12.5f} {SellPrice:12.5f} {Blank:12} {BuyPrice-SellPrice:12.5f}")
+        print(f"{'-'*4:4} {'-'*12:12} {'-'*12:12} {'-'*12:12} {'-'*12:12} {'-'*12:12}")
+
+        c=1
+        maxBorders=0
+        maxSorders=0
+        maxBprice=0
+        maxSprice=0
+        for i in range(depth):
+            buy=oblB[buyIDX+i][0]
+            bprice=oblB[buyIDX+i][1]
+
+            sprice=oblS[sellIDX+i][1]
+            sell=oblS[sellIDX+i][0]
+
+            spread=sprice-bprice
+
+            if buy>maxBorders:
+                maxBorders=buy
+                maxBprice=bprice
+            if sell>maxSorders:
+                maxSorders=sell
+                maxSprice=sprice
+            print(f"{c:4} {buy:12.5f} {bprice:12.5f} {sprice:12.5f} {sell:12.5f} {spread:12.5f}")
+            c+=1
+
+        spread=maxSprice-maxBprice
+        print(f"{'-'*4:4} {'-'*12:12} {'-'*12:12} {'-'*12:12} {'-'*12:12} {'-'*12:12}")
+        print(f"MAX  {maxBorders:12.5f} {maxBprice:12.5f} {maxSprice:12.5f} {maxSorders:12.5f} {spread:12.5f}")
+
+def oandaOrderBook(screen,curses,relay,direction):
+        # Get orderbook
+        orderbook=relay.GetOrderBook(symbol=relay.GetAsset())
+
+        # Get the ticker
+
+        ticker=relay.GetTicker(symbol=relay.GetAsset())
+        BuyPrice=ticker['Bid']
+        SellPrice=ticker['Ask']
+
+        # Max Y/X limits
+
+        maxY,maxX=screen.getmaxyx()
+        xpos=0
+        ypos=int(maxY/2)
+
+        ###
+        ### Display order book
+        ###
+
+        Blank=" "
+
+        ### Get order book
+
+        lp=0
+        sp=0
+        l=len(orderbook)
+        buyIDX=0
+        sellIDX=0
+
+        obl=[]
+        pp=0
+        idx=0
+        fb=0
+        fs=0
+        for cur in orderbook:
+            buy=(float(cur['longCountPercent']))
+            price=round(float(cur['price']),4)
+            sell=(float(cur['shortCountPercent']))
+
+            fb+=buy
+            fs+=sell
+
+            cp=price
+            if pp<BuyPrice and BuyPrice<=cp:
+                buyIDX=idx-1
+            if pp<SellPrice and SellPrice<=cp:
+                sellIDX=idx
+
+            lp+=buy
+            sp+=sell
+
+            obl.append([buy,price,sell])
+            pp=cp
+            idx+=1
+
+        ### Print table
+
+        screen.addstr(0,xpos,f"{Blank:3} {'Volume':>12} {'Buy':>12} {'Sell':>12} {'Volume':>12} {'Spread':>12}",curses.color_pair(5)|curses.A_BOLD)
+        screen.addstr(1,xpos,f"{Blank:3} {Blank:6}{fb:5.2f}% {BuyPrice:12.5f} {SellPrice:12.5f} {Blank:6}{fs:5.2f}% {BuyPrice-SellPrice:12.5f}",curses.color_pair(6)|curses.A_BOLD)
+
+        if direction=='long':
+            screen.addstr(1,xpos+4,f"{Blank:6}{fb:5.2f}% {BuyPrice:12.5f}",curses.color_pair(3)|curses.A_BOLD)
+        else:
+            screen.addstr(1,xpos+30,f"{SellPrice:12.5f} {Blank:6}{fs:5.2f}%",curses.color_pair(3)|curses.A_BOLD)
+
+        depth=maxY-2
+
+        c=1
+        maxBorders=0
+        maxSorders=0
+        maxBprice=0
+        maxSprice=0
+        for i in range(depth):
+            buy=obl[buyIDX-i][0]
+            bprice=obl[buyIDX-i][1]
+            sprice=obl[sellIDX+i][1]
+            sell=obl[sellIDX+i][2]
+            if buy>maxBorders:
+                maxBorders=buy
+                maxBprice=bprice
+            if sell>maxSorders:
+                maxSorders=sell
+                maxSprice=sprice
+
+        for i in range(depth):
+            buy=obl[buyIDX-i][0]
+            bprice=obl[buyIDX-i][1]
+            sprice=obl[sellIDX+i][1]
+            sell=obl[sellIDX+i][2]
+            spread=sprice-bprice
+            screen.addstr(2+i,xpos,f"{c:3} {buy:12.5f} {bprice:12.5f} {sprice:12.5f} {sell:12.5f} {spread:12.5f}",curses.color_pair(4))
+            if bprice==maxBprice:
+                screen.addstr(2+i,xpos+4,f"{buy:12.5f} {bprice:12.5f}",curses.color_pair(2)|curses.A_BOLD)
+            elif sprice==maxSprice:
+                screen.addstr(2+i,xpos+30,f"{sprice:12.5f} {sell:12.5f}",curses.color_pair(2)|curses.A_BOLD)
+            c+=1
+
+###
+### Main code base.
+###
+
+def main(screen):
+    # Total screen width currently required is at least 125 columns for this program to function properly. This should be
+    # tested.
+
+    # Set up colors
+    curses.init_pair(1,curses.COLOR_RED,curses.COLOR_BLACK)
+    curses.init_pair(2,curses.COLOR_GREEN,curses.COLOR_BLACK)
+    curses.init_pair(3,curses.COLOR_YELLOW,curses.COLOR_BLACK)
+    curses.init_pair(4,curses.COLOR_WHITE,curses.COLOR_BLACK)
+    curses.init_pair(5,curses.COLOR_CYAN,curses.COLOR_BLUE)
+    curses.init_pair(6,curses.COLOR_CYAN,curses.COLOR_BLACK)
+    screen.clear()
+
+    relay=JRR.JackrabbitRelay()
+    if relay.GetArgsLen()>4:
+        exchangeName=relay.GetExchange()
+        account=relay.GetAccount()
+        asset=relay.GetAsset()
+        direction=sys.argv[4].lower()
+    else:
+        print("An exchange, (sub)account, an asset, and the direction of trade must be provided.")
+        sys.exit(1)
+
+    while True:
+        ###
+        ### Display order book
+        ###
+
+        ticker=relay.GetTicker(symbol=asset)
+        orderbook=relay.GetOrderBook(symbol=asset)
+
+        if orderbook==[]:
+            screen.addstr(5,xpos,f"Market closed, orderbook not available",curses.color_pair(4))
+
+            screen.refresh()
+            JRRsupport.ElasticSleep(1)
+            continue
+
+        if relay.GetFramework()=='ccxt':
+            ccxtOrderBook(screen,curses,orderbook,ticker,direction)
+        elif relay.GetFramework()=='oanda':
+            oandaOrderBook(screen,curses,relay,direction)
+
+        ###
+        ### Sleep
+        ###
+
+        screen.refresh()
+        JRRsupport.ElasticSleep(1)
+
+    # shut everything down
+    curses.endwin()
+
+curses.wrapper(main)
