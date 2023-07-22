@@ -318,8 +318,12 @@ class ccxtCrypto:
             symbol=kwargs.get('symbol')
             tf=list(self.Broker.timeframes.keys())[0]
             ohlcv=self.GetOHLCV(symbol=symbol,timeframe=tf,limit=1)
-            bid=ohlcv[0][4]
-            ask=ohlcv[0][1]
+            if ohlcv==[]:
+                bid=0
+                ask=0
+            else:
+                bid=ohlcv[0][4]
+                ask=ohlcv[0][1]
         else:
             self.Results=self.API("fetch_ticker",**kwargs)
             bid=self.Results['bid']

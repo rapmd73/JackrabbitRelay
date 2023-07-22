@@ -143,11 +143,16 @@ def main():
                     openTrades=relay.GetOpenTrades(symbol=Order['Asset'])
                 cid=relay.GetOrderDetails(OrderID=id)[-1]['id']
 
+                found=False
                 for cur in openTrades:
                     if cur['id']==cid:
+                        found=True
                         price=float(cur['price'])
                         amount=float(cur['currentUnits'])
                         break
+
+                if not found:
+                    continue
 
                 if amount>=0:
                     dir='long'
@@ -158,7 +163,7 @@ def main():
 
                 tp=round(CalculatePriceExit(Order,'TakeProfit',dir,price),5)
                 sl=round(CalculatePriceExit(Order,'StopLoss',dir,price),5)
-                print(f"{Order['Asset']:10} {sl:.5f} {tprice:.5f}({price:.5f}) {tp:.5f} {abs(amount):9.5f} {dir}")
+                print(f"{id:10} {Order['Asset']:10} {sl:.5f} {tprice:.5f}({price:.5f}) {tp:.5f} {abs(amount):9.5f} {dir}")
     else:
         print("No conditional orders yet.")
         sys.exit(0)
