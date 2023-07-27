@@ -139,6 +139,10 @@ def main():
         else:
             # Manage a single ticket
             openTrades=relay.GetOpenTrades(symbol=relay.Order['Asset'])
+            # no open trades
+            if openTrades==[]:
+                # Fall through. No order matching the ID.
+                FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],'Delete')
 
             for cur in openTrades:
                 if cur['id']==cid:

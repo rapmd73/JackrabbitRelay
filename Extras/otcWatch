@@ -139,12 +139,12 @@ def main():
                 Resp=Data['Response']
                 id=Data['ID']
 
-                if openTrades==None:
-                    openTrades=relay.GetOpenTrades(symbol=Order['Asset'])
+                openTrades=relay.GetOpenTrades(symbol=Order['Asset'])
                 cid=relay.GetOrderDetails(OrderID=id)[-1]['id']
 
                 found=False
                 for cur in openTrades:
+                    print(id,cid,cur['id'])
                     if cur['id']==cid:
                         found=True
                         price=float(cur['price'])
