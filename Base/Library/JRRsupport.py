@@ -27,26 +27,16 @@ MasterNice=os.getpriority(os.PRIO_PROCESS,0)
 # and things go south real quick. Extra care MUST BE and IS taken to stay away from INIT.
 
 class SignalInterceptor():
-    def __init__(self,Log=None,IsMain=True):
+    def __init__(self,Log=None,Ignore=False):
         # Signals not to trap, list(signal.Signals)
         noTrap=[signal.SIGCHLD,signal.SIGCONT,signal.SIGTSTP,signal.SIGWINCH]
 
         self.critical=False
-        self.IsParent=False
+        self.IsParent=True
         self.IsChild=False
         self.original={}
         self.triggered={}
         self.Log=Log
-
-        if IsMain==True:
-            self.IsParent=True
-            self.parent_id=os.getpid()
-        else:
-            self.IsChild=True
-            self.parent_id=os.getppid()
-            # Stay away from INIT
-            if self.parent_id==1:
-                self.parent_id=os.getpid()
 
         # Set all signals to myself.
 
@@ -54,18 +44,17 @@ class SignalInterceptor():
             self.triggered[sig]=False
             try:
                 self.original[sig]=signal.getsignal(sig)
-                if IsMain==True:
+                if not Ignore:
                     if sig not in noTrap:
                         signal.signal(sig,self.ProcessSignal)
-                else: # Reset child process
+                else:
+                    # Ignore and use SafeExit as alternative
                     signal.signal(sig,signal.SIG_IGN)
             except:
                 pass
 
-        # Prent gets task of killing dead child processes
-
-        if IsMain==True:
-            signal.signal(signal.SIGCHLD,self.SignalChild)
+        # Parent gets task of zombie watch
+        signal.signal(signal.SIGCHLD,self.SignalChild)
 
     # For use with Jackrabbit Relay
 
@@ -225,7 +214,7 @@ class SignalInterceptor():
         self.SignalChild(None,None)
         return pid
 
-# Reusable file locks, using atomic operations
+# Reusable file locks
 # NOT suitable for distributed systems or
 # Windows. Linux ONLY
 #
@@ -395,7 +384,7 @@ class Locker:
 def ReadFile(fn):
     if os.path.exists(fn):
         cf=open(fn,'r')
-        buffer=cf.read()
+        buffer=cf.read().strip()
         cf.close()
     else:
         buffer=None
@@ -405,6 +394,10 @@ def WriteFile(fn,data):
     cf=open(fn,'w')
     cf.write(data)
     cf.close()
+
+# Automatically adding a newline (\n) needs to be considered carefully as it may not be the best way of managing text files.
+# Even though putting newline at the end of every line that uses this is a pain, it is a consistency of intent that text is
+# being used bersus binary.
 
 def AppendFile(fn,data):
     cf=open(fn,'a')

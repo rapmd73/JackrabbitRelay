@@ -11,16 +11,17 @@ def GetRatio(decimal):
     ratio = 1 / decimal
     return f"{int(ratio):4}:1"
 
+def Help():
+    print("An exchange and an account must be provided.")
+    sys.exit(1)
+
 # Example usage
 
 def main():
-    relay=JRR.JackrabbitRelay()
-    if relay.GetArgsLen() > 2:
-        exchangeName=relay.GetExchange()
-        account=relay.GetAccount()
-    else:
-        print("An exchange and an account must be provided.")
-        sys.exit(1)
+    relay=JRR.JackrabbitRelay(Usage=Help)
+
+    exchangeName=relay.GetExchange()
+    account=relay.GetAccount()
 
     # Already loaded from login
 

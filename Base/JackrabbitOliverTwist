@@ -38,7 +38,7 @@ import subprocess
 import JRRsupport
 import JackrabbitRelay as JRR
 
-Version="0.0.0.1.385"
+Version="0.0.0.1.390"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -58,10 +58,7 @@ JRLog=JRR.JackrabbitLog()
 
 # Set up signal interceptor
 
-if __name__=='__main__':
-    interceptor=JRRsupport.SignalInterceptor(Log=JRLog,IsMain=True)
-else:
-    interceptor=JRRsupport.SignalInterceptor(Log=JRLog,IsMain=False)
+interceptor=JRRsupport.SignalInterceptor(Log=JRLog)
 
 # The timeout setting for the memory locks. If it takes longer then 15 minutes to
 # check the status of an order, there is a major problem with the exchange/broker.
