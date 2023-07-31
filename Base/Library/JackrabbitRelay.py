@@ -102,9 +102,10 @@ class JackrabbitLog:
 # relay=JackrabbitRelay()
 
 class JackrabbitRelay:
-    def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,secondary=None,NoIdentityVerification=False):
+    def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,secondary=None,NoIdentityVerification=False,Usage=None):
         # All the default locations
-        self.Version="0.0.0.1.385"
+        self.Version="0.0.0.1.390"
+        self.NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
         self.BaseDirectory='/home/JackrabbitRelay2/Base'
         self.ConfigDirectory='/home/JackrabbitRelay2/Config'
         self.DataDirectory="/home/JackrabbitRelay2/Data"
@@ -113,8 +114,10 @@ class JackrabbitRelay:
         self.LedgerDirectory="/home/JackrabbitRelay2/Ledger"
         self.StatisticsDirectory='/home/JackrabbitRelay2/Extras/Statistics'
         self.Identity=None
+        self.Usage=None
 
-        self.NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
+        if Usage!=None:
+            self.Usage=Usage
 
         # Turn off Identity verification
 
@@ -252,9 +255,15 @@ class JackrabbitRelay:
             if self.Framework!='virtual':
                 self.Login()
         elif self.Payload!=None:
-            self.JRLog.Error("Login","An exchange and an account must be provided")
+            if self.Usage:
+                self.Usage()
+            else:
+                self.JRLog.Error("Login","An exchange and an account must be provided")
         else:
-            self.JRLog.Error("Initialization","An exchange and an account must be provided")
+            if self.Usage:
+                self.Usage()
+            else:
+                self.JRLog.Error("Initialization","An exchange and an account must be provided")
 
     def GetExchange(self):
         return self.Exchange
@@ -561,6 +570,11 @@ class JackrabbitRelay:
     def ProcessCommandLine(self):
         self.args=sys.argv
         self.argslen=len(sys.argv)
+
+        # Clear the config arguments, otherwise the Relay method will try to process it.
+        # This is a royal PAIN IN THE ASS to debug.
+        for i in range(1,len(sys.argv)):
+            sys.argv.remove(sys.argv[1])
 
         # Set up exchange, account and asset
         if self.argslen>=1:
