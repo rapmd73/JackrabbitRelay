@@ -31,6 +31,7 @@ class SignalInterceptor():
         # Signals not to trap, list(signal.Signals)
         noTrap=[signal.SIGCHLD,signal.SIGCONT,signal.SIGTSTP,signal.SIGWINCH]
 
+        self.parent_id=os.getpid()
         self.critical=False
         self.IsParent=True
         self.IsChild=False
