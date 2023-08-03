@@ -104,7 +104,7 @@ class JackrabbitLog:
 class JackrabbitRelay:
     def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,secondary=None,NoIdentityVerification=False,Usage=None):
         # All the default locations
-        self.Version="0.0.0.1.390"
+        self.Version="0.0.0.1.391"
         self.NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
         self.BaseDirectory='/home/JackrabbitRelay2/Base'
         self.ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -571,11 +571,6 @@ class JackrabbitRelay:
         self.args=sys.argv
         self.argslen=len(sys.argv)
 
-        # Clear the config arguments, otherwise the Relay method will try to process it.
-        # This is a royal PAIN IN THE ASS to debug.
-        for i in range(1,len(sys.argv)):
-            sys.argv.remove(sys.argv[1])
-
         # Set up exchange, account and asset
         if self.argslen>=1:
             self.Basename=self.args[0]
@@ -595,6 +590,11 @@ class JackrabbitRelay:
             self.Asset=self.args[3].upper()
 
         self.SetupLogging()
+
+        # Clear the config arguments, otherwise the Relay method will try to process it.
+        # This is a royal PAIN IN THE ASS to debug.
+        for i in range(1,len(sys.argv)):
+            sys.argv.remove(sys.argv[1])
 
     # This if where things get messy. The basic API must have calls to
     # each framework buy uniform to the Relay core.

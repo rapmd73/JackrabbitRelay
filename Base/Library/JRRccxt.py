@@ -411,6 +411,7 @@ class ccxtCrypto:
         # ln=kwargs.get('LedgerNote')
         # Shorts are stored as negative numbers, abs() is a safety catch
         amount=float(self.Broker.amount_to_precision(pair,abs(float(kwargs.get('amount')))))
+        Quiet=kwargs.get('Quiet')
 
         params = {}
         order=None
@@ -460,7 +461,8 @@ class ccxtCrypto:
             # The details will be embedded into the response. This is CRITICAL for getting the strike price of
             # market orders.
             order['Details']=self.GetOrderDetails(id=order['id'],symbol=pair)
-            self.Log.Write("|- Order Confirmation ID: "+order['id'])
+            if Quiet!=True:
+                self.Log.Write("|- Order Confirmation ID: "+order['id'])
 
             #JRRledger.WriteLedger(pair, m, action, amount, price, order, ln)
             return order

@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+
+import JackrabbitRelay as JRR
+
+def Help():
+    print("An exchange, and (sub)account must be provided.")
+    sys.exit(1)
+
+relay=JRR.JackrabbitRelay(Usage=Help)
+exchangeName=relay.GetExchange()
+account=relay.GetAccount()
+
+markets=list(relay.Markets.keys())
+markets.sort()
+
+for asset in markets:
+    orders=relay.GetOpenTrades(symbol=asset)
+
+    for single in orders:
+        id=single['id']
+        iu=int(single['currentUnits'])
+        if iu<0:
+            amt='-ALL'
+        else:
+            amt='ALL'
+
+        result=relay.PlaceOrder(pair=asset,action="Sell",amount=amt,ticket=id,orderType="Market",Quiet=True)
+        print(f"{id:7} {asset:7}")
+
