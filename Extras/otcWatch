@@ -144,7 +144,6 @@ def main():
 
                 found=False
                 for cur in openTrades:
-                    print(id,cid,cur['id'])
                     if cur['id']==cid:
                         found=True
                         price=float(cur['price'])
