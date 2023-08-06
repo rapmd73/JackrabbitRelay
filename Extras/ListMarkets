@@ -11,7 +11,7 @@ def GetRatio(decimal):
     ratio = 1 / decimal
     return f"{int(ratio):4}:1"
 
-def Help():
+def Help(args,argslen):
     print("An exchange and an account must be provided.")
     sys.exit(1)
 
