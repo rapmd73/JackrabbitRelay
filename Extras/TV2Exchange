@@ -12,7 +12,7 @@ import json
 
 import JackrabbitRelay as JRR
 
-def Help():
+def Help(args,argslen):
     print("An exchange and an account must be provided.")
     sys.exit(1)
 

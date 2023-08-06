@@ -256,12 +256,12 @@ class JackrabbitRelay:
                 self.Login()
         elif self.Payload!=None:
             if self.Usage:
-                self.Usage()
+                self.Usage(self.args,self.argslen)
             else:
                 self.JRLog.Error("Login","An exchange and an account must be provided")
         else:
             if self.Usage:
-                self.Usage()
+                self.Usage(self.args,self.argslen)
             else:
                 self.JRLog.Error("Initialization","An exchange and an account must be provided")
 
