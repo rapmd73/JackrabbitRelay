@@ -104,7 +104,7 @@ class JackrabbitLog:
 class JackrabbitRelay:
     def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,secondary=None,NoIdentityVerification=False,Usage=None):
         # All the default locations
-        self.Version="0.0.0.1.395"
+        self.Version="0.0.0.1.400"
         self.NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
         self.BaseDirectory='/home/JackrabbitRelay2/Base'
         self.ConfigDirectory='/home/JackrabbitRelay2/Config'

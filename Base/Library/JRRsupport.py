@@ -730,33 +730,38 @@ def renice(n):
     except:
         pass
 
-def ElasticSleep(s):
-    throttle=0
-    LoadAVG=GetLoadAVG()
-    d=float(max(LoadAVG[0],LoadAVG[1],LoadAVG[2]))
-    c=os.cpu_count()
-    n=os.getpriority(os.PRIO_PROCESS,0)
+def ElasticSleep(s,Fuzzy=True):
+    # Do we want a fuzzy sleep or an exact sleep?
+    if Fuzzy:
+        throttle=0
+        LoadAVG=GetLoadAVG()
+        d=float(max(LoadAVG[0],LoadAVG[1],LoadAVG[2]))
+        c=os.cpu_count()
+        n=os.getpriority(os.PRIO_PROCESS,0)
 
-    # if load is greater then the number of cpus, the renice to the lowest priority
-    if d>c:
-        renice(n+1)
+        # if load is greater then the number of cpus, the renice to the lowest priority
+        if d>c:
+            renice(n+1)
+        else:
+            if n>MasterNice:
+                renice(n-1)
+
+        # Convert lo into seconds
+
+        i=int(d)
+        f=d-i
+
+        delay=i+(f/100)
+
+        # if load is greater then cpu count, begin throttling the delay factor.
+
+        if (d>c):
+            throttle=(d-c)*delay
+
+        time.sleep(s+delay+throttle)
     else:
-        if n>MasterNice:
-            renice(n-1)
+        time.sleep(s)
 
-    # Convert lo into seconds
-
-    i=int(d)
-    f=d-i
-
-    delay=i+(f/100)
-
-    # if load is greater then cpu count, begin throttling the delay factor.
-
-    if (d>c):
-        throttle=(d-c)*delay
-
-    time.sleep(s+delay+throttle)
 
 # Returns milliseconds
 
