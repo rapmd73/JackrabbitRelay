@@ -30,9 +30,9 @@ def GetPCTtype(currency):
     pct=float(vs)
     return pct,PCTtype
 
-def GetPCTvalue(pct,close,bal):
+def GetPCTvalue(pct,close,bal,mr):
     volume=round(((pct/100)*bal),8)
-    amount=round(volume/close,8)
+    amount=round((volume/close)/mr,8)
 
     return amount,volume
 
@@ -46,8 +46,9 @@ def GetPCTamount(relay,close):
 
     if "OverridePCTtable" not in relay.Active and "OverridePCTtable" not in relay.Order:
         bal=relay.GetBalance()
+        mr=float(relay.Markets[relay.Asset]['marginRate'])
         pct,PCTtype=GetPCTtype(relay.Order['Units'])
-        amount,volume=GetPCTvalue(pct,close,bal)
+        amount,volume=GetPCTvalue(pct,close,bal,mr)
 
         pctData={}
         pctData['PCT']=pct
@@ -63,7 +64,8 @@ def GetPCTamount(relay,close):
         amount=payload['Amount']
     else:
         bal=relay.GetBalance()
-        amount=round(((float(relay.Order[currency].replace('%',''))/100)*bal)/close,8)
+        mr=float(relay.Markets[relay.Asset]['marginRate'])
+        amount=round((((float(relay.Order[currency].replace('%',''))/100)*bal)/close)/mr,8)
     return amount
 
 def HighestLotSize(relay,asset,units,step):
