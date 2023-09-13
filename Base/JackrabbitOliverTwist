@@ -364,7 +364,7 @@ def ProcessOrphan(**kwargs):
 # memData will be eithewr OrphanMemory or ConfitionalMemory
 
 def ProcessChild(CurList,cur,memData,CurListChanged):
-    data=json.loads(node)
+    data=json.loads(cur.GetData())
 
     # Get result from Locker
 
