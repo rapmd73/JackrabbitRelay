@@ -314,54 +314,45 @@ class ccxtCrypto:
         return self.Results
 
     def GetTicker(self,**kwargs):
-        if self.Broker.has['fetchTickers']==False:
-            symbol=kwargs.get('symbol')
-            tf=list(self.Broker.timeframes.keys())[0]
-            ohlcv=self.GetOHLCV(symbol=symbol,timeframe=tf,limit=1)
-            if ohlcv==[]:
-                bid=0
-                ask=0
-            else:
-                bid=ohlcv[0][4]
-                ask=ohlcv[0][1]
-        else:
+        # Best case situation, exchange has a ticker api.
+
+        if self.Broker.has['fetchTickers']==True:
             self.Results=self.API("fetch_ticker",**kwargs)
+            print(self.Results)
             bid=self.Results['bid']
             ask=self.Results['ask']
-            # Last resort
-            o=self.Results['open']
-            c=self.Results['close']
-
-            # Kucoin/Binance  system doesn't always give complete data
-            # This is an absolute crap way of faking it, but the only way I've come up with.
-
-            if (bid==None or ask==None):
-                # Worst case situation, pull the orderbook. takes at least 5 seconds.
-                symbol=kwargs.get('symbol')
-                ob=self.GetOrderBook(symbol=symbol)
-                if (ob['bids']==None or ob['bids']==[]):
-                    if (ob['asks']==None or ob['asks']==[]):
-                        bid=None
-                    else:
-                        bid=ob['asks'][0][0]
-                else:
-                    bid=ob['bids'][0][0]
-
+        else:
+            # Worst case situation, pull the orderbook. takes at least 5 seconds.
+            symbol=kwargs.get('symbol')
+            ob=self.GetOrderBook(symbol=symbol)
+            if (ob['bids']==None or ob['bids']==[]):
                 if (ob['asks']==None or ob['asks']==[]):
-                    if (ob['bids']==None or ob['bids']==[]):
-                        ask=None
-                    else:
-                        ask=ob['bids'][0][0]
+                    bid=None
                 else:
-                    ask=ob['asks'][0][0]
+                    bid=ob['asks'][0][0]
+            else:
+                bid=ob['bids'][0][0]
 
-            if (bid==None or ask==None):
-                if o!=None and c!=None:
-                    bid=max(o,c)
-                    ask=min(o,c)
+            if (ob['asks']==None or ob['asks']==[]):
+                if (ob['bids']==None or ob['bids']==[]):
+                    ask=None
                 else:
+                    ask=ob['bids'][0][0]
+            else:
+                ask=ob['asks'][0][0]
+
+            # Absolute worst case situation, orderbook is empty... Thank you ALPACA
+
+            if bid==None or ask==None:
+                symbol=kwargs.get('symbol')
+                tf=list(self.Broker.timeframes.keys())[0]
+                ohlcv=self.GetOHLCV(symbol=symbol,timeframe=tf,limit=1)
+                if ohlcv==[]:
                     bid=0
                     ask=0
+                else:
+                    bid=ohlcv[0][4]
+                    ask=ohlcv[0][1]
 
         Pair={}
         Pair['DateTime']=datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
@@ -400,7 +391,7 @@ class ccxtCrypto:
     #   symbol, type, side (action), amount, price, params
 
     # PlaceOrder(exchange, Active, pair=pair, orderType=orderType,
-    #     action=action, amount=amount, close=close, ReduceOnly=ReduceOnly, 
+    #     action=action, amount=amount, close=close, ReduceOnly=ReduceOnly,
     #     LedgerNote=ledgerNote)
 
     def PlaceOrder(self,**kwargs):

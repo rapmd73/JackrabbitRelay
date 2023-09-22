@@ -57,9 +57,11 @@ def main():
             if pair.find(srch)<0:
                 continue
 
-#        print(relay.Markets[pair])
-
         ticker=relay.GetTicker(symbol=pair)
+
+        # If bid and ask are 0, we can't trade it, so don't show it.
+        if ticker['Bid']==0 and ticker['Ask']==0:
+            continue
 
         if relay.Framework=='ccxt':
             marketType=relay.Markets[pair]['type']
@@ -67,10 +69,10 @@ def main():
             and marketType=='spot':
                 marketType='margin'
             id=relay.Markets[pair]['id']
-            print(f"{pair:30} {id:30} {marketType:8} {ticker['Ask']:18.8f} {ticker['Spread']:18.8f} {ticker['Bid']:18.8f}")
+            print(f"{pair:30} {id:30} {marketType:8} {ticker['Bid']:18.8f} {ticker['Spread']:18.8f} {ticker['Ask']:18.8f}")
         elif relay.Framework=='oanda':
             mr=GetRatio(float(relay.Markets[pair]['marginRate']))
-            print(f"{pair:30} {mr} {ticker['Ask']:9.5f} {ticker['Spread']:9.5f} {ticker['Bid']:9.5f}")
+            print(f"{pair:30} {mr} {ticker['Bid']:9.5f} {ticker['Spread']:9.5f} {ticker['Ask']:9.5f}")
         else:
             print("Unrecognized framework")
             sys.exit(0)
