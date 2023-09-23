@@ -318,7 +318,6 @@ class ccxtCrypto:
 
         if self.Broker.has['fetchTickers']==True:
             self.Results=self.API("fetch_ticker",**kwargs)
-            print(self.Results)
             bid=self.Results['bid']
             ask=self.Results['ask']
         else:
