@@ -22,6 +22,8 @@ import time
 import JRRsupport
 import JackrabbitRelay as JRR
 
+import trackback
+
 # Timeout before Locker auto-deletes this order result
 
 OliverTwistTimeout=(15*60)
@@ -123,6 +125,9 @@ def main():
         cid=relay.GetOrderDetails(OrderID=Orphan['ID'])[-1]['id']
         saction=relay.Order['SellAction'].lower()
 
+        # Get the direction of the trade, long/short
+        dir=relay.Order['Direction'].lower()
+
         # Used to determin if the asset/poition has been found
         foundPrice=False
 
@@ -157,8 +162,6 @@ def main():
             # We need to check TakeProfit and StopLoss. If one of them is hit, we need to build and order and backfeed it in
             # to Relay. It will place a new order.
 
-            # Get the direction of the trade, long/short
-            dir=relay.Order['Direction'].lower()
             # Get Ticker
             ticker=relay.GetTicker(symbol=relay.Order['Asset'])
 
@@ -213,7 +216,7 @@ def main():
                 newOrder['Exchange']=relay.Order['Exchange']
                 newOrder['Account']=relay.Order['Account']
                 newOrder['Asset']=relay.Order['Asset']
-                newOrder['Action']=relay.Order['SellAction']
+                newOrder['Action']=relay.Order['SellAction'].lower()
                 if 'EnforceFIFO' in relay.Order:
                     newOrder['EnforceFIFO']=relay.Order['EnforceFIFO']
                 newOrder['Price']=str(strikePrice)
@@ -256,8 +259,10 @@ def main():
         FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],'Delete')
     except Exception as e:
         # Something broke or went horrible wrong
-        relay.JRLog.Write(f"{Orphan['Key']}: Code Error - {str(e)}",stdOut=False)
+        ln=traceback.extract_tb(sys.exc_info()[2])[-1][1]
+        relay.JRLog.Write(f"{Orphan['Key']}: Code Error {ln} - {str(e)}",stdOut=False)
         FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],cur['state'])
 
 if __name__ == '__main__':
     main()
+
