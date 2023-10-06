@@ -22,7 +22,7 @@ import time
 import JRRsupport
 import JackrabbitRelay as JRR
 
-import trackback
+import traceback
 
 # Timeout before Locker auto-deletes this order result
 
@@ -107,6 +107,7 @@ def CalculatePriceExit(order,ts,dir,price):
 
 def main():
     data=sys.stdin.read().strip()
+    JRRsupport.AppendFile("/home/trap.txt",data+"\n")
     Orphan=json.loads(data)
 
     # Use Relay to process and validate the order
@@ -182,7 +183,7 @@ def main():
             StrikeHappened=False
             if dir=='long':
                 if 'Diagnostics' in relay.Active:
-                    relay.JRLog.Write(f"{id}: {dir} Price: {price}, Bid: {ticker['Bid']} TP: {tp}/{relay.Order['TakeProfit']}, SL {sl}/{relay.Order['StopLoss']}",stdOut=False)
+                    relay.JRLog.Write(f"{id}: {relay.Asset}/{units} {dir} Price: {price}, Bid: {ticker['Bid']} TP: {tp}/{relay.Order['TakeProfit']}, SL {sl}/{relay.Order['StopLoss']}",stdOut=False)
 
                 if ticker['Bid']>tp:
                     profit=round((units*ticker['Bid'])-(units*price),5)
@@ -196,7 +197,7 @@ def main():
                     StrikeHappened=True
             else:
                 if 'Diagnostics' in relay.Active:
-                    relay.JRLog.Write(f"{id}: {dir} Price: {price}, Ask: {ticker['Ask']} TP: {tp}/{relay.Order['TakeProfit']}, SL {sl}/{relay.Order['StopLoss']}",stdOut=False)
+                    relay.JRLog.Write(f"{id}: {relay.Asset}/{abs(units)} {dir} Price: {price}, Ask: {ticker['Ask']} TP: {tp}/{relay.Order['TakeProfit']}, SL {sl}/{relay.Order['StopLoss']}",stdOut=False)
 
                 if ticker['Ask']<tp:
                     profit=round((units*price)-(units*ticker['Ask']),5)
@@ -250,10 +251,10 @@ def main():
                 else:
                     # Give OliverTwist a response
                     relay.JRLog.Write(f"{id}: Order failed",stdOut=False)
-                    FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],cur['state'])
+                    FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],Orphan['Status'])
             else:
                 # Strike did not happen
-                FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],cur['state'])
+                FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],Orphan['Status'])
 
         # Fall through. No order matching the ID.
         FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],'Delete')
@@ -261,7 +262,7 @@ def main():
         # Something broke or went horrible wrong
         ln=traceback.extract_tb(sys.exc_info()[2])[-1][1]
         relay.JRLog.Write(f"{Orphan['Key']}: Code Error {ln} - {str(e)}",stdOut=False)
-        FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],cur['state'])
+        FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],Orphan['Status'])
 
 if __name__ == '__main__':
     main()

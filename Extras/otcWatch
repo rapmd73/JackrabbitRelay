@@ -74,6 +74,8 @@ def main():
         buffer=JRRsupport.ReadFile(ConditionalStorehouse)
     OliverTwistLock.Unlock()
 
+    Relay={}
+
     oldAsset=None
     relay=None
     openTrades=None
@@ -105,13 +107,13 @@ def main():
             # Cache and remember these data points. Exchanges like phemex will draw the program into oblivion otherwise from
             # the rtelimits. This only works because we are filtering based upon exchange and account.
 
-            if relay==None:
-                relay=JRR.JackrabbitRelay(framework=Data['Framework'],payload=json.dumps(Order),NoIdentityVerification=True)
+            if Order['Asset'] not in Relay:
+                Relay[Order['Asset']]=JRR.JackrabbitRelay(framework=Data['Framework'],payload=json.dumps(Order),NoIdentityVerification=True)
             else:
-                relay.ProcessPayload(NewPayload=json.dumps(Order))
-            if oldAsset==None or oldAsset!=relay.Order['Asset']:
-                ticker=relay.GetTicker(symbol=relay.Order['Asset'])
-                oldAsset=relay.Order['Asset']
+                Relay[Order['Asset']].ProcessPayload(NewPayload=json.dumps(Order))
+            if oldAsset==None or oldAsset!=Relay[Order['Asset']].Order['Asset']:
+                ticker=Relay[Order['Asset']].GetTicker(symbol=Relay[Order['Asset']].Order['Asset'])
+                oldAsset=Relay[Order['Asset']].Order['Asset']
 
             # Handle each framework type
 
@@ -139,8 +141,8 @@ def main():
                 Resp=Data['Response']
                 id=Data['ID']
 
-                openTrades=relay.GetOpenTrades(symbol=Order['Asset'])
-                cid=relay.GetOrderDetails(OrderID=id)[-1]['id']
+                openTrades=Relay[Order['Asset']].GetOpenTrades(symbol=Order['Asset'])
+                cid=Relay[Order['Asset']].GetOrderDetails(OrderID=id)[-1]['id']
 
                 found=False
                 for cur in openTrades:
@@ -162,7 +164,11 @@ def main():
 
                 tp=round(CalculatePriceExit(Order,'TakeProfit',dir,price),5)
                 sl=round(CalculatePriceExit(Order,'StopLoss',dir,price),5)
-                print(f"{id:10} {Order['Asset']:10} {sl:.5f} {tprice:.5f}({price:.5f}) {tp:.5f} {abs(amount):9.5f} {dir}")
+                tpPips=f"({Order['TakeProfit']})"
+                slPips=""
+                if sl!=0:
+                    slPips=f"({Order['StopLoss']})"
+                print(f"{id:10} {Order['Asset']:10} {sl:.5f} {slPips:<10} {tprice:.5f}({price:.5f}) {tp:.5f} {tpPips:<10} {abs(amount):9.5f} {dir}")
     else:
         print("No conditional orders yet.")
         sys.exit(0)
