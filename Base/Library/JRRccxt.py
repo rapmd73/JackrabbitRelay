@@ -314,13 +314,17 @@ class ccxtCrypto:
         return self.Results
 
     def GetTicker(self,**kwargs):
+        # Initialize as None because some exchanges don't have a ticker function.
+        bid=None
+        ask=None
         # Best case situation, exchange has a ticker api.
 
         if self.Broker.has['fetchTickers']==True:
             self.Results=self.API("fetch_ticker",**kwargs)
             bid=self.Results['bid']
             ask=self.Results['ask']
-        else:
+
+        if bid==None or ask==None:
             # Worst case situation, pull the orderbook. takes at least 5 seconds.
             symbol=kwargs.get('symbol')
             ob=self.GetOrderBook(symbol=symbol)
