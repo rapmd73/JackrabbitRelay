@@ -54,14 +54,17 @@ def FinishOrphan(Key,lID,mID,State):
 # Get the order ID. If there isn't an ID, the order FAILED.
 
 def GetOrderID(res):
-    if res.find('Order Confirmation ID')>-1:
-        s=res.find('ID:')+4
-        for e in range(s,len(res)):
-            if res[e]=='\n':
-                break
-        oid=res[s:e]
+    try:
+        if res.find('Order Confirmation ID')>-1:
+            s=res.find('ID:')+4
+            for e in range(s,len(res)):
+                if res[e]=='\n':
+                    break
+            oid=res[s:e]
 
-        return oid
+            return oid
+    except:
+        pass
     return None
 
 # Calculate Proce Exit

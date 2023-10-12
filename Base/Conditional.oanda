@@ -56,14 +56,20 @@ def FinishOrphan(Key,lID,mID,State):
 # Get the order ID. If there isn't an ID, the order FAILED.
 
 def GetOrderID(res):
-    if res.find('Order Confirmation ID')>-1:
-        s=res.find('ID:')+4
-        for e in range(s,len(res)):
-            if res[e]=='\n':
-                break
-        oid=res[s:e]
+    if res==None:
+        return None
 
-        return oid
+    try:
+        if res.find('Order Confirmation ID')>-1:
+            s=res.find('ID:')+4
+            for e in range(s,len(res)):
+                if res[e]=='\n':
+                    break
+            oid=res[s:e]
+
+            return oid
+    except:
+        pass
     return None
 
 # Calculate Price
@@ -183,28 +189,28 @@ def main():
             StrikeHappened=False
             if dir=='long':
                 if 'Diagnostics' in relay.Active:
-                    relay.JRLog.Write(f"{id}: {relay.Asset}/{units} {dir} Price: {price}, Bid: {ticker['Bid']} TP: {tp}/{relay.Order['TakeProfit']}, SL {sl}/{relay.Order['StopLoss']}",stdOut=False)
+                    relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{units} {dir} Price: {price}, Bid: {ticker['Bid']} TP: {tp}/{relay.Order['TakeProfit']}, SL {sl}/{relay.Order['StopLoss']}",stdOut=False)
 
                 if ticker['Bid']>tp:
                     profit=round((units*ticker['Bid'])-(units*price),5)
-                    relay.JRLog.Write(f"{id}: TP {dir} hit: {tp}, {units}: {price:.5f} -> {ticker['Bid']:5f}/{profit}",stdOut=False)
+                    relay.JRLog.Write(f"{id} -> {cid}: TP {dir} hit: {tp}, {units}: {price:.5f} -> {ticker['Bid']:5f}/{profit}",stdOut=False)
                 if 'StopLoss' in relay.Order and ticker['Bid']<sl:
                     loss=round((units*price)-(units*ticker['Bid']),5)
-                    relay.JRLog.Write(f"{id}: SL {dir} hit: {sl}, {units}: {price:.5f} -> {ticker['Bid']:5f}/{loss}",stdOut=False)
+                    relay.JRLog.Write(f"{id} -> {cid}: SL {dir} hit: {sl}, {units}: {price:.5f} -> {ticker['Bid']:5f}/{loss}",stdOut=False)
 
                 if ticker['Bid']>tp or ('StopLoss' in relay.Order and ticker['Bid']<sl):
                     strikePrice=ticker['Bid']
                     StrikeHappened=True
             else:
                 if 'Diagnostics' in relay.Active:
-                    relay.JRLog.Write(f"{id}: {relay.Asset}/{abs(units)} {dir} Price: {price}, Ask: {ticker['Ask']} TP: {tp}/{relay.Order['TakeProfit']}, SL {sl}/{relay.Order['StopLoss']}",stdOut=False)
+                    relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{abs(units)} {dir} Price: {price}, Ask: {ticker['Ask']} TP: {tp}/{relay.Order['TakeProfit']}, SL {sl}/{relay.Order['StopLoss']}",stdOut=False)
 
                 if ticker['Ask']<tp:
                     profit=round((units*price)-(units*ticker['Ask']),5)
-                    relay.JRLog.Write(f"{id}: TP {dir} hit: {tp}, {units}: {price:.5f} -> {ticker['Ask']:5f}/{profit}",stdOut=False)
+                    relay.JRLog.Write(f"{id} -> {cid}: TP {dir} hit: {tp}, {units}: {price:.5f} -> {ticker['Ask']:5f}/{profit}",stdOut=False)
                 if 'StopLoss' in relay.Order and ticker['Ask']>sl:
                     loss=round((units*ticker['Ask'])-(units*price),5)
-                    relay.JRLog.Write(f"{id}: SL {dir} hit: {sl}, {units}: {price:.5f} -> {ticker['Ask']:5f}/{loss}",stdOut=False)
+                    relay.JRLog.Write(f"{id} -> {cid}: SL {dir} hit: {sl}, {units}: {price:.5f} -> {ticker['Ask']:5f}/{loss}",stdOut=False)
 
                 if ticker['Ask']<tp or ('StopLoss' in relay.Order and ticker['Ask']>sl):
                     strikePrice=ticker['Ask']
@@ -243,14 +249,13 @@ def main():
                 result=relay.SendWebhook(newOrder)
                 oid=GetOrderID(result)
                 if oid!=None:
-                    resp=relay.GetOrderDetails(OrderID=oid)
                     # Order must be closed as it succedded
                     newOrder['ID']=oid
-                    relay.WriteLedger(Order=newOrder,Response=resp)
+                    relay.WriteLedger(Order=newOrder,Response=result)
                     FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],'Delete')
                 else:
                     # Give OliverTwist a response
-                    relay.JRLog.Write(f"{id}: Order failed",stdOut=False)
+                    relay.JRLog.Write(f"{id} -> {cid}: Order failed",stdOut=False)
                     FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],Orphan['Status'])
             else:
                 # Strike did not happen
