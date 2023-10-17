@@ -170,7 +170,7 @@ def main():
                 if makeNewOrder==True:
                     # Copy original order
                     newOrder=relay.Order
-                    newOrder['OliverTwist']=f'Repurchase @/<{price}'
+                    newOrder['OliverTwist']='Repurchase'
                     """
                     newOrder['Exchange']=relay.Order['Exchange']
                     newOrder['Account']=relay.Order['Account']
@@ -217,6 +217,7 @@ def main():
         # Get the "strikePrice". This handles both TakeProfit and StopLoss. It doesn't matter which as both are processed
         # the same way.
 
+        LogMSG=None
         StrikeHappened=False
         if dir=='long':
             if 'Diagnostics' in relay.Active:
@@ -224,10 +225,10 @@ def main():
 
             if ticker['Bid']>tp:
                 profit=round((amount*ticker['Bid'])-(amount*price),8)
-                relay.JRLog.Write(f"{id}: TP {dir} hit: {tp}, {amount}: {price:.5f} -> {ticker['Bid']:5f}/{profit}",stdOut=False)
+                LogMSG=f"{id}: TP {dir} hit: {tp}, {amount}: {price:.5f} -> {ticker['Bid']:5f}/{profit}"
             if 'StopLoss' in relay.Order and ticker['Bid']<sl:
                 loss=round((amount*price)-(amount*ticker['Bid']),8)
-                relay.JRLog.Write(f"{id}: SL {dir} hit: {sl}, {amount}: {price:.5f} -> {ticker['Bid']:5f}/{loss}",stdOut=False)
+                LogMSG=f"{id}: SL {dir} hit: {sl}, {amount}: {price:.5f} -> {ticker['Bid']:5f}/{loss}"
 
             if ticker['Bid']>tp or ('StopLoss' in relay.Order and ticker['Bid']<sl):
                 strikePrice=ticker['Bid']
@@ -238,10 +239,10 @@ def main():
 
             if ticker['Ask']<tp:
                 profit=round((amount*price)-(amount*ticker['Ask']),8)
-                relay.JRLog.Write(f"{id}: TP {dir} hit: {tp}, {amount}: {price:.5f} -> {ticker['Ask']:5f}/{profit}",stdOut=False)
+                LogMSG=f"{id}: TP {dir} hit: {tp}, {amount}: {price:.5f} -> {ticker['Ask']:5f}/{profit}"
             if 'StopLoss' in relay.Order and ticker['Ask']>sl:
                 loss=round((amount*ticker['Ask'])-(amounts*price),8)
-                relay.JRLog.Write(f"{id}: SL {dir} hit: {sl}, {amount}: {price:.5f} -> {ticker['Ask']:5f}/{loss}",stdOut=False)
+                LogMSG=f"{id}: SL {dir} hit: {sl}, {amount}: {price:.5f} -> {ticker['Ask']:5f}/{loss}"
 
             if ticker['Ask']<tp or ('StopLoss' in relay.Order and ticker['Ask']>sl):
                 strikePrice=ticker['Ask']
@@ -271,6 +272,7 @@ def main():
             result=relay.SendWebhook(newOrder)
             oid=GetOrderID(result)
             if oid!=None:
+                relay.JRLog.Write(LogMSG,stdOut=False)
                 resp=relay.GetOrderDetails(id=oid,symbol=relay.Order['Asset'])
                 # Order must be closed as it succedded
                 newOrder['ID']=oid

@@ -17,6 +17,7 @@ import sys
 sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
 import os
 import json
+import datetime
 import time
 
 import JRRsupport
@@ -113,7 +114,6 @@ def CalculatePriceExit(order,ts,dir,price):
 
 def main():
     data=sys.stdin.read().strip()
-    JRRsupport.AppendFile("/home/trap.txt",data+"\n")
     Orphan=json.loads(data)
 
     # Use Relay to process and validate the order
@@ -124,12 +124,19 @@ def main():
 
     relay=JRR.JackrabbitRelay(framework=Orphan['Framework'],payload=order,NoIdentityVerification=True)
     relay.JRLog.SetBaseName('OliverTwist')
+    LogMSG=None
+
+    # Check is "paused" marker is found
+#    paused='OlivwerTwwist.'+relay.Exchange+'.'+relay.Account+'.Paused'
+#    if os.path.exists(paused):
+#        FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],Orphan['Status'])
 
     try:
         # Check to see if order is still open and return current state
         # Handle OANDa's weird order id sequencing
         id=Orphan['ID']
-        cid=relay.GetOrderDetails(OrderID=Orphan['ID'])[-1]['id']
+        orderDetail=relay.GetOrderDetails(OrderID=Orphan['ID'])
+        cid=orderDetail[-1]['id']
         saction=relay.Order['SellAction'].lower()
 
         # Get the direction of the trade, long/short
@@ -172,6 +179,21 @@ def main():
             # Get Ticker
             ticker=relay.GetTicker(symbol=relay.Order['Asset'])
 
+            # Check the spreads. It is possible that a fast moving market will pass this test, then drastically increase by
+            # the time the position is closed.
+
+            if 'Spread' in relay.Active:
+                if ticker['Spread']>=float(relay.Active['Spread']):
+                    s=f"excessivew spread, {relay.Order['SellAction'].lower()} delayed, {ticker['Spread']:.5f} > {relay.Active['Spread']:.5f}"
+                    relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{units} {dir} {s}",stdOut=False)
+                    FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],Orphan['Status'])
+
+            if 'Spread' in relay.Order:
+                if ticker['Spread']>=float(relay.Order['Spread']):
+                    s=f"excessivew spread, {relay.Order['SellAction'].lower()} delayed, {ticker['Spread']:.5f} > {relay.Order['Spread']:.5f}"
+                    relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{units} {dir} {s}",stdOut=False)
+                    FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],Orphan['Status'])
+
             # Fsilsafe, in the WORST way possible. Do NOT leave a take profit out of the order. At this stage, the whole thing is
             # an absolute nightmare to fix. The is a very brutal way of dealing with poor user choices.
             if 'TakeProfit' not in relay.Order:
@@ -183,6 +205,11 @@ def main():
             if 'StopLoss' in relay.Order:
                 sl=round(CalculatePriceExit(relay.Order,'StopLoss',dir,price),5)
 
+            # find trade open time
+            parts=orderDetail[0]['time'].split('.')
+            dsS=f"{parts[0]}.{parts[1][:6]}Z"
+            ds=datetime.datetime.strptime(dsS,'%Y-%m-%dT%H:%M:%S.%fZ')
+
             # Get the "strikePrice". This handles both TakeProfit and StopLoss. It doesn't matter which as both are processed
             # the same way.
 
@@ -191,28 +218,14 @@ def main():
                 if 'Diagnostics' in relay.Active:
                     relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{units} {dir} Price: {price}, Bid: {ticker['Bid']} TP: {tp}/{relay.Order['TakeProfit']}, SL {sl}/{relay.Order['StopLoss']}",stdOut=False)
 
-                if ticker['Bid']>tp:
-                    profit=round((units*ticker['Bid'])-(units*price),5)
-                    relay.JRLog.Write(f"{id} -> {cid}: TP {dir} hit: {tp}, {units}: {price:.5f} -> {ticker['Bid']:5f}/{profit}",stdOut=False)
-                if 'StopLoss' in relay.Order and ticker['Bid']<sl:
-                    loss=round((units*price)-(units*ticker['Bid']),5)
-                    relay.JRLog.Write(f"{id} -> {cid}: SL {dir} hit: {sl}, {units}: {price:.5f} -> {ticker['Bid']:5f}/{loss}",stdOut=False)
-
-                if ticker['Bid']>tp or ('StopLoss' in relay.Order and ticker['Bid']<sl):
+                if ticker['Bid']>(tp+ticker['Spread']) or ('StopLoss' in relay.Order and ticker['Bid']<(sl-ticker['Spread'])):
                     strikePrice=ticker['Bid']
                     StrikeHappened=True
             else:
                 if 'Diagnostics' in relay.Active:
                     relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{abs(units)} {dir} Price: {price}, Ask: {ticker['Ask']} TP: {tp}/{relay.Order['TakeProfit']}, SL {sl}/{relay.Order['StopLoss']}",stdOut=False)
 
-                if ticker['Ask']<tp:
-                    profit=round((units*price)-(units*ticker['Ask']),5)
-                    relay.JRLog.Write(f"{id} -> {cid}: TP {dir} hit: {tp}, {units}: {price:.5f} -> {ticker['Ask']:5f}/{profit}",stdOut=False)
-                if 'StopLoss' in relay.Order and ticker['Ask']>sl:
-                    loss=round((units*ticker['Ask'])-(units*price),5)
-                    relay.JRLog.Write(f"{id} -> {cid}: SL {dir} hit: {sl}, {units}: {price:.5f} -> {ticker['Ask']:5f}/{loss}",stdOut=False)
-
-                if ticker['Ask']<tp or ('StopLoss' in relay.Order and ticker['Ask']>sl):
+                if ticker['Ask']<(tp-ticker['Spread']) or ('StopLoss' in relay.Order and ticker['Ask']>(sl+ticker['Spread'])):
                     strikePrice=ticker['Ask']
                     StrikeHappened=True
 
@@ -249,6 +262,24 @@ def main():
                 result=relay.SendWebhook(newOrder)
                 oid=GetOrderID(result)
                 if oid!=None:
+                    orderDetail=relay.GetOrderDetails(OrderID=oid)
+
+                    # find trade close time and  duration
+                    parts=orderDetail[0]['time'].split('.')
+                    deS=f"{parts[0]}.{parts[1][:6]}Z"
+                    de=datetime.datetime.strptime(deS,'%Y-%m-%dT%H:%M:%S.%fZ')
+                    duration=de-ds
+
+                    rpl=float(orderDetail[-1]['pl'])
+                    sprice=float(orderDetail[-1]['price'])
+
+                    # rpl is reported by broker. This is the actual profit/loss of trade.
+                    if rpl>=0:
+                        LogMSG=f"{oid} -> {cid} Prft {dir}, {units}: {price:.5f} -> {sprice:5f}/{abs(rpl):.5f}, {duration}"
+                    else:
+                        LogMSG=f"{oid} -> {cid} Loss {dir}, {units}: {price:.5f} -> {sprice:5f}/{abs(rpl):.5f}, {duration}"
+                    relay.JRLog.Write(f"{LogMSG}",stdOut=False)
+
                     # Order must be closed as it succedded
                     newOrder['ID']=oid
                     relay.WriteLedger(Order=newOrder,Response=result)

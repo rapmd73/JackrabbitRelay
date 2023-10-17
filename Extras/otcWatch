@@ -8,6 +8,7 @@
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
+import datetime
 import time
 import json
 import random
@@ -71,14 +72,14 @@ def main():
 
     OliverTwistLock.Lock()
     if os.path.exists(ConditionalStorehouse):
-        buffer=JRRsupport.ReadFile(ConditionalStorehouse)
+        buffer=JRRsupport.ReadFile(ConditionalStorehouse).strip()
     OliverTwistLock.Unlock()
 
     Relay={}
+    TickerData={}
+    openTrades={}
 
-    oldAsset=None
     relay=None
-    openTrades=None
     ticker=None
     if buffer!=None and buffer!='':
         Orphans=buffer.split('\n')
@@ -107,13 +108,15 @@ def main():
             # Cache and remember these data points. Exchanges like phemex will draw the program into oblivion otherwise from
             # the rtelimits. This only works because we are filtering based upon exchange and account.
 
-            if Order['Asset'] not in Relay:
-                Relay[Order['Asset']]=JRR.JackrabbitRelay(framework=Data['Framework'],payload=json.dumps(Order),NoIdentityVerification=True)
+            if Data['Framework'] not in Relay:
+                Relay[Data['Framework']]=JRR.JackrabbitRelay(framework=Data['Framework'],payload=json.dumps(Order),NoIdentityVerification=True)
             else:
-                Relay[Order['Asset']].ProcessPayload(NewPayload=json.dumps(Order))
-            if oldAsset==None or oldAsset!=Relay[Order['Asset']].Order['Asset']:
-                ticker=Relay[Order['Asset']].GetTicker(symbol=Relay[Order['Asset']].Order['Asset'])
-                oldAsset=Relay[Order['Asset']].Order['Asset']
+                Relay[Data['Framework']].ProcessPayload(NewPayload=json.dumps(Order))
+
+            if Order['Asset'] not in TickerData:
+                TickerData[Order['Asset']]=Relay[Data['Framework']].GetTicker(symbol=Relay[Data['Framework']].Order['Asset'])
+
+            ticker=TickerData[Order['Asset']]
 
             # Handle each framework type
 
@@ -141,11 +144,21 @@ def main():
                 Resp=Data['Response']
                 id=Data['ID']
 
-                openTrades=Relay[Order['Asset']].GetOpenTrades(symbol=Order['Asset'])
-                cid=Relay[Order['Asset']].GetOrderDetails(OrderID=id)[-1]['id']
+                if Order['Asset'] not in openTrades:
+                    openTrades[Order['Asset']]=Relay[Data['Framework']].GetOpenTrades(symbol=Order['Asset'])
+                detail=Relay[Data['Framework']].GetOrderDetails(OrderID=id)
+                cid=detail[-1]['id']
+
+                # find trading duration
+                parts=detail[0]['time'].split('.')
+                dsS=f"{parts[0]}.{parts[1][:6]}Z"
+                ds=datetime.datetime.strptime(dsS,'%Y-%m-%dT%H:%M:%S.%fZ')
+                deS=datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S.%f')
+                de=datetime.datetime.strptime(deS,'%Y-%m-%d %H:%M:%S.%f')
+                duration=de-ds
 
                 found=False
-                for cur in openTrades:
+                for cur in openTrades[Order['Asset']]:
                     if cur['id']==cid:
                         found=True
                         price=float(cur['price'])
@@ -168,7 +181,7 @@ def main():
                 slPips=""
                 if sl!=0:
                     slPips=f"({Order['StopLoss']})"
-                print(f"{id:10} {Order['Asset']:10} {sl:.5f} {slPips:<10} {tprice:.5f}({price:.5f}) {tp:.5f} {tpPips:<10} {abs(amount):9.5f} {dir}")
+                print(f"{id:10} {Order['Asset']:10} {sl:.5f} {slPips:<10} {tprice:.5f}({price:.5f})/{ticker['Spread']:.5f} {tp:.5f} {tpPips:<10} {abs(amount):9.5f} {dir}, {duration}")
     else:
         print("No conditional orders yet.")
         sys.exit(0)
