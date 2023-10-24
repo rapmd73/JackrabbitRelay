@@ -94,6 +94,33 @@ def GetTicket(relay,asset,tid,amount):
 
     return amount
 
+# We don't want any order "over-stacking", unless Clustering is set to yes, so we
+# verify that an order isn't within range of anothwer order. Its a lazy way of
+# creating an "unbounded" grid.
+
+def AlreadyBought(relay,asset,price,pipDistance):
+    openTrades=relay.GetOpenTrades(symbol=asset)
+    roundedPrice=round(price,5)
+    for trade in openTrades:
+        buyPrice=round(float(trade['price']),5)
+        if roundedPrice>=(buyPrice-pipDistance) and roundedPrice<=(buyPrice+pipDistance):
+            return True
+    return False
+
+# Convert a percebtage of pips to a number
+
+def ConvertPctPips2Value(relay,str):
+    # Percentage
+    if '%' in str:
+        val=float(str.replace('%','').strip())/100
+        # Pips
+    elif 'p' in str.lower():
+        val=float(str.lower().replace('p','').strip())*relay.Broker.onePip
+    else:
+        val=float(str)
+
+    return val
+
 ###
 ### Main code base. Place order on exchange
 ###
@@ -212,6 +239,14 @@ def main():
                 amount=minimum
             else:
                 amount=-minimum
+
+    # Check if this payload has a deviation. If so, validate it.
+    # AlreadyBought(relay,asset,price,pipDistance)
+
+    if 'Deviation' in relay.Order:
+        devPips=ConvertPctPips2Value(relay,relay.Order['Deviation'])
+        if AlreadyBought(relay,relay.Order['Asset'],ticker['Bid'],devPips):
+            relay.JRLog.Error("Deviation", f"{relay.Order['Deviation']}: Required condition not met")
 
     # Check and manage FIFO rule
     if 'EnforceFIFO' in relay.Active or 'EnforceFIFO' in relay.Order:

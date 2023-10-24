@@ -75,7 +75,7 @@ def GetOrderID(res):
 
 # Calculate Price
 
-def CalculatePriceExit(order,ts,dir,price):
+def CalculatePriceExit(order,ts,dir,price,onePip):
     # Figure out TakeProfit or Stoploss
     if ts=='TakeProfit':
         if '%' in order[ts]:
@@ -86,9 +86,9 @@ def CalculatePriceExit(order,ts,dir,price):
         # Pips
         elif 'p' in order[ts].lower():
             if dir=='long':
-                val=price+(float(order[ts].lower().replace('p','').strip())*0.0001)
+                val=price+(float(order[ts].lower().replace('p','').strip())*onePip)
             else:
-                val=price-(float(order[ts].lower().replace('p','').strip())*0.0001)
+                val=price-(float(order[ts].lower().replace('p','').strip())*onePip)
         else:
             val=float(order[ts])
     elif ts=='StopLoss':
@@ -100,9 +100,9 @@ def CalculatePriceExit(order,ts,dir,price):
         # Pips
         elif 'p' in order[ts].lower():
             if dir=='long':
-                val=price-(float(order[ts].lower().replace('p','').strip())*0.0001)
+                val=price-(float(order[ts].lower().replace('p','').strip())*onePip)
             else:
-                val=price+(float(order[ts].lower().replace('p','').strip())*0.0001)
+                val=price+(float(order[ts].lower().replace('p','').strip())*onePip)
         else:
             val=float(order[ts])
 
@@ -199,11 +199,11 @@ def main():
             if 'TakeProfit' not in relay.Order:
                 relay.Order['TakeProfit']='10p'
             # Calculate Take Profit
-            tp=round(CalculatePriceExit(relay.Order,'TakeProfit',dir,price),5)
+            tp=round(CalculatePriceExit(relay.Order,'TakeProfit',dir,price,relay.Broker.onePip),5)
 
             # Figure out StopLoss, if there is one
             if 'StopLoss' in relay.Order:
-                sl=round(CalculatePriceExit(relay.Order,'StopLoss',dir,price),5)
+                sl=round(CalculatePriceExit(relay.Order,'StopLoss',dir,price,relay.Broker.onePip),5)
 
             # find trade open time
             parts=orderDetail[0]['time'].split('.')

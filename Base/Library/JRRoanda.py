@@ -68,6 +68,18 @@ class oanda:
         self.Currency=None
         self.Markets=self.GetMarkets()
 
+        self.onePip=None
+
+    # Set the value of one pip
+
+    def SetPipValue(self,asset):
+        # Value needed to calculate 1 pip for this pair
+        if self.onePip==None:
+            if abs(float(self.Markets[asset.replace('_','/')]['pipLocation']))==2:
+                self.onePip=0.01
+            else:
+                self.onePip=0.0001
+
     # Handle the retry functionality and send the request to the broker.
 
     def API(self,function,**kwargs):
@@ -169,6 +181,7 @@ class oanda:
             for pos in self.Results['positions']:
                 asset=pos['instrument'].replace('_','/')
                 if symbol==asset:
+                    self.SetPipValue(symbol)
                     if 'averagePrice' in pos['long']:
                         units=int(pos['long']['units'])
                         position=float(pos['long']['averagePrice'])*units
@@ -189,6 +202,7 @@ class oanda:
         limit=str(kwargs.get('limit'))
         params={"granularity":timeframe.upper(), "count":limit }
         candles=[]
+        self.SetPipValue(symbol)
 
         res=v20Instruments.InstrumentsCandles(instrument=symbol,params=params)
         self.Results=self.API("GetOHLCV",request=res)
@@ -208,6 +222,7 @@ class oanda:
     def GetTicker(self,**kwargs):
         symbol=kwargs.get('symbol').replace('/','_')
         params={"instruments":symbol }
+        self.SetPipValue(symbol)
 
         res=v20Pricing.PricingInfo(accountID=self.AccountID,params=params)
         self.Results=self.API("GetTicker",request=res)
@@ -230,6 +245,7 @@ class oanda:
 
     def GetOrderBook(self,**kwargs):
         symbol=kwargs.get('symbol').replace('/','_')
+        self.SetPipValue(symbol)
 
         req=v20Instruments.InstrumentsOrderBook(instrument=symbol,params={})
         self.Results=self.API("GetOrderBook",request=req,noError=True)
@@ -255,6 +271,7 @@ class oanda:
                 if symbol==order['instrument']:
                     oList.append(order)
 
+        self.SetPipValue(symbol)
         return oList
 
     # As references in GetPosition, a position may consist of one or more actual
@@ -263,6 +280,7 @@ class oanda:
     def GetOpenTrades(self,**kwargs):
         symbol=kwargs.get('symbol').replace('/','_')
         params={"instrument":symbol }
+        self.SetPipValue(symbol)
 
         req=v20Trades.TradesList(accountID=self.AccountID,params=params)
         self.Results=self.API("GetOpenTrades",request=req)
@@ -420,6 +438,7 @@ class oanda:
 
     def GetMinimum(self,**kwargs):
         symbol=kwargs.get('symbol')
+        self.SetPipValue(symbol)
 
         minimum=1
         mincost=self.GetTicker(symbol=symbol)['Ask']
