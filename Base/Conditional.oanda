@@ -177,7 +177,7 @@ def ReduceLotSize(relay,pair,val):
 
         sprice=float(orderDetail[-1]['price'])
         rpl=float(orderDetail[-1]['pl'])
-        relay.JRLog.Write(f"{lossID} -> {oid} ReduceBy {Dir}, {val}: {price:.5f} -> {sprice:5f}/{rpl:.5f}")
+        relay.JRLog.Write(f"{lossID} -> {oid} Rduc {Dir}, {val}: {price:.5f} -> {sprice:5f}/{rpl:.5f}")
 
 ###
 ### Main driver
