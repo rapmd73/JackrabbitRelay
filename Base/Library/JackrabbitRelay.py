@@ -104,7 +104,7 @@ class JackrabbitLog:
 class JackrabbitRelay:
     def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,secondary=None,NoIdentityVerification=False,Usage=None):
         # All the default locations
-        self.Version="0.0.0.1.465"
+        self.Version="0.0.0.1.470"
         self.NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
         self.BaseDirectory='/home/JackrabbitRelay2/Base'
         self.ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -408,8 +408,13 @@ class JackrabbitRelay:
                 self.JRLog.Error("TradingView Remap",f"Can't read symbol map for {self.Exchange}")
 
             TVlist=json.loads(raw)
-            if self.Asset in TVlist:
-                NewPair=TVlist[self.Asset]
+            if 'Market' in self.Order and self.Order['Market'].lower()!='spot':
+                srchAsset=self.Asset+':'+self.Order['Market'].lower()
+            else:
+                srchAsset=self.Asset
+
+            if srchAsset in TVlist:
+                NewPair=TVlist[srchAsset]
             else:
                 self.JRLog.Write('|- Pair not in symbol file')
                 return
