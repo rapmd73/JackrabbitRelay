@@ -27,7 +27,6 @@ oo=relay.GetOpenTrades(symbol=asset)
 
 tpnl=0
 for o in oo:
-    print(o)
     iu=int(o['currentUnits'])
     price=float(o['price'])
     upl=float(o['unrealizedPL'])
