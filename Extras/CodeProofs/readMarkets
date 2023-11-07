@@ -23,6 +23,8 @@ else:
     print("An exchange and a (sub)account must be provided.")
     sys.exit(1)
 
+print(relay.Broker.Summary)
+
 # Already loaded from login
 
 markets=relay.Markets
