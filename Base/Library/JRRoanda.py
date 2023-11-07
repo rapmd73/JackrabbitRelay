@@ -276,10 +276,11 @@ class oanda:
 
     # As references in GetPosition, a position may consist of one or more actual
     # trades. This is NOT the same as an open list of limit orders.
+    # count is maximum number o allowed open trades.
 
     def GetOpenTrades(self,**kwargs):
         symbol=kwargs.get('symbol').replace('/','_')
-        params={"instrument":symbol }
+        params={"instrument":symbol,"count":500 }
         self.SetPipValue(symbol)
 
         req=v20Trades.TradesList(accountID=self.AccountID,params=params)
