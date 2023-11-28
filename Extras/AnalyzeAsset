@@ -82,24 +82,24 @@ print(f"Timeframe duration: {y} years, {m} months, {d} days")
 
 print()
 
-print(f"Maximum market high:    {round(mh,percision)}")
-print(f"Minimum market low:     {round(ml,percision)}")
-print(f"Highest market spread:  {round(sp,percision)}")
+print(f"Maximum market high:    {round(mh,percision):.{percision}f}")
+print(f"Minimum market low:     {round(ml,percision):.{percision}f}")
+print(f"Highest market spread:  {round(sp,percision):.{percision}f}")
 
 print()
 
 mavg=sum(avgList)/len(avgList)
 
-print(f"Market median:          {round((mh+ml)/2,percision)}")
-print(f"Market average:         {round(mavg,percision)}")
+print(f"Market median:          {round((mh+ml)/2,percision):.{percision}f}")
+print(f"Market average:         {round(mavg,percision):.{percision}f}")
 
 print()
 
 mmm=maxMonth[2]-maxMonth[3]     # Maximum monthly movement
 amm=sum(spList)/len(spList)     # Average monthly movement
 
-print(f"Maximum month movement: {round(mmm,percision)} ({(mmm/mh)*100:.2f}%)")
-print(f"Average month movement: {round(amm,percision)} ({(amm/mh)*100:.2f}%)")
+print(f"Maximum month movement: {round(mmm,percision):.{percision}f} ({(mmm/mh)*100:.2f}%)")
+print(f"Average month movement: {round(amm,percision):.{percision}f} ({(amm/mh)*100:.2f}%)")
 
 print()
 

@@ -9,6 +9,7 @@ import sys
 sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
 import os
 import json
+import datetime
 
 import JackrabbitRelay as JRR
 
@@ -27,6 +28,12 @@ oo=relay.GetOpenTrades(symbol=asset)
 
 tpnl=0
 for o in oo:
+    # find trade open time
+    parts=o['openTime'].split('.')
+    dsS=f"{parts[0]}.{parts[1][:6]}Z"
+    dt=datetime.datetime.strptime(dsS,'%Y-%m-%dT%H:%M:%S.%fZ')
+    epoch=dt.timestamp()
+
     iu=int(o['currentUnits'])
     price=float(o['price'])
     upl=float(o['unrealizedPL'])
@@ -36,5 +43,5 @@ for o in oo:
         side='Long'
     else:
         side='Shrt'
-    print(f"{o['openTime']} {o['instrument']:10} {o['id']:7} {side:4} {iu:16.5f} {price:16.5f} {upl:16.5f} {fin:16.5f}")
+    print(f"{o['openTime']} {epoch} {o['instrument']:10} {o['id']:7} {side:4} {iu:16.5f} {price:16.5f} {upl:16.5f} {fin:16.5f}")
 print("\n",round(tpnl,5),len(oo))
