@@ -98,8 +98,8 @@ print()
 mmm=maxMonth[2]-maxMonth[3]     # Maximum monthly movement
 amm=sum(spList)/len(spList)     # Average monthly movement
 
-print(f"Maximum month movement: {round(mmm,percision):.{percision}f} ({(mmm/mh)*100:.2f}%)")
-print(f"Average month movement: {round(amm,percision):.{percision}f} ({(amm/mh)*100:.2f}%)")
+print(f"Maximum {relay.Timeframes[-1]} movement: {round(mmm,percision):.{percision}f} ({(mmm/mh)*100:.2f}%)")
+print(f"Average {relay.Timeframes[-1]} movement: {round(amm,percision):.{percision}f} ({(amm/mh)*100:.2f}%)")
 
 print()
 
@@ -111,3 +111,4 @@ for slice in spList:
 lsp=len(spList)
 print(f"Total {relay.Timeframes[-1]}s analyzed: {lsp}")
 print(f"{relay.Timeframes[-1]}s above average:  {maa} ({(maa/lsp)*100:.2f}%)")
+

@@ -459,6 +459,16 @@ class oanda:
 
         # Check for a "chain" sequence order and find the beginning
 
+        # These elements occur WITH orderID
+
+        # 'tradeReduced' if we reduce a trade size
+        # 'tradeClose' if we close a trade altogether
+
+#        if 'tradeClose' in self.Results['transaction']:
+#            nid=int(self.Results['transaction']['tradeClose']['tradeID'])
+#            if nid<int(ticket):
+#                FinalResults.append(self.GetOrderDetails(OrderID=str(nid)))
+
         if 'replacesOrderID' in self.Results['transaction']:
             nid=int(self.Results['transaction']['replacesOrderID'])
             if nid<int(ticket):
@@ -470,6 +480,8 @@ class oanda:
                 return self.GetOrderDetails(OrderID=str(nid))
 
         FinalResults.append(self.Results['transaction'])
+
+#        return FinalResults
 
         tid=int(self.Results['transaction']['id'])
         ltid=int(self.Results['lastTransactionID'])
