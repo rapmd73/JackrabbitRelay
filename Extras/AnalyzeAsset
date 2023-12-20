@@ -104,9 +104,14 @@ print(f"Average {relay.Timeframes[-1]} movement: {round(amm,percision):.{percisi
 print()
 
 maa=0                           # Months where spread was above average
+#mc=0
 for slice in spList:
     if slice>amm:
         maa+=1
+#        print(f"{mc:3} {slice:.{percision}}")
+#        mc+=1
+
+#print()
 
 lsp=len(spList)
 print(f"Total {relay.Timeframes[-1]}s analyzed: {lsp}")

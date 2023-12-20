@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay - Analyze Market
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+# This program calculate the starting and ending units based up the levels and steps. It produces a report identical to
+# the spreadsheet I featured several times.
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import datetime
+from dateutil.relativedelta import relativedelta
+
+import JackrabbitRelay as JRR
+
+def Help(args,argslen):
+    print("An exchange and an account must be provided.")
+    sys.exit(1)
+
+# Example usage
+
+def main():
+    relay=JRR.JackrabbitRelay(Usage=Help)
+
+    exchangeName=relay.GetExchange()
+    account=relay.GetAccount()
+
+    if relay.GetFramework()=='ccxt':
+        percision=8
+    elif relay.GetFramework()=='oanda':
+        percision=5 # abs(int(relay.Markets[asset]['pipLocation']))
+    else:
+        print("Unrecoginized framework: {relay.GetFramework()}")
+        sys.exit(1)
+
+    # Already loaded from login
+
+    markets=relay.Markets
+
+    # Get additional command line setting
+
+    srch='ALL'
+    if relay.GetArgsLen() > 3:
+        srch=relay.GetArgs(3).upper()
+
+    # Begin listing this exchange/broker
+
+    print(f"{'Asset':20} TF {'Max High':>15} {'Max Low':>15} {'Max Spread':>15} {'Market Median':>15} {'Market Average':>15} {'Max Movement':>15} {'% Max':>6}  {'Avg Movement':>15} {'% Avg':>6}  Tot >AV Duration")
+    for asset in relay.Markets:
+        # Skip non active assets
+        if relay.Framework=='ccxt':
+            if asset[0]=='.' or asset.find(".d")>-1 or asset.find(" ")>-1:
+                continue
+            if 'active' in relay.Markets[asset]:
+                if relay.Markets[asset]['active']==False:
+                    continue
+
+        if srch!=None and srch.upper()!='ALL':
+            if asset.find(srch)<0:
+                continue
+
+        # Figure out worst case price based upon 5000 candles on the monthly time frame.
+
+        # market high
+        mh=0
+        # market low
+        ml=9999999
+        wcp=0
+        mms=0
+        maxMonth=[]
+        spList=[]
+        avgList=[]
+
+        ohlcv=relay.GetOHLCV(symbol=asset,timeframe=relay.Timeframes[-1],limit=5000)
+
+        for slice in ohlcv:
+            cs=0
+            for i in range(1,4):
+                wcp=max(slice[i],wcp)
+                mh=max(slice[i],mh)
+                ml=min(slice[i],ml)
+                avgList.append(slice[i])
+
+            ms=slice[2]-slice[3] # monthly spread
+            spList.append(ms)
+            if ms>mms:           # monthly max spread, the largest month encountered
+                mms=ms
+                maxMonth=slice
+
+        # market spread
+        sp=round(mh-ml,percision)
+
+        # highest time frame
+        htf=relay.Timeframes[-1]
+
+        # find trading duration
+        dsS=datetime.datetime.fromtimestamp(ohlcv[0][0]/1000).strftime('%Y-%m-%d %H:%M:%S')
+        ds=datetime.datetime.strptime(dsS,'%Y-%m-%d %H:%M:%S')
+        deS=datetime.datetime.fromtimestamp(ohlcv[-1][0]/1000).strftime('%Y-%m-%d %H:%M:%S')
+        de=datetime.datetime.strptime(deS,'%Y-%m-%d %H:%M:%S')
+
+        delta=relativedelta(de,ds)
+        y=delta.years
+        m=delta.months
+        d=delta.days
+        # duration
+        dstr=""
+        if y>0:
+            dstr+=f"{y}y "
+        if m>0:
+            dstr+=f"{m}m "
+        if d>0:
+          dstr+=f"{d}d"
+
+        # market median
+        mmed=round((mh+ml)/2,percision)
+        # market average
+        mavg=round(sum(avgList)/len(avgList),percision)
+
+        # Maximum monthly movement
+        mmm=round(maxMonth[2]-maxMonth[3],percision)
+        # Average monthly movement
+        amm=round(sum(spList)/len(spList),percision)
+
+        # Percents
+        pmmm=round((mmm/mh)*100,2)
+        pamm=round((amm/mh)*100,2)
+
+        # Months where spread was above average
+        maa=0
+        for slice in spList:
+            if slice>amm:
+                maa+=1
+
+        # total tf analyzed
+        lsp=len(spList)
+        # tf above average
+        tfaa=round((maa/lsp)*100,2)
+
+        print(f"{asset:20} {htf:2} {mh:15.{percision}f} {ml:15.{percision}f} {sp:15.{percision}f} {mmed:15.{percision}f} {mavg:15.{percision}f} {mmm:15.{percision}f} {pmmm:6.2f}% {amm:15.{percision}f} {pamm:6.2f}% {lsp:3.0f} {tfaa:3.0f} {dstr}")
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Terminated")
+
+
+
+
+
+
+
+
+
+
+
+
+
