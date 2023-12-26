@@ -705,8 +705,8 @@ class JackrabbitRelay:
 
     def GetOrderBook(self,**kwargs):
         self.RotateKeys()
-        self.EnforceRateLimit()
         self.Results=self.Broker.GetOrderBook(**kwargs)
+        self.EnforceRateLimit()
         return self.Results
 
     # Get open orders

@@ -1,6 +1,6 @@
 psutil
-requests
 plotly
+kaleido
 pandas
 numpy
 ccxt

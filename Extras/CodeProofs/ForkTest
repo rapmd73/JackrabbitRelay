@@ -9,29 +9,41 @@ import sys
 sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
 import os
 import time
+import json
 import random
 
 import JRRsupport
+import JackrabbitRelay as JRR
 
-if __name__=='__main__':
-    interceptor=JRRsupport.SignalInterceptor(IsMain=True)
-else:
-    interceptor=JRRsupport.SignalInterceptor(IsMain=False)
+interceptor=JRRsupport.SignalInterceptor()
+relay=None
 
-def RandoSleeper():
-    t=random.randint(1,20)
-    print(f"{os.getppid()}/{os.getpid()}: {interceptor.WhoAmI()} sleeping {t} seconds")
-    time.sleep(t)
+def RandoSleeper(*args,**kwargs):
+    try:
+        relay=JRR.JackrabbitRelay(exchange=args[0],account=args[1],asset=args[2])
+        ticker=relay.GetTicker(symbol=args[2])
+
+        print(f"{os.getppid()}/{os.getpid()}: {interceptor.WhoAmI()} {args[2]} {ticker}")
+    except Exception as e:
+        print(f"{os.getppid()}/{os.getpid()}: {interceptor.WhoAmI()} {e}")
 
 def main():
-    print(f"Parent: {os.getpid()}, {interceptor.AnyTriggered()}")
-    RandoSleeper()
+    relay=JRR.JackrabbitRelay()
+    if relay.GetArgsLen() > 2:
+        exchangeName=relay.GetExchange()
+        account=relay.GetAccount()
+    else:
+        print("An exchange, (sub)account, and an asset must be provided.")
+        sys.exit(1)
 
-    for i in range(100):
-        interceptor.StartProcess(RandoSleeper)
+    print(f"Parent: {os.getpid()}, {interceptor.AnyTriggered()}")
+
+    for asset in relay.GetMarkets():
+        interceptor.StartProcess(RandoSleeper,args=[exchangeName,account,asset])
+
         while interceptor.GetChildren()>10:
             l=interceptor.GetChildren()
-            print(f"{i}/{l} {interceptor.AnyTriggered()}")
+            #print(f"{asset}/{l} {interceptor.AnyTriggered()}")
             if l==0:
                 break
             time.sleep(1)
