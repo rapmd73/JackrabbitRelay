@@ -380,6 +380,10 @@ class Locker:
     def Erase(self):
         return self.RetryData("Erase",0,None)
 
+###
+### General purpose functions
+###
+
 # General file tools
 
 def ReadFile(fn):
@@ -396,9 +400,9 @@ def WriteFile(fn,data):
     cf.write(data)
     cf.close()
 
-# Automatically adding a newline (\n) needs to be considered carefully as it may not be the best way of managing text files.
-# Even though putting newline at the end of every line that uses this is a pain, it is a consistency of intent that text is
-# being used bersus binary.
+# Automatically adding a newline (\n) needs to be considered carefully as it may not be the best way of managing
+# text files. Even though putting newline at the end of every line that uses this is a pain, it is a consistency
+# of intent that text is being used bersus binary.
 
 def AppendFile(fn,data):
     cf=open(fn,'a')
@@ -657,6 +661,16 @@ class DList:
             while current:
                 self.dump(current)
                 current=current.GetNext()
+
+###
+### Generic any purpose functions
+###
+
+# Create a directory
+
+def mkdir(fn):
+    if not os.path.exists(fn):
+        os.makedirs(fn)
 
 # Get Yesterday's date
 

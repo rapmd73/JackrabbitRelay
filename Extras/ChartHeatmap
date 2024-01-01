@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import time
+import datetime
+import json
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.subplots as ps
+
+import JRRsupport
+import JackrabbitRelay as JRR
+
+def CalculateCorrelation(list1, list2):
+    if len(list1) != len(list2):
+        return 0
+
+    n = len(list1)
+    sum_x = sum(list1)
+    sum_y = sum(list2)
+    sum_x_sq = sum([x**2 for x in list1])
+    sum_y_sq = sum([y**2 for y in list2])
+    sum_xy = sum([list1[i]*list2[i] for i in range(n)])
+
+    numerator = (n*sum_xy) - (sum_x*sum_y)
+    denominator = ((n*sum_x_sq - sum_x**2)**0.5) * ((n*sum_y_sq - sum_y**2)**0.5)
+
+    if denominator == 0:
+        return 0
+
+    return round(float(numerator / denominator),4)
+
+###
+### Main code base. Place order on exchange
+###
+
+if len(sys.argv)<3:
+    print("You must specify either (I)mage or (H)tml for output type as the first argumrnt.")
+    print("An exchange and an account must also br given")
+    sys.exit(1)
+
+ih=sys.argv[1].lower()
+if ih!='i' and ih!='h':
+    print("You MUST specify either (I)mage or (H)tml for output type")
+    sys.exit(1)
+
+exchangeName=sys.argv[2].lower()
+account=sys.argv[3]
+
+# Check for a search pattern
+
+assetSearch=None
+if len(sys.argv) > 4:
+    assetSearch=sys.argv[4].upper()
+
+# Remove sys arg list
+
+for i in range(1,len(sys.argv)):
+    sys.argv.remove(sys.argv[1])
+
+relay=JRR.JackrabbitRelay(exchange=exchangeName,account=account)
+
+chartDir=f"{relay.DataDirectory}/Charts/"
+
+markets=relay.GetMarkets()
+
+if relay.Framework=='ccxt':
+    TimeFrame='1d'
+elif relay.Framework=='oanda':
+    TimeFrame='D'
+else:
+    print(f"{relay.Framework} is not supported.")
+    sys.exit(1)
+
+# Initialize closing price list
+ohlcv={}
+
+for asset in markets:
+    if assetSearch!=None:
+        if asset.find(assetSearch)>=0:
+            ohlcv[asset]=[]
+    else:
+        ohlcv[asset]=[]
+
+print("Processing markets")
+for asset in markets:
+    if assetSearch!=None and asset.find(assetSearch)<0:
+        continue
+
+    # Remove last candle as it is not complete.
+    count=5000
+    candles=relay.GetOHLCV(symbol=asset,timeframe=TimeFrame,limit=count)[:count-1]
+
+    # Get closing price and calculate rate of change % from close[0]
+
+    rl=[]
+    dl=[]
+    cZ=candles[0][4]
+    for slice in candles:
+        c=slice[4]
+        timestamp=datetime.datetime.fromtimestamp(float(slice[0])/1000)
+
+        dt=timestamp.strftime('%Y-%m-%d')
+        roc=round(((c-cZ)/cZ)*100,5)
+        dl.append(dt)
+        rl.append(roc)
+    ohlcv[asset].append(dl)
+    ohlcv[asset].append(rl)
+
+# Sort keys actually used
+al=list(sorted(ohlcv.keys()))
+
+# Make chart directory
+
+JRRsupport.mkdir(chartDir)
+
+# Build heatmap
+
+print("Making heatmap chart")
+
+hmData=[]
+for assetV in al:
+    cpData=[]
+    for assetH in al:
+        d=CalculateCorrelation(ohlcv[assetV][1],ohlcv[assetH][1])
+        cpData.append(d)
+    hmData.append(cpData)
+
+if ih=='h':
+    fn=chartDir+exchangeName+'.'+account+'.'+'Heatmap.html'
+else:
+    fn=chartDir+exchangeName+'.'+account+'.'+'Heatmap.png'
+
+fig1=ps.make_subplots(specs=[[{"secondary_y":False}]])
+fig1.add_layout_image(dict(
+        source='https://rapmd.net/RAPMDlogo.png',
+        xref='paper',yref='paper',
+        xanchor='center',yanchor='middle',
+        x=0.5,y=0.5,
+        sizex=1,sizey=1,
+        opacity=0.1
+    ))
+fig1.add_trace(go.Heatmap(x=al,y=al,z=hmData,colorscale=[(0,"#ff0000"),(0.5,"#ffff00"),(1,"#00ff00")]),secondary_y=False)
+
+fig1.update_layout(title={"text":"Heatmap of (Inverse) Correlated Pairs","x":0.5,"xanchor":"center","yanchor":"top"},template='plotly_white')
+
+if ih=='h':
+    fig1.write_html(fn)
+else:
+    fig1.write_image(fn,width=1920,height=1024)
