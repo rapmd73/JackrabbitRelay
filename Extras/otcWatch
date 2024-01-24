@@ -42,19 +42,22 @@ def CalculatePriceExit(order,ts,dir,price):
         else:
             val=float(order[ts])
     elif ts=='StopLoss':
-        if '%' in order[ts]:
-            if dir=='long':
-                val=price-((float(order[ts].replace('%','').strip())/100)*price)
+        if 'StopLoss' in order:
+            if '%' in order[ts]:
+                if dir=='long':
+                    val=price-((float(order[ts].replace('%','').strip())/100)*price)
+                else:
+                    val=price+((float(order[ts].replace('%','').strip())/100)*price)
+            # Pips
+            elif 'p' in order[ts].lower():
+                if dir=='long':
+                    val=price-(float(order[ts].lower().replace('p','').strip())*0.0001)
+                else:
+                    val=price+(float(order[ts].lower().replace('p','').strip())*0.0001)
             else:
-                val=price+((float(order[ts].replace('%','').strip())/100)*price)
-        # Pips
-        elif 'p' in order[ts].lower():
-            if dir=='long':
-                val=price-(float(order[ts].lower().replace('p','').strip())*0.0001)
-            else:
-                val=price+(float(order[ts].lower().replace('p','').strip())*0.0001)
+                val=float(order[ts])
         else:
-            val=float(order[ts])
+            val=0
 
     return val
 
@@ -147,6 +150,8 @@ def main():
                 if Order['Asset'] not in openTrades:
                     openTrades[Order['Asset']]=Relay[Data['Framework']].GetOpenTrades(symbol=Order['Asset'])
                 detail=Relay[Data['Framework']].GetOrderDetails(OrderID=id)
+                if detail==None:
+                    continue
                 cid=detail[-1]['id']
 
                 # find trading duration
@@ -163,6 +168,7 @@ def main():
                         found=True
                         price=float(cur['price'])
                         amount=float(cur['currentUnits'])
+                        rpl=float(cur['unrealizedPL'])
                         break
 
                 if not found:
@@ -181,7 +187,7 @@ def main():
                 slPips=""
                 if sl!=0:
                     slPips=f"({Order['StopLoss']})"
-                print(f"{id:10} {Order['Asset']:10} {sl:.5f} {slPips:<10} {tprice:.5f}({price:.5f})/{ticker['Spread']:.5f} {tp:.5f} {tpPips:<10} {abs(amount):9.5f} {dir}, {duration}")
+                print(f"{id:10} {Order['Asset']:10} {sl:.5f} {slPips:<10} {tprice:.5f}({price:.5f})/{ticker['Spread']:.5f} {tp:.5f} {tpPips:<10} {rpl:.5f} {abs(amount):9.5f} {dir}, {duration}")
     else:
         print("No conditional orders yet.")
         sys.exit(0)

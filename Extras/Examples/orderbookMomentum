@@ -188,6 +188,6 @@ while True:
             OLDmaxSorders=maxSorders
 
             spread=maxSprice-maxBprice
-            print(f"{time} {maxBorders:12.4f} {maxBprice:12.4f} {maxSprice:12.4f} {maxSorders:12.4f} {spread:12.4f}")
+            print(f"{time} {maxBorders:12.4f} {maxBprice:12.4f} {spread:12.4f} {maxSprice:12.4f} {maxSorders:12.4f}")
 
     JRRsupport.ElasticSleep(1)

@@ -1,9 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Jackrabbit Relay base class and functionality
+# Jackrabbit Proxy base class and functionality
 # 2021 Copyright © Robert APM Darin
 # All rights reserved unconditionally.
+
+# Everything in the Jacckrabbit Relay class must be mirrored in the Proxy class. This will allow a client to connect to
+# a remote Relay PlaceOrder.proxy and pull exchange data as if it were direct access. Functionality of this is on the
+# basis of continued distributed layering.
+
+# the remote system MMMUUSSTT have a virtual exchange configured to allow proxy functionality.
+
+# The API function is really a webhook sender/receiver to the remote Relay system.
 
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
@@ -16,122 +24,48 @@ from datetime import datetime
 
 # Framework APIs
 
-import JRRccxt
-import JRRoanda
 import JRRsupport
+from JackrabbitRelay import JackrabbitLog
 
-# This is the logging class
-#
-# This will all a unified approach to logging individual assets
-# JRLog=JackrabbitLog(market+'.'+exchange+'.'+asset)
-#   -> spot.kucoin.adausdt
-
-class JackrabbitLog:
-    def __init__(self,filename=None,Base=None,Directory=None):
-        if Directory==None:
-            self.LogDirectory="/home/JackrabbitRelay2/Logs"
-        else:
-            self.LogDirectory=Directory
-        self.StartTime=datetime.now()
-        self.logfile=None
-        self.filename=filename
-        self.basename=Base
-        if self.basename==None:
-            self.basename=os.path.basename(sys.argv[0])
-        self.SetLogName(filename)
-
-    def SetLogDirectory(self,dirname):
-        if dirname!=None:
-            self.LogDirectory=dirname
-
-    def SetBaseName(self,basename):
-        if basename==None:
-            self.basename=os.path.basename(sys.argv[0])
-        else:
-            self.basename=basename
-        self.SetLogName(self.filename)
-
-    def SetLogName(self,filename):
-        if filename!=self.filename:
-            self.filename=filename
-        if filename==None:
-            self.logfile=self.basename
-        else:
-            self.logfile=self.basename+'.'+filename.replace('/','').replace('-','').replace(':','').replace(' ','')
-
-    def Write(self,text,stdOut=True):
-        pid=os.getpid()
-        time=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
-
-        s=f'{time} {pid:7.0f} {text}\n'
-
-        fn=self.LogDirectory+'/'+self.logfile+'.log'
-        fh=open(fn,'a+')
-        fh.write(s)
-        fh.close()
-        if stdOut==True:
-            print(s.rstrip())
-            sys.stdout.flush()
-
-    def Elapsed(self):
-        EndTime=datetime.now()
-        Elapsed=(EndTime-self.StartTime)
-        self.Write("Processing Completed: "+str(Elapsed)+" seconds")
-
-    def Error(self,f,s):
-        msg=f+' failed with: '+s
-        self.Write(msg)
-        self.Elapsed()
-        sys.exit(3)
-
-    def Success(self,f,s):
-        msg=f+' successful with: '+s
-        self.Write(msg)
-        self.Elapsed()
-        sys.exit(0)
-
-# The main class for the system. This IS going to be a royal pain in the ass to
+# The proxy class for the system. This IS going to be a royal pain in the ass to
 # type, but it also prevent mistakes as the system grows and developes. This
 # will also allow me to build in place as I replace one section at a time.
 
-# relay=JackrabbitRelay(framework="ccxt",payload=order)
-# relay=JackrabbitRelay(secondary="EquilibriumConfig")
+# relay=JackrabbitProxy(framework="ccxt",payload=order)
+# relay=JackrabbitProxy(secondary="EquilibriumConfig")
 
 # The config files can also provide the framework and work from the command
 # line.
 
-# relay=JackrabbitRelay()
+# proxy=JackrabbitProxy()
 
-class JackrabbitRelay:
-    def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,secondary=None,NoIdentityVerification=False,Usage=None):
+# Done:
+#   { "Action":"GetMarket", "Exchange":"Proxy", "Account":"Sandbox", "Identity":"Redacted" }
+#   { "Action":"GetTicker", "Exchange":"bybit", "Account":"Sandbox", "Asset":"TRX/USDT:USDT", "Identity":"Redacted" }
+
+# { "Action":"GetOHLCV", "Exchange":"bybit", "Account":"Sandbox", "Asset":"TRX/USDT:USDT", "TimeFrame":"D", "Identity":"Redacted" }
+# { "Action":"GetOrderBook", "Exchange":"bybit", "Account":"Sandbox", "Asset":"TRX/USDT:USDT", "Identity":"Redacted" }
+
+# Action is the Relay function to call
+
+class JackrabbitProxy:
+    def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,Usage=None):
         # All the default locations
         self.Version="0.0.0.1.500"
-        self.NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
         self.BaseDirectory='/home/JackrabbitRelay2/Base'
         self.ConfigDirectory='/home/JackrabbitRelay2/Config'
         self.DataDirectory="/home/JackrabbitRelay2/Data"
-        self.BalancesDirectory='/home/JackrabbitRelay2/Statistics/Balances'
-        self.ChartsDirectory='/home/JackrabbitRelay2/Statistics/Charts'
         self.LedgerDirectory="/home/JackrabbitRelay2/Ledger"
-        self.StatisticsDirectory='/home/JackrabbitRelay2/Extras/Statistics'
-        self.Identity=None
+
+        # Set up the allowable function jump list.
+        self.jumplist={}
+        self.BuildJumpList()
+
+        # Set up the usage notes
         self.Usage=None
 
         if Usage!=None:
             self.Usage=Usage
-
-        # Turn off Identity verification
-
-        if NoIdentityVerification==True:
-            self.IdentityVerification=False
-        else:
-            self.IdentityVerification=True
-
-        # This will be the connector point to any exchange/broker
-        self.Broker=None
-
-        # This is for the rate limiting sub-system
-        self.Limiter=None
 
         # Initialize The log to just the basename of the program.
         self.JRLog=JackrabbitLog(None)
@@ -146,32 +80,10 @@ class JackrabbitRelay:
         # This is the main exchange configuration structure, including APIs.
         self.Config=[]
 
-        # Secondary config reader for Equilibrium or any other external program
-        # hooking into Relay. This will be responsible for the same
-        # functionality as the payload or commandline methods. Exchange,
-        # Account, Asset, etc must be set up.
-
-        self.Secondary=secondary
-
         # Convience for uniformity
         self.Exchange=None
 
-        # Break down any chained lists. Exchange will be first, rest of chain
-        # will be in the list. Exchange place order MUST be last. With the below
-        # example, Exchange will contain dsr and ExchangeList will contain
-        # kucoin. It is the responsibility of the PlaceOrder for dsr (this
-        # example) to build the order for kucoin (this example) and feed it back
-        # into the Relay Server with SendWebhook.
-        #    "Exchange":"dsr,kucoin",
-
-        self.ExchangeList=None
-
-        # Account must also be a list reference to coinside with the coresponding
-        # exchange.
-        #    "Account":"Sandbox,MAIN",
-
         self.Account=None
-        self.AccountList=None
 
         self.Asset=None
 
@@ -182,31 +94,11 @@ class JackrabbitRelay:
         self.Active=[]
         self.CurrentKey=-1
 
-        # List of available timeframes on this exchange/broker. Will ne filled in be login process.
-        self.Timeframes=None
-
         # The current order being processed
         self.Order=None
 
         # Result from last operation
         self.Results=None
-
-        # this is the framework that defines the low level API,
-        # ie CCXT, OANDA, ROBINHOOD, FTXSTOCKS
-        # Framework can be provided by config file
-
-        self.Framework=None
-        if framework!=None:
-            self.Framework=framework.lower()
-
-        # Whether or not to rotate keys after every API call. Does NOT apply to
-        # OANDA.
-
-        self.ForceRotateKeys=True
-
-        # Read global identty
-
-        self.ReadGlobalIdentity()
 
         # Process command line. Must be first function called
 
@@ -217,12 +109,6 @@ class JackrabbitRelay:
 
         if self.Payload!=None:
             self.ProcessPayload()
-
-        # Process secondary config file. Exchange, Account, and Asset must be
-        # defined.
-
-        if self.Secondary!=None:
-            self.Secondary()
 
         # Setup the exchange and account passed in to the method. At this point, if we dont have an exchange
         # and account, the information has to have been force fed into the method.
@@ -243,94 +129,44 @@ class JackrabbitRelay:
         # Now that all parts are loaded, fully verify the payload for the
         # specific broker
 
-        if self.Payload!=None:
-            self.VerifyPayload()
+ #       if self.Payload!=None:
+ #           self.VerifyPayload()
 
         # Login to exchange/Broker
 
         if self.Exchange!=None and self.Account!=None:
-
-            # Do NOT automatically log into a virtual exchange. This is
-            # responsibility of calling program (the virtual exchange).
-
             if self.Framework!='virtual':
-                self.Login()
+                self.JRLog.Error("Initialization","Framework must be Virtual for a proxy")
         elif self.Payload!=None:
             if self.Usage:
                 self.Usage(self.args,self.argslen)
             else:
-                self.JRLog.Error("Login","An exchange and an account must be provided")
+                self.JRLog.Error("Initialization","An exchange and an account must be provided")
         else:
             if self.Usage:
                 self.Usage(self.args,self.argslen)
             else:
                 self.JRLog.Error("Initialization","An exchange and an account must be provided")
 
+    # Build a jump list of acceptable functions
+
+    def BuildJumpList(self):
+        for name in dir(self):
+            member=getattr(self,name)
+            if callable(member) and name.startswith('Read'):
+                self.jumplist[name]=member
+
     def GetExchange(self):
         return self.Exchange
 
-    def GetExchangeList(self):
-        return ','.join(self.ExchangeList)
-
-    def GetExchangeNext(self):
-        if self.ExchangeList!=None and len(self.ExchangeList)>0:
-            return self.ExchangeList[0]
-        else:
-            return None
-
-    def GetExchangeAfterNext(self):
-        if self.ExchangeList!=None and len(self.ExchangeList)>1:
-            return self.ExchangeList[1:]
-        else:
-            return None
-
-    def GetExchangeLast(self):
-        if self.ExchangeList!=None and len(self.ExchangeList)>0:
-            return self.ExchangeList[-1]
-        else:
-            return None
-
     def GetAccount(self):
         return self.Account
-
-    def GetAccountList(self):
-        return ','.join(self.AccountList)
-
-    def GetAccountNext(self):
-        if self.AccountList!=None and len(self.AccountList)>0:
-            return self.AccountList[0]
-        else:
-            return None
-
-    def GetAccountAfterNext(self):
-        if self.AccountList!=None and len(self.AccountList)>1:
-            return self.AccountList[1:]
-        else:
-            return None
-
-    def GetAccountLast(self):
-        if self.AccountList!=None and len(self.AccountList)>0:
-            return self.AccountList[-1]
-        else:
-            return None
 
     def GetAsset(self):
         return self.Asset
 
     def SetAsset(self,asset):
         self.Asset=asset
-
-    def SetRotateKeys(self,rk):
-        self.ForceRotateKeys=rk
-
-    def GetRotateKeys(self):
-        return self.ForceRotateKeys
-
-    def SetFramework(self,framework):
-        self.Framework=framework
-
-    def GetFramework(self):
-        return self.Framework
 
     # Return command line information to user
 
@@ -354,21 +190,7 @@ class JackrabbitRelay:
         if lname!=None:
             self.JRLog.SetLogName(lname)
 
-    # Read global Identity
-
-    def ReadGlobalIdentity(self):
-        idf=self.ConfigDirectory+'/Identity.cfg'
-        if os.path.exists(idf):
-            cf=open(idf,'rt+')
-            try:
-                self.Identity=json.loads(cf.readline())
-            except:
-                self.JRLog.Error("Reading Configuration",'identity damaged')
-            cf.close()
-        else:
-            self.JRLog.Error("Reading Configuration",'Identity.cfg not found')
-
-    # Webhook processing. This unified layer will communicate with Relay for
+    # Webhook processing. This unified layer will communicate with Proxy for
     # placing the order and return the results.
 
     def SendWebhook(self,Order):
@@ -391,42 +213,109 @@ class JackrabbitRelay:
 
         return res
 
-    # Remap TradingView symbol to the exchange symbol/broker
+    # Get the order ID. If there isn't an ID, the order FAILED.
 
-    def TradingViewRemap(self):
-        if self.Asset!=self.Order['Asset']:
-            self.JRLog.Errr("TradingViewRemap",'internal asset conflict. Report this error.')
+    def GetProxyResult(self,res):
+        if res==None:
+            return None
 
-        NewPair=self.Asset
-        self.JRLog.Write('TradingView Symbol Remap')
-        self.JRLog.Write('|- In: '+self.Asset)
+        try:
+            if res.find('ProxyResult: ')>-1:
+                s=res.find('ProxyResult:')+13
+                for e in range(s,len(res)):
+                    if res[e]=='\n':
+                        break
+                result=res[s:e]
 
-        fn=self.DataDirectory+'/'+self.Exchange+'.'+self.Account+'.symbolmap'
-        if os.path.exists(fn):
-            try:
-                raw=JRRsupport.ReadFile(fn)
-            except Exception as e:
-                self.JRLog.Error("TradingView Remap",f"Can't read symbol map for {self.Exchange}")
+                return result
+        except:
+            pass
+        return None
 
-            TVlist=json.loads(raw)
-            if 'Market' in self.Order and self.Order['Market'].lower()!='spot':
-                srchAsset=self.Asset+':'+self.Order['Market'].lower()
-            else:
-                srchAsset=self.Asset
+    # Read the exchange config file and load API/SECRET for a given (sub)account.
+    # MAIN is reserved for the main account
 
-            if srchAsset in TVlist:
-                NewPair=TVlist[srchAsset]
-            else:
-                self.JRLog.Write('|- Pair not in symbol file')
-                return
-        else:
-            self.JRLog.Write('|- No symbol file')
+    def ProcessConfig(self):
+        logProcess={}
+        logProcess['JRLog']=self.JRLog
+        keys=[]
+
+        # Stop processing here if we don't want to proceed with private
+        # API, but want to use only public API.
+
+        if self.Account==None or self.Account.lower()=="none":
             return
 
-        self.JRLog.Write('|- Out: '+NewPair)
+        fn=self.ConfigDirectory+'/'+self.Exchange+'.cfg'
+        if os.path.exists(fn):
+            cf=open(fn,'rt+')
+            for line in cf.readlines():
+                if len(line.strip())>0 and line[0]!='#':
+                    self.Config.append(line)
+                    try:
+                        key=json.loads(line)
+                    except:
+                        self.JRLog.Error("Reading Configuration",'damaged: '+line)
+                    if key['Account']==self.Account:
+                        # Add identity to account reference
 
-        self.Asset=NewPair
-        self.Order['Asset']=NewPair
+                        # Will need to check for identity before adding global
+                        # identity.
+
+                        # Add the hooks for the logging process.
+
+                        if 'Identity' not in key:
+                            self.JRLog.Error("Reading Configuration",'Proxy identity REQUIRED')
+                        else:
+                            key={ **key, **logProcess }
+                        self.Keys.append(key)
+                cf.close()
+
+            if self.Keys==[]:
+                self.JRLog.Error("Reading Configuration",self.Account+' reference not found, check spelling/case')
+            else:
+                # Verify and set framework
+                for config in self.Keys:
+                    if 'Framework' not in config:
+                        self.JRLog.Error("Reading Configuration",f"{self.Exchange}/{self.Account} does no identify the framework")
+                self.Framework=self.Keys[0]['Framework'].lower()
+
+                # Initialize to the first key
+                self.Active=self.Keys[0]
+        else:
+            self.JRLog.Error("Reading Configuration",self.Exchange+'.cfg not found in config directory')
+
+    def ProcessCommandLine(self):
+        # Deep copy arguments
+        self.args=[]
+        for i in range(len(sys.argv)):
+            self.args.append(sys.argv[i])
+        self.argslen=len(self.args)
+
+        # Set up exchange, account and asset
+        if self.argslen>=1:
+            self.Basename=self.args[0]
+        if self.argslen>=2:
+            self.Exchange=self.args[1].lower().replace(' ','')
+            # Check for and handle an exchange list
+            echg=self.args[1].lower().replace(' ','')
+            if ',' in echg:
+                eList=echg.split(',')
+                self.Exchange=eList[0]
+                self.ExchangeList=eList[1:]
+            else:
+                self.Exchange=echg
+        if self.argslen>=3:
+            self.Account=self.args[2]
+        if self.argslen>=4:
+            self.Asset=self.args[3].upper()
+
+        self.SetupLogging()
+
+        # Clear the config arguments, otherwise the Proxy method will try to process it.
+        # This is a royal PAIN IN THE ASS to debug.
+        for i in range(1,len(sys.argv)):
+            sys.argv.remove(sys.argv[1])
 
     # Process and validate the order payload
 
@@ -448,24 +337,69 @@ class JackrabbitRelay:
         if "Exchange" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing exchange identifier')
         else:
-            # Check for and handle an exchange list
-            echg=self.Order['Exchange'].lower().replace(' ','')
-            if ',' in echg:
-                eList=echg.split(',')
-                self.Order['Exchange']=eList[0]
-                self.ExchangeList=eList[1:]
             self.Exchange=self.Order['Exchange']
 
         if "Account" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing account identifier')
         else:
-            # Check for and handle an account list
-            acct=self.Order['Account'].replace(' ','')
-            if ',' in acct:
-                aList=acct.split(',')
-                self.Order['Account']=aList[0]
-                self.AccountList=aList[1:]
             self.Account=self.Order['Account']
+
+    # Get the market list from the exchange
+    # { "Action":"GetMarket", "Exchange":"Proxy", "Account":"Sandbox", "Identity":"Redacted" }
+
+    def GetMarkets(self):
+        cmd={}
+        cmd['Action']='GetMarkets'
+        cmd['Exchange']=self.Exchange
+        cmd['Account']=self.Account
+        cmd['Identity']=self.Active['Identity']
+
+        self.Results=self.SendWebhook(cmd)
+        if 'GetMarkets/' in self.Results:
+            self.Markets=json.loads(self.GetProxyResult(self.Results)[11:])
+            return self.Markets
+
+        return None
+
+    # Get the the ticker from the exchange
+    # { "Action":"GetTicker", "Exchange":"bybit", "Account":"Sandbox", "Asset":"TRX/USDT:USDT", "Identity":"Redacted" }
+
+    def GetTicker(self,**kwargs):
+        cmd={}
+        cmd['Action']='GetTicker'
+        cmd['Exchange']=self.Exchange
+        cmd['Account']=self.Account
+        cmd['Asset']=kwargs.get('symbol')
+        cmd['Identity']=self.Active['Identity']
+
+        self.Results=self.SendWebhook(cmd)
+        if 'GetTicker/' in self.Results:
+            self.Ticker=json.loads(self.GetProxyResult(self.Results)[10:])
+            return self.Ticker
+
+        return None
+
+    # Get OHLCV data from exchange
+    # { "Action":"GetOHLCV", "Exchange":"bybit", "Account":"Sandbox", "Asset":"TRX/USDT:USDT", "TimeFrame":"D", "Candles":"10", "Identity":"Redacted" }
+
+    def GetOHLCV(self,**kwargs):
+        cmd={}
+        cmd['Action']='GetOHLCV'
+        cmd['Exchange']=self.Exchange
+        cmd['Account']=self.Account
+        cmd['Asset']=kwargs.get('symbol')
+        cmd['Timeframe']=kwargs.get('timeframe')
+        cmd['Candles']=kwargs.get('limit')
+        cmd['Identity']=self.Active['Identity']
+
+        self.Results=self.SendWebhook(cmd)
+        if 'GetOHLCV/' in self.Results:
+            self.ohlcv=json.loads(self.GetProxyResult(self.Results)[9:])
+            return self.ohlcv
+
+        return None
+
+"""
 
     # Verify the payload based upon a specific broker requirements.
 
@@ -520,93 +454,8 @@ class JackrabbitRelay:
             else:
                 self.JRLog.Error("Identity verification","FAILED: Identity.cfg not found")
 
-    # Read the exchange config file and load API/SECRET for a given (sub)account.
-    # MAIN is reserved for the main account
-
-    def ProcessConfig(self):
-        logProcess={}
-        logProcess['JRLog']=self.JRLog
-        keys=[]
-
-        # Stop processing here if we don't want to proceed with private
-        # API, but want to use only public API.
-
-        if self.Account==None or self.Account.lower()=="none":
-            return
-
-        fn=self.ConfigDirectory+'/'+self.Exchange+'.cfg'
-        if os.path.exists(fn):
-            cf=open(fn,'rt+')
-            for line in cf.readlines():
-                if len(line.strip())>0 and line[0]!='#':
-                    self.Config.append(line)
-                    try:
-                        key=json.loads(line)
-                    except:
-                        self.JRLog.Error("Reading Configuration",'damaged: '+line)
-                    if key['Account']==self.Account:
-                        # Add identity to account reference
-
-                        # Will need to check for identity before adding global
-                        # identity.
-
-                        # Add the hooks for the logging process.
-
-                        if 'Identity' not in key:
-                            key={ **key, **self.Identity, **logProcess }
-                        else:
-                            key={ **key, **logProcess }
-                        self.Keys.append(key)
-                cf.close()
-
-            if self.Keys==[]:
-                self.JRLog.Error("Reading Configuration",self.Account+' reference not found, check spelling/case')
-            else:
-                # Verify and set framework
-                for config in self.Keys:
-                    if 'Framework' not in config:
-                        self.JRLog.Error("Reading Configuration",f"{self.Exchange}/{self.Account} does no identify the framework")
-                self.Framework=self.Keys[0]['Framework'].lower()
-
-                # Initialize to the first key
-                self.Active=self.Keys[0]
-        else:
-            self.JRLog.Error("Reading Configuration",self.Exchange+'.cfg not found in config directory')
-
-    def ProcessCommandLine(self):
-        # Deep copy arguments
-        self.args=[]
-        for i in range(len(sys.argv)):
-            self.args.append(sys.argv[i])
-        self.argslen=len(self.args)
-
-        # Set up exchange, account and asset
-        if self.argslen>=1:
-            self.Basename=self.args[0]
-        if self.argslen>=2:
-            self.Exchange=self.args[1].lower().replace(' ','')
-            # Check for and handle an exchange list
-            echg=self.args[1].lower().replace(' ','')
-            if ',' in echg:
-                eList=echg.split(',')
-                self.Exchange=eList[0]
-                self.ExchangeList=eList[1:]
-            else:
-                self.Exchange=echg
-        if self.argslen>=3:
-            self.Account=self.args[2]
-        if self.argslen>=4:
-            self.Asset=self.args[3].upper()
-
-        self.SetupLogging()
-
-        # Clear the config arguments, otherwise the Relay method will try to process it.
-        # This is a royal PAIN IN THE ASS to debug.
-        for i in range(1,len(sys.argv)):
-            sys.argv.remove(sys.argv[1])
-
     # This if where things get messy. The basic API must have calls to
-    # each framework buy uniform to the Relay core.
+    # each framework buy uniform to the Proxy core.
 
     # Rotate API key/Secret
 
@@ -660,7 +509,7 @@ class JackrabbitRelay:
         self.Limiter=JRRsupport.Locker(ln,ID=ln)
         atexit.register(self.CleanUp)
 
-        # Market data is loaded automatically. Pull it into the Relay object as
+        # Market data is loaded automatically. Pull it into the Proxy object as
         # well.
 
         if self.Framework=='ccxt':
@@ -671,14 +520,6 @@ class JackrabbitRelay:
             self.Timeframes=list(self.Broker.timeframes.keys())
 
         self.Markets=self.Broker.Markets
-
-    # Get the market list from the exchange
-
-    def GetMarkets(self):
-        self.RotateKeys()
-        self.Markets=self.Broker.GetMarkets()
-        self.EnforceRateLimit()
-        return self.Markets
 
     # Get account balance(s)
 
@@ -822,3 +663,4 @@ class JackrabbitRelay:
         # Not Found
         orphanLock.Unlock()
         return False
+"""
