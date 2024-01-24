@@ -34,6 +34,7 @@ if [ x$1 != 'xnopull' ] ; then
     python3 -m pip install --upgrade pip
 
     for i in `cat requirements.txt` ; do
+        # --break-system-packages
         $pip3 install -U $i
     done
 

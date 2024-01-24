@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import time
+
+import JRRsupport
+
+###
+### Main code base.
+###
+
+if len(sys.argv)<2:
+    print("At least one Oliver Twwist log file is required.")
+    sys.exit(1)
+
+tt=0
+sl=0
+rs=0
+for i in range(1,len(sys.argv)):
+    if len(sys.argv)>2:
+        print(sys.argv[i])
+
+    lines=JRRsupport.ReadFile(sys.argv[i]).strip().split('\n')
+
+    # Running Sum
+    day={}
+    pnl=0
+
+    for line in lines:
+        if line=='' or ('Prft' not in line and 'Loss' not in line):
+            continue
+
+        data=line.split(' ')
+
+        dmy=data[0].split(' ')[0].split('-')
+        date=dmy[0]+'-'+dmy[1]  # +'-'+dmy[2]
+
+        pdata=line.split('/')[1].strip().split(',')[0]
+
+        if 'Prft' in line:
+            pnl=float(pdata)
+        if 'Loss' in line:
+            pnl=-float(pdata)
+        rs+=pnl
+
+        if date in day:
+            day[date]+=pnl
+        else:
+            day[date]=pnl
+
+        if 'Prft' in line or 'Loss' in line:
+            tt+=1
+        if 'Loss' in line:
+            sl+=1
+
+    for d in sorted(day.keys()):
+        print(f"{d} {round(day[d],4):10.4f}")
+
+print()
+
+# Trades/Month
+tpm=int(tt/len(day.keys()))
+atm=round(rs/tt,4)
+apm=round(atm*tpm,4)
+
+print(f"Total Profits/StopLosses/Trades: {round(rs,4):.4f}/{sl}/{tt}")
+print(f"Average/Trade:        {atm:.4f}")
+print(f"Average Trades/Month: {tpm:.0f}")
+print(f"Average Profit/Month: {apm:.4f}")

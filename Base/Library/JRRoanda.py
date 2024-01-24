@@ -469,6 +469,9 @@ class oanda:
 #            if nid<int(ticket):
 #                FinalResults.append(self.GetOrderDetails(OrderID=str(nid)))
 
+        if 'transaction' not in self.Results:
+            return None
+
         if 'replacesOrderID' in self.Results['transaction']:
             nid=int(self.Results['transaction']['replacesOrderID'])
             if nid<int(ticket):

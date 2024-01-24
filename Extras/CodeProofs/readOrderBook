@@ -42,7 +42,7 @@ if relay.GetFramework()=='ccxt':
     sp=0
     buyIDX=0
     sellIDX=0
-    l=min(len(orderbook['asks']),len(orderbook['bids']))
+    l=min(len(orderbook['asks']),len(orderbook['bids']))-1
 
     obl=[]
     oblB=[]
@@ -112,7 +112,7 @@ if relay.GetFramework()=='ccxt':
 
     spread=maxSprice-maxBprice
     print(f"{'-'*4:4} {'-'*12:12} {'-'*12:12} {'-'*12:12} {'-'*12:12} {'-'*12:12}")
-    print(f"MAX  {maxBorders:12.5f} {maxBprice:12.5f} {maxSprice:12.5f} {maxSorders:12.5f} {spread:12.5f}")
+    print(f"MAX  {maxBorders:12.5f} {maxBprice:12.5f} {spread:12.5f} {maxSprice:12.5f} {maxSorders:12.5f}")
 elif relay.GetFramework()=='oanda':
     BuyPrice=ticker['Bid']
     SellPrice=ticker['Ask']
