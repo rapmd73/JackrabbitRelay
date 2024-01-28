@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import ccxt
+
+import JRRsupport
+
+if len(sys.argv)<2:
+    print('Port number must be given to local Jackrabbit Relay server')
+    sys.exit(1)
+
+port=int(sys.argv[1])
+
+papi='\n# Public access API\n'
+papi+='{ "Framework":"ccxt","Account":"Public","MarketType":"Spot","API":"Public","SECRET":"Public","RateLimit":"1000","Webhook":"http://127.0.0.1:'+str(port)+'" }\n'
+
+cdir='/home/JackrabbitRelay2/Config/'
+
+for i in ccxt.exchanges:
+    exchange=getattr(ccxt,i)()
+
+    en=i.strip()
+
+    try:
+        found=False
+        m=exchange.load_markets()
+        cname=cdir+en+'.cfg'
+        if os.path.exists(cname):
+            buf=JRRsupport.ReadFile(cname)
+            found=('"Account":"Public"' in buf)
+
+        if not found:
+            first=list(m.keys())[0]
+            t=exchange.fetch_ticker(symbol=first)
+            o1=exchange.fetch_ohlcv(symbol=first,timeframe='1d',limit=10)
+            o2=exchange.fetch_order_book(symbol=first)
+
+            print(en)
+            JRRsupport.AppendFile(cname,papi)
+    except Exception as e:
+        pass
+

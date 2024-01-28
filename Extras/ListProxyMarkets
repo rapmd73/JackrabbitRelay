@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+
+import JackrabbitRelay as JRR
+import JackrabbitProxy as JRP
+
+def GetRatio(decimal):
+    ratio = 1 / decimal
+    return f"{int(ratio):4}:1"
+
+def Help(args,argslen):
+    print("An exchange and an account must be provided.")
+    sys.exit(1)
+
+# Example usage
+
+def main():
+    proxy=JRP.JackrabbitProxy(Usage=Help)
+
+    exchangeName=proxy.GetExchange()
+    account=proxy.GetAccount()
+
+    # Already loaded from login
+
+    markets=proxy.GetMarkets()
+
+    # Get additional command line setting
+
+    srch='ALL'
+    if proxy.GetArgsLen() > 3:
+        srch=proxy.GetArgs(3).upper()
+    if proxy.GetArgsLen() > 4:
+        srchLT=True
+        sLT=float(proxy.GetArgs(4))
+    else:
+        srchLT=False
+    if proxy.GetArgsLen() > 5:
+        srchGT=True
+        sGT=float(proxy.GetArgs(5))
+    else:
+        srchGT=False
+
+    # Begin listing this exchange/broker
+
+    for pair in proxy.Markets:
+        if proxy.Framework=='ccxt':
+            if pair[0]=='.' or pair.find(".d")>-1 or pair.find(" ")>-1:
+                continue
+            if 'active' in proxy.Markets[pair]:
+                if proxy.Markets[pair]['active']==False:
+                    continue
+
+        if srch!=None and srch.upper()!='ALL':
+            if pair.find(srch)<0:
+                continue
+
+        ticker=proxy.GetTicker(symbol=pair)
+
+        # If bid and ask are 0, we can't trade it, so don't show it.
+        if ticker['Bid']==0 and ticker['Ask']==0:
+            continue
+
+        dstr=f"{pair:30} "
+        if 'id' in proxy.Markets[pair]:
+            id=proxy.Markets[pair]['id']
+            dstr+=f"{id:30} "
+        if 'type' in proxy.Markets[pair]:
+            marketType=proxy.Markets[pair]['type']
+            if 'margin' in proxy.Markets[pair] and proxy.Markets[pair]['margin']==True and marketType=='spot':
+                marketType='margin'
+            dstr+=f"{marketType:8} "
+        if 'marginRate' in proxy.Markets[pair]:
+            mr=GetRatio(float(proxy.Markets[pair]['marginRate']))
+            dstr+=f"{mr} "
+        dstr+=f"{ticker['Bid']:18.8f} {ticker['Spread']:18.8f} {ticker['Ask']:18.8f}"
+
+        print(dstr)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Terminated")

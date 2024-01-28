@@ -186,22 +186,23 @@ class ccxtCrypto:
         # Cycle through required login types. Each exchange could have different login
         # requireents. Try to soft through each requirement and handle it.
 
-        # CCXT reference
-        er=[ 'apiKey','secret','uid','login','password','twofa','privateKey','walletAddress','token' ]
-        # Jackrabbit referrence for config file
-        re=[ 'API','SECRET','UserID','UserLogin','Passphrase','2Factor','PrivateKey','LoginWallet','Token' ]
+        if self.Active['Account'].lower()!='public':
+            # CCXT reference
+            er=[ 'apiKey','secret','uid','login','password','twofa','privateKey','walletAddress','token' ]
+            # Jackrabbit referrence for config file
+            re=[ 'API','SECRET','UserID','UserLogin','Passphrase','2Factor','PrivateKey','LoginWallet','Token' ]
 
-        for r in range(len(er)):
-            rf=er[r]
-            jf=re[r]
-            # test for the requiremnt and try to satisfy it
-            if self.Broker.requiredCredentials[rf]==True:
-                if jf in self.Active:
-                    # Check if this is a public access point
-                    if self.Active[jf].lower()!='public':
-                        self.Broker.__dict__[rf]=self.Active[jf]
-                else:
-                    self.Log.Error("Connecting to exchange",self.Exchange+" requires a(n) '+jf+' as well")
+            for r in range(len(er)):
+                rf=er[r]
+                jf=re[r]
+                # test for the requiremnt and try to satisfy it
+                if self.Broker.requiredCredentials[rf]==True:
+                    if jf in self.Active:
+                        # Check if this is a public access point
+                        if self.Active[jf].lower()!='public':
+                            self.Broker.__dict__[rf]=self.Active[jf]
+                    else:
+                        self.Log.Error("Connecting to exchange",f"{self.Exchange} requires a(n) {jf} as well")
 
         if 'Market' in self.Active:
             self.Active['Market']=self.Active['Market'].lower()
