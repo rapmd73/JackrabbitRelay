@@ -33,6 +33,10 @@ ticker=proxy.GetTicker(symbol=asset)
 print(ticker)
 print()
 
-ohlcv=proxy.GetOHLCV(symbol=asset,timeframe='1d',limit=10)
+ohlcv=proxy.GetOHLCV(symbol=asset,timeframe='1d',limit=5000)
 print(ohlcv)
+print()
+
+ticker=proxy.GetOrderBook(symbol=asset)
+print(ticker)
 print()

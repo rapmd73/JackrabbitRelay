@@ -51,7 +51,7 @@ from JackrabbitRelay import JackrabbitLog
 class JackrabbitProxy:
     def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,Usage=None):
         # All the default locations
-        self.Version="0.0.0.1.500"
+        self.Version="0.0.0.1.505"
         self.BaseDirectory='/home/JackrabbitRelay2/Base'
         self.ConfigDirectory='/home/JackrabbitRelay2/Config'
         self.DataDirectory="/home/JackrabbitRelay2/Data"
@@ -376,6 +376,24 @@ class JackrabbitProxy:
         if 'GetTicker/' in self.Results:
             self.Ticker=json.loads(self.GetProxyResult(self.Results)[10:])
             return self.Ticker
+
+        return None
+
+    # Get the the ticker from the exchange
+    # { "Action":"GetTicker", "Exchange":"bybit", "Account":"Sandbox", "Asset":"TRX/USDT:USDT", "Identity":"Redacted" }
+
+    def GetOrderBook(self,**kwargs):
+        cmd={}
+        cmd['Action']='GetOrderBook'
+        cmd['Exchange']=self.Exchange
+        cmd['Account']=self.Account
+        cmd['Asset']=kwargs.get('symbol')
+        cmd['Identity']=self.Active['Identity']
+
+        self.Results=self.SendWebhook(cmd)
+        if 'GetOrderBook/' in self.Results:
+            self.OrderBook=json.loads(self.GetProxyResult(self.Results)[13:])
+            return self.OrderBook
 
         return None
 

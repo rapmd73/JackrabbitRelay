@@ -26,6 +26,39 @@ import JackrabbitRelay as JRR
 import JackrabbitProxy as JRP
 
 ###
+### functions for proxy
+###
+
+def GetMarkets(proxy,relay):
+    return json.dumps(relay.GetMarkets())
+
+def GetTicker(proxy,relay):
+    if 'Asset' in proxy.Order:
+        return json.dumps(relay.GetTicker(symbol=proxy.Order['Asset']))
+    else:
+        proxy.JRLog.Error(f"{proxy.Order['Action']}", "Asset missing")
+
+def GetOrderBook(proxy,relay):
+    if 'Asset' in proxy.Order:
+        return json.dumps(relay.GetOrderBook(symbol=proxy.Order['Asset']))
+    else:
+        proxy.JRLog.Error(f"{proxy.Order['Action']}", "Asset missing")
+
+def GetOHLCV(proxy,relay):
+    if 'Asset' in proxy.Order and 'Timeframe' in proxy.Order and 'Candles' in proxy.Order:
+        return json.dumps(relay.GetOHLCV(symbol=proxy.Order['Asset'],timeframe=proxy.Order['Timeframe'],limit=int(proxy.Order['Candles'])))
+    else:
+        proxy.JRLog.Error(f"{proxy.Order['Action']}", "Asset or Tineframe or Candles missing")
+
+# This jump list simplifies the main code be reducing bloat.
+
+JumpList={}
+JumpList['GetMarkets']=GetMarkets
+JumpList['GetTicker']=GetTicker
+JumpList['GetOHLCV']=GetOHLCV
+JumpList['GetOrderBook']=GetOrderBook
+
+###
 ### Main code base. Place order on exchange
 ###
 
@@ -57,6 +90,22 @@ def main():
 
     relay=JRR.JackrabbitRelay(framework=None,exchange=proxy.Active['DataExchange'],account=proxy.Active['DataAccount'])
 
+    if proxy.Order['Action'] in JumpList:
+        results=JumpList[proxy.Order['Action']](proxy,relay)
+    else:
+        proxy.JRLog.Error(f"{proxy.Order['Action']}", "Unrecognized proxy command")
+
+    proxy.JRLog.Write(f"ProxyResult: {proxy.Order['Action']}/{results}")
+
+    # Close out the program with the elapsed time it ran
+
+    proxy.JRLog.Elapsed()
+
+if __name__ == '__main__':
+    main()
+
+
+"""
     if proxy.Order['Action']=='GetMarkets':
         results=json.dumps(relay.GetMarkets())
     elif proxy.Order['Action']=='GetTicker':
@@ -69,17 +118,8 @@ def main():
             results=json.dumps(relay.GetOHLCV(symbol=proxy.Order['Asset'],timeframe=proxy.Order['Timeframe'],limit=int(proxy.Order['Candles'])))
         else:
             proxy.JRLog.Error(f"{proxy.Order['Action']}", "Asset or Tineframe or Candles missing")
-    else:
-        proxy.JRLog.Error(f"{proxy.Order['Action']}", "Unrecognized proxy command")
+"""
 
-    proxy.JRLog.Write(f"ProxyResult: {proxy.Order['Action']}/{results}")
-
-    # Close out the program with the elapsed time it ran
-
-    proxy.JRLog.Elapsed()
-
-if __name__ == '__main__':
-    main()
 
 """
 
