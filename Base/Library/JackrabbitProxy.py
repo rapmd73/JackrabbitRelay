@@ -50,7 +50,7 @@ from JackrabbitRelay import JackrabbitLog
 class JackrabbitProxy:
     def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,Usage=None):
         # All the default locations
-        self.Version="0.0.0.1.505"
+        self.Version="0.0.0.1.510"
         self.BaseDirectory='/home/JackrabbitRelay2/Base'
         self.ConfigDirectory='/home/JackrabbitRelay2/Config'
         self.DataDirectory="/home/JackrabbitRelay2/Data"
@@ -78,7 +78,22 @@ class JackrabbitProxy:
         # Convience for uniformity
         self.Exchange=None
 
+        # Break down any chained lists. Exchange will be first, rest of chain
+        # will be in the list. Exchange place order MUST be last. With the below
+        # example, Exchange will contain dsr and ExchangeList will contain
+        # kucoin. It is the responsibility of the PlaceOrder for dsr (this
+        # example) to build the order for kucoin (this example) and feed it back
+        # into the Relay Server with SendWebhook.
+        #    "Exchange":"dsr,kucoin",
+
+        self.ExchangeList=None
+
+        # Account must also be a list reference to coinside with the coresponding
+        # exchange.
+        #    "Account":"Sandbox,MAIN",
+
         self.Account=None
+        self.AccountList=None
 
         self.Asset=None
 
@@ -146,8 +161,50 @@ class JackrabbitProxy:
     def GetExchange(self):
         return self.Exchange
 
+    def GetExchangeList(self):
+        return ','.join(self.ExchangeList)
+
+    def GetExchangeNext(self):
+        if self.ExchangeList!=None and len(self.ExchangeList)>0:
+            return self.ExchangeList[0]
+        else:
+            return None
+
+    def GetExchangeAfterNext(self):
+        if self.ExchangeList!=None and len(self.ExchangeList)>1:
+            return self.ExchangeList[1:]
+        else:
+            return None
+
+    def GetExchangeLast(self):
+        if self.ExchangeList!=None and len(self.ExchangeList)>0:
+            return self.ExchangeList[-1]
+        else:
+            return None
+
     def GetAccount(self):
         return self.Account
+
+    def GetAccountList(self):
+        return ','.join(self.AccountList)
+
+    def GetAccountNext(self):
+        if self.AccountList!=None and len(self.AccountList)>0:
+            return self.AccountList[0]
+        else:
+            return None
+
+    def GetAccountAfterNext(self):
+        if self.AccountList!=None and len(self.AccountList)>1:
+            return self.AccountList[1:]
+        else:
+            return None
+
+    def GetAccountLast(self):
+        if self.AccountList!=None and len(self.AccountList)>0:
+            return self.AccountList[-1]
+        else:
+            return None
 
     def GetAsset(self):
         return self.Asset
@@ -285,7 +342,15 @@ class JackrabbitProxy:
         if self.argslen>=1:
             self.Basename=self.args[0]
         if self.argslen>=2:
-            self.Exchange=self.args[1].lower()
+            self.Exchange=self.args[1].lower().replace(' ','')
+            # Check for and handle an exchange list
+            echg=self.args[1].lower().replace(' ','')
+            if ',' in echg:
+                eList=echg.split(',')
+                self.Exchange=eList[0]
+                self.ExchangeList=eList[1:]
+            else:
+                self.Exchange=echg
         if self.argslen>=3:
             self.Account=self.args[2]
         if self.argslen>=4:
@@ -318,11 +383,23 @@ class JackrabbitProxy:
         if "Exchange" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing exchange identifier')
         else:
+            # Check for and handle an exchange list
+            echg=self.Order['Exchange'].lower().replace(' ','')
+            if ',' in echg:
+                eList=echg.split(',')
+                self.Order['Exchange']=eList[0]
+                self.ExchangeList=eList[1:]
             self.Exchange=self.Order['Exchange']
 
         if "Account" not in self.Order:
             self.JRLog.Error('Processing Payload','Missing account identifier')
         else:
+            # Check for and handle an account list
+            acct=self.Order['Account'].replace(' ','')
+            if ',' in acct:
+                aList=acct.split(',')
+                self.Order['Account']=aList[0]
+                self.AccountList=aList[1:]
             self.Account=self.Order['Account']
 
     # Get the market list from the exchange
