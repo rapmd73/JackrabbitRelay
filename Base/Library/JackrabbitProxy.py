@@ -42,9 +42,8 @@ from JackrabbitRelay import JackrabbitLog
 # Done:
 #   { "Action":"GetMarket", "Exchange":"Proxy", "Account":"Sandbox", "Identity":"Redacted" }
 #   { "Action":"GetTicker", "Exchange":"bybit", "Account":"Sandbox", "Asset":"TRX/USDT:USDT", "Identity":"Redacted" }
-
-# { "Action":"GetOHLCV", "Exchange":"bybit", "Account":"Sandbox", "Asset":"TRX/USDT:USDT", "TimeFrame":"D", "Identity":"Redacted" }
-# { "Action":"GetOrderBook", "Exchange":"bybit", "Account":"Sandbox", "Asset":"TRX/USDT:USDT", "Identity":"Redacted" }
+#   { "Action":"GetOHLCV", "Exchange":"bybit", "Account":"Sandbox", "Asset":"TRX/USDT:USDT", "TimeFrame":"D", "Identity":"Redacted" }
+#   { "Action":"GetOrderBook", "Exchange":"bybit", "Account":"Sandbox", "Asset":"TRX/USDT:USDT", "Identity":"Redacted" }
 
 # Action is the Relay function to call
 
@@ -56,10 +55,6 @@ class JackrabbitProxy:
         self.ConfigDirectory='/home/JackrabbitRelay2/Config'
         self.DataDirectory="/home/JackrabbitRelay2/Data"
         self.LedgerDirectory="/home/JackrabbitRelay2/Ledger"
-
-        # Set up the allowable function jump list.
-        self.jumplist={}
-        self.BuildJumpList()
 
         # Set up the usage notes
         self.Usage=None
@@ -148,14 +143,6 @@ class JackrabbitProxy:
             else:
                 self.JRLog.Error("Initialization","An exchange and an account must be provided")
 
-    # Build a jump list of acceptable functions
-
-    def BuildJumpList(self):
-        for name in dir(self):
-            member=getattr(self,name)
-            if callable(member) and name.startswith('Read'):
-                self.jumplist[name]=member
-
     def GetExchange(self):
         return self.Exchange
 
@@ -243,7 +230,7 @@ class JackrabbitProxy:
         # Stop processing here if we don't want to proceed with private
         # API, but want to use only public API.
 
-        if self.Account==None or self.Account.lower()=="none":
+        if self.Account==None or self.Account.lower()=="public":
             return
 
         fn=self.ConfigDirectory+'/'+self.Exchange+'.cfg'
@@ -255,7 +242,7 @@ class JackrabbitProxy:
                     try:
                         key=json.loads(line)
                     except:
-                        self.JRLog.Error("Reading Configuration",'damaged: '+line)
+                        self.JRLog.Error("Reading Configuration",f'damaged: {line}')
                     if key['Account']==self.Account:
                         # Add identity to account reference
 
@@ -267,6 +254,8 @@ class JackrabbitProxy:
                         if 'Identity' not in key:
                             self.JRLog.Error("Reading Configuration",'Proxy identity REQUIRED')
                         else:
+                            if len(key['Identity'])<1024:
+                                self.JRLog.Error("Reading Configuration",'Proxy identity too short')
                             key={ **key, **logProcess }
                         self.Keys.append(key)
                 cf.close()
@@ -296,15 +285,7 @@ class JackrabbitProxy:
         if self.argslen>=1:
             self.Basename=self.args[0]
         if self.argslen>=2:
-            self.Exchange=self.args[1].lower().replace(' ','')
-            # Check for and handle an exchange list
-            echg=self.args[1].lower().replace(' ','')
-            if ',' in echg:
-                eList=echg.split(',')
-                self.Exchange=eList[0]
-                self.ExchangeList=eList[1:]
-            else:
-                self.Exchange=echg
+            self.Exchange=self.args[1].lower()
         if self.argslen>=3:
             self.Account=self.args[2]
         if self.argslen>=4:
@@ -417,268 +398,3 @@ class JackrabbitProxy:
 
         return None
 
-"""
-
-    # Verify the payload based upon a specific broker requirements.
-
-    def VerifyPayload(self):
-        if self.Framework=='ccxt':
-            if "Market" not in self.Order:
-                self.JRLog.Error('Processing Payload','Missing market identifier')
-            self.Order['Market']=self.Order['Market'].lower()
-
-        if "Action" not in self.Order:
-            self.JRLog.Error('Processing Payload','Missing action (buy/sell/close) identifier')
-        self.Order['Action']=self.Order['Action'].lower()
-        # Convert version 1 payloads to version 2
-        if self.Order['Action']=='long':
-            self.Order['Action']='buy'
-        if self.Order['Action']=='short':
-            self.Order['Action']='sell'
-        if self.Order['Action']!='buy' and self.Order['Action']!='sell' and self.Order['Action']!='close':
-            self.JRLog.Error('Processing Payload','Action must be one of buy, sell or close')
-
-        if "OrderType" not in self.Order:
-            self.Order['OrderType']='market'
-        else:
-            self.Order['OrderType']=self.Order['OrderType'].lower()
-
-        if "Asset" not in self.Order:
-            self.JRLog.Error('Processing Payload','Missing asset identifier')
-        else:
-            self.Order['Asset']=self.Order['Asset'].upper()
-            self.Asset=self.Order['Asset']
-
-        # Set up logging data
-
-        if self.Exchange!=None and self.Account!=None and self.Asset!=None:
-            if "Market" in self.Order:
-                lname=f"{self.Exchange}.{self.Account}.{self.Order['Market']}.{self.Asset}"
-            else:
-                lname=f"{self.Exchange}.{self.Account}.{self.Asset}"
-            self.JRLog.SetLogName(lname)
-
-        # Verify the Identity within the payload. Identity now REQUIRED.
-
-        # self.Active['Identity'] will either be the global identity of the account identity.
-
-        if self.IdentityVerification==True:
-            if "Identity" in self.Active:
-                if "Identity" in self.Order:
-                    if self.Order['Identity']!=self.Active['Identity']:
-                        self.JRLog.Error("Identity verification","FAILED: Identity does not match")
-                else:
-                    self.JRLog.Error("Identity verification","FAILED: Identity not in payload")
-            else:
-                self.JRLog.Error("Identity verification","FAILED: Identity.cfg not found")
-
-    # This if where things get messy. The basic API must have calls to
-    # each framework buy uniform to the Proxy core.
-
-    # Rotate API key/Secret
-
-    def RotateKeys(self):
-        if self.CurrentKey<0:
-            self.CurrentKey=(os.getpid()%len(self.Keys))
-        else:
-            self.CurrentKey=((self.CurrentKey+1)%len(self.Keys))
-        self.Active=self.Keys[self.CurrentKey]
-
-        if self.Framework=='ccxt':
-            self.ccxt=self.Broker.SetExchangeAPI()
-
-    # Carry out rate limit
-
-    def EnforceRateLimit(self):
-        if 'RateLimit' in self.Active:
-            ratelimit=int(self.Active['RateLimit'])
-        else:
-            ratelimit=1000
-
-        while self.Limiter.Lock()!='locked':
-            JRRsupport.ElasticSleep(ratelimit/1000)
-        JRRsupport.ElasticSleep(ratelimit/1000)
-        self.Limiter.Unlock()
-
-    # Function to run at exit.
-
-    def CleanUp(self):
-        # Something probably went wrong, such as an exchnge/broker timeout. Remove the rate limit by force. This
-        # is neccessary or any program is a rate limited sleep will hold up everything waiting for a dead lock to
-        # expire.
-
-        self.Limiter.Unlock()
-
-    # Login to a given exchange
-
-    # Active references must be passed as well.
-
-    def Login(self):
-        # Sanity check
-
-        if self.Framework==None:
-            if 'Framework' in self.Active:
-                self.Framework=self.Active['Framework'].lower()
-            else:
-                self.JRLog.Error("Login",self.Exchange+' framework not given in configuration')
-
-        # Initialize rate limiting sub-system
-        ln="RateLimiter."+self.Exchange
-        self.Limiter=JRRsupport.Locker(ln,ID=ln)
-        atexit.register(self.CleanUp)
-
-        # Market data is loaded automatically. Pull it into the Proxy object as
-        # well.
-
-        if self.Framework=='ccxt':
-            self.Broker=JRRccxt.ccxtCrypto(self.Exchange,self.Config,self.Active,DataDirectory=self.DataDirectory)
-            self.Timeframes=list(self.Broker.Broker.timeframes.keys())
-        elif self.Framework=='oanda':
-            self.Broker=JRRoanda.oanda(self.Exchange,self.Config,self.Active,DataDirectory=self.DataDirectory)
-            self.Timeframes=list(self.Broker.timeframes.keys())
-
-        self.Markets=self.Broker.Markets
-
-    # Get account balance(s)
-
-    def GetBalance(self,**kwargs):
-        self.RotateKeys()
-        self.Results=self.Broker.GetBalance(**kwargs)
-        self.EnforceRateLimit()
-        return self.Results
-
-    # Get the exchange positions. For and non-spot market
-
-    def GetPositions(self,**kwargs):
-        self.RotateKeys()
-        self.Results=self.Broker.GetPositions(**kwargs)
-        self.EnforceRateLimit()
-        return self.Results
-
-    # Get OHLCV data from exchange
-
-    def GetOHLCV(self,**kwargs):
-        self.RotateKeys()
-        self.Results=self.Broker.GetOHLCV(**kwargs)
-        self.EnforceRateLimit()
-        return self.Results
-
-    # Get ticker data from exchange
-
-    def GetTicker(self,**kwargs):
-        self.RotateKeys()
-        self.Results=self.Broker.GetTicker(**kwargs)
-        self.EnforceRateLimit()
-        return self.Results
-
-    # Get orderbook data from exchange
-
-    def GetOrderBook(self,**kwargs):
-        self.RotateKeys()
-        self.Results=self.Broker.GetOrderBook(**kwargs)
-        self.EnforceRateLimit()
-        return self.Results
-
-    # Get open orders
-
-    def GetOpenOrders(self,**kwargs):
-        self.RotateKeys()
-        self.Results=self.Broker.GetOpenOrders(**kwargs)
-        self.EnforceRateLimit()
-        return self.Results
-
-    # Get open Trades
-
-    def GetOpenTrades(self,**kwargs):
-        self.RotateKeys()
-        self.Results=self.Broker.GetOpenTrades(**kwargs)
-        self.EnforceRateLimit()
-        return self.Results
-
-    # Place Order to exchange. Needs to handle buy, sell, close
-    # exchange
-    # Active, retry limit is in this structure
-    # ADA/USD or USD/JPY
-    # market or limit
-    # 1 or 0.001 ...
-    # buy, sell or close
-    # 63000
-    # Reduce only, true/false
-    # Ledger note, if any
-
-    def PlaceOrder(self,**kwargs):
-        self.RotateKeys()
-        self.Results=self.Broker.PlaceOrder(**kwargs)
-        self.EnforceRateLimit()
-        return self.Results
-
-    def GetMinimum(self,**kwargs):
-        self.RotateKeys()
-        minimum,mincost=self.Broker.GetMinimum(**kwargs)
-        self.EnforceRateLimit()
-        return minimum,mincost
-
-    # Get the exact details of a specific order
-
-    def GetOrderDetails(self,**kwargs):
-        self.RotateKeys()
-        self.Results=self.Broker.GetOrderDetails(**kwargs)
-        self.EnforceRateLimit()
-        return self.Results
-
-    # Process the orphan order
-
-    def MakeOrphanOrder(self,id,Order):
-        self.Results=self.Broker.MakeOrphanOrder(id,Order)
-        self.EnforceRateLimit()
-
-    # Process the conditional order
-
-    def MakeConditionalOrder(self,id,Order):
-        self.Results=self.Broker.MakeConditionalOrder(id,Order)
-        self.EnforceRateLimit()
-
-    # Make ledger entry
-
-    def WriteLedger(self,**kwargs):
-        self.Results=self.Broker.WriteLedger(**kwargs,LedgerDirectory=self.LedgerDirectory)
-        self.EnforceRateLimit()
-
-    # See if an order is already in Oliver Twist for Exchange/Account/Pair. This is to allow ONLY ONE order at a time.
-
-    def OliverTwistOneShot(self,CompareOrder):
-        fList=[self.DataDirectory+'/OliverTwist.Conditional.Receiver',self.DataDirectory+'/OliverTwist.Conditional.Storehouse']
-        orphanLock=JRRsupport.Locker("OliverTwist")
-
-        orphanLock.Lock()
-        for fn in fList:
-            if os.path.exists(fn):
-                buffer=JRRsupport.ReadFile(fn)
-                if buffer!=None and buffer!='':
-                    Orphans=buffer.split('\n')
-                    for Entry in Orphans:
-                        # Force set InMotion to False
-                        Entry=Entry.strip()
-                        if Entry=='':
-                            continue
-                        # Break down entry and set up memory locker
-                        try:
-                            Orphan=json.loads(Entry)
-                        except:
-                            continue
-
-                        if 'Order' in Orphan:
-                            if type(Orphan['Order'])==str:
-                                order=json.loads(Orphan['Order'])
-                            else:
-                                order=Orphan['Order']
-                            if CompareOrder['Exchange']==order['Exchange'] \
-                            and CompareOrder['Account']==order['Account'] \
-                            and CompareOrder['Asset']==order['Asset']:
-                                orphanLock.Unlock()
-                                return True
-
-        # Not Found
-        orphanLock.Unlock()
-        return False
-"""
