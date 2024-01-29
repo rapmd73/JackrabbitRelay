@@ -105,7 +105,7 @@ class JackrabbitLog:
 class JackrabbitRelay:
     def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,secondary=None,NoIdentityVerification=False,Usage=None):
         # All the default locations
-        self.Version="0.0.0.1.505"
+        self.Version="0.0.0.1.510"
         self.NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
         self.BaseDirectory='/home/JackrabbitRelay2/Base'
         self.ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -556,6 +556,8 @@ class JackrabbitRelay:
                             key={ **key, **self.Identity, **logProcess }
                         else:
                             key={ **key, **logProcess }
+                        if len(key['Identity'])<1024:
+                            self.JRLog.Error("Reading Configuration",'Identity too short')
                         self.Keys.append(key)
                 cf.close()
 
