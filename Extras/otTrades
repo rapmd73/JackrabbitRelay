@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import time
+import datetime
+import json
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.subplots as ps
+
+import JRRsupport
+import JackrabbitRelay as JRR
+
+chartDir='/home/JackrabbitRelay2/Data/Charts/'
+
+# Initialize global signal interceptor. prevent file trashing on CTRL-C
+
+Log=JRR.JackrabbitLog()
+interceptor=JRRsupport.SignalInterceptor(Log=Log)
+
+# Find start date fom ending data an duration
+
+def FindStartDateTime(end_date_str, duration_str):
+    # Convert strings to datetime objects
+    end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d %H:%M:%S.%f')
+    duration_parts = duration_str.split(', ')
+    days = int(duration_parts[0].split()[0])
+    time_parts = duration_parts[1].split(':')
+    hours = int(time_parts[0])
+    minutes = int(time_parts[1])
+    seconds = float(time_parts[2])
+
+    # Calculate start date
+    start_date = end_date - datetime.timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds)
+
+    # Display start date in the same format as end date
+    start_date_formatted = start_date.strftime('%Y-%m-%d %H:%M:%S.%f')
+    return start_date_formatted
+
+
+###
+### Main code base.
+###
+
+if len(sys.argv)<2:
+    print("At least one OANDA gridbot version 2 log file is required.")
+    sys.exit(1)
+
+entry={}
+relay={}
+lines={}
+orderList={}
+
+# Copy arg list
+
+if len(sys.argv)<3:
+    print("You must specify either (I)mage or (H)tml for output type as the first argumrnt.")
+    print("A version 2 grid bot log must be specified as the swecond argument")
+    sys.exit(1)
+
+ih=sys.argv[1].lower()
+if ih!='i' and ih!='h':
+    print("You MUST specify either (I)mage or (H)tml for output type")
+    sys.exit(1)
+
+gblog=sys.argv[2]
+
+# Remove sys arg list
+
+for i in range(1,len(sys.argv)):
+    sys.argv.remove(sys.argv[1])
+
+# Read the log file
+
+print("Phase 1: read log file")
+data=gblog.split('.')
+
+account=data[2]
+asset=data[3]
+
+# Add the /
+pair=data[3][:3]+'/'+data[3][3:]
+relay=JRR.JackrabbitRelay(framework='oanda',exchange=data[1],account=data[2],asset=pair)
+lines=JRRsupport.ReadFile(gblog).strip().split('\n')
+
+# Make the chart inline to reading the data. Large numbers of orders will break web browsers.
+# Chart header
+
+if ih=='h':
+    fn=chartDir+'otTrades.html' #en+'.'+sa+'.'+p+'.html'
+else:
+    fn=chartDir+'otTrades.png' #en+'.'+sa+'.'+p+'.html'
+
+en='oanda'
+ts=f"GridBot2 Trades: {relay.GetAccount()} - {relay.GetAsset()}"
+
+fig1=ps.make_subplots(specs=[[{"secondary_y":False}]])
+
+# Process the data and produce the graph. This section can use a lot of memory, but it is very fast as the data
+# is loaded already.
+
+print("Phase 2: making the chart")
+
+# Plot trades
+
+for line in lines:
+    data=line.split(' ')
+    if data[3]=='':
+        data.pop(3)
+    if data[2]=='':
+        data.pop(2)
+
+    # Date and time, duration
+    dt=' '.join(line.split(' ')[0:2])
+    if "days," in line or "day," in line:
+        dur=f"{data[12]} {data[13]} {data[14]}"
+    else:
+        dur=f"0 days, {data[12]}"
+
+    # Prft/Loss
+    action=data[6]
+
+    bTime=FindStartDateTime(dt,dur)
+    bPrice=float(data[9])
+
+    sTime=dt
+    sPrice=float(data[11].split('/')[0])
+    rpl=float(data[11].split('/')[1].strip(','))
+
+    if action.lower()=='loss':
+        rpl*=-1
+
+    if action.lower()=='prft' and rpl>0:        # Profit
+        col="rgba(0,128,0,1)"
+    elif action.lower()=='prdt' and rpl==0:     # Breakeven
+        col="rgba(128,128,0,1)"
+    elif action.lower()=='prft' and rpl<0:      # Loss by slippage
+        col="rgba(255,128,0,0.5)"
+    elif action.lower()=='loss':                # Stoploss
+        col="rgba(128,0,0,0.5)"
+    else:
+        print('L:',line)
+        continue
+
+    fig1.add_trace(go.Scatter(x=[bTime,sTime],y=[bPrice,sPrice],marker_color=col,mode='lines'),secondary_y=False)
+
+# Chart footer
+
+fig1.update_yaxes(title_text='Price',secondary_y=False)
+fig1.update_layout(title={"text":ts,"x":0.5,"xanchor":"center","yanchor":"top"},template='plotly_white',showlegend=False)
+
+if ih=='h':
+    fig1.write_html(fn)
+else:
+    fig1.write_image(fn,width=1920,height=1024)

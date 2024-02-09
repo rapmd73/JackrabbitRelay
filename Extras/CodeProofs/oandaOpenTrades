@@ -43,5 +43,6 @@ for o in oo:
         side='Long'
     else:
         side='Shrt'
-    print(f"{o['openTime']} {epoch} {o['instrument']:10} {o['id']:7} {side:4} {iu:16.5f} {price:16.5f} {upl:16.5f} {fin:16.5f}")
+#    print(f"{o['openTime']} {epoch} {o['instrument']:10} {o['id']:7} {side:4} {iu:16.5f} {price:16.5f} {upl:16.5f} {fin:16.5f}")
+    print(f"{o['openTime']} {o['instrument']:10} {o['id']:7} {side:4} {iu:16.5f} {price:16.5f} {upl:16.5f} {fin:16.5f}")
 print("\n",round(tpnl,5),len(oo))
