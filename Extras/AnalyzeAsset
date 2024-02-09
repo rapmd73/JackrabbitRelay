@@ -52,7 +52,7 @@ ohlcv=relay.GetOHLCV(symbol=asset,timeframe=relay.Timeframes[-1],limit=5000)
 
 for slice in ohlcv:
     cs=0
-    for i in range(1,4):
+    for i in range(1,5):
         wcp=max(slice[i],wcp)
         mh=max(slice[i],mh)
         ml=min(slice[i],ml)
@@ -88,10 +88,56 @@ print(f"Highest market spread:  {round(sp,percision):.{percision}f}")
 
 print()
 
+mmed=(mh+ml)/2
 mavg=sum(avgList)/len(avgList)
 
-print(f"Market median:          {round((mh+ml)/2,percision):.{percision}f}")
+# Candle above median
+ca=0
+# Candle below median
+cb=0
+
+for slice in ohlcv:
+    above=0
+    below=0
+    for i in range(1,5):
+        if slice[i]>mmed:
+            above+=1
+        if slice[i]<mmed:
+            below+=1
+
+    if above>=4:
+        ca+=1
+    if below>=4:
+        cb+=1
+
+spl=len(ohlcv)-(ca+cb)
+
+print(f"Market median:          {round(mmed,percision):.{percision}f}")
+print(f"Above/Below/Split:      {ca}/{round((ca/len(ohlcv))*100,percision):.2f}% {cb}/{round((cb/len(ohlcv))*100,percision):.2f}% {spl}/{round((spl/len(ohlcv))*100,percision):.2f}%")
+
+# Candle above median
+ca=0
+# Candle below median
+cb=0
+
+for slice in ohlcv:
+    above=0
+    below=0
+    for i in range(1,5):
+        if slice[i]>mavg:
+            above+=1
+        if slice[i]<mavg:
+            below+=1
+
+    if above>=4:
+        ca+=1
+    if below>=4:
+        cb+=1
+
+spl=len(ohlcv)-(ca+cb)
+
 print(f"Market average:         {round(mavg,percision):.{percision}f}")
+print(f"Above/Below/Split:      {ca}/{round((ca/len(ohlcv))*100,percision):.2f}% {cb}/{round((cb/len(ohlcv))*100,percision):.2f}% {spl}/{round((spl/len(ohlcv))*100,percision):.2f}%")
 
 print()
 
@@ -104,14 +150,9 @@ print(f"Average {relay.Timeframes[-1]} movement: {round(amm,percision):.{percisi
 print()
 
 maa=0                           # Months where spread was above average
-#mc=0
 for slice in spList:
     if slice>amm:
         maa+=1
-#        print(f"{mc:3} {slice:.{percision}}")
-#        mc+=1
-
-#print()
 
 lsp=len(spList)
 print(f"Total {relay.Timeframes[-1]}s analyzed: {lsp}")

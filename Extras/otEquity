@@ -78,24 +78,6 @@ fig1=ps.make_subplots(specs=[[{"secondary_y":False}]])
 
 fig1.add_trace(go.Scatter(x=xps,y=equity,name='Equity',marker_color="#0000ff"),secondary_y=False)
 
-if ih=='h':
-    fig1.add_layout_image(dict(
-        source='https://rapmd.net/RAPMDlogo.png',
-        xref='paper',yref='paper',
-        xanchor='center',yanchor='middle',
-        x=0.5,y=0.5,
-        sizex=1,sizey=1,
-        opacity=0.1
-    ))
-else:
-    fig1.add_layout_image(dict(
-        source='file:///var/www/vhosts/rapmd.net/httpdocs/RAPMDlogo.png',
-        xref='paper',yref='paper',
-        xanchor='center',yanchor='middle',
-        x=0.5,y=0.5,
-        sizex=1,sizey=1,
-        opacity=0.1
-    ))
 fig1.update_yaxes(title_text='Equity Curve',secondary_y=False)
 fig1.update_layout(title={"text":ts,"x":0.5,"xanchor":"center","yanchor":"top"},template='plotly_white')
 
