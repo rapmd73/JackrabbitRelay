@@ -23,21 +23,22 @@ else:
     print("An exchange and a (sub)account must be provided.")
     sys.exit(1)
 
-print(relay.Broker.Summary)
-
 # Already loaded from login
 
 markets=relay.Markets
 timeframes=relay.Timeframes
-print(timeframes)
+
+# relay -> Mimic
+# relay.Broker -> exchange Mimic is using
+
+if relay.Framework=='mimic':
+    relay.Framework=relay.Broker.Framework
 
 if relay.GetFramework()=='oanda':
     for cur in markets:
-        print(markets[cur])
         asset=markets[cur]['displayName']
         print(f'{asset:12}')
 elif relay.GetFramework()=='ccxt':
     for cur in markets:
-        print(markets[cur])
         asset=markets[cur]['symbol']
         print(f'{asset:12}')
