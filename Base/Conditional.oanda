@@ -281,8 +281,8 @@ def main():
             dsS=f"{parts[0]}.{parts[1][:6]}Z"
             ds=datetime.datetime.strptime(dsS,'%Y-%m-%dT%H:%M:%S.%fZ')
 
-            # Get the "strikePrice". This handles both TakeProfit and StopLoss. It doesn't matter which as both are processed
-            # the same way.
+            # Get the "strikePrice". This handles both TakeProfit and StopLoss. It doesn't matter which as both
+            # are processed the same way.
 
             StrikeHappened=False
             if dir=='long':

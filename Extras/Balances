@@ -66,3 +66,13 @@ elif relay.GetFramework()=='oanda':
                 else:
                     side='short'
                 print(f"{asset:12} {abs(bal):12.5f} {side} {margin:6.2f}")
+elif relay.GetFramework()=='mimic':
+    balance=relay.GetBalance()
+    if balance!=None:
+        for coin in balance:
+            bal=float(balance[coin])
+            if bal<0:
+                side='short'
+            else:
+                side='long'
+            print(f"{coin:7} {abs(bal):.8f} {side}")

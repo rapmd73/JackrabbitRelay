@@ -32,6 +32,9 @@ markets=relay.GetMarkets()
 ticker=relay.GetTicker(symbol=asset)
 orderbook=relay.GetOrderBook(symbol=asset)
 
+if relay.GetFramework()=='mimic':
+    relay.Framework=relay.Broker.Framework
+
 if relay.GetFramework()=='ccxt':
     BuyPrice=round(float(ticker['Ask']),8)
     SellPrice=round(float(ticker['Bid']),8)

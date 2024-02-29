@@ -72,7 +72,9 @@ def main():
             print(f"{pair:30} {id:30} {marketType:8} {ticker['Bid']:18.8f} {ticker['Spread']:18.8f} {ticker['Ask']:18.8f}")
         elif relay.Framework=='oanda':
             mr=GetRatio(float(relay.Markets[pair]['marginRate']))
-            print(f"{pair:30} {mr} {ticker['Bid']:9.5f} {ticker['Spread']:9.5f} {ticker['Ask']:9.5f}")
+            lfr=float(relay.Markets[pair]['financing']['longRate'])
+            sfr=float(relay.Markets[pair]['financing']['shortRate'])
+            print(f"{pair:10} {mr} {lfr:7.4f} {sfr:7.4f} {ticker['Bid']:9.5f} {ticker['Spread']:9.5f} {ticker['Ask']:9.5f}")
         else:
             print("Unrecognized framework")
             sys.exit(0)

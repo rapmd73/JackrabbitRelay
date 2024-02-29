@@ -27,7 +27,7 @@ else:
 
 markets=relay.GetMarkets()
 
-ticker=relay.GetTicker(symbol=asset)
-
-print(ticker)
+while True:
+    ticker=relay.GetTicker(symbol=asset)
+    print(ticker)
 

@@ -40,9 +40,8 @@ for o in oo:
     fin=float(o['financing'])
     tpnl+=upl+fin
     if iu>=0:
-        side='Long'
+        side='L'
     else:
-        side='Shrt'
-#    print(f"{o['openTime']} {epoch} {o['instrument']:10} {o['id']:7} {side:4} {iu:16.5f} {price:16.5f} {upl:16.5f} {fin:16.5f}")
-    print(f"{o['openTime']} {o['instrument']:10} {o['id']:7} {side:4} {iu:16.5f} {price:16.5f} {upl:16.5f} {fin:16.5f}")
+        side='S'
+    print(f"{o['openTime']} {o['id']:>7} {side} {abs(iu):4.0f} {price:10.5f} {upl:9.5f} {fin:9.5f}")
 print("\n",round(tpnl,5),len(oo))

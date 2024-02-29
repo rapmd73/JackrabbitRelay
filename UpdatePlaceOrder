@@ -13,6 +13,9 @@ fnFuture="CCXT-PlaceOrder.future"
 fnMargin="CCXT-PlaceOrder.margin"
 fnSwap="CCXT-PlaceOrder.swap"
 
+echo Updating / replacing PlaceOrder MIMIC
+cp $GitHubBase"/MIMIC-PlaceOrder" $BaseDir"/PlaceOrder.mimic"
+
 echo Updating / replacing PlaceOrder DSR
 cp $GitHubBase"/DSR-PlaceOrder" $BaseDir"/PlaceOrder.dsr"
 

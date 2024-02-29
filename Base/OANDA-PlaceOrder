@@ -68,6 +68,41 @@ def GetPCTamount(relay,close):
         amount=round((((float(relay.Order[currency].replace('%',''))/100)*bal)/close)/mr,8)
     return amount
 
+# Find the lowest lot size used in the list of open trades. This is a good way to make
+# the entire process dynamic and fluid as lot size can be varied by any metric,
+# including but not limited to, the amount of margin used.
+
+def LowestLotSize(relay,asset,units,step):
+    lowestSize=abs(units)
+    lotSize=abs(step)
+
+    openTrades=relay.GetOpenTrades(symbol=asset)
+
+    usedSize=[]
+    for trade in openTrades:
+        t=abs(int(trade['currentUnits']))
+        if t not in usedSize:
+            usedSize.append(t)
+        t=abs(int(trade['initialUnits']))
+        if t not in usedSize:
+            usedSize.append(t)
+    usedSize=sorted(usedSize)
+
+    nextSize = lowestSize  # Start with the lowestSize
+
+    while nextSize in usedSize:
+        nextSize+=lotSize
+
+    # Shorts are negative so check direction
+    if units<0:
+        sign=-1
+    else:
+        sign=1
+
+    return nextSize*sign
+
+# Find highest lot size
+
 def HighestLotSize(relay,asset,units,step):
     openTrades=relay.GetOpenTrades(symbol=asset)
     highestSize=abs(units)
@@ -256,7 +291,7 @@ def main():
             step=1
 
         if relay.Order['Action']=='buy':
-            amount=HighestLotSize(relay,relay.Order['Asset'],amount,step)
+            amount=LowestLotSize(relay,relay.Order['Asset'],amount,step)
         elif 'Ticket' in relay.Order:
             amount=GetTicket(relay,relay.Order['Asset'],relay.Order['Ticket'],amount)
 

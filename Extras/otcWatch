@@ -81,6 +81,8 @@ def main():
     Relay={}
     TickerData={}
     openTrades={}
+    tpl=0
+    tlen=0
 
     relay=None
     ticker=None
@@ -92,6 +94,8 @@ def main():
 
             Data=json.loads(Entry)
             if Data['Framework']=='ccxt':
+                Order=Data['Order']
+            elif Data['Framework']=='mimic':
                 Order=Data['Order']
             elif Data['Framework']=='oanda':
                 Order=Data['Order']
@@ -143,15 +147,38 @@ def main():
                 tp=round(CalculatePriceExit(Order,'TakeProfit',dir,price),8)
                 sl=round(CalculatePriceExit(Order,'StopLoss',dir,price),8)
                 print(f"{id} {Order['Asset']:14} {sl:.8f} {tprice:.8f}({price:.8f}) {tp:.8f} {amount:.8f} {dir}")
+            elif Data['Framework']=='mimic':
+                id=Data['ID']
+                if type(Data['Response'])==str:
+                    Detail=json.loads(Data['Response'])
+                else:
+                    Detail=Data['Response']
+
+                price=float(Detail['Price'])
+                amount=float(Detail['Amount'])
+
+                if amount>=0:
+                    dir='long'
+                    tprice=ticker['Bid']
+                else:
+                    dir='short'
+                    tprice=ticker['Ask']
+
+                tp=round(CalculatePriceExit(Order,'TakeProfit',dir,price),8)
+                sl=round(CalculatePriceExit(Order,'StopLoss',dir,price),8)
+                print(f"{id} {Order['Asset']:14} {sl:.8f} {tprice:.8f}({price:.8f}) {tp:.8f} {amount:.8f} {dir}")
             elif Data['Framework']=='oanda':
                 Resp=Data['Response']
                 id=Data['ID']
 
                 if Order['Asset'] not in openTrades:
                     openTrades[Order['Asset']]=Relay[Data['Framework']].GetOpenTrades(symbol=Order['Asset'])
+
                 detail=Relay[Data['Framework']].GetOrderDetails(OrderID=id)
+
                 if detail==None:
                     continue
+
                 cid=detail[-1]['id']
 
                 # find trading duration
@@ -174,6 +201,8 @@ def main():
                 if not found:
                     continue
 
+                tlen=len(openTrades[Order['Asset']])
+
                 if amount>=0:
                     dir='long'
                     tprice=ticker['Bid']
@@ -181,16 +210,22 @@ def main():
                     dir='short'
                     tprice=ticker['Ask']
 
+                tpl+=rpl
+
                 tp=round(CalculatePriceExit(Order,'TakeProfit',dir,price),5)
                 sl=round(CalculatePriceExit(Order,'StopLoss',dir,price),5)
                 tpPips=f"({Order['TakeProfit']})"
                 slPips=""
                 if sl!=0:
                     slPips=f"({Order['StopLoss']})"
-                print(f"{id:10} {Order['Asset']:10} {sl:.5f} {slPips:<10} {tprice:.5f}({price:.5f})/{ticker['Spread']:.5f} {tp:.5f} {tpPips:<10} {rpl:.5f} {abs(amount):9.5f} {dir}, {duration}")
+                print(f"{id:10} {Order['Asset']:10} {sl:.5f} {slPips:<10} {tprice:.5f}({price:.5f}) {tp:.5f} {tpPips:<10} {rpl:.5f} {abs(amount):4.0f} {dir}, {duration}")
     else:
         print("No conditional orders yet.")
         sys.exit(0)
+
+    if tpl!=0:
+        print()
+        print(f"Current Trades/PNL: {tlen}/{tpl:.5f}")
 
 if __name__ == '__main__':
     main()
