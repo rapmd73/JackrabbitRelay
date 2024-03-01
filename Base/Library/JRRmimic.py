@@ -242,7 +242,7 @@ class mimic:
     def UpdateWallet(self,action,asset,amount,price,fee_rate=0):
         # if the account has already been disabled (liquidated), then don't waste time here
         if self.Wallet['Enabled']=='N':
-            return '{ "Error":"Account Liquidated!" }'
+            return 'Account Disabled From Liquidated!'
 
         # action is assumed to be only lowercase at this point.
         # Split the asset pair into base and quote currencies
@@ -273,12 +273,10 @@ class mimic:
             if quote in self.Wallet['Wallet'] and self.Wallet['Wallet'][quote] >= total_cost:
                 # Deduct the total cost including fees from the quote currency balance
                 self.Wallet['Wallet'][quote]-=total_cost
-                # Add the appropriate amount of the base currency to the base currency wallet
+                # Add the appropriate amount of the base currency to the base currency wallet.
+                # Using negatives as shorts allows position flipping by default.
                 if base in self.Wallet['Wallet']:
-                    if actualAmount<0:
-                        self.Wallet['Wallet'][base]-=actualAmount
-                    else:
-                        self.Wallet['Wallet'][base]+=actualAmount
+                    self.Wallet['Wallet'][base]+=actualAmount
                 else:
                     self.Wallet['Wallet'][base]=actualAmount  # Initialize the base currency wallet if not present
                 # Update fee balance
@@ -305,7 +303,7 @@ class mimic:
             else:
                 # Not enough balance, account liquidated.
                 self.Wallet['Enabled']='N'
-                return '{ "Error":"Account Liquidated!" }'
+                return 'Account Liquidated!'
         elif action=='sell':
             # Check if the base currency is present in the base currency wallet and the amount to sell is available
             if base in self.Wallet['Wallet'] and self.Wallet['Wallet'][base] >= abs(actualAmount):
@@ -326,7 +324,7 @@ class mimic:
                 if 'Fees' in self.Wallet['Wallet']:
                     self.Wallet['Wallet']['Fees']+=fee
                 else:
-                    self.Wallet['Wallet']['Fees'] = fee  # Initialize fee balance if not present
+                    self.Wallet['Wallet']['Fees']=fee  # Initialize fee balance if not present
                 # Update successful
                 order={}
                 order['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
@@ -345,9 +343,9 @@ class mimic:
             else:
                 # Not enough balance, but account is not liquidated. Need to cross analyze this on shorting.
                 #self.Wallet['Enabled']='N'
-                return '{ "Error":"Not enough balance!" }'
+                return 'Not enough balance!'
         else:   # Should NEVER happen.
-            return '{ "Error":"Invalid action!" }'
+            return 'Invalid action!'
 
     # Welcome to the nightmare: placing and maintaining orders.
 
@@ -374,10 +372,14 @@ class mimic:
         m=kwargs.get('orderType').lower()
         action=kwargs.get('action').lower()
         price=kwargs.get('price')
-        # ln=kwargs.get('LedgerNote')
+        ln=kwargs.get('LedgerNote',None)
         # Shorts are stored as negative numbers
         amount=float(kwargs.get('amount'))
-        Quiet=kwargs.get('Quiet')
+        ro=kwargs.get('ReduceOnly',False)
+        Quiet=kwargs.get('Quiet',False)
+
+        # Split the asset pair into base and quote currencies
+        base,quote=pair.split('/')
 
         # simulate a real order
         order={}
@@ -400,6 +402,10 @@ class mimic:
         else:
             Fee=self.DefaultFeeRate
 
+        # Handle ReduceOnly
+        if ro==True and action=='sell':
+            amount=self.Wallet['Wallet'][base]
+
         result=self.UpdateWallet(action,pair,amount,price,Fee)
         JRRsupport.AppendFile(self.history,json.dumps(result)+'\n')
         self.PutWallet()
@@ -414,20 +420,24 @@ class mimic:
             #JRRledger.WriteLedger(pair, m, action, amount, price, order, ln)
             return order
         else: # We have an error
-            return result
+            self.Log.Error("PlaceOrder",result)
 
     # Get the details of the completed order. This will reaD from the positions list.
 
     def GetOrderDetails(self,**kwargs):
         if os.path.exists(self.history):
-            id=kwargs.get('id')
+            id=kwargs.get('ID')
             pair=kwargs.get('pair',None)
             cf=open(self.history,'r')
             # We need to go line by line as history file may be too large to load
             for line in cf.readlines():
-                if line=='':
+                line=line.strip()
+                if line=='' or (line[0]!='{' and line[-1]!='}'):
                     continue
-                order=json.loads(line)
+                try:    # skip non-JSON lines
+                    order=json.loads(line)
+                except:
+                    continue
                 if (order['ID']==id and pair!=None and order['Asset']==pair) \
                 or (order['ID']==id and pair==None):
                     cf.close()

@@ -157,6 +157,14 @@ def main():
                 price=float(Detail['Price'])
                 amount=float(Detail['Amount'])
 
+                # find trading duration
+                parts=Detail['DateTime'].split('.')
+                dsS=f"{parts[0]}.{parts[1][:6]}Z"
+                ds=datetime.datetime.strptime(dsS,'%Y-%m-%d %H:%M:%S.%fZ')
+                deS=datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S.%f')
+                de=datetime.datetime.strptime(deS,'%Y-%m-%d %H:%M:%S.%f')
+                duration=de-ds
+
                 if amount>=0:
                     dir='long'
                     tprice=ticker['Bid']
@@ -166,7 +174,7 @@ def main():
 
                 tp=round(CalculatePriceExit(Order,'TakeProfit',dir,price),8)
                 sl=round(CalculatePriceExit(Order,'StopLoss',dir,price),8)
-                print(f"{id} {Order['Asset']:14} {sl:.8f} {tprice:.8f}({price:.8f}) {tp:.8f} {amount:.8f} {dir}")
+                print(f"{id} {Order['Asset']:14} {sl:.8f} {tprice:.8f}({price:.8f}) {tp:.8f} {amount:.8f} {dir}  {duration}")
             elif Data['Framework']=='oanda':
                 Resp=Data['Response']
                 id=Data['ID']
@@ -218,7 +226,7 @@ def main():
                 slPips=""
                 if sl!=0:
                     slPips=f"({Order['StopLoss']})"
-                print(f"{id:10} {Order['Asset']:10} {sl:.5f} {slPips:<10} {tprice:.5f}({price:.5f}) {tp:.5f} {tpPips:<10} {rpl:.5f} {abs(amount):4.0f} {dir}, {duration}")
+                print(f"{id:10} {Order['Asset']:10} {sl:.5f} {slPips:<10} {tprice:.5f}({price:.5f}) {tp:.5f} {tpPips:<10} {rpl:.5f} {abs(amount):4.0f} {dir} {duration}")
     else:
         print("No conditional orders yet.")
         sys.exit(0)

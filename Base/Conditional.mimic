@@ -145,10 +145,7 @@ def main():
         # Check to see if we have enough balance, if not then delete this order. Deal with futures as well.
 
         base=relay.Markets[relay.Order['Asset']]['base'].upper()
-        if relay.Order['Market']=='spot':
-            bal=relay.GetBalance(Base=base)
-        else:
-            bal=relay.GetPositions(symbols=[relay.Order['Asset']])
+        bal=relay.GetBalance(Base=base)
 
         # if ticker is below price and spread, purge and re-purchase
 
