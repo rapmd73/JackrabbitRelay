@@ -298,7 +298,7 @@ def main():
     elif relay.Order['Action']=='short':
         relay.Order['Action']='sell'
 
-    if amount>0:
+    if abs(amount)!=0:
         lNote=None
         if 'LedgerNote' in relay.Order:
             lNote=relay.Order['LedgerNote']
