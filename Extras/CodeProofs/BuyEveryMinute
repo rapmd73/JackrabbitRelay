@@ -14,19 +14,25 @@ import time
 import JRRsupport
 import JackrabbitRelay as JRR
 
-NewOrder='{"Recipe":"#Tester","Action":"Buy","Exchange":"phemex","Market":"Spot","Account":"Sandbox","Asset":"TRX/USDT","USD":"20","OrderType":"Market","Link":"https://www.tradingview.com/chart/L0ejIBsJ/","Comment":"Conditional order entries","Conditional":"Yes","ConditionalOneShot":"Yes","Direction":"Long","SellAction":"Sell","TakeProfit":"1%","StopLoss":"10%" }'
+NewOrder='{"Recipe":"BuyEveryMinute Conditional","Action":"Buy","Exchange":"mimic","Market":"spot","Account":"phemexPublic","Asset":"XRP/USDT","Base":"1","OrderType":"Market","Comment":"Conditional order entries","Conditional":"Yes","Direction":"Long","SellAction":"Sell","TakeProfit":"1%","StopLoss":"10%" }'
 
 # Get the order ID. If there isn't an ID, the order FAILED.
 
 def GetOrderID(res):
-    if res.find('Order Confirmation ID')>-1:
-        s=res.find('ID:')+4
-        for e in range(s,len(res)):
-            if res[e]=='\n':
-                break
-        oid=res[s:e]
+    if res==None:
+        return None
 
-        return oid
+    try:
+        if res.find('Order Confirmation ID')>-1:
+            s=res.find('ID:')+4
+            for e in range(s,len(res)):
+                if res[e]=='\n':
+                    break
+            oid=res[s:e]
+
+            return oid
+    except:
+        pass
     return None
 
 ###
@@ -40,11 +46,11 @@ def main():
     while True:
         # Feed the new order to Relay
         result=relay.SendWebhook(relay.Order)
-        print(result)
         oid=GetOrderID(result)
         if oid!=None:
             bal=relay.GetBalance(Base=relay.Order['Asset'].split('/')[0])
-            print(oid,bal)
+            detail=relay.GetOrderDetails(id=oid,symbol=relay.Order['Asset'])
+            print(oid,round(detail['Price'],8),round(bal,8))
         JRRsupport.ElasticSleep(60)
 
 if __name__ == '__main__':

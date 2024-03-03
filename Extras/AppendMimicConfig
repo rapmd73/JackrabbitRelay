@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import ccxt
+
+import JRRsupport
+
+if len(sys.argv)<2:
+    print('Port number must be given to local Jackrabbit Relay server')
+    sys.exit(1)
+
+port=int(sys.argv[1])
+
+cname='/home/JackrabbitRelay2/Config/mimic.cfg'
+
+for i in ccxt.exchanges:
+    exchange=getattr(ccxt,i)()
+
+    en=i.strip()
+    mapi='{ "Framework":"mimic","Account":"'+en+'Public","DataExchange":"'+en+'","DataAccount":"Public","InitialBalance":"100000","Webhook":"http://127.0.0.1:'+str(port)+'" }\n'
+
+    # Add mimic api access
+
+    try:
+        found=False
+        if os.path.exists(cname):
+            buf=JRRsupport.ReadFile(cname)
+            found=('"Account":"'+en+'Public"' in buf)
+
+        if not found:
+            m=exchange.load_markets()
+            first=list(m.keys())[0]
+            t=exchange.fetch_ticker(symbol=first)
+            o1=exchange.fetch_ohlcv(symbol=first,timeframe='1d',limit=10)
+            o2=exchange.fetch_order_book(symbol=first)
+
+            print(en)
+            JRRsupport.AppendFile(cname,mapi)
+    except Exception as e:
+        pass

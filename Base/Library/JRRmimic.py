@@ -73,11 +73,9 @@ class mimic:
         self.Results=None
 
         # This is where all trades for a given mimic account are tracked in relation to the data source
-#        self.history=f"{self.Storage}/{self.Active['DataExchange']}.{self.Active['DataAccount']}.history"
-#        self.walletFile=f"{self.Storage}/{self.Active['DataExchange']}.{self.Active['DataAccount']}.wallet"
         self.history=f"{self.Storage}/{self.Active['Account']}.history"
         self.walletFile=f"{self.Storage}/{self.Active['Account']}.wallet"
-        self.walletLock=JRRsupport.Locker(self.walletFile)
+        self.walletLock=JRRsupport.Locker(self.walletFile,ID=self.walletFile)
         self.Wallet=None
 
         # Lock it up and set the exit approach
@@ -118,7 +116,10 @@ class mimic:
         # Copy ratelimits from data source
 
         self.Active['RateLimit']=self.Broker.Active['RateLimit']
-        self.Active['Retry']=self.Broker.Active['Retry']
+        if 'Retry' in self.Active:
+            self.Active['Retry']=self.Broker.Active['Retry']
+        else:
+            self.Active['Retry']=3
 
         return self.Broker
 
@@ -407,7 +408,8 @@ class mimic:
             amount=self.Wallet['Wallet'][base]
 
         result=self.UpdateWallet(action,pair,amount,price,Fee)
-        JRRsupport.AppendFile(self.history,json.dumps(result)+'\n')
+        if 'ID' in result:
+            JRRsupport.AppendFile(self.history,json.dumps(result)+'\n')
         self.PutWallet()
         if 'ID' in result and result['ID']!=None:
             # Required because most crypto exchanges don't retain order details after a certain length of time.
@@ -426,7 +428,7 @@ class mimic:
 
     def GetOrderDetails(self,**kwargs):
         if os.path.exists(self.history):
-            id=kwargs.get('ID')
+            id=kwargs.get('id')
             pair=kwargs.get('pair',None)
             cf=open(self.history,'r')
             # We need to go line by line as history file may be too large to load
@@ -441,7 +443,7 @@ class mimic:
                 if (order['ID']==id and pair!=None and order['Asset']==pair) \
                 or (order['ID']==id and pair==None):
                     cf.close()
-                    return line
+                    return order
             cf.close()
 
         return None
