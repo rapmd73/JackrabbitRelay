@@ -28,12 +28,12 @@ def main():
     exchangeName=relay.GetExchange()
     account=relay.GetAccount()
 
-    if relay.GetFramework()=='ccxt':
+    if relay.GetFramework()=='mimic' or relay.GetFramework()=='ccxt':
         percision=8
     elif relay.GetFramework()=='oanda':
         percision=5 # abs(int(relay.Markets[asset]['pipLocation']))
     else:
-        print("Unrecoginized framework: {relay.GetFramework()}")
+        print(f"Unrecognized framework: {relay.GetFramework()}")
         sys.exit(1)
 
     # Already loaded from login

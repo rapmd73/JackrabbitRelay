@@ -29,13 +29,13 @@ else:
     print("An exchange, an account, and an asset must be provided.")
     sys.exit(1)
 
-if relay.GetFramework()=='ccxt':
+if relay.GetFramework()=='mimic' or relay.GetFramework()=='ccxt':
     percision=8
 elif relay.GetFramework()=='oanda':
     # Percision
     percision=abs(int(relay.Markets[asset]['pipLocation']))
 else:
-    print("Unrecoginized framework: {relay.GetFramework()}")
+    print(f"Unrecognized framework: {relay.GetFramework()}")
     sys.exit(1)
 
 # Figure out worst case price based upon 5000 candles on the monthly time frame.
@@ -49,6 +49,9 @@ spList=[]
 avgList=[]
 
 ohlcv=relay.GetOHLCV(symbol=asset,timeframe=relay.Timeframes[-1],limit=5000)
+if ohlcv==[]:
+    print('OHLCV data not available, stopping analysis')
+    sys.exit(1)
 
 for slice in ohlcv:
     cs=0
@@ -82,11 +85,25 @@ print(f"Timeframe duration: {y} years, {m} months, {d} days")
 
 print()
 
+# Figure out maximums
+
 print(f"Maximum market high:    {round(mh,percision):.{percision}f}")
 print(f"Minimum market low:     {round(ml,percision):.{percision}f}")
 print(f"Highest market spread:  {round(sp,percision):.{percision}f}")
 
 print()
+
+# If MIMIC or CCXT, find the minumum cost
+
+if relay.Framework=='mimic' or relay.Framework=='ccxt':
+    minimum,mincost=relay.GetMinimum(symbol=asset)
+
+    print(f"Minimum Amount/Units:   {minimum:.{percision}f}")
+    print(f"Minimum Cost:           {mincost:.{percision}f}")
+
+    print()
+
+# Market median and average
 
 mmed=(mh+ml)/2
 mavg=sum(avgList)/len(avgList)
@@ -141,6 +158,8 @@ print(f"Above/Below/Split:      {ca}/{round((ca/len(ohlcv))*100,percision):.2f}%
 
 print()
 
+# Figure our highest timeframe movement
+
 mmm=maxMonth[2]-maxMonth[3]     # Maximum monthly movement
 amm=sum(spList)/len(spList)     # Average monthly movement
 
@@ -148,6 +167,8 @@ print(f"Maximum {relay.Timeframes[-1]} movement: {round(mmm,percision):.{percisi
 print(f"Average {relay.Timeframes[-1]} movement: {round(amm,percision):.{percision}f} ({(amm/mh)*100:.2f}%)")
 
 print()
+
+# Figure out how many of the highest timeframe was above the average.
 
 maa=0                           # Months where spread was above average
 for slice in spList:
@@ -157,4 +178,5 @@ for slice in spList:
 lsp=len(spList)
 print(f"Total {relay.Timeframes[-1]}s analyzed: {lsp}")
 print(f"{relay.Timeframes[-1]}s above average:  {maa} ({(maa/lsp)*100:.2f}%)")
+
 

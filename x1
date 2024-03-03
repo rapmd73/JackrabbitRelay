@@ -1,6 +1,0 @@
-                    # find trade close time and  duration
-                    parts=orderDetail[0]['time'].split('.')
-                    deS=f"{parts[0]}.{parts[1][:6]}Z"
-                    de=datetime.datetime.strptime(deS,'%Y-%m-%dT%H:%M:%S.%fZ')
-                    duration=de-ds
-

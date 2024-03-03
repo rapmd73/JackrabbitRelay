@@ -47,7 +47,7 @@ def main():
     # Begin listing this exchange/broker
 
     for pair in proxy.Markets:
-        if proxy.Framework=='ccxt':
+        if proxy.Framework=='mimic' or proxy.Framework=='ccxt':
             if pair[0]=='.' or pair.find(".d")>-1 or pair.find(" ")>-1:
                 continue
             if 'active' in proxy.Markets[pair]:

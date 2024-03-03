@@ -46,7 +46,7 @@ def main():
     # Begin listing this exchange/broker
 
     for pair in relay.Markets:
-        if relay.Framework=='ccxt':
+        if relay.Framework=='mimic' or relay.Framework=='ccxt':
             if pair[0]=='.' or pair.find(".d")>-1 or pair.find(" ")>-1:
                 continue
             if 'active' in relay.Markets[pair]:
@@ -63,7 +63,7 @@ def main():
         if ticker['Bid']==0 and ticker['Ask']==0:
             continue
 
-        if relay.Framework=='ccxt':
+        if relay.Framework=='mimic' or relay.Framework=='ccxt':
             marketType=relay.Markets[pair]['type']
             if 'margin' in relay.Markets[pair] and relay.Markets[pair]['margin']==True \
             and marketType=='spot':
