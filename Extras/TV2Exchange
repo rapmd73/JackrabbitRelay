@@ -32,7 +32,7 @@ if relay.GetFramework()=='oanda':
         tv=p['displayName'].replace('/','').replace('_','')
         ns=p['displayName']
         TradingView[tv]=ns
-elif relay.GetFramework()=='ccxt':
+elif relay.GetFramework()=='ccxt' or relay.GetFramework()=='mimic':
     for cur in markets:
         p=markets[cur]
         if 'type' in p and p['type'].lower()!='spot':
