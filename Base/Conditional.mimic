@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# CCXT Conditional Orders - OliverTwist
+# MIMIC Conditional Orders - OliverTwist
 
 # Jackrabbit Relay
 # 2021 Copyright © Robert APM Darin
@@ -149,7 +149,7 @@ def main():
 
         # if ticker is below price and spread, purge and re-purchase
 
-        if amount>bal:
+        if abs(amount)>bal:
             if "ConditionalRepurchase" in relay.Active:
                 relay.JRLog.Write(f"Original: {json.dumps(relay.Order)}",stdOut=False)
 
