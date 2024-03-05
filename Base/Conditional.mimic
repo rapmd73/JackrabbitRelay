@@ -148,7 +148,7 @@ def main():
         bal=relay.GetBalance(Base=base)
 
         # if ticker is below price and spread, purge and re-purchase
-
+        """
         if abs(amount)>bal:
             if "ConditionalRepurchase" in relay.Active:
                 relay.JRLog.Write(f"Original: {json.dumps(relay.Order)}",stdOut=False)
@@ -195,7 +195,7 @@ def main():
             else:
                 relay.JRLog.Write(f"{id}: Amount {amount:.8f} > Balance {bal:.8f} {base}, purge",stdOut=False)
                 FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],'Delete')
-
+        """
         # Fsilsafe, in the WORST way possible. Do NOT leave a take profit out of the order. At this stage, the whole thing is
         # an absolute nightmare to fix. The is a very brutal way of dealing with poor user choices.
         if 'TakeProfit' not in relay.Order:
@@ -241,7 +241,7 @@ def main():
                 strikePrice=ticker['Ask']
                 StrikeHappened=True
 
-        if StrikeHappened==True:
+        if StrikeHappened==True and abs(amount)>bal:
             # Build "strike" order. TakeProfit or StopLoss has been triggered
             newOrder={}
             newOrder['OliverTwist']='Conditional'
@@ -287,4 +287,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
