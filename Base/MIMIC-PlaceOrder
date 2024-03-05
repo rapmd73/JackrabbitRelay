@@ -233,7 +233,10 @@ def main():
             # Make sure minimum is enforced.
             # KuCoin sub accounts do NOT verify or report correctly on this.
             if abs(amount)<minimum:
-                amount=minimum
+                if amount<0:
+                    amount=minimum*-1
+                else:
+                    amount=minimum
 
     # Get Previous Balance
 
@@ -241,7 +244,7 @@ def main():
     # PlaceOrder programs. Shorts will be negative
 
     pBalance=relay.GetBalance(Base=base)
-    relay.JRLog.Write(f"Previous Balance: {abs(pBalance):.8f} {base}")
+    relay.JRLog.Write(f"Previous Balance: {pBalance:.8f} {base}")
 
     # Check if we close on sell
 
@@ -260,24 +263,31 @@ def main():
 
     if relay.Order['Action']=='close':
         if pBalance>0:    # Long Position
+            amount=pBalance*-1
             relay.Order['Action']='sell'
         elif pBalance<0:  # Short Position
+            amount=pBalance
             relay.Order['Action']='buy'
         relay.JRLog.Write(f"Forcing direction to {relay.Order['Action']}")
-        amount=abs(pBalance)
 
     # Check for reduction
 
     if "Reduction" in relay.Active and relay.Order['Action']!="buy" and amount>=pBalance:
         pct=float(relay.Active['Reduction'])/100
-        r=round((amount*pct),8)
+        r=round((abs(amount)*pct),8)
         relay.JRLog.Write("Reduction: "+str(r))
-        amount-=r
+        if anount<0:
+            amount+=r
+        else:
+            amount-=r
     elif "Reduction" in relay.Order and relay.Order['Action']!="buy" and abs(amount)>=abs(pBalance):
         pct=float(relay.Order['Reduction'])/100
-        r=round((amount*pct),8)
+        r=round((abs(amount)*pct),8)
         relay.JRLog.Write("Reduction: "+str(r))
-        amount-=r
+        if anount<0:
+            amount+=r
+        else:
+            amount-=r
 
     # Determine trade action and carry it out
 
@@ -312,7 +322,7 @@ def main():
             LedgerNote=lNote)
 
         nBalance=relay.GetBalance(Base=base)
-        relay.JRLog.Write(f"New Balance: {abs(nBalance):.8f} {base}")
+        relay.JRLog.Write(f"New Balance: {nBalance:.8f} {base}")
 
         if ("Conditional" in relay.Active or "Conditional" in relay.Order) and 'market' in relay.Order['OrderType']:
             relay.Order['Response']=order
