@@ -16,7 +16,7 @@ import json
 
 import JRRsupport
 
-Version="0.0.0.1.720"
+Version="0.0.0.1.730"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
 LogDirectory="/home/JackrabbitRelay2/Logs"

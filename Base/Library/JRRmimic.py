@@ -45,7 +45,7 @@ class mimic:
     #   placed in init and released at exit.
 
     def __init__(self,Exchange,Config,Active,DataDirectory=None):
-        self.Version="0.0.0.1.720"
+        self.Version="0.0.0.1.730"
 
         self.StableCoinUSD=['USDT','USDC','BUSD','UST','DAI','FRAX','TUSD', \
                 'USDP','LUSD','USDN','HUSD','FEI','TRIBE','RSR','OUSD','XSGD', \
@@ -283,9 +283,9 @@ class mimic:
                 # Update fee balance
                 fee=round(abs(actualAmount) * actualPrice * fee_rate,8)
                 if 'Fees' in self.Wallet['Wallet']:
-                    self.Wallet['Wallet']['Fees']+=fee
+                    self.Wallet['Fees']+=fee
                 else:
-                    self.Wallet['Wallet']['Fees']=fee  # Initialize fee balance if not present
+                    self.Wallet['Fees']=fee  # Initialize fee balance if not present
                 # Update successful
                 order={}
                 order['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
@@ -323,9 +323,9 @@ class mimic:
                 # Update fee balance
                 fee = round(abs(actualAmount) * actualPrice * fee_rate,8)
                 if 'Fees' in self.Wallet['Wallet']:
-                    self.Wallet['Wallet']['Fees']+=fee
+                    self.Wallet['Fees']+=fee
                 else:
-                    self.Wallet['Wallet']['Fees']=fee  # Initialize fee balance if not present
+                    self.Wallet['Fees']=fee  # Initialize fee balance if not present
                 # Update successful
                 order={}
                 order['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
