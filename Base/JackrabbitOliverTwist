@@ -18,7 +18,6 @@
 #    Orphan.oanda
 #    Conditional.ccxt
 #    Conditional.oanda
-#    Conditional.mimic
 
 # ANY order (direct orphan or conditional) is an ORPHAN at all times withis THIS framework.
 
@@ -39,7 +38,7 @@ import subprocess
 import JRRsupport
 import JackrabbitRelay as JRR
 
-Version="0.0.0.1.730"
+Version="0.0.0.1.510"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -327,9 +326,9 @@ def ProcessOrphan(**kwargs):
         OrphanManager=BaseDirectory+'/Conditional.'+Orphan['Framework']
 
     # Diagnostics only
-    fn=f"/tmp/{Orphan['Framework']}.{Orphan['Key']}.OliverTwist"
-    if not os.path.exists(fn):
-        JRRsupport.WriteFile(fn,json.dumps(Orphan)+'\n')
+    # fn=f"/tmp/{Orphan['Framework']},{Orphan['Key']}.OliverTwist"
+    # if not os.path.exists(fn):
+    #     JRRsupport.WriteFile(fn,json.dumps(Orphan)+'\n')
 
     if os.path.exists(OrphanManager):
         transactor=[ OrphanManager ]
@@ -338,6 +337,7 @@ def ProcessOrphan(**kwargs):
 
         try:
             payload=json.dumps(Orphan).encode()
+            #JRRsupport.AppendFile("/home/trap.txt",json.dumps(Orphan)+"\n")
 
             subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
             subp.stdin.write(payload)
@@ -421,8 +421,6 @@ def ProcessChild(CurList,cur,memData,CurListChanged):
             data['mID']=memData[data['Key']].ID
             memData[data['Key']].Put(OliverTwistTimeout*100,"Running")
             interceptor.StartProcess(ProcessOrphan,kwargs=data)
-            # Diagnostics: single processing
-            #ProcessOrphan(**data)
 
         cur=cur.GetNext()
         OliverTwistLock.Unlock()
