@@ -475,10 +475,11 @@ class mimic:
         Conditional['Response']=resp
         Conditional['Class']='Conditional'
 
-        f=Orphan['Framework']
-        e=Orphan['Order']['Exchange']
-        a=Orphan['Order']['Account']
-        nsf=f"{DataDirectory}/OliverTwist/{f}.{e}.{a}.receiver"
+#        f=Orphan['Framework']
+#        e=Orphan['Order']['Exchange']
+#        a=Orphan['Order']['Account']
+#        nsf=f"{DataDirectory}/OliverTwist/{f}.{e}.{a}.receiver"
+        nsf=f"{DataDirectory}/OliverTwist.Conditional.Receiver"
 
         orphanLock.Lock()
         JRRsupport.AppendFile(nsf,json.dumps(Conditional)+'\n')
