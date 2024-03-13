@@ -40,7 +40,7 @@ import subprocess
 import JRRsupport
 import JackrabbitRelay as JRR
 
-Version="0.0.0.1.510"
+Version="0.0.0.1.750"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -333,8 +333,6 @@ def ProcessOrphan(**kwargs):
     except:
         JRLog.Write(f"Broke: {Orphan['Key']}")
 
-    print(f"2: {Orphan['Key']} {State}")
-
     # This should never happen, but if it dowes, go back to waiting state. Class doesn't matter here
     Memory=JRRsupport.Locker(Orphan['Key'],ID=Orphan['mID'])
     Memory.Put(OliverTwistTimeout*100,"Waiting")
@@ -368,8 +366,6 @@ def ProcessChild(CurList,cur,memData,CurListChanged):
             status='waiting'
         else:
             JRLog.Error("Corruption",f"{data['Key']}: {sData}")
-
-        print(f"1: {data['Key']} {sData}")
 
     if status=='delete':
         # This is the ONLY way to properly handle deletions that
