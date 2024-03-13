@@ -672,7 +672,6 @@ class ccxtCrypto:
     # Create an orphan order and deliver to OliverTwist
 
     def MakeOrphanOrder(self,id,Order):
-        OrphanReceiver=self.DataDirectory+'/OliverTwist.Orphan.Receiver'
         orphanLock=JRRsupport.Locker("OliverTwist")
 
         # Strip Identity
@@ -685,15 +684,20 @@ class ccxtCrypto:
         Orphan['ID']=id
         Orphan['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
         Orphan['Order']=json.dumps(Order)
+        Orphan['Class']='Orphan'
+
+        f=Orphan['Framework']
+        e=Orphan['Order']['Exchange']
+        a=Orphan['Order']['Account']
+        nsf=f"{DataDirectory}/OliverTwist/{f}.{e}.{a}.receiver"
 
         orphanLock.Lock()
-        JRRsupport.AppendFile(OrphanReceiver,json.dumps(Orphan)+'\n')
+        JRRsupport.AppendFile(nsf,json.dumps(Orphan)+'\n')
         orphanLock.Unlock()
 
     # Create a conditional order and deliver to OliverTwist
 
     def MakeConditionalOrder(self,id,Order):
-        ConditionalReceiver=self.DataDirectory+'/OliverTwist.Conditional.Receiver'
         orphanLock=JRRsupport.Locker("OliverTwist")
 
         if type(Order['Response'])==dict:
@@ -713,9 +717,15 @@ class ccxtCrypto:
         Conditional['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
         Conditional['Order']=json.dumps(Order)
         Conditional['Response']=resp
+        Conditional['Class']='Conditional'
+
+        f=Orphan['Framework']
+        e=Orphan['Order']['Exchange']
+        a=Orphan['Order']['Account']
+        nsf=f"{DataDirectory}/OliverTwist/{f}.{e}.{a}.receiver"
 
         orphanLock.Lock()
-        JRRsupport.AppendFile(ConditionalReceiver,json.dumps(Conditional)+'\n')
+        JRRsupport.AppendFile(nsf,json.dumps(Conditional)+'\n')
         orphanLock.Unlock()
 
     # Make ledger entry. Record everything for accounting purposes
