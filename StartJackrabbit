@@ -13,7 +13,7 @@ if [ -z $Port ] ; then
     exit 1
 fi
 
-otProc=2
+otProc=5
 if [ "x$2" != "x" ] ; then
     otProc=$2
 fi
