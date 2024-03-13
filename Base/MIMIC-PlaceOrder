@@ -262,13 +262,12 @@ def main():
     # direction and place an order opposite to it.
 
     if relay.Order['Action']=='close':
+        relay.Order['Action']='sell'
         if pBalance>0:    # Long Position
             amount=pBalance*-1
-            relay.Order['Action']='sell'
         elif pBalance<0:  # Short Position
             amount=pBalance
-            relay.Order['Action']='buy'
-        relay.JRLog.Write(f"Forcing direction to {relay.Order['Action']}")
+#        relay.JRLog.Write(f"Forcing direction to {relay.Order['Action']}")
 
     # Check for reduction
 
