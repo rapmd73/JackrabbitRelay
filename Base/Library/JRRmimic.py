@@ -457,7 +457,6 @@ class mimic:
     # Create a conditional order and deliver to OliverTwist
 
     def MakeConditionalOrder(self,id,Order):
-        ConditionalReceiver=self.DataDirectory+'/OliverTwist.Conditional.Receiver'
         orphanLock=JRRsupport.Locker("OliverTwist")
 
         resp=Order['Response']
@@ -474,9 +473,15 @@ class mimic:
         Conditional['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
         Conditional['Order']=json.dumps(Order)
         Conditional['Response']=resp
+        Conditional['Class']='Conditional'
+
+        f=Orphan['Framework']
+        e=Orphan['Order']['Exchange']
+        a=Orphan['Order']['Account']
+        nsf=f"{DataDirectory}/OliverTwist/{f}.{e}.{a}.receiver"
 
         orphanLock.Lock()
-        JRRsupport.AppendFile(ConditionalReceiver,json.dumps(Conditional)+'\n')
+        JRRsupport.AppendFile(nsf,json.dumps(Conditional)+'\n')
         orphanLock.Unlock()
 
     # Make ledger entry with every detail.

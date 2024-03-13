@@ -23,54 +23,6 @@ import time
 import JRRsupport
 import JackrabbitRelay as JRR
 
-# Timeout before Locker auto-deletes this order result
-
-OliverTwistTimeout=(15*60)
-
-# Write the result to Locker memory so parent knows we are finished.
-
-def FinishOrphan(Key,lID,mID,State):
-    # Get the lock read and set up the memory key. Locker doesn't care and which class this order belongs to. OliverTwist will
-    # match the ID to the right class list, orphan or conditional.
-
-    OliverTwistLock=JRRsupport.Locker("OliverTwist",ID=lID)
-    Memory=JRRsupport.Locker(Key,ID=mID)
-
-    OliverTwistLock.Lock()
-
-    State=State.lower()
-
-    if State!='delete':
-        # Return this order to a waiting state
-        Memory.Put(OliverTwistTimeout*100,"Waiting")
-    elif State=='delete':
-        # This order has been processed and needs to be removed from the system.
-        Memory.Put(OliverTwistTimeout*100,"Delete")
-
-    OliverTwistLock.Unlock()
-
-    # We're done. This child has completed its task
-    sys.exit(0)
-
-# Get the order ID. If there isn't an ID, the order FAILED.
-
-def GetOrderID(res):
-    if res==None:
-        return None
-
-    try:
-        if res.find('Order Confirmation ID')>-1:
-            s=res.find('ID:')+4
-            for e in range(s,len(res)):
-                if res[e]=='\n':
-                    break
-            oid=res[s:e]
-
-            return oid
-    except:
-        pass
-    return None
-
 # Calculate Price
 
 def CalculatePriceExit(order,ts,dir,price,onePip):
@@ -169,7 +121,7 @@ def ReduceLotSize(relay,pair,val):
 
     # Feed the new order to Relay
     result=relay.SendWebhook(newOrder)
-    oid=GetOrderID(result)
+    oid=relay.GetOrderID(result)
     if oid!=None:
         orderDetail=relay.GetOrderDetails(OrderID=oid)
 
@@ -181,10 +133,7 @@ def ReduceLotSize(relay,pair,val):
 ### Main driver
 ###
 
-def main():
-    data=sys.stdin.read().strip()
-    Orphan=json.loads(data)
-
+def OrderProcessor(Orphan):
     # Use Relay to process and validate the order
     if type(Orphan['Order']) is dict:
         order=json.dumps(Orphan['Order'])
@@ -194,11 +143,6 @@ def main():
     relay=JRR.JackrabbitRelay(framework=Orphan['Framework'],payload=order,NoIdentityVerification=True)
     relay.JRLog.SetBaseName('OliverTwist')
     LogMSG=None
-
-    # Check is "paused" marker is found
-#    paused='OlivwerTwwist.'+relay.Exchange+'.'+relay.Account+'.Paused'
-#    if os.path.exists(paused):
-#        FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],Orphan['Status'])
 
     try:
         # Check to see if order is still open and return current state
@@ -230,7 +174,7 @@ def main():
             # no open trades
             if openTrades==[]:
                 # Fall through. No order matching the ID.
-                FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],'Delete')
+                return 'Delete'
 
             for cur in openTrades:
                 if cur['id']==cid:
@@ -255,13 +199,13 @@ def main():
                 if ticker['Spread']>=float(relay.Active['Spread']):
                     s=f"excessivew spread, {relay.Order['SellAction'].lower()} delayed, {ticker['Spread']:.5f} > {relay.Active['Spread']:.5f}"
                     relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{units} {dir} {s}",stdOut=False)
-                    FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],Orphan['Status'])
+                    return 'Waiting'
 
             if 'Spread' in relay.Order:
                 if ticker['Spread']>=float(relay.Order['Spread']):
                     s=f"excessivew spread, {relay.Order['SellAction'].lower()} delayed, {ticker['Spread']:.5f} > {relay.Order['Spread']:.5f}"
                     relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{units} {dir} {s}",stdOut=False)
-                    FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],Orphan['Status'])
+                    return 'Waiting'
 
             # Fsilsafe, in the WORST way possible. Do NOT leave a take profit out of the order. At this stage, the whole thing is
             # an absolute nightmare to fix. The is a very brutal way of dealing with poor user choices.
@@ -327,7 +271,7 @@ def main():
 
                 # Feed the new order to Relay
                 result=relay.SendWebhook(newOrder)
-                oid=GetOrderID(result)
+                oid=relay.GetOrderID(result)
                 if oid!=None:
                     orderDetail=relay.GetOrderDetails(OrderID=oid)
 
@@ -362,22 +306,18 @@ def main():
                     # Order must be closed as it succedded
                     newOrder['ID']=oid
                     relay.WriteLedger(Order=newOrder,Response=result)
-                    FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],'Delete')
+                    return 'Delete'
                 else:
                     # Give OliverTwist a response
                     relay.JRLog.Write(f"{id} -> {cid}: Order failed",stdOut=False)
-                    FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],Orphan['Status'])
+                    return 'Waiting'
             else:
                 # Strike did not happen
-                FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],Orphan['Status'])
+                return 'Waiting'
 
         # Fall through. No order matching the ID.
-        FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],'Delete')
+        return 'Delete'
     except Exception as e:
         # Something broke or went horrible wrong
         relay.JRLog.Write(f"{Orphan['Key']}: Code Error - {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
-        FinishOrphan(Orphan['Key'],Orphan['lID'],Orphan['mID'],Orphan['Status'])
-
-if __name__ == '__main__':
-    main()
-
+        return 'Waiting'

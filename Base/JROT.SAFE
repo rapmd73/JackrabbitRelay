@@ -374,6 +374,8 @@ def ProcessChild(CurList,cur,memData,CurListChanged):
     else:
         status=sData['Status'].lower()
 
+    print(status,data['Key'])
+
     # This check must contain all possible expected values.
 
     if status!='delete' and status!='running':

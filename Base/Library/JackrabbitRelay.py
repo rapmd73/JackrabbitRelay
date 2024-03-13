@@ -371,6 +371,27 @@ class JackrabbitRelay:
         else:
             self.JRLog.Error("Reading Configuration",'Identity.cfg not found')
 
+    # Get the order ID. If there isn't an ID, the order FAILED.
+
+    def GetOrderID(self,res):
+        if res==None:
+            return None
+
+        result=None
+        try:
+            if res.find('Order Confirmation ID')>-1:
+                s=res.find('ID:')+4
+                for e in range(s,len(res)):
+                    if res[e]=='\n':
+                        break
+                oid=res[s:e]
+
+                result=oid
+        except:
+            result=None
+
+        return result
+
     # Webhook processing. This unified layer will communicate with Relay for
     # placing the order and return the results.
 
