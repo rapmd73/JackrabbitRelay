@@ -307,7 +307,7 @@ class mimic:
                 return 'Account Liquidated!'
         elif action=='sell':
             # Check if the base currency is present in the base currency wallet and the amount to sell is available
-            if base in self.Wallet['Wallet'] and self.Wallet['Wallet'][base] >= abs(actualAmount):
+            if base in self.Wallet['Wallet'] and abs(self.Wallet['Wallet'][base])>=abs(actualAmount):
                 # Calculate the total proceeds from selling the asset after deducting fees
                 total_proceeds=abs(actualAmount) * actualPrice * (1 - fee_rate)
                 # Add the total proceeds minus fees to the quote currency balance
@@ -317,9 +317,15 @@ class mimic:
                     self.Wallet['Wallet'][quote]=total_proceeds  # Initialize quote currency balance if not present
                 # Subtract the appropriate amount of the base currency from the base currency wallet
                 if actualAmount<0:    # handle shorting
-                    self.Wallet['Wallet'][base]+=actualAmount
+                    if self.Wallet['Wallet'][base]<0:
+                        self.Wallet['Wallet'][base]-=actualAmount
+                    else:
+                        self.Wallet['Wallet'][base]+=actualAmount
                 else:
-                    self.Wallet['Wallet'][base]-=actualAmount
+                    if self.Wallet['Wallet'][base]<0:
+                        self.Wallet['Wallet'][base]+=actualAmount
+                    else:
+                        self.Wallet['Wallet'][base]-=actualAmount
                 # Update fee balance
                 fee = round(abs(actualAmount) * actualPrice * fee_rate,8)
                 if 'Fees' in self.Wallet['Wallet']:
