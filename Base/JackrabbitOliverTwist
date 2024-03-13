@@ -18,6 +18,7 @@
 #    Orphan.oanda
 #    Conditional.ccxt
 #    Conditional.oanda
+#    Conditional.mimic
 
 # ANY order (direct orphan or conditional) is an ORPHAN at all times withis THIS framework.
 
@@ -30,6 +31,7 @@
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
+import importlib
 import time
 import json
 import random
@@ -318,38 +320,20 @@ def ProcessOrphan(**kwargs):
 
     # The entire kwargs payload is the orphan JSON...
     Orphan=kwargs
+    State='Waiting'
 
-    # Figure out which transactor is needed
-    if Orphan['Class']=='Orphan':
-        OrphanManager=BaseDirectory+'/Orphan.'+Orphan['Framework']
-    else:
-        OrphanManager=BaseDirectory+'/Conditional.'+Orphan['Framework']
+    try:
+        # Figure out which order processor is needed
+        if Orphan['Class']=='Orphan':
+            Processor=importlib.import_module(f"ORPHAN{Orphan['Framework']}")
+        else:
+            Processor=importlib.import_module(f"COND{Orphan['Framework']}")
 
-    # Diagnostics only
-    # fn=f"/tmp/{Orphan['Framework']},{Orphan['Key']}.OliverTwist"
-    # if not os.path.exists(fn):
-    #     JRRsupport.WriteFile(fn,json.dumps(Orphan)+'\n')
+        State=Processor.OrderProcessor(Orphan)
+    except:
+        JRLog.Write(f"Broke: {Orphan['Key']}")
 
-    if os.path.exists(OrphanManager):
-        transactor=[ OrphanManager ]
-
-        # Time to get down to business
-
-        try:
-            payload=json.dumps(Orphan).encode()
-            #JRRsupport.AppendFile("/home/trap.txt",json.dumps(Orphan)+"\n")
-
-            subp=subprocess.Popen(transactor,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-            subp.stdin.write(payload)
-            subp.communicate() # [0].decode().strip()
-
-            # response will be in Jackrabbit Locker as a memory element
-            return None
-        except Exception as e:
-            # This should never happen, but if it dowes, go back to waiting state. Class doesn't matter here
-            Memory=JRRsupport.Locker(Orphan['Key'],ID=Orphan['mID'])
-            Memory.Put(OliverTwistTimeout*100,"Waiting")
-            return None
+    print(f"2: {Orphan['Key']} {State}")
 
     # This should never happen, but if it dowes, go back to waiting state. Class doesn't matter here
     Memory=JRRsupport.Locker(Orphan['Key'],ID=Orphan['mID'])
@@ -384,6 +368,8 @@ def ProcessChild(CurList,cur,memData,CurListChanged):
             status='waiting'
         else:
             JRLog.Error("Corruption",f"{data['Key']}: {sData}")
+
+        print(f"1: {data['Key']} {sData}")
 
     if status=='delete':
         # This is the ONLY way to properly handle deletions that

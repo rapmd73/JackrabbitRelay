@@ -9,6 +9,7 @@ import sys
 sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
 import os
 import json
+import time
 
 import JackrabbitProxy as JRP
 
@@ -25,18 +26,19 @@ else:
     print("An exchange, (sub)account, and an asset must be provided.")
     sys.exit(1)
 
-markets=proxy.GetMarkets()
-print(markets[asset])
-print()
+#markets=proxy.GetMarkets()
+#print(markets[asset])
+#print()
+
+sTime=time.time()
 
 ticker=proxy.GetTicker(symbol=asset)
 print(ticker)
 print()
 
-ohlcv=proxy.GetOHLCV(symbol=asset,timeframe='1d',limit=5000)
-print(ohlcv)
+ohlcv=proxy.GetOHLCV(symbol=asset,timeframe='1d',limit=5)
+for candle in ohlcv:
+    print(candle)
 print()
 
-ticker=proxy.GetOrderBook(symbol=asset)
-print(ticker)
-print()
+print(f"Elspsed: {time.time()-sTime:.6}")
