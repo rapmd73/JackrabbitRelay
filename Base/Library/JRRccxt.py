@@ -690,7 +690,7 @@ class ccxtCrypto:
 #        e=Orphan['Order']['Exchange']
 #        a=Orphan['Order']['Account']
 #        nsf=f"{DataDirectory}/OliverTwist/{f}.{e}.{a}.receiver"
-        nsf=f"{DataDirectory}/OliverTwist.Orphan.Receiver"
+        nsf=f"{self.DataDirectory}/OliverTwist.Orphan.Receiver"
 
         orphanLock.Lock()
         JRRsupport.AppendFile(nsf,json.dumps(Orphan)+'\n')
@@ -724,7 +724,7 @@ class ccxtCrypto:
 #        e=Orphan['Order']['Exchange']
 #        a=Orphan['Order']['Account']
 #        nsf=f"{DataDirectory}/OliverTwist/{f}.{e}.{a}.receiver"
-        nsf=f"{DataDirectory}/OliverTwist.Conditional.Receiver"
+        nsf=f"{self.DataDirectory}/OliverTwist.Conditional.Receiver"
 
         orphanLock.Lock()
         JRRsupport.AppendFile(nsf,json.dumps(Conditional)+'\n')
