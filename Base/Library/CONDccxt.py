@@ -108,7 +108,7 @@ def OrderProcessor(Orphan):
 
         # if ticker is below price and spread, purge and re-purchase
 
-        if amount>bal:
+        if bal>amount:
             if "ConditionalRepurchase" in relay.Active:
                 relay.JRLog.Write(f"Original: {json.dumps(relay.Order)}",stdOut=False)
 
@@ -232,7 +232,7 @@ def OrderProcessor(Orphan):
                 return 'Delete'
             else:
                 # Give OliverTwist a response
-                relay.JRLog.Write(f"{id}: Order failed",stdOut=False)
+                relay.JRLog.Write(f"{id}: Order failed with {relay.GetFailedReason(result)}",stdOut=False)
                 return 'Delete' # 'Waiting'
         else:
             # Strike did not happen

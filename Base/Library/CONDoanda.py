@@ -309,7 +309,7 @@ def OrderProcessor(Orphan):
                     return 'Delete'
                 else:
                     # Give OliverTwist a response
-                    relay.JRLog.Write(f"{id} -> {cid}: Order failed",stdOut=False)
+                    relay.JRLog.Write(f"{id} -> {cid}: Order failed with {relay.GetFailedReason(result)}",stdOut=False)
                     return 'Waiting'
             else:
                 # Strike did not happen
