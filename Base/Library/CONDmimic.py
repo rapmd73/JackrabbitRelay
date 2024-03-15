@@ -120,7 +120,7 @@ def OrderProcessor(Orphan):
 
             if ticker['Bid']>tp:
                 profit=round((amount*ticker['Bid'])-(amount*price),8)
-                LogMSG=f"{id}: TP {dir} hit: {tp}, {amount}: {price:.5f} -> {ticker['Bid']:5f}/{profit}"
+                LogMSG=f"{id}: TP {dir} hit: {tp}, {amount}: {price:.5f} -> {ticker['Bid']:5f}/{abs(profit)}"
             if 'StopLoss' in relay.Order and ticker['Bid']<sl:
                 loss=round((amount*price)-(amount*ticker['Bid']),8)
                 LogMSG=f"{id}: SL {dir} hit: {sl}, {amount}: {price:.5f} -> {ticker['Bid']:5f}/{loss}"
@@ -134,7 +134,7 @@ def OrderProcessor(Orphan):
 
             if ticker['Ask']<tp:
                 profit=round((amount*price)-(amount*ticker['Ask']),8)
-                LogMSG=f"{id}: TP {dir} hit: {tp}, {amount}: {price:.5f} -> {ticker['Ask']:5f}/{profit}"
+                LogMSG=f"{id}: TP {dir} hit: {tp}, {amount}: {price:.5f} -> {ticker['Ask']:5f}/{abs(profit)}"
             if 'StopLoss' in relay.Order and ticker['Ask']>sl:
                 loss=round((amount*ticker['Ask'])-(amount*price),8)
                 LogMSG=f"{id}: SL {dir} hit: {sl}, {amount}: {price:.5f} -> {ticker['Ask']:5f}/{loss}"
@@ -144,7 +144,10 @@ def OrderProcessor(Orphan):
                 StrikeHappened=True
 
         if StrikeHappened==True:
-            if abs(amount)>bal:
+            if 'Diagnostics' in relay.Active:
+                relay.JRLog.Write(f"{id}: Amount {abs(amount)}, Balance: {abs(bal)}",stdOut=False)
+
+            if abs(bal)>abs(amount):
                 # Build "strike" order. TakeProfit or StopLoss has been triggered
                 newOrder={}
                 newOrder['OliverTwist']='Conditional'
@@ -176,10 +179,10 @@ def OrderProcessor(Orphan):
                     return 'Delete'
                 else:
                     # Give OliverTwist a response
-                    relay.JRLog.Write(f"{id}: Order failed",stdOut=False)
+                    relay.JRLog.Write(f"{id}: Order failed with {relay.GetFailedReason(result)}",stdOut=False)
                     return 'Delete' # 'Waiting'
             else:
-                # Amount < Balance
+                # Amount > Balance
                 relay.JRLog.Write(f"{id}: Amount {amount:.8f} > Balance {bal:.8f} {base}, purge",stdOut=False)
                 return 'Delete'
         else:
@@ -187,7 +190,7 @@ def OrderProcessor(Orphan):
             return 'Waiting'
     except Exception as e:
         # Something went wrong
-        relay.JRLog.Write(f"{Orphan['Key']}: CONDmisc {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
+        relay.JRLog.Write(f"{Orphan['Key']}: CONDmimic {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
         if 'Diagnostics' in relay.Active:
             relay.JRLog.Write(f"{Orphan['Key']}: {data}",stdOut=False)
         return 'Waiting'

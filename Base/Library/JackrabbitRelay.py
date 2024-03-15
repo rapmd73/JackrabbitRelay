@@ -106,7 +106,7 @@ class JackrabbitLog:
 class JackrabbitRelay:
     def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,secondary=None,NoIdentityVerification=False,Usage=None):
         # All the default locations
-        self.Version="0.0.0.1.750"
+        self.Version="0.0.0.1.770"
         self.NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
         self.BaseDirectory='/home/JackrabbitRelay2/Base'
         self.ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -384,9 +384,26 @@ class JackrabbitRelay:
                 for e in range(s,len(res)):
                     if res[e]=='\n':
                         break
-                oid=res[s:e]
+                result=res[s:e]
+        except:
+            result=None
 
-                result=oid
+        return result
+
+    # Get the reason why the order failed
+
+    def GetFailedReason(self,res):
+        if res==None:
+            return None
+
+        result=None
+        try:
+            if res.find('PlaceOrder failed with:')>-1:
+                s=res.find('with:')+6
+                for e in range(s,len(res)):
+                    if res[e]=='\n':
+                        break
+                result=res[s:e]
         except:
             result=None
 
