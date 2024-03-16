@@ -12,6 +12,8 @@ if len(sys.argv)<2:
     print('Port number must be given to local Jackrabbit Relay server')
     sys.exit(1)
 
+print("Building MIMIC config file based on exchanges with public API access")
+
 port=int(sys.argv[1])
 
 cname='/home/JackrabbitRelay2/Config/mimic.cfg'

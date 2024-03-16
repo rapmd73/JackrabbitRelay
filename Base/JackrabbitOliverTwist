@@ -445,9 +445,9 @@ def main():
     while True:
         # Inner loop cycles conditional orders for every single orphan
 
-        ReceiveOrphans('Conditional')
         cor=ConditionalList.GetHead()
         while cor!=None:
+            ReceiveOrphans('Conditional')
             ConditionalList,cor,ConditionalListChanged=ProcessChild(ConditionalList,cor,ConditionalMemory,ConditionalListChanged)
 
             # Update Conditional storehouse, if needed

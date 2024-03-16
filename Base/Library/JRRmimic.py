@@ -80,8 +80,8 @@ class mimic:
 
         # Lock it up and set the exit approach
 
-        self.walletLock.Lock()
         atexit.register(self.CleanUp)
+        self.walletLock.Lock()
 
         # Login to broker/exchange and pull the market data from the data source
 
@@ -158,7 +158,7 @@ class mimic:
     # exchange within the wallet. Crypto value is wallet amount * current ticker, no position tracking.
 
     def GetWallet(self,**kwargs):
-        # if summary file not exists, set up defaults
+        # if wallet file not exists, set up defaults
         if not os.path.exists(self.walletFile):
             # Get list of valid quote currencies
             qList=[]
