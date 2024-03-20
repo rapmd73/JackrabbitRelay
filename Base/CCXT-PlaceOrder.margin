@@ -127,7 +127,7 @@ def main():
         if "permissions" in relay.Markets[relay.Order['Asset']]['info']:
             marketType=' '.join(relay.Markets[relay.Order['Asset']]['info']['permissions']).lower()
 
-    if relay.Order['Market'] not in marketType:
+    if relay.Order['Market'].lower() not in marketType:
         relay.JRLog.Error(relay.Exchange, f"wrong market type: {relay.Order['Market']}, asset is {marketType}")
 
     # Check for order type override

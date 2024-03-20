@@ -58,7 +58,6 @@ def main():
                 continue
 
         ticker=relay.GetTicker(symbol=pair)
-
         # If bid and ask are 0, we can't trade it, so don't show it.
         if ticker['Bid']==0 and ticker['Ask']==0:
             continue
@@ -69,7 +68,8 @@ def main():
             and marketType=='spot':
                 marketType='margin'
             id=relay.Markets[pair]['id']
-            print(f"{pair:30} {id:30} {marketType:8} {ticker['Bid']:18.8f} {ticker['Spread']:18.8f} {ticker['Ask']:18.8f}")
+            minimum,mincost=relay.GetMinimum(symbol=pair)
+            print(f"{pair:30} {id:30} {marketType:8} {minimum:18.8f} {mincost:18.8f} {ticker['Bid']:18.8f} {ticker['Spread']:18.8f} {ticker['Ask']:18.8f}")
         elif relay.Framework=='oanda':
             mr=GetRatio(float(relay.Markets[pair]['marginRate']))
             lfr=float(relay.Markets[pair]['financing']['longRate'])

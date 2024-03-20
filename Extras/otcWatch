@@ -19,7 +19,7 @@ import JRRsupport
 import JackrabbitRelay as JRR
 
 DataDirectory='/home/JackrabbitRelay2/Data'
-ConditionalStorehouse=DataDirectory+'/OliverTwist.Conditional.Storehouse'
+ConditionalStorehouse=DataDirectory+'/OliverTwist.Storehouse'
 
 OliverTwistLock=JRRsupport.Locker("OliverTwist")
 

@@ -149,6 +149,7 @@ def OrderProcessor(Orphan):
         # Handle OANDa's weird order id sequencing
         id=Orphan['ID']
         orderDetail=relay.GetOrderDetails(OrderID=Orphan['ID'])
+        # Figure out a way to handle when an order ID nolong exists.
         cid=orderDetail[-1]['id']
         saction=relay.Order['SellAction'].lower()
 

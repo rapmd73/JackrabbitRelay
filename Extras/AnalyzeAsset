@@ -48,10 +48,12 @@ maxMonth=[]
 spList=[]
 avgList=[]
 
-ohlcv=relay.GetOHLCV(symbol=asset,timeframe=relay.Timeframes[-1],limit=5000)
-if ohlcv==[]:
-    print('OHLCV data not available, stopping analysis')
-    sys.exit(1)
+tf=-1
+ohlcv=[]
+while ohlcv==[]:
+    ohlcv=relay.GetOHLCV(symbol=asset,timeframe=relay.Timeframes[tf],limit=5000)
+    if ohlcv==[]:
+        tf-=1
 
 for slice in ohlcv:
     cs=0
@@ -69,12 +71,12 @@ for slice in ohlcv:
 
 sp=mh-ml
 
-print(f"Highest timeframe for {asset} is {relay.Timeframes[-1]}")
+print(f"Highest timeframe for {asset} is {relay.Timeframes[tf]}")
 
 # find trading duration
 dsS=datetime.datetime.fromtimestamp(ohlcv[0][0]/1000).strftime('%Y-%m-%d %H:%M:%S')
 ds=datetime.datetime.strptime(dsS,'%Y-%m-%d %H:%M:%S')
-deS=datetime.datetime.fromtimestamp(ohlcv[-1][0]/1000).strftime('%Y-%m-%d %H:%M:%S')
+deS=datetime.datetime.fromtimestamp(ohlcv[tf][0]/1000).strftime('%Y-%m-%d %H:%M:%S')
 de=datetime.datetime.strptime(deS,'%Y-%m-%d %H:%M:%S')
 
 delta=relativedelta(de,ds)
@@ -163,8 +165,8 @@ print()
 mmm=maxMonth[2]-maxMonth[3]     # Maximum monthly movement
 amm=sum(spList)/len(spList)     # Average monthly movement
 
-print(f"Maximum {relay.Timeframes[-1]} movement: {round(mmm,percision):.{percision}f} ({(mmm/mh)*100:.2f}%)")
-print(f"Average {relay.Timeframes[-1]} movement: {round(amm,percision):.{percision}f} ({(amm/mh)*100:.2f}%)")
+print(f"Maximum {relay.Timeframes[tf]} movement: {round(mmm,percision):.{percision}f} ({(mmm/mh)*100:.2f}%)")
+print(f"Average {relay.Timeframes[tf]} movement: {round(amm,percision):.{percision}f} ({(amm/mh)*100:.2f}%)")
 
 print()
 
@@ -176,7 +178,7 @@ for slice in spList:
         maa+=1
 
 lsp=len(spList)
-print(f"Total {relay.Timeframes[-1]}s analyzed: {lsp}")
-print(f"{relay.Timeframes[-1]}s above average:  {maa} ({(maa/lsp)*100:.2f}%)")
+print(f"Total {relay.Timeframes[tf]}s analyzed: {lsp}")
+print(f"{relay.Timeframes[tf]}s above average:  {maa} ({(maa/lsp)*100:.2f}%)")
 
 

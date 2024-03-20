@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+import time
+
+import JackrabbitProxy as JRP
+
+###
+### Main code base. Place order on exchange
+###
+
+proxy=JRP.JackrabbitProxy()
+if proxy.GetArgsLen() > 2:
+    exchangeName=proxy.GetExchange()
+    account=proxy.GetAccount()
+else:
+    print("An exchange anna a (sub)account must be provided.")
+    sys.exit(1)
+
+markets=proxy.GetMarkets()
+for asset in markets:
+    print(markets[asset])
+    print()
