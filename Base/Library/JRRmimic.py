@@ -187,7 +187,7 @@ class mimic:
 
             self.PutWallet()
         else:
-            self.Wallet=json.loads(JRRsupport.ReadFile(self.walletFile))
+            self.Wallet=json.loads(JRRsupport.ReadFile(self.walletFile).strip().split('\n')[0])
 
         return self.Wallet
 
@@ -252,7 +252,7 @@ class mimic:
         # Time to F* with the trader. Simulate dust.
         # It is very rare that an order is filled exactly as requested.
         rpct=random.uniform(0, 1)
-        mda=amount*0.0031
+        mda=amount*0.0013
         dust=abs(mda)*rpct
         if amount<0:    # short
             actualAmount=amount+dust
@@ -481,11 +481,7 @@ class mimic:
         Conditional['Response']=resp
         Conditional['Class']='Conditional'
 
-#        f=Orphan['Framework']
-#        e=Orphan['Order']['Exchange']
-#        a=Orphan['Order']['Account']
-#        nsf=f"{DataDirectory}/OliverTwist/{f}.{e}.{a}.receiver"
-        nsf=f"{self.DataDirectory}/OliverTwist.Conditional.Receiver"
+        nsf=f"{self.DataDirectory}/OliverTwist.Receiver"
 
         orphanLock.Lock()
         JRRsupport.AppendFile(nsf,json.dumps(Conditional)+'\n')
