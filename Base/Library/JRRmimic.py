@@ -45,7 +45,7 @@ class mimic:
     #   placed in init and released at exit.
 
     def __init__(self,Exchange,Config,Active,DataDirectory=None):
-        self.Version="0.0.0.1.770"
+        self.Version="0.0.0.1.780"
 
         self.StableCoinUSD=['USDT','USDC','BUSD','UST','DAI','FRAX','TUSD', \
                 'USDP','LUSD','USDN','HUSD','FEI','TRIBE','RSR','OUSD','XSGD', \
@@ -246,8 +246,13 @@ class mimic:
             return 'Account Disabled From Liquidated!'
 
         # action is assumed to be only lowercase at this point.
-        # Split the asset pair into base and quote currencies
+        # Split the asset pair into base and quote currencies.
+        # When testing futures/swap, convert EGLD/USDT:BTC to EGLD/BTC
         base,quote=asset.split('/')
+        if ':' in asset:
+            quote=asset.split(':')[1]
+            if '-' in quote:
+                quote=quote.split('-')[0]
 
         # Time to F* with the trader. Simulate dust.
         # It is very rare that an order is filled exactly as requested.
