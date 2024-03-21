@@ -167,6 +167,11 @@ def ReadOrphanList(cl=None):
 
             if rc>0:
                 JRLog.Write(f"{rc} record(s) read")
+            # If this is an older file, delete it after te order are processed.
+            if cl!=None:
+                WriteOrphanList()
+                os.remove(WorkingStorehouse)
+
     OliverTwistLock.Unlock()
 
 # Write only when there are changes.
