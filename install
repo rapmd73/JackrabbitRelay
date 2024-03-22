@@ -25,7 +25,7 @@ cp * /home/JackrabbitRelay2 > /dev/null 2>&1
 # Do NOT copy the Config folder
 mkdir -p $BaseDir/Config > /dev/null 2>&1
 
-for d in Base Base/Library Data Extras Extras/CodeProofs Logs Ledger ; do
+for d in Base Base/Library Data Extras Logs Ledger ; do
     mkdir -p $BaseDir/$d > /dev/null 2>&1
     cp -r /home/GitHub/JackrabbitRelay/$d/* $BaseDir/$d > /dev/null 2>&1
 done
