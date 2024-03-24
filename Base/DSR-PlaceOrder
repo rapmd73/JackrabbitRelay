@@ -61,7 +61,9 @@ def main():
     else:
         expire=DataTTL
     key=relay.Order['Recipe'].replace(" ","")+relay.GetExchangeLast()+relay.GetAccountLast()+relay.Order['Asset']+relay.Order['TCycles']+relay.Order['TBuys']
-    results=dsrList.update(key,json.dumps(relay.Order),expire)
+    ro=relay.Order.copy()
+    ro.pop('Identity',None) # Remove Identity
+    results=dsrList.update(key,json.dumps(ro),expire)
 
     # Replaced is a special case where the itwem in the list expired, but is not unique.
     # Orders must be unique to be processed as legitimate.

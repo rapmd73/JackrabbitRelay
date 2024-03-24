@@ -120,10 +120,10 @@ def OrderProcessor(Orphan):
 
             if ticker['Bid']>tp:
                 profit=round((amount*ticker['Bid'])-(amount*price),8)
-                LogMSG=f"{id}: TP {dir} hit: {tp}, {amount}: {price:.5f} -> {ticker['Bid']:5f}/{abs(profit)}"
+                LogMSG=f"{id}: Prft {dir}, {tp}, {amount}: {price:.8f} -> {ticker['Bid']:5f}/{abs(profit)}"
             if 'StopLoss' in relay.Order and ticker['Bid']<sl:
                 loss=round((amount*price)-(amount*ticker['Bid']),8)
-                LogMSG=f"{id}: SL {dir} hit: {sl}, {amount}: {price:.5f} -> {ticker['Bid']:5f}/{loss}"
+                LogMSG=f"{id}: prft {dir}, {sl}, {amount}: {price:.8f} -> {ticker['Bid']:5f}/{abs(loss)}"
 
             if ticker['Bid']>tp or ('StopLoss' in relay.Order and ticker['Bid']<sl):
                 strikePrice=ticker['Bid']
@@ -134,10 +134,10 @@ def OrderProcessor(Orphan):
 
             if ticker['Ask']<tp:
                 profit=round((amount*price)-(amount*ticker['Ask']),8)
-                LogMSG=f"{id}: TP {dir} hit: {tp}, {amount}: {price:.5f} -> {ticker['Ask']:5f}/{abs(profit)}"
+                LogMSG=f"{id}: Prft {dir}, {tp}, {amount}: {price:.8f} -> {ticker['Ask']:5f}/{abs(profit)}"
             if 'StopLoss' in relay.Order and ticker['Ask']>sl:
                 loss=round((amount*ticker['Ask'])-(amount*price),8)
-                LogMSG=f"{id}: SL {dir} hit: {sl}, {amount}: {price:.5f} -> {ticker['Ask']:5f}/{loss}"
+                LogMSG=f"{id}: Loss {dir}, {sl}, {amount}: {price:.8f} -> {ticker['Ask']:5f}/{abs(loss)}"
 
             if ticker['Ask']<tp or ('StopLoss' in relay.Order and ticker['Ask']>sl):
                 strikePrice=ticker['Ask']

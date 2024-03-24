@@ -121,17 +121,8 @@ def OrderProcessor(Orphan):
 
                 if makeNewOrder==True:
                     # Copy original order
-                    newOrder=relay.Order
+                    newOrder=relay.Order.copy()
                     newOrder['OliverTwist']='Repurchase'
-                    """
-                    newOrder['Exchange']=relay.Order['Exchange']
-                    newOrder['Account']=relay.Order['Account']
-                    newOrder['Market']=relay.Order['Market']
-                    newOrder['Asset']=relay.Order['Asset']
-                    newOrder['Action']=relay.Order['SellAction']
-                    newOrder['Price']=str(strikePrice)
-                    newOrder['Base']=str(amount)
-                    """
                     if 'OrderType' in relay.Order:
                         newOrder['OrderType']=relay.Order['OrderType']
                     else:
@@ -177,10 +168,10 @@ def OrderProcessor(Orphan):
 
             if ticker['Bid']>tp:
                 profit=round((amount*ticker['Bid'])-(amount*price),8)
-                LogMSG=f"{id}: TP {dir} hit: {tp}, {amount}: {price:.5f} -> {ticker['Bid']:5f}/{profit}"
+                LogMSG=f"{id}: Prft {dir}, {tp}, {amount}: {price:.5f} -> {ticker['Bid']:5f}/{abs(profit)}"
             if 'StopLoss' in relay.Order and ticker['Bid']<sl:
                 loss=round((amount*price)-(amount*ticker['Bid']),8)
-                LogMSG=f"{id}: SL {dir} hit: {sl}, {amount}: {price:.5f} -> {ticker['Bid']:5f}/{loss}"
+                LogMSG=f"{id}: Loss {dir}, {sl}, {amount}: {price:.5f} -> {ticker['Bid']:5f}/{abs(loss)}"
 
             if ticker['Bid']>tp or ('StopLoss' in relay.Order and ticker['Bid']<sl):
                 strikePrice=ticker['Bid']
@@ -191,10 +182,10 @@ def OrderProcessor(Orphan):
 
             if ticker['Ask']<tp:
                 profit=round((amount*price)-(amount*ticker['Ask']),8)
-                LogMSG=f"{id}: TP {dir} hit: {tp}, {amount}: {price:.5f} -> {ticker['Ask']:5f}/{profit}"
+                LogMSG=f"{id}: Prft {dir}, {tp}, {amount}: {price:.5f} -> {ticker['Ask']:5f}/{abs(profit)}"
             if 'StopLoss' in relay.Order and ticker['Ask']>sl:
                 loss=round((amount*ticker['Ask'])-(amounts*price),8)
-                LogMSG=f"{id}: SL {dir} hit: {sl}, {amount}: {price:.5f} -> {ticker['Ask']:5f}/{loss}"
+                LogMSG=f"{id}: Loss {dir}, {sl}, {amount}: {price:.5f} -> {ticker['Ask']:5f}/{abs(loss)}"
 
             if ticker['Ask']<tp or ('StopLoss' in relay.Order and ticker['Ask']>sl):
                 strikePrice=ticker['Ask']

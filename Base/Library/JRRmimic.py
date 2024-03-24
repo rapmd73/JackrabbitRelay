@@ -238,7 +238,62 @@ class mimic:
     def GetOpenTrades(self,**kwargs):
         pass
 
+    # Liquidate a wallet, used for position flipping.
+
+    def LiquidateWallet(self,asset,fee_rate=0):
+        base,quote=asset.split('/')
+        if ':' in asset:
+            quote=asset.split(':')[1]
+            if '-' in quote:
+                quote=quote.split('-')[0]
+
+        # Liquidate base value
+        amount=self.Wallet['Wallet'][base]
+        self.Wallet['Wallet'][base]=0
+
+        ticker=self.Broker.GetTicker(symbol=asset)
+        if amount<0:
+            actualPrice=min(ticker['Bid'],ticker['Ask'])-ticker['Spread']   # Short
+        else:
+            actualPrice=max(ticker['Bid'],ticker['Ask'])+ticker['Spread']   # Long
+
+        # Fees WILL be paid no watter what.
+        fee=round(abs(amount) * actualPrice * fee_rate,8)
+        if 'Fees' in self.Wallet['Wallet']:
+            self.Wallet['Fees']+=fee
+        else:
+            self.Wallet['Fees']=fee  # Initialize fee balance if not present
+
+        total_proceeds=round(abs(amount) * actualPrice * (1 - fee_rate),8)
+        # Add the total proceeds minus fees to the quote currency balance
+        if quote in self.Wallet['Wallet']:
+            self.Wallet['Wallet'][quote]+=total_proceeds
+        else:
+            self.Wallet['Wallet'][quote]=total_proceeds  # Initialize quote currency balance if not present
+
+        # Figure out liquidation direction
+        if amount>0:
+            action='sell'
+        else:
+            action='buy'
+        # Update successful
+        order={}
+        order['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+        order['ID']=f"{time.time()*10000000:.0f}"
+        order['Action']=action
+        order['Asset']=asset
+        order[base]=self.Wallet['Wallet'][base]
+        order[quote]=self.Wallet['Wallet'][quote]
+        order['Amount']=round(amount,8)
+        order['Price']=round(actualPrice,8)
+        order['Fee']=round(fee,8)
+        JRRsupport.AppendFile(self.history,json.dumps(order)+'\n')
+        return order
+
     # Manage the wallet. This is where the dirty side of Mimic takes place.
+
+    # if b>0, a>0: b+=a, q-=a
+    # if b<0, a<0: b-=a, q-=abs(a)
 
     def UpdateWallet(self,action,asset,amount,price,fee_rate=0):
         # if the account has already been disabled (liquidated), then don't waste time here
@@ -254,17 +309,17 @@ class mimic:
             if '-' in quote:
                 quote=quote.split('-')[0]
 
-        # Time to F* with the trader. Simulate dust.
+        # Time to F* with the trader. Simulate dust/not a full fill.
         # It is very rare that an order is filled exactly as requested.
         rpct=random.uniform(0, 1)
-        mda=amount*0.0013
-        dust=abs(mda)*rpct
+        mda=abs(amount)*0.0013
+        dust=mda*rpct
         if amount<0:    # short
             actualAmount=amount+dust
         else:           # long
             actualAmount=amount-dust
 
-        # Need to recheck minimum values
+        # Need to get the actual price of the asset at THIS time, not the price the user wwanted.
 
         ticker=self.Broker.GetTicker(symbol=asset)
         if actualAmount<0:
@@ -276,7 +331,7 @@ class mimic:
             # Calculate the total cost for buying the asset including fees
             total_cost=abs(actualAmount) * actualPrice * (1 + fee_rate)
             # Check if the wallet has enough balance for the purchase including fees
-            if quote in self.Wallet['Wallet'] and self.Wallet['Wallet'][quote] >= total_cost:
+            if quote in self.Wallet['Wallet'] and self.Wallet['Wallet'][quote]>=total_cost:
                 # Deduct the total cost including fees from the quote currency balance
                 self.Wallet['Wallet'][quote]-=total_cost
                 # Add the appropriate amount of the base currency to the base currency wallet.
@@ -305,6 +360,7 @@ class mimic:
                 # Remove from allet
                 if self.Wallet['Wallet'][base]==0.0:
                     self.Wallet['Wallet'].pop(base,None)
+                JRRsupport.AppendFile(self.history,json.dumps(order)+'\n')
                 return order
             else:
                 # Not enough balance, account liquidated.
@@ -351,6 +407,7 @@ class mimic:
                 # Remove from allet
                 if self.Wallet['Wallet'][base]==0.0:
                     self.Wallet['Wallet'].pop(base,None)
+                JRRsupport.AppendFile(self.history,json.dumps(order)+'\n')
                 return order
             else:
                 # Not enough balance, but account is not liquidated. Need to cross analyze this on shorting.
@@ -373,11 +430,9 @@ class mimic:
 
     # CRITICAL:
 
-    #   When subtracting amounts for the wallet, the positional tracking system MUST substract from the OLDEST
-    #   (first in/first out) position in the list at the CURRENT (ticker) market value. Extensive research in
-    #   this shows that FIFO is THE account standard practiced globally.
-
-    #   Cryprocurreny selling never selld by ID, only AMOUNT
+    # For position fliping
+    # if b>0, a<0: sell base, buy amount
+    # if b<0, a>0: buy bbase, sell amount
 
     def PlaceOrder(self,**kwargs):
         pair=kwargs.get('pair')
@@ -418,10 +473,19 @@ class mimic:
         if ro==True and action=='sell':
             amount=self.Wallet['Wallet'][base]
 
-        result=self.UpdateWallet(action,pair,amount,price,Fee)
+        # Handle long/short flipping
 
-        if 'ID' in result:
-            JRRsupport.AppendFile(self.history,json.dumps(result)+'\n')
+        result=None
+        if amount>0 and self.Wallet['Wallet'][base]>=0 \
+        or amount<0 and self.Wallet['Wallet'][base]<=0:
+            result=self.UpdateWallet(action,pair,amount,price,Fee)
+        elif amount<0 and self.Wallet['Wallet'][base]>0:
+            result=self.LiquidateWallet(pair,Fee)
+            result=self.UpdateWallet('buy',pair,amount,price,Fee)
+        elif amount>0 and self.Wallet['Wallet'][base]<0:
+            result=self.LiquidateWallet(pair,Fee)
+            result=self.UpdateWallet('buy',pair,amount,price,Fee)
+
         self.PutWallet()
         if 'ID' in result and result['ID']!=None:
             # Required because most crypto exchanges don't retain order details after a certain length of time.

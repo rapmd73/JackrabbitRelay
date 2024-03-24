@@ -21,8 +21,8 @@ if relay.GetArgsLen() > 4:
     exchangeName=relay.GetExchange()
     account=relay.GetAccount()
     asset=relay.GetAsset()
-    side=relay.GetArgs(4)
-    amount=relay.GetArgs(5)
+    side=relay.GetArgs(4).lower()
+    amount=float(relay.GetArgs(5))
 else:
     print("An exchange, (sub)account, an asset, a side (buy/sell), and an amount must be provided.")
     sys.exit(1)
@@ -31,7 +31,14 @@ ticker=relay.GetTicker(symbol=asset)
 bPrice=ticker['Ask']
 sPrice=ticker['Bid']
 
-mPrice=min(bPrice,sPrice)
+if side=='buy' and amount>0:
+    mPrice=max(bPrice,sPrice)
+elif side=='buy' and amount<0:
+    mPrice=min(bPrice,sPrice)
+elif side=='sell' and amount>0:
+    mPrice=min(bPrice,sPrice)
+elif side=='sell' and amount<0:
+    mPrice=max(bPrice,sPrice)
 
 result=relay.PlaceOrder(pair=asset,orderType="market",action=side,amount=amount,price=bPrice,ReduceOnly=False,LedgerNote="Dry Run")
 print(result)

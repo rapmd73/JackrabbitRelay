@@ -27,6 +27,11 @@ for i in range(1,len(sys.argv)):
     if len(sys.argv)>2:
         print(sys.argv[i])
 
+    if 'oanda' in sys.argv[i]:
+        perc=4
+    else:
+        perc=8
+
     lines=JRRsupport.ReadFile(sys.argv[i]).strip().split('\n')
 
     # Running Sum
@@ -61,16 +66,16 @@ for i in range(1,len(sys.argv)):
             sl+=1
 
     for d in sorted(day.keys()):
-        print(f"{d} {round(day[d],4):10.4f}")
+        print(f"{d} {round(day[d],4):14.{perc}f}")
 
 print()
 
 # Trades/Month
 tpm=int(tt/len(day.keys()))
-atm=round(rs/tt,4)
-apm=round(atm*tpm,4)
+atm=round(rs/tt,perc)
+apm=round(atm*tpm,perc)
 
-print(f"Total Profits/StopLosses/Trades: {round(rs,4):.4f}/{sl}/{tt}")
-print(f"Average/Trade:        {atm:.4f}")
+print(f"Total Profits/StopLosses/Trades: {round(rs,perc):.{perc}f}/{sl}/{tt}")
+print(f"Average/Trade:        {atm:.{perc}f}")
 print(f"Average Trades/Month: {tpm:.0f}")
-print(f"Average Profit/Month: {apm:.4f}")
+print(f"Average Profit/Month: {apm:.{perc}f}")
