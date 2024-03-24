@@ -5,6 +5,8 @@
 # 2021 Copyright © Robert APM Darin
 # All rights reserved unconditionally.
 
+# wget "https://scanner.tradingview.com/crypto/scan"
+
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
