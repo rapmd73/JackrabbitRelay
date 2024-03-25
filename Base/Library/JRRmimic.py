@@ -473,6 +473,11 @@ class mimic:
         if ro==True and action=='sell':
             amount=self.Wallet['Wallet'][base]
 
+        # Create base if not present
+
+        if base not in self.Wallet['Wallet']:
+            self.Wallet['Wallet'][base]=0
+
         # Handle long/short flipping
 
         result=None
