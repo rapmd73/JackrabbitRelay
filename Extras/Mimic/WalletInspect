@@ -60,7 +60,10 @@ for line in lines:
     f=float(data['Fee'])
 
     if act=='B':
-        cnr-=abs(p*a)
+        if bw!=0:
+            cnr-=abs(p*a)
+        else:
+            cnr+=abs(p*a)
     elif act=='S':
         cnr+=abs(p*a)
 

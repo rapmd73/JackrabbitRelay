@@ -45,7 +45,7 @@ class mimic:
     #   placed in init and released at exit.
 
     def __init__(self,Exchange,Config,Active,DataDirectory=None):
-        self.Version="0.0.0.1.780"
+        self.Version="0.0.0.1.785"
 
         self.StableCoinUSD=['USDT','USDC','BUSD','UST','DAI','FRAX','TUSD', \
                 'USDP','LUSD','USDN','HUSD','FEI','TRIBE','RSR','OUSD','XSGD', \
@@ -271,16 +271,11 @@ class mimic:
         else:
             self.Wallet['Wallet'][quote]=total_proceeds  # Initialize quote currency balance if not present
 
-        # Figure out liquidation direction
-        if amount>0:
-            action='sell'
-        else:
-            action='buy'
         # Update successful
         order={}
         order['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
         order['ID']=f"{time.time()*10000000:.0f}"
-        order['Action']=action
+        order['Action']='sell'
         order['Asset']=asset
         order[base]=self.Wallet['Wallet'][base]
         order[quote]=self.Wallet['Wallet'][quote]
@@ -430,9 +425,8 @@ class mimic:
 
     # CRITICAL:
 
-    # For position fliping
-    # if b>0, a<0: sell base, buy amount
-    # if b<0, a>0: buy bbase, sell amount
+    # Any value moving from quote to base is a buy.
+    # Any value moving from base to quote is a sell.
 
     def PlaceOrder(self,**kwargs):
         pair=kwargs.get('pair')
