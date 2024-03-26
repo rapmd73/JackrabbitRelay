@@ -407,6 +407,8 @@ def main():
             while interceptor.GetChildren()>(NumberProcesses-1):
                 JRRsupport.ElasticSleep(1)
 
+        JRRsupport.ElasticSleep(1)
+
 if __name__ == '__main__':
     main()
 
