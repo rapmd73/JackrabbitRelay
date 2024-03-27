@@ -251,7 +251,7 @@ def ReceiveOrphans(cl=None):
                 OrphanList[Orphan['Key']]=Orphan
 
                 OrphanMemory[Orphan['Key']]=JRRsupport.Locker(Orphan['Key'])
-                OrphanMemory[Orphan['Key']].Put(OliverTwistTimeout*OliverTwictCount,"Waiting")
+                OrphanMemory[Orphan['Key']].Put(OliverTwistTimeout*OliverTwistCount,"Waiting")
 
                 rc+=1
             if rc>0:
@@ -388,6 +388,7 @@ def main():
 
     while True:
         ReceiveOrphans()
+
         # Dynamic factor for memory timeouts
         OliverTwistCount=len(OrphanList)
 
