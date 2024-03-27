@@ -103,7 +103,7 @@ def GetID():
 
 def ReadOrphanList(cl=None):
     # Required as the blobals are modified
-    global OliverTwictCount
+    global OliverTwistCount
     global OliverTwistLock
     global OrphanList
     global OrphanMemory
@@ -126,7 +126,7 @@ def ReadOrphanList(cl=None):
         buffer=JRRsupport.ReadFile(WorkingStorehouse).strip()
         if buffer!=None and buffer!='':
             Orphans=buffer.split('\n')
-            OliverTwictCount=len(Orphans)
+            OliverTwistCount=len(Orphans)
             for Entry in Orphans:
                 # Force set InMotion to False
                 Entry=Entry.strip()
@@ -162,7 +162,7 @@ def ReadOrphanList(cl=None):
                 OrphanList[Orphan['Key']]=Orphan
 
                 OrphanMemory[Orphan['Key']]=JRRsupport.Locker(Orphan['Key'])
-                OrphanMemory[Orphan['Key']].Put(OliverTwistTimeout*OliverTwictCount,"Waiting")
+                OrphanMemory[Orphan['Key']].Put(OliverTwistTimeout*OliverTwistCount,"Waiting")
                 rc+=1
 
             if rc>0:
@@ -194,7 +194,7 @@ def WriteOrphanList():
 
 def ReceiveOrphans(cl=None):
     # Required as the globals are modified
-    global OliverTwictCount
+    global OliverTwistCount
     global OliverTwistLock
     global OrphanList
     global OrphanMemory
@@ -270,7 +270,7 @@ def ReceiveOrphans(cl=None):
 # processing the conditions.
 
 def ProcessOrphan(**kwargs):
-    global OliverTwictCount
+    global OliverTwistCount
     global JRLog
 
     # The entire kwargs payload is the orphan JSON...
@@ -291,7 +291,7 @@ def ProcessOrphan(**kwargs):
     otLock=JRRsupport.Locker("OliverTwist",ID=Orphan['lID'])
     Memory=JRRsupport.Locker(Orphan['Key'],ID=Orphan['mID'])
     otLock.Lock()
-    Memory.Put(OliverTwistTimeout*OliverTwictCount,State)
+    Memory.Put(OliverTwistTimeout*OliverTwistCount,State)
     otLock.Unlock()
     return None
 
@@ -302,7 +302,7 @@ def ProcessOrphan(**kwargs):
 def ProcessChild(Orphan):
     # Required as the globals are modified
     global NumberProcesses
-    global OliverTwictCount
+    global OliverTwistCount
     global OliverTwistLock
     global OrphanList
     global OrphanMemory
@@ -356,7 +356,7 @@ def ProcessChild(Orphan):
         if status=='waiting':
             Orphan['lID']=OliverTwistLock.ID
             Orphan['mID']=OrphanMemory[Orphan['Key']].ID
-            OrphanMemory[Orphan['Key']].Put(OliverTwistTimeout*OliverTwictCount,"Running")
+            OrphanMemory[Orphan['Key']].Put(OliverTwistTimeout*OliverTwistCount,"Running")
             interceptor.StartProcess(ProcessOrphan,kwargs=Orphan)
 
         OliverTwistLock.Unlock()
