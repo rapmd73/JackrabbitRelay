@@ -31,7 +31,7 @@ for d in Base Base/Library Data Extras Logs Ledger ; do
 done
 
 if [ x$1 != 'xnopull' ] ; then
-    python3 -m pip install --upgrade pip
+    python3 -m pip install --upgrade pip --break-system-packages
 
     for i in `cat requirements.txt` ; do
         # --break-system-packages
