@@ -35,7 +35,7 @@ if [ x$1 != 'xnopull' ] ; then
 
     for i in `cat requirements.txt` ; do
         # --break-system-packages
-        $pip3 install -U $i
+        $pip3 install -U $i --break-system-packages
     done
 
     for i in $BaseDir/Data/*.symbolmap ; do 
