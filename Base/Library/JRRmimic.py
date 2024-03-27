@@ -463,8 +463,8 @@ class mimic:
         else:
             Fee=self.DefaultFeeRate
 
-        # Handle ReduceOnly
-        if ro==True and action=='sell':
+        # Handle ReduceOnly. If ReduceOnly is is payload, block all flipping altogether on all sides.
+        if ro==True and abs(amount)>abs(self.Wallet['Wallet'][base]):
             amount=self.Wallet['Wallet'][base]
 
         # Create base if not present
