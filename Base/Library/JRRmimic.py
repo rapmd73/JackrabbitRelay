@@ -464,8 +464,12 @@ class mimic:
             Fee=self.DefaultFeeRate
 
         # Handle ReduceOnly. If ReduceOnly is is payload, block all flipping altogether on all sides.
-        if ro==True and abs(amount)>abs(self.Wallet['Wallet'][base]):
-            amount=self.Wallet['Wallet'][base]
+        if ro==True:
+            if amount<0 and self.Wallet['Wallet'][base]>0 \
+            or amount>0 and self.Wallet['Wallet'][base]<0:
+                return 'Position direction flipping disabled, close first'
+            elif abs(amount)>abs(self.Wallet['Wallet'][base]):
+                amount=self.Wallet['Wallet'][base]
 
         # Create base if not present
 

@@ -12,33 +12,42 @@ import json
 
 import JackrabbitRelay as JRR
 
+def Usage():
+    print('An exchange, account, asset, action, and amount are required.')
+    print('If the last argument on the command line is RO, then a reduce only order is issued.')
+    print()
+    print('     placeOrder kraken MAIN BTC/USD buy 0.001')
+    print('     placeOrder binance MAIN ADA/USDT buy 10 RO')
+    sys.exit(1)
+
 ###
 ### Main code base. Place order on exchange
 ###
 
-relay=JRR.JackrabbitRelay()
+relay=JRR.JackrabbitRelay(Usage=Usage)
 if relay.GetArgsLen() > 4:
     exchangeName=relay.GetExchange()
     account=relay.GetAccount()
     asset=relay.GetAsset()
-    side=relay.GetArgs(4).lower()
+    action=relay.GetArgs(4).lower()
     amount=float(relay.GetArgs(5))
 else:
-    print("An exchange, (sub)account, an asset, a side (buy/sell), and an amount must be provided.")
-    sys.exit(1)
+    Usage()
+
+ro=(relay.GetArgs(-1).lower()=='ro')
 
 ticker=relay.GetTicker(symbol=asset)
 bPrice=ticker['Ask']
 sPrice=ticker['Bid']
 
-if side=='buy' and amount>0:
+if action=='buy' and amount>0:
     mPrice=max(bPrice,sPrice)
-elif side=='buy' and amount<0:
+elif action=='buy' and amount<0:
     mPrice=min(bPrice,sPrice)
-elif side=='sell' and amount>0:
+elif action=='sell' and amount>0:
     mPrice=min(bPrice,sPrice)
-elif side=='sell' and amount<0:
+elif action=='sell' and amount<0:
     mPrice=max(bPrice,sPrice)
 
-result=relay.PlaceOrder(pair=asset,orderType="market",action=side,amount=amount,price=bPrice,ReduceOnly=False,LedgerNote="Dry Run")
+result=relay.PlaceOrder(pair=asset,orderType="market",action=action,amount=amount,price=bPrice,ReduceOnly=ro,LedgerNote="CodeProofs/placeOrder")
 print(result)
