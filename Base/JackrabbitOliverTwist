@@ -387,14 +387,13 @@ def main():
     ReceiveOrphans('Conditional')
 
     while True:
+        ReceiveOrphans()
         # Dynamic factor for memory timeouts
         OliverTwistCount=len(OrphanList)
 
         # Deleted will break the system otherwise.
         keyList=list(OrphanList.keys())
         for cur in keyList:
-            ReceiveOrphans()
-
             # Process each order
 
             ProcessChild(OrphanList[cur])
@@ -403,6 +402,8 @@ def main():
             interceptor.SafeExit()
 
             # Only allow "NumberProcesses" children to run as once.
+
+            ReceiveOrphans()
 
             while interceptor.GetChildren()>(NumberProcesses-1):
                 JRRsupport.ElasticSleep(1)
