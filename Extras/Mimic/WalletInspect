@@ -31,6 +31,7 @@ if not os.path.exists(acn):
 
 lines=JRRsupport.ReadFile(acn).strip().split('\n')
 
+fees={}
 cnr={}
 Wallet={}
 
@@ -66,6 +67,9 @@ for line in lines:
     if data['Asset'] not in Wallet:
         Wallet[data['Asset']]=[]
 
+    if data['Asset'] not in fees:
+        fees[data['Asset']]=0
+
     if act=='B':
         if bw!=0:
             cnr[data['Asset']]-=abs(p*a)
@@ -74,6 +78,8 @@ for line in lines:
     elif act=='S':
         cnr[data['Asset']]+=abs(p*a)
 
+    fees[data['Asset']]+=f
+
     str=f"{dt} {act} {bw:14.8f} {qw:14.8f} {a:14.8f} {p:.8f} {f:.8f} {cnr[data['Asset']]:14.8f}"
     Wallet[data['Asset']].append(str)
 
@@ -81,7 +87,7 @@ for pair in sorted(Wallet.keys()):
     if len(sys.argv)>2 and sys.argv[2]!=pair:
         continue
 
-    print(f"{pair}:")
+    print(f"{pair}: {fees[pair]:.8f} paid in fees")
     for l in Wallet[pair]:
         print(f"   {l}")
     print()
