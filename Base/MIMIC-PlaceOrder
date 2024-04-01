@@ -49,7 +49,7 @@ def GetPCTvalue(pct,close,bal):
 def GetPCTamount(relay,currency,quote,close):
     fn=relay.DataDirectory+'/'+relay.Exchange+'.'+relay.Account+'.PCTtable'
     PCTtable=JRRsupport.TimedList("PCTtable",fn,Log=relay.JRLog)
-    if relay.Order['Action']=='close':
+    if relay.Order['Action'].lower()=='close':
         expire=0
     else:
         expire=(3650*86400)
@@ -150,7 +150,7 @@ def main():
         if "MaxAssets" in relay.Active:
             fn=relay.DataDirectory+'/'+relay.Exchange+'.'+relay.Account+'.MaxAssets'
             maxAssetsList=JRRsupport.TimedList("MaxAssets",fn,maxsize=int(relay.Active['MaxAssets']),Log=relay.JRLog)
-            if relay.Order['Action']=='close':
+            if relay.Order['Action'].lower()=='close':
                 expire=0
             else:
                 expire=(7*86400)
@@ -161,7 +161,7 @@ def main():
     # Check for reduce only in active config. This is a argin/futures only setting.
 
     ReduceOnly=False
-    if "ReduceOnly" in relay.Active:
+    if "ReduceOnly" in relay.Active or "ReduceOnly" in relay.Order or relay.Order['Action'].lower()=='close':
         ReduceOnly=True
 
     # Get Minimum allowed amount (units) and cost
@@ -255,13 +255,13 @@ def main():
     # a short position.
 
     if (abs(pBalance)<minimum or abs(pBalance*price)<mincost) \
-    and relay.Order['Action']=='close':
+    and relay.Order['Action'].lower()=='close':
         relay.JRLog.Error(relay.Exchange, "not enough to close position")
 
     # Closing the position, with futures, we need to figure out the current
     # direction and place an order opposite to it.
 
-    if relay.Order['Action']=='close':
+    if relay.Order['Action'].lower()=='close':
         relay.Order['Action']='sell'
         if pBalance>0:    # Long Position
             amount=pBalance*-1
@@ -300,7 +300,7 @@ def main():
 
     # Set direction appropriate to close
 
-    if relay.Order['Action']=='close':
+    if relay.Order['Action'].lower()=='close':
         relay.Order['Action']='sell'
     elif relay.Order['Action']=='long':
         relay.Order['Action']='buy'

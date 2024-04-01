@@ -49,7 +49,7 @@ def GetPCTvalue(pct,close,bal):
 def GetPCTamount(relay,currency,quote,close):
     fn=relay.DataDirectory+'/'+relay.Exchange+'.'+relay.Account+'.PCTtable'
     PCTtable=JRRsupport.TimedList("PCTtable",fn,Log=relay.JRLog)
-    if relay.Order['Action']=='close':
+    if relay.Order['Action'].lower()=='close':
         expire=0
     else:
         expire=(3650*86400)
@@ -165,7 +165,7 @@ def main():
         if "MaxAssets" in relay.Active:
             fn=relay.DataDirectory+'/'+relay.Exchange+'.'+relay.Account+'.MaxAssets'
             maxAssetsList=JRRsupport.TimedList("MaxAssets",fn,maxsize=int(relay.Active['MaxAssets']),Log=relay.JRLog)
-            if relay.Order['Action']=='close':
+            if relay.Order['Action'].lower()=='close':
                 expire=0
             else:
                 expire=(7*86400)
@@ -277,13 +277,13 @@ def main():
     # If the amount is less then the minimum and action is to sell/close
 
     if (abs(pBalance)<minimum or abs(pBalance*price)<mincost) \
-    and (relay.Order['Action']=='close' or relay.Order['Action']=='sell'):
+    and (relay.Order['Action'].lower()=='close' or relay.Order['Action']=='sell'):
         relay.JRLog.Error(relay.Exchange, "not enough to sell/close position")
 
     # Test to see if amount is more than balance and correct in needed
 
-    if ((relay.Order['Action']=='close' or relay.Order['Action']=='sell') \
-    and (amount>pBalance and pBalance>0)) or (relay.Order['Action']=='close'):
+    if ((relay.Order['Action'].lower()=='close' or relay.Order['Action']=='sell') \
+    and (amount>pBalance and pBalance>0)) or (relay.Order['Action'].lower()=='close'):
         relay.JRLog.Write("|- Forcing balance")
         amount=pBalance
 
@@ -310,7 +310,7 @@ def main():
     relay.JRLog.Write(f"|- Price: {price:.8f}")
     relay.JRLog.Write(f"|- Total: {total:.8f}")
 
-    if relay.Order['Action']=='close':
+    if relay.Order['Action'].lower()=='close':
         relay.Order['Action']='sell'
 
 # In spot markets, ReduceOnly ALWAYS false

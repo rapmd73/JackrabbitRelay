@@ -56,7 +56,7 @@ def main():
 
     fn=relay.DataDirectory+'/'+relay.GetExchangeLast()+'.'+relay.GetAccountLast()+'.'+relay.Order['Asset']+'.DSR'
     dsrList=JRRsupport.TimedList("DSR",fn,Log=relay.JRLog)
-    if relay.Order['Action']=='close':
+    if relay.Order['Action'].lower()=='close':
         expire=0
     else:
         expire=DataTTL
