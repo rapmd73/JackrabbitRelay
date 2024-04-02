@@ -382,10 +382,11 @@ class mimic:
                 # Add the total proceeds minus fees to the quote currency balance
                 # quote MUST be >=0.
                 self.Wallet['Wallet'][quote]+=total_proceeds
-                if base in self.Wallet['Wallet']:
+                if self.Wallet['Wallet'][base]>0 and actualAmount>0:
+                    self.Wallet['Wallet'][base]-=actualAmount
+                elif self.Wallet['Wallet'][base]>0 and actualAmount<0 \
+                or self.Wallet['Wallet'][base]<0 and actualAmount>0:
                     self.Wallet['Wallet'][base]+=actualAmount
-                else:
-                    self.Wallet['Wallet'][base]=actualAmount  # Initialize the base currency wallet if not present
                 # Update fee balance
                 fee = round(abs(actualAmount) * actualPrice * fee_rate,8)
                 if 'Fees' in self.Wallet['Wallet']:
