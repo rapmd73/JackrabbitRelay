@@ -45,7 +45,7 @@ class mimic:
     #   placed in init and released at exit.
 
     def __init__(self,Exchange,Config,Active,DataDirectory=None):
-        self.Version="0.0.0.1.787"
+        self.Version="0.0.0.1.790"
 
         self.StableCoinUSD=['USDT','USDC','BUSD','UST','DAI','FRAX','TUSD', \
                 'USDP','LUSD','USDN','HUSD','FEI','TRIBE','RSR','OUSD','XSGD', \
@@ -322,6 +322,17 @@ class mimic:
         else:
             actualPrice=max(ticker['Bid'],ticker['Ask'])+ticker['Spread']   # Long
 
+        minimum,mincost=self.Broker.GetMinimum(symbol=asset)
+        # Make sure order is above minimum requirements
+        if abs(actualAmount)<minimum or abs(actualAmount)*actualPrice<mincost:
+            return 'Below minimum requirements'
+
+        if base in self.Wallet['Wallet'] and action=='buy':
+            if base in self.Wallet['Wallet'] \
+            and ((actualAmount>0 and self.Wallet['Wallet'][base]<0) \
+            or (actualAmount<0 and self.Wallet['Wallet'][base]>0)):
+                action='sell'
+
         if action=='buy':
             # Calculate the total cost for buying the asset including fees
             total_cost=abs(actualAmount) * actualPrice * (1 + fee_rate)
@@ -352,7 +363,7 @@ class mimic:
                 order['Amount']=round(actualAmount,8)
                 order['Price']=round(actualPrice,8)
                 order['Fee']=round(fee,8)
-                # Remove from allet
+                # Remove from Wallet
                 if self.Wallet['Wallet'][base]==0.0:
                     self.Wallet['Wallet'].pop(base,None)
                 JRRsupport.AppendFile(self.history,json.dumps(order)+'\n')
@@ -362,26 +373,19 @@ class mimic:
                 self.Wallet['Enabled']='N'
                 return 'Account Liquidated!'
         elif action=='sell':
+            if base in self.Wallet['Wallet'] and self.Wallet['Wallet'][base]==0:
+                return 'Nothing to sell'
             # Check if the base currency is present in the base currency wallet and the amount to sell is available
-            if base in self.Wallet['Wallet'] and abs(self.Wallet['Wallet'][base])>=abs(actualAmount):
+            if quote in self.Wallet['Wallet'] and self.Wallet['Wallet'][quote]>=0:
                 # Calculate the total proceeds from selling the asset after deducting fees
                 total_proceeds=abs(actualAmount) * actualPrice * (1 - fee_rate)
                 # Add the total proceeds minus fees to the quote currency balance
-                if quote in self.Wallet['Wallet']:
-                    self.Wallet['Wallet'][quote]+=total_proceeds
+                # quote MUST be >=0.
+                self.Wallet['Wallet'][quote]+=total_proceeds
+                if base in self.Wallet['Wallet']:
+                    self.Wallet['Wallet'][base]+=actualAmount
                 else:
-                    self.Wallet['Wallet'][quote]=total_proceeds  # Initialize quote currency balance if not present
-                # Subtract the appropriate amount of the base currency from the base currency wallet
-                if actualAmount<0:    # handle shorting
-                    if self.Wallet['Wallet'][base]<0:
-                        self.Wallet['Wallet'][base]-=actualAmount
-                    else:
-                        self.Wallet['Wallet'][base]+=actualAmount
-                else:
-                    if self.Wallet['Wallet'][base]<0:
-                        self.Wallet['Wallet'][base]+=actualAmount
-                    else:
-                        self.Wallet['Wallet'][base]-=actualAmount
+                    self.Wallet['Wallet'][base]=actualAmount  # Initialize the base currency wallet if not present
                 # Update fee balance
                 fee = round(abs(actualAmount) * actualPrice * fee_rate,8)
                 if 'Fees' in self.Wallet['Wallet']:
@@ -479,6 +483,7 @@ class mimic:
         # Handle long/short flipping
 
         result=None
+        """
         if amount>0 and self.Wallet['Wallet'][base]>=0 \
         or amount<0 and self.Wallet['Wallet'][base]<=0:
             result=self.UpdateWallet(action,pair,amount,price,Fee)
@@ -488,6 +493,9 @@ class mimic:
         elif amount>0 and self.Wallet['Wallet'][base]<0:
             result=self.LiquidateWallet(pair,Fee)
             result=self.UpdateWallet('buy',pair,amount,price,Fee)
+        """
+
+        result=self.UpdateWallet(action,pair,amount,price,Fee)
 
         self.PutWallet()
         if 'ID' in result and result['ID']!=None:
