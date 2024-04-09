@@ -325,7 +325,7 @@ class mimic:
         minimum,mincost=self.Broker.GetMinimum(symbol=asset)
         # Make sure order is above minimum requirements
         if abs(actualAmount)<minimum or abs(actualAmount)*actualPrice<mincost:
-            return 'Below minimum requirements'
+            return f'Below minimum requirements: {actualAmount:.8f} < {minimum:.8f} or {(abs(actualAmount)*actualPrice):.8f} < {mincost:.8f}'
 
         if base in self.Wallet['Wallet'] and action=='buy':
             if base in self.Wallet['Wallet'] \
