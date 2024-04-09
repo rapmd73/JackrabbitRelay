@@ -41,6 +41,8 @@ def main():
 
     # Validate these items in the order
 
+    if 'Market' in relay.Order:
+        relay.Order['Market']=relay.Order['Market'].lower()
     if 'Recipe' not in relay.Order:
         relay.JRLog.Error("DSR","Recipe missing")
     if 'TCycles' not in relay.Order:

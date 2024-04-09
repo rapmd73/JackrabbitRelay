@@ -82,6 +82,7 @@ for i in range(1,len(sys.argv)):
 print("Phase 1: read log file")
 data=gblog.split('.')
 
+exchange=data[1]
 account=data[2]
 asset=data[3]
 
@@ -94,9 +95,9 @@ lines=JRRsupport.ReadFile(gblog).strip().split('\n')
 # Chart header
 
 if ih=='h':
-    fn=chartDir+'otTrades.html' #en+'.'+sa+'.'+p+'.html'
+    fn=chartDir+f'Trades.{exchange}.{account}.{asset}.html'
 else:
-    fn=chartDir+'otTrades.png' #en+'.'+sa+'.'+p+'.html'
+    fn=chartDir+f'Trades.{exchange}.{account}.{asset}.png'
 
 en='oanda'
 ts=f"GridBot2 Trades: {relay.GetAccount()} - {relay.GetAsset()}"
@@ -111,11 +112,12 @@ print("Phase 2: making the chart")
 # Plot trades
 
 for line in lines:
+    if line=='' or ('Prft' not in line and 'Loss' not in line):
+        continue
+
     data=line.split(' ')
-    if data[3]=='':
-        data.pop(3)
-    if data[2]=='':
-        data.pop(2)
+    while '' in data:
+        data.remove('')
 
     # Date and time, duration
     dt=' '.join(line.split(' ')[0:2])
@@ -153,6 +155,25 @@ for line in lines:
 
 # Chart footer
 
+if os.path.exists('/home/JackrabbitRelay2/Data/logo.png'):
+    if ih=='h':
+        fig1.add_layout_image(dict(
+            source='/logo.png',
+            xref='paper',yref='paper',
+            xanchor='center',yanchor='middle',
+            x=0.5,y=0.5,
+            sizex=1,sizey=1,
+            opacity=0.1
+        ))
+    else:
+        fig1.add_layout_image(dict(
+            source='file:///home/JackrabbitRelay2/Data/logo.png',
+            xref='paper',yref='paper',
+            xanchor='center',yanchor='middle',
+            x=0.5,y=0.5,
+            sizex=1,sizey=1,
+            opacity=0.1
+        ))
 fig1.update_yaxes(title_text='Price',secondary_y=False)
 fig1.update_layout(title={"text":ts,"x":0.5,"xanchor":"center","yanchor":"top"},template='plotly_white',showlegend=False)
 

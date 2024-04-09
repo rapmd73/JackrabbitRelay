@@ -5,6 +5,11 @@
 # 2021 Copyright © Robert APM Darin
 # All rights reserved unconditionally.
 
+# Mimic
+# 2024-03-25 16:15:21.152559   47120 17110487079419736: Prft long, 0.64438, 1.56739812: 0.63800000 -> 0.644400/0.01003135
+# Oanda
+# 2024-02-15 01:29:28.047577 1152604 78276 -> 78271 Prft short, 61.0: 0.64905 -> 0.647920/0.06890, 2:45:07.902341
+
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
@@ -17,7 +22,6 @@ import plotly.subplots as ps
 
 import JRRsupport
 
-#chartDir='/var/www/vhosts/rapmd.net/httpdocs/'
 chartDir='/home/JackrabbitRelay2/Data/Charts/'
 
 ###
@@ -41,9 +45,15 @@ equity=[]
 pnl=0
 
 data=sys.argv[2].split('.')
-enchange=data[1]
+exchange=data[1]
 account=data[2]
-asset=data[3][:3]+'/'+data[3][3:]
+pair=data[3]
+
+if 'mimic' in sys.argv[2].lower():
+    asset=data[4]
+    pair=data[4]
+else:
+    asset=data[3][:3]+'/'+data[3][3:]
 
 lines=JRRsupport.ReadFile(sys.argv[2]).strip().split('\n')
 
@@ -68,9 +78,9 @@ for line in lines:
 # Make the chart
 
 if ih=='h':
-    fn=chartDir+'otEquity.html' #en+'.'+sa+'.'+p+'.html'
+    fn=chartDir+f'Equity.{exchange}.{account}.{pair}.html'
 else:
-    fn=chartDir+'otEquity.png' #en+'.'+sa+'.'+p+'.html'
+    fn=chartDir+f'Equity.{exchange}.{account}.{pair}.png'
 
 ts=f"OliverTwist Equity Curve: {account} - {asset}"
 
@@ -78,6 +88,25 @@ fig1=ps.make_subplots(specs=[[{"secondary_y":False}]])
 
 fig1.add_trace(go.Scatter(x=xps,y=equity,name='Equity',marker_color="#0000ff"),secondary_y=False)
 
+if os.path.exists('/home/JackrabbitRelay2/Data/logo.png'):
+    if ih=='h':
+        fig1.add_layout_image(dict(
+            source='/logo.png',
+            xref='paper',yref='paper',
+            xanchor='center',yanchor='middle',
+            x=0.5,y=0.5,
+            sizex=1,sizey=1,
+            opacity=0.1
+        ))
+    else:
+        fig1.add_layout_image(dict(
+            source='file:///home/JackrabbitRelay2/Data/logo.png',
+            xref='paper',yref='paper',
+            xanchor='center',yanchor='middle',
+            x=0.5,y=0.5,
+            sizex=1,sizey=1,
+            opacity=0.1
+        ))
 fig1.update_yaxes(title_text='Equity Curve',secondary_y=False)
 fig1.update_layout(title={"text":ts,"x":0.5,"xanchor":"center","yanchor":"top"},template='plotly_white')
 
