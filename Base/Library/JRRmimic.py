@@ -324,12 +324,11 @@ class mimic:
 
         minimum,mincost=self.Broker.GetMinimum(symbol=asset)
         # Make sure order is above minimum requirements
-        if abs(actualAmount)<minimum or abs(actualAmount)*actualPrice<mincost:
+        if abs(actualAmount)<minimum or (abs(actualAmount)*actualPrice)<mincost:
             return f'Below minimum requirements: {actualAmount:.8f} < {minimum:.8f} or {(abs(actualAmount)*actualPrice):.8f} < {mincost:.8f}'
 
         if base in self.Wallet['Wallet'] and action=='buy':
-            if base in self.Wallet['Wallet'] \
-            and ((actualAmount>0 and self.Wallet['Wallet'][base]<0) \
+            if ((actualAmount>0 and self.Wallet['Wallet'][base]<0) \
             or (actualAmount<0 and self.Wallet['Wallet'][base]>0)):
                 action='sell'
 
@@ -373,6 +372,8 @@ class mimic:
                 self.Wallet['Enabled']='N'
                 return 'Account Liquidated!'
         elif action=='sell':
+            if base not in self.Wallet['Wallet']:
+                return 'Nothing to sell'
             if base in self.Wallet['Wallet'] and self.Wallet['Wallet'][base]==0:
                 return 'Nothing to sell'
             # Check if the base currency is present in the base currency wallet and the amount to sell is available
@@ -384,6 +385,8 @@ class mimic:
                 self.Wallet['Wallet'][quote]+=total_proceeds
                 if self.Wallet['Wallet'][base]>0 and actualAmount>0:
                     self.Wallet['Wallet'][base]-=actualAmount
+                elif self.Wallet['Wallet'][base]<0 and actualAmount<0:
+                    self.Wallet['Wallet'][base]+=actualAmount
                 elif self.Wallet['Wallet'][base]>0 and actualAmount<0 \
                 or self.Wallet['Wallet'][base]<0 and actualAmount>0:
                     self.Wallet['Wallet'][base]+=actualAmount
@@ -411,7 +414,6 @@ class mimic:
                 return order
             else:
                 # Not enough balance, but account is not liquidated. Need to cross analyze this on shorting.
-                #self.Wallet['Enabled']='N'
                 return 'Not enough balance!'
         else:   # Should NEVER happen.
             return 'Invalid action!'
@@ -482,19 +484,6 @@ class mimic:
             self.Wallet['Wallet'][base]=0
 
         # Handle long/short flipping
-
-        result=None
-        """
-        if amount>0 and self.Wallet['Wallet'][base]>=0 \
-        or amount<0 and self.Wallet['Wallet'][base]<=0:
-            result=self.UpdateWallet(action,pair,amount,price,Fee)
-        elif amount<0 and self.Wallet['Wallet'][base]>0:
-            result=self.LiquidateWallet(pair,Fee)
-            result=self.UpdateWallet('buy',pair,amount,price,Fee)
-        elif amount>0 and self.Wallet['Wallet'][base]<0:
-            result=self.LiquidateWallet(pair,Fee)
-            result=self.UpdateWallet('buy',pair,amount,price,Fee)
-        """
 
         result=self.UpdateWallet(action,pair,amount,price,Fee)
 
