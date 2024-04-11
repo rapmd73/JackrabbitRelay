@@ -386,7 +386,7 @@ class mimic:
                 if self.Wallet['Wallet'][base]>0 and actualAmount>0:
                     self.Wallet['Wallet'][base]-=actualAmount
                 elif self.Wallet['Wallet'][base]<0 and actualAmount<0:
-                    self.Wallet['Wallet'][base]+=actualAmount
+                    self.Wallet['Wallet'][base]+=abs(actualAmount)
                 elif self.Wallet['Wallet'][base]>0 and actualAmount<0 \
                 or self.Wallet['Wallet'][base]<0 and actualAmount>0:
                     self.Wallet['Wallet'][base]+=actualAmount
