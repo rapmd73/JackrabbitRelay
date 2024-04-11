@@ -254,6 +254,10 @@ def main():
     # If the amount is less then the minimum and action is to close. Sell opens
     # a short position.
 
+    if ReduceOnly==True:
+        if (abs(pBalance)>0 and amount<0) or (abs(pBalance)<0 and amount>0):
+            relay.JRLog.Error(relay.Exchange, "ReduceOnly mode active, close position first")
+
     if (abs(pBalance)<minimum or abs(pBalance*price)<mincost) \
     and relay.Order['Action'].lower()=='close':
         relay.JRLog.Error(relay.Exchange, "not enough to close position")
@@ -263,15 +267,16 @@ def main():
 
     if relay.Order['Action'].lower()=='close':
         relay.Order['Action']='sell'
-        if pBalance>0:    # Long Position
-            amount=pBalance*-1
-        elif pBalance<0:  # Short Position
-            amount=pBalance
+        amount=pBalance
+#        if pBalance>0:    # Long Position
+#            amount=pBalance*-1
+#        elif pBalance<0:  # Short Position
+#            amount=pBalance
 #        relay.JRLog.Write(f"Forcing direction to {relay.Order['Action']}")
 
     # Check for reduction
 
-    if "Reduction" in relay.Active and relay.Order['Action']!="buy" and amount>=pBalance:
+    if "Reduction" in relay.Active and relay.Order['Action']!="buy" and abs(amount)>=abs(pBalance):
         pct=float(relay.Active['Reduction'])/100
         r=round((abs(amount)*pct),8)
         relay.JRLog.Write("Reduction: "+str(r))
@@ -294,15 +299,13 @@ def main():
     relay.JRLog.Write("Placing Order")
     relay.JRLog.Write(f"|- Asset: {relay.Order['Asset']}")
     relay.JRLog.Write(f"|- Action: {relay.Order['Action']}")
-    relay.JRLog.Write(f"|- Amount: {amount:.8f}")
+    relay.JRLog.Write(f"|- Amount: {amount:.8f} requested")
     relay.JRLog.Write(f"|- Price: {price:.8f}")
-    relay.JRLog.Write(f"|- Total: {total:.8f}")
+    relay.JRLog.Write(f"|- Total: {total:.8f} estimated")
 
     # Set direction appropriate to close
 
-    if relay.Order['Action'].lower()=='close':
-        relay.Order['Action']='sell'
-    elif relay.Order['Action']=='long':
+    if relay.Order['Action']=='long':
         relay.Order['Action']='buy'
     elif relay.Order['Action']=='short':
         relay.Order['Action']='sell'

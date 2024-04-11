@@ -308,7 +308,7 @@ class mimic:
         # It is very rare that an order is filled exactly as requested.
         rpct=random.uniform(0, 1)
         mda=abs(amount)*0.0013
-        dust=mda*rpct
+        dust=round(abs(mda*rpct),8)
         if amount<0:    # short
             actualAmount=amount+dust
         else:           # long
@@ -334,7 +334,7 @@ class mimic:
 
         if action=='buy':
             # Calculate the total cost for buying the asset including fees
-            total_cost=abs(actualAmount) * actualPrice * (1 + fee_rate)
+            total_cost=round(abs(actualAmount) * actualPrice * (1 + fee_rate),8)
             # Check if the wallet has enough balance for the purchase including fees
             if quote in self.Wallet['Wallet'] and self.Wallet['Wallet'][quote]>=total_cost:
                 # Deduct the total cost including fees from the quote currency balance
@@ -376,13 +376,16 @@ class mimic:
                 return 'Nothing to sell'
             if base in self.Wallet['Wallet'] and self.Wallet['Wallet'][base]==0:
                 return 'Nothing to sell'
+
             # Check if the base currency is present in the base currency wallet and the amount to sell is available
             if quote in self.Wallet['Wallet'] and self.Wallet['Wallet'][quote]>=0:
                 # Calculate the total proceeds from selling the asset after deducting fees
-                total_proceeds=abs(actualAmount) * actualPrice * (1 - fee_rate)
+                total_proceeds=round(abs(actualAmount) * actualPrice * (1 - fee_rate),8)
+
                 # Add the total proceeds minus fees to the quote currency balance
                 # quote MUST be >=0.
                 self.Wallet['Wallet'][quote]+=total_proceeds
+
                 if self.Wallet['Wallet'][base]>0 and actualAmount>0:
                     self.Wallet['Wallet'][base]-=actualAmount
                 elif self.Wallet['Wallet'][base]<0 and actualAmount<0:
@@ -470,6 +473,11 @@ class mimic:
         else:
             Fee=self.DefaultFeeRate
 
+        # Create base if not present
+
+        if base not in self.Wallet['Wallet']:
+            self.Wallet['Wallet'][base]=0
+
         # Handle ReduceOnly. If ReduceOnly is is payload, block all flipping altogether on all sides.
         if ro==True:
             if amount<0 and self.Wallet['Wallet'][base]>0 \
@@ -477,11 +485,6 @@ class mimic:
                 return 'Position direction flipping disabled, close first'
             elif abs(amount)>abs(self.Wallet['Wallet'][base]):
                 amount=self.Wallet['Wallet'][base]
-
-        # Create base if not present
-
-        if base not in self.Wallet['Wallet']:
-            self.Wallet['Wallet'][base]=0
 
         # Handle long/short flipping
 
