@@ -134,7 +134,7 @@ def main():
 
     # Is this going to be a reduce only order?
 
-    ro=(relay.GetArgs(-1).lower()=='ro')
+    ro='ro' in str(relay.args).lower()
 
     # Get the ticker for current price.
 
@@ -199,19 +199,19 @@ def main():
 
     if Diagnostics==True:
         print(result)
+
+    # Get the order ID
+    oid=relay.GetOrderID(result)
+    if oid!=None:
+        # Get and print the details of the order
+        print(f"Order successful: {oid}")
+        print()
+        detail=relay.GetOrderDetails(id=oid,symbol=asset)
+        print(detail)
     else:
-        # Get the order ID
-        oid=relay.GetOrderID(result)
-        if oid!=None:
-            # Get and print the details of the order
-            print(f"Order successful: {oid}")
-            print()
-            detail=relay.GetOrderDetails(id=oid,symbol=relay.Order['Asset'])
-            print(detail)
-        else:
-            # Why did it fail?
-            failed=relay.GetFailedReason(result)
-            print(f"Order failed: {failed}")
+        # Why did it fail?
+        failed=relay.GetFailedReason(result)
+        print(f"Order failed: {failed}")
 
 if __name__ == '__main__':
     main()
