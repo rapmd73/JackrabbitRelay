@@ -1,0 +1,217 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+# This program manually places trades through Jackrabbit Relay.
+
+# This is more of a how-to for the framework, but its is useful just to be able to ram an order through quickly.
+
+# This program can be easily modified with trading logic to be an automated strategy. The basic framework remains
+# the same.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+
+import JRRsupport
+import JackrabbitRelay as JRR
+
+# How to use this program.
+
+# This is a basic boilerplate approach to simplify error checking, both during the Relay initialization and
+# argument verification from the command line.
+
+def Usage(args,arglen):
+    if arglen==0:
+        if sys.argv[0]!='':
+            cmd=sys.argv[0]
+        else:
+            cmd='./PlaceManualOrder'
+    else:
+        cmd=args[0]
+
+    print('An exchange, account, asset, action are required.')
+    print('If the last argument on the command line is RO, then a reduce only order is issued.')
+    print()
+    print(f'     {cmd} kraken MAIN BTC/USD buy 0.001 spot')
+    print(f'     {cmd} binance MAIN ADA/USDT buy 10 spot RO')
+    print(f'     {cmd} binance MAIN ADA/USDT close spot')
+    print(f'     {cmd} mimic krakenPublic LTC/USDT sell 10 spot diag')
+    print(f'     {cmd} oanda RedRobbin EUR/USD buy 5')
+    sys.exit(1)
+
+###
+### Main code base. Place order on exchange
+###
+
+def main():
+
+    # Set this to True for additional diagnostics.
+
+    Diagnostics=False
+
+    # Relay verifies the exchange and account. Certain things are automatically loaded if the very first parameters
+    # are present. This is mostly for convience.
+
+    relay=JRR.JackrabbitRelay(Usage=Usage)
+
+    # if we reach this point in the program, Relay's minimum requirements of an exchange and account have been
+    # provided OR it has pulled in an order from standard input (STDIN). The command line has been consumed and
+    # copied to internal Relay variables.
+
+    if relay.GetArgsLen()>4:
+        # You can assign variables for convience, or use the Relay functions.
+        exchange=relay.GetExchange()
+        account=relay.GetAccount()
+        asset=relay.GetAsset()
+        action=relay.GetArgs(4).lower()
+    else:
+        Usage(relay.args,relay.argslen)
+
+    # Activate diagnostics
+    if 'diag' in str(relay.args).lower():
+        Diagnostics=True
+
+    if asset not in relay.Markets:
+        print(f"{asset} is not listed in the exchange's inventory, please check spelling or use ListMarkets to verify its presence.")
+        print()
+        Usage(relay.args,relay.argslen)
+
+    amount=0
+    if action!='close':
+        if relay.GetArgsLen()>5:
+            amount=float(relay.GetArgs(5)) # Base currency value
+        else:
+            print("This action requires a base amount")
+            print()
+            Usage(relay.args,relay.argslen)
+
+    # Verify the action is one of the required abilities.
+    if action!='long' and action!='short' and action!='buy' and action!='sell' and action!='close':
+        Usage()
+
+    if action=='long':
+        action='buy'
+    elif action=='short':
+        action='sell'
+
+    # Check for CCXT or MIMIC. Cryptocurrency markets require a 'Market' key
+
+    # Pull the information from the market list. The disadvantage to this is this approach could pick the wrong
+    # type if the exchange carried mixed pairs in one list. Is is often better to specify the market manually.
+
+    # For the purposes of demonstration though, this method will work.
+
+    marketType=None
+    mt=None
+    if relay.Framework=='ccxt' or relay.Framework=='mimic':
+        marketType="spot"
+        if "type" in relay.Markets[asset]:
+            if "type" in relay.Markets[asset]['info']:
+                if relay.Markets[asset]['info']['type']==relay.Markets[asset]['type']:
+                    marketType=relay.Markets[asset]['type'].lower()
+                else:
+                    marketType=relay.Markets[asset]['info']['type'].lower()
+        else:
+            if "permissions" in relay.Markets[asset]['info']:
+                marketType=' '.join(relay.Markets[asset]['info']['permissions']).lower()
+
+        found=False
+        for i in relay.args:
+            if i in marketType:
+                found=True
+                mt=i
+
+        # Did we find a market type?
+        if found==False:
+            print(f"Wrong or missing market type, this asset is type {marketType}")
+            print()
+            Usage(relay.args,relay.argslen)
+
+    # Is this going to be a reduce only order?
+
+    ro=(relay.GetArgs(-1).lower()=='ro')
+
+    # Get the ticker for current price.
+
+    ticker=relay.GetTicker(symbol=asset)
+    bPrice=ticker['Ask']
+    sPrice=ticker['Bid']
+
+    # Figure out the proper price to use. Long positions always uses the highest, while short positions use the
+    # lowest.
+
+    if action=='buy' and amount>0:
+        mPrice=max(bPrice,sPrice)
+    elif action=='buy' and amount<0:
+        mPrice=min(bPrice,sPrice)
+    elif action=='sell' and amount>0:
+        mPrice=min(bPrice,sPrice)
+    elif action=='sell' and amount<0:
+        mPrice=max(bPrice,sPrice)
+    else:
+        # Close the position, Relay will sort this out at place order API call
+        mPrice=(bPrice+sPrice)/2
+
+    # Build the order.
+
+    # The order of the keys doesn't matter. I prefer a certain order for mental clarity and checking for mistakes.
+    # Because the identity is so long, I prefer it at the bottom of the order. This is mostly a diagnostics tatic, is
+    # I need to print the order to screen for debugging.
+
+    NewOrder={}
+
+    # Meaningless to the system, but important as it show up in the logs. This is a commenting tactic. 'Recipe' is a
+    # term from Jackrabbit TV, and simply carried over. It has no meaning to the system, and is for YOU only.
+
+    NewOrder['Recipe']='Manual Trade'
+    NewOrder['Exchange']=exchange
+    NewOrder['Account']=account
+    if mt!=None:
+        NewOrder['Market']=mt
+    NewOrder['OrderType']='Market' # place a market order
+    NewOrder['Asset']=asset
+    NewOrder['Action']=action
+    NewOrder['Price']=str(mPrice)
+    if relay.Framework=='ccxt' or relay.Framework=='mimic':
+        NewOrder['Base']=str(amount)
+    else:
+        NewOrder['Units']=str(amount)
+
+    # Many options is Relay have this format. Quite a few of them ignoew the value, like 'Diagnostics'. All the
+    # matters is that the key is present. Check the Wiki for more details of which ones exhibit this behavior.
+
+    if ro==True:
+        NewOrder['ReduceOnly']='Yes'
+
+    # ALL order *MUST* have an identity. This only works if the program is running on the same server as the active
+    # Relay installation. Otherwise, you will need to put the identity string in like any other key.
+
+    NewOrder['Identity']=relay.Active['Identity']
+
+    # Send the order to the Relay server
+
+    result=relay.SendWebhook(NewOrder)
+
+    if Diagnostics==True:
+        print(result)
+    else:
+        # Get the order ID
+        oid=relay.GetOrderID(result)
+        if oid!=None:
+            # Get and print the details of the order
+            print(f"Order successful: {oid}")
+            print()
+            detail=relay.GetOrderDetails(id=oid,symbol=relay.Order['Asset'])
+            print(detail)
+        else:
+            # Why did it fail?
+            failed=relay.GetFailedReason(result)
+            print(f"Order failed: {failed}")
+
+if __name__ == '__main__':
+    main()
