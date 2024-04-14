@@ -479,14 +479,10 @@ class mimic:
             self.Wallet['Wallet'][base]=0
 
         # Handle ReduceOnly. If ReduceOnly is is payload, block all flipping altogether on all sides.
-        if ro==True:
-            if amount<0 and self.Wallet['Wallet'][base]>0 \
-            or amount>0 and self.Wallet['Wallet'][base]<0:
+        if ro==True and self.Wallet['Wallet'][base]!=0:
+            if (amount<0 and self.Wallet['Wallet'][base]>0) \
+            or (amount>0 and self.Wallet['Wallet'][base]<0):
                 return 'Position direction flipping disabled, close first'
-            elif abs(amount)>abs(self.Wallet['Wallet'][base]):
-                amount=self.Wallet['Wallet'][base]
-
-        # Handle long/short flipping
 
         result=self.UpdateWallet(action,pair,amount,price,Fee)
 

@@ -713,7 +713,10 @@ class JackrabbitRelay:
         elif self.Framework=='mimic':
             self.Broker=JRRmimic.mimic(self.Exchange,self.Config,self.Active,DataDirectory=self.DataDirectory)
 
-        self.Timeframes=list(self.Broker.timeframes.keys())
+        if self.Broker.timeframes!=None:
+            self.Timeframes=list(self.Broker.timeframes.keys())
+        else:
+            self.Timeframes=self.Broker.timeframes
         self.Markets=self.Broker.Markets
 
     # Get the market list from the exchange
