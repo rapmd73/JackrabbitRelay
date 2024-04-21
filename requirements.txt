@@ -1,8 +1,6 @@
 psutil
-plotly
-kaleido
 pandas
 numpy
 ccxt
 oandapyV20
-aiohttp>=3.9.0 # not directly required, pinned by Snyk to avoid a vulnerability
+plotly
