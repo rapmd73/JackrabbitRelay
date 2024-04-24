@@ -14,7 +14,8 @@ import time
 import JRRsupport
 import JackrabbitRelay as JRR
 
-NewOrder='{"Recipe":"BuyEveryMinute Conditional","Action":"Buy","Exchange":"mimic","Market":"spot","Account":"phemexPublic","Asset":"XRP/USDT","Base":"1","OrderType":"Market","Conditional":"Yes","Direction":"Long","SellAction":"Sell","TakeProfit":"1%","StopLoss":"10%" }'
+#NewOrder='{"Recipe":"BuyEveryMinute Conditional","Action":"Buy","Exchange":"mimic","Market":"spot","Account":"Kraken18","Asset":"BTC/USD","USD":"20","OrderType":"Market","Conditional":"Yes","Direction":"Long","SellAction":"Sell","TakeProfit":"1%","StopLoss":"10%" }'
+NewOrder='{"Recipe":"BuyEveryMinute Conditional","Action":"Buy","Exchange":"mimic","Market":"spot","Account":"Kraken18","Asset":"BTC/USD","USD":"20","OrderType":"Market","Conditional":"Yes","Direction":"Long","SellAction":"Sell","TakeProfit":"0.1%","StopLoss":"0.1%" }'
 
 ###
 ### Main driver
