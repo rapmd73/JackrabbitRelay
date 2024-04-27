@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+import time
+import random
+
+import JRRsupport
+import JackrabbitRelay as JRR
+
+###
+### Main code base. Place order on exchange
+###
+
+relay=JRR.JackrabbitRelay()
+if relay.GetArgsLen() > 3:
+    exchangeName=relay.GetExchange()
+    account=relay.GetAccount()
+    asset=relay.GetAsset()
+    amount=float(relay.GetArgs(4))
+    tp=float(relay.GetArgs(5))
+    sl=float(relay.GetArgs(6))
+else:
+    print("An exchange, (sub)account, and an asset must be provided.")
+    sys.exit(1)
+
+markets=relay.GetMarkets()
+ticker=relay.GetTicker(symbol=asset)
+
+price = (ticker['Bid']+ticker['Ask'])/2
+pip_value = 0.0001
+budget = 1000  # $1000 budget
+position_size = budget * 0.01  # 1% of the budget
+
+take_profit_pips = tp*pip_value
+stop_loss_pips = sl*pip_value
+
+cost_per_pip_take_profit = round(take_profit_pips / price,5)
+cost_per_pip_stop_loss = round(stop_loss_pips / price,5)
+
+tp_price = round(price + (take_profit_pips),5)
+sl_price = round(price - (stop_loss_pips),5)
+
+pip_size=(pip_value/amount)*price
+
+print(f"Cost of 1 pip: {pip_size:.5f}")
+print(f"Take Profit: {pip_size*take_profit_pips:.5f}")
+print(f"Stop Loss: {cost_per_pip_stop_loss:.5f}")
+print(f"Position Size:", position_size)
+print(f"Place Take Profit at:", tp_price)
+print(f"Place Stop Loss at:", sl_price)
+

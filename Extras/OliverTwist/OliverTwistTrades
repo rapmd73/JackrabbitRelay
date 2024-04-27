@@ -49,8 +49,9 @@ def FindStartDateTime(end_date_str, duration_str):
 ### Main code base.
 ###
 
-if len(sys.argv)<2:
-    print("At least one OANDA gridbot version 2 log file is required.")
+if len(sys.argv)<3:
+    print("You must specify either (I)mage or (H)tml for output type as the first argumrnt.")
+    print("A version 2 grid bot log must be specified as the swecond argument")
     sys.exit(1)
 
 entry={}
@@ -59,11 +60,6 @@ lines={}
 orderList={}
 
 # Copy arg list
-
-if len(sys.argv)<3:
-    print("You must specify either (I)mage or (H)tml for output type as the first argumrnt.")
-    print("A version 2 grid bot log must be specified as the swecond argument")
-    sys.exit(1)
 
 ih=sys.argv[1].lower()
 if ih!='i' and ih!='h':
@@ -82,13 +78,17 @@ for i in range(1,len(sys.argv)):
 print("Phase 1: read log file")
 data=gblog.split('.')
 
-exchange=data[1]
+exchange=data[1].lower()
 account=data[2]
-asset=data[3]
 
-# Add the /
-pair=data[3][:3]+'/'+data[3][3:]
-relay=JRR.JackrabbitRelay(framework='oanda',exchange=data[1],account=data[2],asset=pair)
+if len(data)==5:
+    asset=data[3]
+    pair=data[3][:3]+'/'+data[3][3:]
+else:
+    asset=data[4]
+    pair=data[3]+'/'+data[4]
+
+#relay=JRR.JackrabbitRelay(framework='oanda',exchange=data[1],account=data[2],asset=pair)
 lines=JRRsupport.ReadFile(gblog).strip().split('\n')
 
 # Make the chart inline to reading the data. Large numbers of orders will break web browsers.
@@ -99,8 +99,8 @@ if ih=='h':
 else:
     fn=chartDir+f'Trades.{exchange}.{account}.{asset}.png'
 
-en='oanda'
-ts=f"GridBot2 Trades: {relay.GetAccount()} - {relay.GetAsset()}"
+en=exchange
+ts=f"OliverTwist Trades: {account} - {pair}"
 
 fig1=ps.make_subplots(specs=[[{"secondary_y":False}]])
 
@@ -141,7 +141,7 @@ for line in lines:
 
     if action.lower()=='prft' and rpl>0:        # Profit
         col="rgba(0,128,0,1)"
-    elif action.lower()=='prdt' and rpl==0:     # Breakeven
+    elif action.lower()=='prft' and rpl==0:     # Breakeven
         col="rgba(128,128,0,1)"
     elif action.lower()=='prft' and rpl<0:      # Loss by slippage
         col="rgba(255,128,0,0.5)"

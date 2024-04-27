@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import time
+import datetime
+import json
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.subplots as ps
+
+import JRRsupport
+
+chartDir='/home/JackrabbitRelay2/Data/Charts/'
+MimicData='/home/JackrabbitRelay2/Data/Mimic/'
+
+###
+### Main code base.
+###
+
+if len(sys.argv)<4:
+    print("You MUST specify either (I)mage or (H)tml for output type")
+    print("A Mimic account and an asset are required.")
+    sys.exit(1)
+
+ih=sys.argv[1].lower()
+if ih!='i' and ih!='h':
+    print("You MUST specify either (I)mage or (H)tml for output type")
+    sys.exit(1)
+
+exchange='mimic'
+account=sys.argv[2]
+asset=sys.argv[3].upper()
+
+acn=f'{MimicData}{account}.history'
+if not os.path.exists(acn):
+    print('Please verify wallet name and case')
+    sys.exit(1)
+
+lines=JRRsupport.ReadFile(acn).strip().split('\n')
+
+bl={}
+sl={}
+
+xps=[]
+buy=[]
+sell=[]
+
+for line in lines:
+    if line=='':
+        continue
+
+    try:
+        data=json.loads(line)
+    except:
+        print("Line damaged:")
+        print(f"  {line}")
+        sys.exit(1)
+
+    pair=data['Asset']
+
+    if pair!=asset:
+        continue
+
+    dt=data['DateTime'].split(' ')[0]
+    act=data['Action'].upper()[0]   # B or S
+
+    if dt not in bl:
+        bl[dt]=0
+    if dt not in sl:
+        sl[dt]=0
+
+    if act=='B':
+        bl[dt]+=1
+    if act=='S':
+        sl[dt]+=1
+
+# This only works because we padded empty areas with zeros.
+
+for dt in sorted(bl.keys()):
+    xps.append(dt)
+    buy.append(bl[dt])
+    sell.append(sl[dt])
+
+# Make the chart
+
+pfn=pair.replace('/','').replace(':','').replace('-','')
+if ih=='h':
+    fn=chartDir+f'DailyActivity.{exchange}.{account}.{pfn}.html'
+else:
+    fn=chartDir+f'DailyActivity.{exchange}.{account}.{pfn}.png'
+
+ts=f"Mimic Daily Trade Activity: {account} - {asset}"
+
+b1=go.Bar(x=xps,y=buy,name='Buy',marker_color="#ff0000",offsetgroup=0)
+b2=go.Bar(x=xps,y=sell,name='Sell',marker_color="#007f00",offsetgroup=1)
+
+fig1=go.Figure(data=[b1,b2], )
+
+if ih=='h':
+    fig1.add_layout_image(dict(
+        source='https://rapmd.net/RAPMDlogo.png',
+        xref='paper',yref='paper',
+        xanchor='center',yanchor='middle',
+        x=0.5,y=0.5,
+        sizex=1,sizey=1,
+        opacity=0.1
+    ))
+else:
+    fig1.add_layout_image(dict(
+        source='file:///var/www/vhosts/rapmd.net/httpdocs/RAPMDlogo.png',
+        xref='paper',yref='paper',
+        xanchor='center',yanchor='middle',
+        x=0.5,y=0.5,
+        sizex=1,sizey=1,
+        opacity=0.1
+    ))
+fig1.update_yaxes(title_text='Daily Trading Activity')
+fig1.update_layout(title={"text":ts,"x":0.5,"xanchor":"center","yanchor":"top"},template='plotly_white')
+
+if ih=='h':
+    fig1.write_html(fn)
+else:
+    fig1.write_image(fn,width=1920,height=1024)
