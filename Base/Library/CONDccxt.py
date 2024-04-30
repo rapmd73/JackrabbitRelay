@@ -121,7 +121,7 @@ def OrderProcessor(Orphan):
 
         # find trade open time
         parts=oDetail['datetime'].split('.')
-        dsS=f"{parts[0]}.{parts[1][:6]}Z"
+        dsS=f"{parts[0]}.{parts[1][:6]}Z".replace('ZZ','Z')
         ds=datetime.datetime.strptime(dsS,'%Y-%m-%dT%H:%M:%S.%fZ')
 
         # Get the "strikePrice". This handles both TakeProfit and StopLoss. It doesn't matter which as both are processed
@@ -175,7 +175,7 @@ def OrderProcessor(Orphan):
 
                 # find trade close time and  duration
                 parts=resp['datetime'].split('.')
-                deS=f"{parts[0]}.{parts[1][:6]}Z"
+                deS=f"{parts[0]}.{parts[1][:6]}Z".replace('ZZ','Z')
                 de=datetime.datetime.strptime(deS,'%Y-%m-%dT%H:%M:%S.%fZ')
                 duration=de-ds
 
