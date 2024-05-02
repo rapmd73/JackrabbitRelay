@@ -128,16 +128,22 @@ for line in lines:
 
     # Prft/Loss
     action=data[6]
+    dir=data[7].split(',')[0].lower()
 
     bTime=FindStartDateTime(dt,dur)
+    amount=abs(float(data[8].split(':')[0]))
     bPrice=float(data[9])
 
     sTime=dt
     sPrice=float(data[11].split('/')[0])
-    rpl=float(data[11].split('/')[1].strip(','))
 
-    if action.lower()=='loss':
-        rpl*=-1
+    if dir=='long':
+        rpl=(sPrice-bPrice)*amount #float(data[11].split('/')[1].strip(','))
+    else:
+        rpl=(bPrice-sPrice)*amount #float(data[11].split('/')[1].strip(','))
+
+#    if action.lower()=='loss':
+#        rpl*=-1
 
     if action.lower()=='prft' and rpl>0:        # Profit
         col="rgba(0,128,0,1)"
