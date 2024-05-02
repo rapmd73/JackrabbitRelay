@@ -168,6 +168,7 @@ def OrderProcessor(Orphan):
                     resp=relay.GetOrderDetails(id=oid,symbol=relay.Order['Asset'])
                     # Order must be closed as it succedded
                     newOrder['ID']=oid
+                    relay.JRLog.Write(json.dumps(resp),stdOut=False)
                     sprice=float(resp['Price'])
 
                     # find trade close time and  duration
@@ -178,15 +179,15 @@ def OrderProcessor(Orphan):
 
                     rpl=0
                     if dir=='long':
-                        if sprice>tp: # ticker['Bid']
-                            rpl=round((amount*sprice)-(amount*price),8)
-                        if sl!=0 and sprice<sl: # ticker['Bid']
-                            rpl=round((amount*price)-(amount*sprice),8)
+                        if ticker['Bid']>tp
+                            rpl=round((abs(amount)*sprice)-(abs(amount)*price),8)
+                        if sl!=0 and ticker['Bid']<sl
+                            rpl=round((abs(amount)*price)-(abs(amount)*sprice),8)
                     else:
-                        if sprice<tp:   # ticker['Ask']
-                            rpl=round((amount*price)-(amount*sprice),8)
-                        if sl!=0 and sprice>sl: # ticker['Ask']
-                            rpl=round((amount*sprice)-(amount*price),8)
+                        if ticker['Ask']<tp
+                            rpl=round((abs(amount)*price)-(abs(amount)*sprice),8)
+                        if sl!=0 and ticker['Ask']>sl
+                            rpl=round((abs(amount)*sprice)-(abs(amount)*price),8)
 
                     # rpl is reported by broker. This is the actual profit/loss of trade.
                     if rpl>=0:
