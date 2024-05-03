@@ -90,7 +90,7 @@ for dt in sorted(bl.keys()):
 
 # Make the chart
 
-pfn=pair.replace('/','').replace(':','').replace('-','')
+pfn=asset.replace('/','').replace(':','').replace('-','')
 if ih=='h':
     fn=chartDir+f'DailyActivity.{exchange}.{account}.{pfn}.html'
 else:
