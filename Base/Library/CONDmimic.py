@@ -181,12 +181,12 @@ def OrderProcessor(Orphan):
                     if dir=='long':
                         if ticker['Bid']>tp:
                             rpl=round((abs(amount)*sprice)-(abs(amount)*price),8)
-                        if sl!=0 and ticker['Bid']<sl
+                        if sl!=0 and ticker['Bid']<sl:
                             rpl=round((abs(amount)*price)-(abs(amount)*sprice),8)
                     else:
                         if ticker['Ask']<tp:
                             rpl=round((abs(amount)*price)-(abs(amount)*sprice),8)
-                        if sl!=0 and ticker['Ask']>sl
+                        if sl!=0 and ticker['Ask']>sl:
                             rpl=round((abs(amount)*sprice)-(abs(amount)*price),8)
 
                     # rpl is reported by broker. This is the actual profit/loss of trade.
