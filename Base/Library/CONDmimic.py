@@ -179,12 +179,12 @@ def OrderProcessor(Orphan):
 
                     rpl=0
                     if dir=='long':
-                        if ticker['Bid']>tp
+                        if ticker['Bid']>tp:
                             rpl=round((abs(amount)*sprice)-(abs(amount)*price),8)
                         if sl!=0 and ticker['Bid']<sl
                             rpl=round((abs(amount)*price)-(abs(amount)*sprice),8)
                     else:
-                        if ticker['Ask']<tp
+                        if ticker['Ask']<tp:
                             rpl=round((abs(amount)*price)-(abs(amount)*sprice),8)
                         if sl!=0 and ticker['Ask']>sl
                             rpl=round((abs(amount)*sprice)-(abs(amount)*price),8)

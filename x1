@@ -1,0 +1,4 @@
+#!/bin/bash
+
+curl -vv http://65.21.116.92:11434/api/generate -d '{"model": "matrix4","prompt": "Why is the sky blue?"}'
+
