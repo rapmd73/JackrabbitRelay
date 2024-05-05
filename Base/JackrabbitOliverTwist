@@ -285,8 +285,8 @@ def ProcessOrphan(**kwargs):
             Processor=importlib.import_module(f"COND{Orphan['Framework']}")
 
         State=Processor.OrderProcessor(Orphan)
-    except:
-        JRLog.Write(f"Broke: {Orphan['Key']}")
+    except Exception as err:
+        JRLog.Write(f"Broke: {Orphan['Key']}, {err}")
 
     otLock=JRRsupport.Locker("OliverTwist",ID=Orphan['lID'])
     Memory=JRRsupport.Locker(Orphan['Key'],ID=Orphan['mID'])
