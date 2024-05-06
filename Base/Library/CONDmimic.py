@@ -201,7 +201,7 @@ def OrderProcessor(Orphan):
                 else:
                     # Give OliverTwist a response
                     relay.JRLog.Write(f"{id}: Order failed with {relay.GetFailedReason(result)}",stdOut=False)
-                    return 'Delete' # 'Waiting'
+                    return 'Waiting'
             else:
                 # Amount > Balance
                 relay.JRLog.Write(f"{id}: Amount {amount:.8f} > Balance {bal:.8f} {base}, purge",stdOut=False)
