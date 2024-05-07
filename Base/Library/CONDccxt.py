@@ -168,10 +168,8 @@ def OrderProcessor(Orphan):
             result=relay.SendWebhook(newOrder)
             oid=relay.GetOrderID(result)
             if oid!=None:
-                relay.JRLog.Write(LogMSG,stdOut=False)
                 resp=relay.GetOrderDetails(id=oid,symbol=relay.Order['Asset'])
                 # Order must be closed as it succedded
-                relay.JRLog.Write(json.dumps(resp),stdOut=False)
                 sprice=float(resp['price'])
 
                 # find trade close time and  duration

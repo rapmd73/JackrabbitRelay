@@ -168,7 +168,6 @@ def OrderProcessor(Orphan):
                     resp=relay.GetOrderDetails(id=oid,symbol=relay.Order['Asset'])
                     # Order must be closed as it succedded
                     newOrder['ID']=oid
-                    relay.JRLog.Write(json.dumps(resp),stdOut=False)
                     sprice=float(resp['Price'])
 
                     # find trade close time and  duration
