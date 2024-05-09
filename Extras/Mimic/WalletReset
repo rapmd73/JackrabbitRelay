@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+
+import JRRsupport
+
+MimicData='/home/JackrabbitRelay2/Data/Mimic/'
+
+###
+### Main code base.
+###
+
+if len(sys.argv)<2:
+    print("A Mimic account is required.")
+    sys.exit(1)
+
+account=sys.argv[1]
+acn=f'{MimicData}{account}.wallet'
+if not os.path.exists(acn):
+    print('Please verify wallet name and case')
+    sys.exit(1)
+awn=f'{MimicData}{account}.history'
+
+print(f"ALL INFORMATION WILL BE DELETED. Are you sure you want to RESET this wallet, {account}?")
+answer=input("If you are sure, answer 'Yes' >")
+if answer.lower()=='yes':
+    walletLock=JRRsupport.Locker(acn,ID=acn)
+    walletLock.Lock()
+    os.remove(acn)
+    os.remove(awn)
+    walletLock.Unlock()
+
+    print(f"{account} has been fully reset")
