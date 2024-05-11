@@ -32,7 +32,6 @@ if not os.path.exists(acn):
 lines=JRRsupport.ReadFile(acn).strip().split('\n')
 
 fees={}
-cnr={}
 Wallet={}
 
 for line in lines:
@@ -47,47 +46,62 @@ for line in lines:
         sys.exit(1)
 
     asset=data['Asset']
-    base,quote=asset.split('/')
-    if ':' in asset:
-        quote=asset.split(':')[1]
-        if '-' in quote:
-            quote=quote.split('-')[0]
-
-    dt=data['DateTime']
-    act=data['Action'].upper()[0]
-    bw=float(data[base])
-    qw=float(data[quote])
-    a=float(data['Amount'])
-    p=float(data['Price'])
     f=float(data['Fee'])
-
-    if data['Asset'] not in cnr:
-        cnr[data['Asset']]=0
 
     if data['Asset'] not in Wallet:
         Wallet[data['Asset']]=[]
-
     if data['Asset'] not in fees:
         fees[data['Asset']]=0
 
-    if act=='B':
-        if bw!=0:
-            cnr[data['Asset']]-=abs(p*a)
-        else:
-            cnr[data['Asset']]+=abs(p*a)
-    elif act=='S':
-        cnr[data['Asset']]+=abs(p*a)
-
     fees[data['Asset']]+=f
 
-    str=f"{dt} {act} {bw:14.8f} {qw:14.8f} {a:14.8f} {p:.8f} {f:.8f} {cnr[data['Asset']]:14.8f}"
-    Wallet[data['Asset']].append(str)
+    Wallet[data['Asset']].append(line)
 
 for pair in sorted(Wallet.keys()):
     if len(sys.argv)>2 and sys.argv[2]!=pair:
         continue
 
     print(f"{pair}: {fees[pair]:.8f} paid in fees")
-    for l in Wallet[pair]:
-        print(f"   {l}")
+
+    # This will become the initial balance of the wallet.
+    balance=0
+
+    # Scan thie current pair
+    for line in Wallet[pair]:
+        try:
+            data=json.loads(line)
+        except:
+            print("Line damaged:")
+            print(f"  {line}")
+            sys.exit(1)
+
+        asset=data['Asset']
+        base,quote=asset.split('/')
+        if ':' in asset:
+            quote=asset.split(':')[1]
+            if '-' in quote:
+                quote=quote.split('-')[0]
+
+        dt=data['DateTime']
+        act=data['Action'].upper()[0]
+        bw=float(data[base])
+        qw=float(data[quote])
+        a=float(data['Amount'])
+        p=float(data['Price'])
+        f=float(data['Fee'])
+
+        if balance==0:
+            balance=qw+f+(abs(bw)*p)
+
+        pnl=(qw+(abs(bw)*p))-balance
+        """
+        if act=='B':
+            pnl=(qw+(abs(bw)*p)+f)-balance
+        elif act=='S':
+            pnl=(qw+(abs(bw)*p)+(abs(a)*p)+f)-balance
+        """
+
+        str=f"  {dt} {act} {bw:14.8f} {qw:14.8f} {a:14.8f} {p:.8f} {f:.8f} {pnl:.8f}"
+        print(str)
+
     print()
