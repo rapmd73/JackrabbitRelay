@@ -47,7 +47,7 @@ def GetPCTvalue(pct,close,bal):
     return amount,volume
 
 def GetPCTamount(relay,currency,quote,close):
-    fn=relay.DataDirectory+'/'+relay.Exchange+'.'+relay.Account+'.PCTtable'
+    fn=relay.Directories['Data']+'/'+relay.Exchange+'.'+relay.Account+'.PCTtable'
     PCTtable=JRRsupport.TimedList("PCTtable",fn,Log=relay.JRLog)
     if relay.Order['Action'].lower()=='close':
         expire=0
@@ -148,7 +148,7 @@ def main():
 
     if not "OverrideMaxAssets" in relay.Order:
         if "MaxAssets" in relay.Active:
-            fn=relay.DataDirectory+'/'+relay.Exchange+'.'+relay.Account+'.MaxAssets'
+            fn=relay.Directories['Data']+'/'+relay.Exchange+'.'+relay.Account+'.MaxAssets'
             maxAssetsList=JRRsupport.TimedList("MaxAssets",fn,maxsize=int(relay.Active['MaxAssets']),Log=relay.JRLog)
             if relay.Order['Action'].lower()=='close':
                 expire=0
@@ -268,11 +268,13 @@ def main():
     if relay.Order['Action'].lower()=='close':
         relay.Order['Action']='sell'
         amount=pBalance
-#        if pBalance>0:    # Long Position
-#            amount=pBalance*-1
-#        elif pBalance<0:  # Short Position
-#            amount=pBalance
-#        relay.JRLog.Write(f"Forcing direction to {relay.Order['Action']}")
+    elif relay.Order['Action'].lower()=='flip':
+        relay.Order['Action']='buy'
+        pchg=amount-pBalance
+        if pBalance>0 and amount<0:
+            amount=-abs(pchg)
+        elif pBalance<0 and amount>0:
+            amount=abs(pchg)
 
     # Check for reduction
 

@@ -585,8 +585,10 @@ class oanda:
         LedgerDirectory=kwargs.get('LedgerDirectory')
 
         if 'ID' in Order:
+            Order.pop('Identity',None)
             id=Order['ID']
         if Response!=None:
+            Response.pop('Identity',None)
             if 'orderCreateTransaction' in Response:
                 id=Response['orderCreateTransaction']['id']
             elif 'longOrderCreateTransaction' in Response:
@@ -624,3 +626,9 @@ class oanda:
 
             if type(IsLog)==bool and IsLog==True:
                 self.Log.Write(f"Ledgered: {subOrder['Exchange']}:{id}",stdOut=False)
+
+    # Read ledger entry and locate by ID
+
+    def FindLedgerID(self,**kwargs):
+        pass
+

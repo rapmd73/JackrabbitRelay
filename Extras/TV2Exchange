@@ -44,7 +44,7 @@ elif relay.GetFramework()=='ccxt' or relay.GetFramework()=='mimic':
         ns=p['symbol']
         TradingView[tv]=ns
 
-fn=relay.DataDirectory+'/'+exchangeName+'.'+account+'.symbolmap'
+fn=relay.Directories['Data']+'/'+exchangeName+'.'+account+'.symbolmap'
 fh=open(fn,'w')
 fh.write(json.dumps(TradingView)+"\n")
 fh.close()
