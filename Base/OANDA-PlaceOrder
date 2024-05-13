@@ -37,7 +37,7 @@ def GetPCTvalue(pct,close,bal,mr):
     return amount,volume
 
 def GetPCTamount(relay,close):
-    fn=relay.DataDirectory+'/'+relay.Exchange+'.'+relay.Account+'.PCTtable'
+    fn=relay.Directories['Data']+'/'+relay.Exchange+'.'+relay.Account+'.PCTtable'
     PCTtable=JRRsupport.TimedList("PCTtable",fn,Log=relay.JRLog)
     if relay.Order['Action'].lower()=='close':
         expire=0
@@ -231,7 +231,7 @@ def main():
 
     if not "OverrideMaxAssets" in relay.Order:
         if "MaxAssets" in relay.Active:
-            fn=relay.DataDirectory+'/'+relay.Exchange+'.'+relay.Account+'.MaxAssets'
+            fn=relay.Directories['Data']+'/'+relay.Exchange+'.'+relay.Account+'.MaxAssets'
             maxAssetsList=JRRsupport.TimedList("MaxAssets",fn,maxsize=int(relay.Active['MaxAssets']),Log=relay.JRLog)
             if relay.Order['Action'].lower()=='close':
                 expire=0
@@ -265,7 +265,7 @@ def main():
         if '%' in relay.Order['Units']:
             amount=int(GetPCTamount(relay,price))
         else:
-            amount=int(relay.Order['Units'])
+            amount=int(relay.Order['Units'].split('.')[0])
 
         # Make sure minimum is enforced. Negative is for short.
 
@@ -334,7 +334,15 @@ def main():
     if relay.Order['Action'].lower()=='close':
         relay.Order['Action']='sell'
         amount='ALL'
-    elif relay.Order['Action']=='sell' and ReduceOnly==True:
+    elif relay.Order['Action'].lower()=='flip':
+        # handle position flipping
+        relay.Order['Action']='buy'
+        pchg=amount-units
+        if pBalance>0 and amount<0:
+            amount=-abs(pchg)
+        elif pBalance<0 and amount>0:
+            amount=abs(pchg)
+    elif relay.Order['Action'].lower()=='sell' and ReduceOnly==True:
         if pBalance>0:    # Long Position
             relay.Order['Action']='sell'
             relay.JRLog.Write(f"Forcing direction to {relay.Order['Action']}")
@@ -343,7 +351,7 @@ def main():
             relay.Order['Action']='buy'
             relay.JRLog.Write(f"Forcing direction to {relay.Order['Action']}")
             amount=units #int(pBalance/price)
-    elif relay.Order['Action']=='sell' \
+    elif relay.Order['Action'].lower()=='sell' \
      and ((amount<0 and amount<units) or (amount>0 and amount>units)):
         # Make ure units is in range of what we actually hold
         amount=units

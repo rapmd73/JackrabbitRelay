@@ -84,14 +84,19 @@ def main():
     amount=0
     if action!='close':
         if relay.GetArgsLen()>5:
-            amount=float(relay.GetArgs(5)) # Base currency value
+            if exchange=='oanda':
+                amount=int(relay.GetArgs(5)) # Base currency value
+            else:
+                amount=float(relay.GetArgs(5)) # Base currency value
         else:
             print("This action requires a base amount")
             print()
             Usage(relay.args,relay.argslen)
 
     # Verify the action is one of the required abilities.
-    if action!='long' and action!='short' and action!='buy' and action!='sell' and action!='close':
+    if action!='long' and action!='short' \
+    and action!='buy' and action!='sell' \
+    and action!='close' and action!='flip':
         Usage()
 
     if action=='long':
@@ -134,7 +139,7 @@ def main():
 
     # Is this going to be a reduce only order?
 
-    ro='ro' in str(relay.args).lower()
+    ro='ReduceOnly' in str(relay.args).lower()
 
     # Get the ticker for current price.
 
@@ -181,7 +186,6 @@ def main():
         NewOrder['Base']=str(amount)
     else:
         NewOrder['Units']=str(amount)
-
     # Many options is Relay have this format. Quite a few of them ignoew the value, like 'Diagnostics'. All the
     # matters is that the key is present. Check the Wiki for more details of which ones exhibit this behavior.
 
@@ -206,7 +210,10 @@ def main():
         # Get and print the details of the order
         print(f"Order successful: {oid}")
         print()
-        detail=relay.GetOrderDetails(id=oid,symbol=asset)
+        if relay.Framework=='oanda':
+            detail=relay.GetOrderDetails(OrderID=oid,symbol=asset)
+        else:
+            detail=relay.GetOrderDetails(id=oid,symbol=asset)
         print(detail)
     else:
         # Why did it fail?

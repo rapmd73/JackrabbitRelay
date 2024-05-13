@@ -108,13 +108,11 @@ class JackrabbitRelay:
         # All the default locations
         self.Version="0.0.0.1.840"
         self.NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
-        self.BaseDirectory='/home/JackrabbitRelay2/Base'
-        self.ConfigDirectory='/home/JackrabbitRelay2/Config'
-        self.DataDirectory="/home/JackrabbitRelay2/Data"
-        self.BalancesDirectory='/home/JackrabbitRelay2/Statistics/Balances'
-        self.ChartsDirectory='/home/JackrabbitRelay2/Statistics/Charts'
-        self.LedgerDirectory="/home/JackrabbitRelay2/Ledger"
-        self.StatisticsDirectory='/home/JackrabbitRelay2/Extras/Statistics'
+        self.Directories={}
+        self.Directories['Base']='/home/JackrabbitRelay2/Base'
+        self.Directories['Config']='/home/JackrabbitRelay2/Config'
+        self.Directories['Data']="/home/JackrabbitRelay2/Data"
+        self.Directories['Ledger']="/home/JackrabbitRelay2/Ledger"
         self.Identity=None
         self.Usage=None
 
@@ -360,7 +358,7 @@ class JackrabbitRelay:
     # Read global Identity
 
     def ReadGlobalIdentity(self):
-        idf=self.ConfigDirectory+'/Identity.cfg'
+        idf=self.Directories['Config']+'/Identity.cfg'
         if os.path.exists(idf):
             cf=open(idf,'rt+')
             try:
@@ -442,7 +440,7 @@ class JackrabbitRelay:
         self.JRLog.Write('TradingView Symbol Remap')
         self.JRLog.Write('|- In: '+self.Asset)
 
-        fn=self.DataDirectory+'/'+self.Exchange+'.'+self.Account+'.symbolmap'
+        fn=self.Directories['Data']+'/'+self.Exchange+'.'+self.Account+'.symbolmap'
         if os.path.exists(fn):
             try:
                 raw=JRRsupport.ReadFile(fn)
@@ -524,7 +522,8 @@ class JackrabbitRelay:
             self.Order['Action']='buy'
         if self.Order['Action']=='short':
             self.Order['Action']='sell'
-        if self.Order['Action']!='buy' and self.Order['Action']!='sell' and self.Order['Action']!='close':
+        if self.Order['Action']!='buy' and self.Order['Action']!='sell' \
+        and self.Order['Action']!='close' and self.Order['Action']!='flip':
             self.JRLog.Error('Processing Payload','Action must be one of buy, sell or close')
 
         if "OrderType" not in self.Order:
@@ -575,7 +574,7 @@ class JackrabbitRelay:
         if self.Account==None or self.Account.lower()=="none":
             return
 
-        fn=self.ConfigDirectory+'/'+self.Exchange+'.cfg'
+        fn=self.Directories['Config']+'/'+self.Exchange+'.cfg'
         if os.path.exists(fn):
             cf=open(fn,'rt+')
             for line in cf.readlines():
@@ -707,11 +706,11 @@ class JackrabbitRelay:
         # well.
 
         if self.Framework=='ccxt':
-            self.Broker=JRRccxt.ccxtCrypto(self.Exchange,self.Config,self.Active,DataDirectory=self.DataDirectory)
+            self.Broker=JRRccxt.ccxtCrypto(self.Exchange,self.Config,self.Active,DataDirectory=self.Directories['Data'])
         elif self.Framework=='oanda':
-            self.Broker=JRRoanda.oanda(self.Exchange,self.Config,self.Active,DataDirectory=self.DataDirectory)
+            self.Broker=JRRoanda.oanda(self.Exchange,self.Config,self.Active,DataDirectory=self.Directories['Data'])
         elif self.Framework=='mimic':
-            self.Broker=JRRmimic.mimic(self.Exchange,self.Config,self.Active,DataDirectory=self.DataDirectory)
+            self.Broker=JRRmimic.mimic(self.Exchange,self.Config,self.Active,DataDirectory=self.Directories['Data'])
 
         if self.Broker.timeframes!=None:
             self.Timeframes=list(self.Broker.timeframes.keys())
@@ -829,13 +828,20 @@ class JackrabbitRelay:
     # Make ledger entry
 
     def WriteLedger(self,**kwargs):
-        self.Results=self.Broker.WriteLedger(**kwargs,LedgerDirectory=self.LedgerDirectory)
+        self.Results=self.Broker.WriteLedger(**kwargs,LedgerDirectory=self.Directories['Ledger'])
         self.EnforceRateLimit()
 
-    # See if an order is already in Oliver Twist for Exchange/Account/Pair. This is to allow ONLY ONE order at a time.
+    # Read ledger entry and locate by ID
+
+    def FindLedgerID(self,**kwargs):
+        self.Results=self.Broker.FindLedgerID(**kwargs,LedgerDirectory=self.Directories['Ledger'])
+        return self.Results
+
+    # See if an order is already in Oliver Twist for Exchange/Account/Pair. This is to allow ONLY ONE order
+    # at a time.
 
     def OliverTwistOneShot(self,CompareOrder):
-        fList=[self.DataDirectory+'/OliverTwist.Conditional.Receiver',self.DataDirectory+'/OliverTwist.Conditional.Storehouse']
+        fList=[self.Directories['Data']+'/OliverTwist.Conditional.Receiver',self.Directories['Data']+'/OliverTwist.Conditional.Storehouse']
         orphanLock=JRRsupport.Locker("OliverTwist")
 
         orphanLock.Lock()

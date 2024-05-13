@@ -560,3 +560,8 @@ class mimic:
 
     def WriteLedger(self,**kwargs):
         pass
+
+    # Read ledger entry and locate by ID
+
+    def FindLedgerID(self,**kwargs):
+        pass

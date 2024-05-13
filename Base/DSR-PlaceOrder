@@ -56,7 +56,7 @@ def main():
     # to the PlaceOrder function, since placing the order has to be the last thing
     # done.
 
-    fn=relay.DataDirectory+'/'+relay.GetExchangeLast()+'.'+relay.GetAccountLast()+'.'+relay.Order['Asset']+'.DSR'
+    fn=relay.Directories['Data']+'/'+relay.GetExchangeLast()+'.'+relay.GetAccountLast()+'.'+relay.Order['Asset']+'.DSR'
     dsrList=JRRsupport.TimedList("DSR",fn,Log=relay.JRLog)
     if relay.Order['Action'].lower()=='close':
         expire=0

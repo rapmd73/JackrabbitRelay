@@ -47,7 +47,7 @@ def GetPCTvalue(pct,close,bal):
     return amount,volume
 
 def GetPCTamount(relay,currency,quote,close):
-    fn=relay.DataDirectory+'/'+relay.Exchange+'.'+relay.Account+'.PCTtable'
+    fn=relay.Directories['Data']+'/'+relay.Exchange+'.'+relay.Account+'.PCTtable'
     PCTtable=JRRsupport.TimedList("PCTtable",fn,Log=relay.JRLog)
     if relay.Order['Action'].lower()=='close':
         expire=0
@@ -153,7 +153,7 @@ def main():
 
     if not "OverrideMaxAssets" in relay.Order:
         if "MaxAssets" in relay.Active:
-            fn=relay.DataDirectory+'/'+relay.Exchange+'.'+relay.Account+'.MaxAssets'
+            fn=relay.Directories['Data']+'/'+relay.Exchange+'.'+relay.Account+'.MaxAssets'
             maxAssetsList=JRRsupport.TimedList("MaxAssets",fn,maxsize=int(relay.Active['MaxAssets']),Log=relay.JRLog)
             if relay.Order['Action'].lower()=='close':
                 expire=0
@@ -238,7 +238,10 @@ def main():
             # Make sure minimum is enforced.
             # KuCoin sub accounts do NOT verify or report correctly on this.
             if abs(amount)<minimum:
-                amount=minimum
+                if amount>0:
+                    amount=minimum
+                else:
+                    amount=minimum*-1
 
     # Figure limit order pricing, minimum cost is ignored as limit orders can be
     # anything.
@@ -299,16 +302,6 @@ def main():
         relay.JRLog.Write("Reduction: "+str(r))
         amount-=r
 
-    # Determine trade action and carry it out
-
-    total=round(amount*price,8)
-    relay.JRLog.Write("Placing Order")
-    relay.JRLog.Write(f"|- Asset: {relay.Order['Asset']}")
-    relay.JRLog.Write(f"|- Action: {relay.Order['Action']}")
-    relay.JRLog.Write(f"|- Amount: {amount:.8f}")
-    relay.JRLog.Write(f"|- Price: {price:.8f}")
-    relay.JRLog.Write(f"|- Total: {total:.8f}")
-
     # Set leverage
 
     try:
@@ -327,12 +320,38 @@ def main():
     except:
         pass
 
-    if relay.Order['Action'].lower()=='close':
-        relay.Order['Action']='sell'
+    if relay.Order['Action'].lower()=='flip':
+        pchg=amount-abs(pBalance)
+        if pBalance>0 and amount<0:
+            relay.Order['Action']='sell'
+            amount=abs(pchg)
+        elif pBalance<0 and amount>0:
+            relay.Order['Action']='buy'
+            amount=abs(pchg)
+        elif pBalance>0 and amount>0:
+            relay.Order['Action']='buy'
+        elif pBalance<0 and amount<0:
+            relay.Order['Action']='sell'
+            amount=abs(amount)
+        elif pBalance==0:
+            if amount<0:
+                relay.Order['Action']='sell'
+            else:
+                relay.Order['Action']='buy'
     elif relay.Order['Action']=='long':
         relay.Order['Action']='buy'
     elif relay.Order['Action']=='short':
         relay.Order['Action']='sell'
+
+    # Determine trade action and carry it out
+
+    total=round(amount*price,8)
+    relay.JRLog.Write("Placing Order")
+    relay.JRLog.Write(f"|- Asset: {relay.Order['Asset']}")
+    relay.JRLog.Write(f"|- Action: {relay.Order['Action']}")
+    relay.JRLog.Write(f"|- Amount: {amount:.8f}")
+    relay.JRLog.Write(f"|- Price: {price:.8f}")
+    relay.JRLog.Write(f"|- Total: {total:.8f}")
 
     if amount>0:
         lNote=None

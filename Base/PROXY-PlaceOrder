@@ -139,7 +139,7 @@ def GetPCTvalue(pct,close,bal,mr):
     return amount,volume
 
 def GetPCTamount(relay,close):
-    fn=relay.DataDirectory+'/'+relay.Exchange+'.'+relay.Account+'.PCTtable'
+    fn=relay.Directories['Data']+'/'+relay.Exchange+'.'+relay.Account+'.PCTtable'
     PCTtable=JRRsupport.TimedList("PCTtable",fn,Log=relay.JRLog)
     if relay.Order['Action'].lower()=='close':
         expire=0
@@ -298,7 +298,7 @@ def main():
 
     if not "OverrideMaxAssets" in relay.Order:
         if "MaxAssets" in relay.Active:
-            fn=relay.DataDirectory+'/'+relay.Exchange+'.'+relay.Account+'.MaxAssets'
+            fn=relay.Directories['Data']+'/'+relay.Exchange+'.'+relay.Account+'.MaxAssets'
             maxAssetsList=JRRsupport.TimedList("MaxAssets",fn,maxsize=int(relay.Active['MaxAssets']),Log=relay.JRLog)
             if relay.Order['Action'].lower()=='close':
                 expire=0

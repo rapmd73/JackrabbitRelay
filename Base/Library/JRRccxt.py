@@ -461,7 +461,6 @@ class ccxtCrypto:
             if Quiet!=True:
                 self.Log.Write("|- Order Confirmation ID: "+order['id'])
 
-            #JRRledger.WriteLedger(pair, m, action, amount, price, order, ln)
             return order
 
         return None
@@ -667,6 +666,7 @@ class ccxtCrypto:
                     pass
         else:
             self.Results=self.API("fetchOrder",**kwargs)
+
         return self.Results
 
     # Create an orphan order and deliver to OliverTwist
@@ -731,13 +731,16 @@ class ccxtCrypto:
         LedgerDirectory=kwargs.get('LedgerDirectory')
 
         if Response!=None:
+            Response.pop('Identity',None)
             id=Response['id']
         else:
+            Order.pop('Identity',None)
             id=Order['ID']
 
         # We need the embedded order reference if comming from OliverTwist
         if 'Order' in Order:
             subOrder=json.loads(Order['Order'])
+            subOrder.pop('Identity',None)
         else:
             subOrder=Order
 
@@ -771,3 +774,27 @@ class ccxtCrypto:
 
             if type(IsLog)==bool and IsLog==True:
                 self.Log.Write(f"Ledgered: {subOrder['Exchange']}/{subOrder['Account']}:{id}",stdOut=False)
+
+    # Read ledger entry and locate by ID
+
+    def FindLedgerID(self,**kwargs):
+        LedgerDirectory=kwargs.get('LedgerDirectory')
+        id=kwargs.get('ID')
+        exchange=kwargs.get('Exchange').lower()
+        account=kwargs.get('Account')
+        asset=kwargs.get('Asset').upper().replace(':','').replace('/','').replace('-','')
+        mkt=kwargs.get('Market').lower()        # ie, Spot
+
+        data=None
+        lf=f"{LedgerDirectory}/{exchange}.{mkt}.{account}.{asset}.ledger"
+        fh=open(lf,'r')
+        for line in fh:
+            try:
+                data=json.loads(line)
+                if data['ID']==id:
+                    break
+            except Exception as err:
+                pass
+
+        fh.close()
+        return data['Detail']
