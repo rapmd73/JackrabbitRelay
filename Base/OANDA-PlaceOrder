@@ -99,6 +99,7 @@ def LowestLotSize(relay,asset,units,step):
     else:
         sign=1
 
+    relay.JRLog.Write(f'EnforceFIFO: next unit size is {nextSize*sign}')
     return nextSize*sign
 
 # Find highest lot size
@@ -283,18 +284,6 @@ def main():
         if AlreadyBought(relay,relay.Order['Asset'],ticker['Bid'],devPips):
             relay.JRLog.Error("Deviation", f"{relay.Order['Deviation']}: Required condition not met")
 
-    # Check and manage FIFO rule
-    if 'EnforceFIFO' in relay.Active or 'EnforceFIFO' in relay.Order:
-        if 'Step' in relay.Order:
-            step=int(relay.Order['Step'])
-        else:
-            step=1
-
-        if relay.Order['Action']=='buy':
-            amount=LowestLotSize(relay,relay.Order['Asset'],amount,step)
-        elif 'Ticket' in relay.Order:
-            amount=GetTicket(relay,relay.Order['Asset'],relay.Order['Ticket'],amount)
-
     # Figure limit order pricing, minimum cost is ignored as limit orders can be
     # anything.
 
@@ -355,6 +344,18 @@ def main():
      and ((amount<0 and amount<units) or (amount>0 and amount>units)):
         # Make ure units is in range of what we actually hold
         amount=units
+
+    # Check and manage FIFO rule
+    if 'EnforceFIFO' in relay.Active or 'EnforceFIFO' in relay.Order:
+        if 'Step' in relay.Order:
+            step=int(relay.Order['Step'])
+        else:
+            step=1
+
+        if relay.Order['Action']=='buy':
+            amount=LowestLotSize(relay,relay.Order['Asset'],amount,step)
+        elif 'Ticket' in relay.Order:
+            amount=GetTicket(relay,relay.Order['Asset'],relay.Order['Ticket'],amount)
 
     # Determine trade action and carry it out
 
