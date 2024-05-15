@@ -352,7 +352,7 @@ def main():
         else:
             step=1
 
-        if relay.Order['Action']=='buy':
+        if relay.Order['Action']=='buy' and ((amount>0 and units>0) or (amount<0 and units<0)):
             amount=LowestLotSize(relay,relay.Order['Asset'],amount,step)
         elif 'Ticket' in relay.Order:
             amount=GetTicket(relay,relay.Order['Asset'],relay.Order['Ticket'],amount)
