@@ -49,7 +49,7 @@ def GetPCTvalue(pct,close,bal):
 def GetPCTamount(relay,currency,quote,close):
     fn=relay.Directories['Data']+'/'+relay.Exchange+'.'+relay.Account+'.PCTtable'
     PCTtable=JRRsupport.TimedList("PCTtable",fn,Log=relay.JRLog)
-    if relay.Order['Action'].lower()=='close':
+    if relay.Order['Action'].lower()=='close' or relay.Order['Action'].lower()=='flip':
         expire=0
     else:
         expire=(3650*86400)
@@ -71,6 +71,8 @@ def GetPCTamount(relay,currency,quote,close):
 
         payload=json.loads(results['Payload']['Payload'],strict=False)
         amount=payload['Amount']
+        if (pct<0 and amount>0) or (pct>0 and amount<0):
+            amount=amount*-1
     else:
         bal=relay.GetBalance(Base=quote)
         amount=round(((float(relay.Order[currency].replace('%',''))/100)*bal)/close,8)
