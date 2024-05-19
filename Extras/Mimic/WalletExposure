@@ -55,7 +55,8 @@ bExposure=[]
 qExposure=[]
 cnr=[]
 
-xnr=0
+pnl=0
+balance=0
 for line in lines:
     if line=='':
         continue
@@ -85,13 +86,10 @@ for line in lines:
     p=float(data['Price'])
     f=float(data['Fee'])
 
-    if act=='B':
-        if bw!=0:
-            xnr-=abs(p*a)
-        else:
-            xnr+=abs(p*a)
-    elif act=='S':
-        xnr+=abs(p*a)
+    if balance==0:
+        balance=qw+f+(abs(bw)*p)
+
+    pnl=(qw+(abs(bw)*p))-balance
 
     xps.append(dt)
     if base not in StableCoinUSD:
@@ -103,7 +101,7 @@ for line in lines:
         qExposure.append(qw*p)
     else:
         qExposure.append(qw)
-    cnr.append(xnr)
+    cnr.append(pnl)
 
 # Make the chart
 pair=sys.argv[3].replace('/','').split(':')[0]
