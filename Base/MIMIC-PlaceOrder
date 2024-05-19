@@ -168,8 +168,12 @@ def main():
 
     # Get Minimum allowed amount (units) and cost
 
+    price=ticker['Ask']
+
     isMinimum=False
     minimum,mincost=relay.GetMinimum(symbol=relay.Order['Asset'])
+    if 'binance' in relay.Active['DataExchange']:
+        minimum=minimum/price
 
     # Handle various currencies and verifications
 
@@ -202,8 +206,6 @@ def main():
 
     if (hasUSD and hasBase) or (hasUSD and hasQuote) or (hasQuote and hasBase):
         relay.JRLog.Error("Quote validation","USD, Base, or Quote can be present, NOT a combination of two or more.")
-
-    price=ticker['Ask']
 
     # No amount method so using exchange minimum
     if (not hasUSD and not hasBase and not hasQuote):

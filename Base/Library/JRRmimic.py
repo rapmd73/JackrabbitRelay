@@ -333,7 +333,7 @@ class mimic:
 
         minimum,mincost=self.Broker.GetMinimum(symbol=asset)
         if self.ForceQuote==True:
-            minimum=minimum/abs(actualAmount)
+            minimum=minimum/abs(actualPrice)
 
         # Make sure order is above minimum requirements
         if abs(actualAmount)<minimum or (abs(actualAmount)*actualPrice)<mincost:
