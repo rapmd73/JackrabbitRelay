@@ -45,7 +45,7 @@ class mimic:
     #   placed in init and released at exit.
 
     def __init__(self,Exchange,Config,Active,DataDirectory=None):
-        self.Version="0.0.0.1.840"
+        self.Version="0.0.0.1.855"
 
         self.StableCoinUSD=['USDT','USDC','BUSD','UST','DAI','FRAX','TUSD', \
                 'USDP','LUSD','USDN','HUSD','FEI','TRIBE','RSR','OUSD','XSGD', \
@@ -64,6 +64,13 @@ class mimic:
         # Convience for imternal use
         self.DataExchange=self.Active['DataExchange']
         self.DataAccount=self.Active['DataAccount']
+
+        # The minimum amount on binance is expressed in QUOTE currency, NOT base. This test determins
+        # whether we need to comvert the mimin to QUOTE.
+
+        self.ForceQuote=False
+        if 'binance' in self.DataExchange.lower():
+            self.ForceQuote=True
 
         # Extract for convience and readability
 
@@ -322,7 +329,12 @@ class mimic:
         else:
             actualPrice=max(ticker['Bid'],ticker['Ask'])+ticker['Spread']   # Long
 
+        # If the exchange is Binance, these values are going to be expressed in QUOTE currency, NOT base
+
         minimum,mincost=self.Broker.GetMinimum(symbol=asset)
+        if self.ForceQuote==True:
+            minimum=minimum/abs(actualAmount)
+
         # Make sure order is above minimum requirements
         if abs(actualAmount)<minimum or (abs(actualAmount)*actualPrice)<mincost:
             return f'Below minimum requirements: {actualAmount:.8f} < {minimum:.8f} or {(abs(actualAmount)*actualPrice):.8f} < {mincost:.8f}'
