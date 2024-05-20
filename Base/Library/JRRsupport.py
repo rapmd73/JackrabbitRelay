@@ -749,8 +749,8 @@ def ElasticSleep(s,Fuzzy=True):
     if Fuzzy:
         throttle=0
         LoadAVG=GetLoadAVG()
-        d=float(max(LoadAVG[0],LoadAVG[1],LoadAVG[2]))
         c=os.cpu_count()
+        d=float(max(LoadAVG[0],LoadAVG[1],LoadAVG[2]))/c
         n=os.getpriority(os.PRIO_PROCESS,0)
 
         # if load is greater then the number of cpus, the renice to the lowest priority
