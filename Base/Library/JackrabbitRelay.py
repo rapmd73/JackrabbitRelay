@@ -394,9 +394,11 @@ class JackrabbitRelay:
         if res==None:
             return None
 
+        srch='failed with:'
+
         result=None
         try:
-            if res.find('PlaceOrder failed with:')>-1:
+            if res.find(srch)>-1:
                 s=res.find('with:')+6
                 for e in range(s,len(res)):
                     if res[e]=='\n':

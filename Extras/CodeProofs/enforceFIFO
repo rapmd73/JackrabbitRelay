@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+
+import JackrabbitRelay as JRR
+
+# Find the lowest lot size used in the list of open trades. This is a good way to make
+# the entire process dynamic and fluid as lot size can be varied by any metric,
+# including but not limited to, the amount of margin used.
+
+def LowestLotSize(relay,asset,units,step):
+    lowestSize=abs(units)
+    lotSize=abs(step)
+
+    openTrades=relay.GetOpenTrades(symbol=asset)
+
+    usedSize=[]
+    for trade in openTrades:
+        t=abs(int(trade['currentUnits']))
+        if t not in usedSize:
+            usedSize.append(t)
+        t=abs(int(trade['initialUnits']))
+        if t not in usedSize:
+            usedSize.append(t)
+    usedSize=sorted(usedSize)
+
+    print(usedSize)
+
+    nextSize = lowestSize  # Start with the lowestSize
+
+    while nextSize in usedSize:
+        nextSize+=lotSize
+
+    # Shorts are negative so check direction
+    if units<0:
+        sign=-1
+    else:
+        sign=1
+
+    print(f'EnforceFIFO: next unit size is {nextSize*sign}')
+    return nextSize*sign
+
+###
+### Main code base. Place order on exchange
+###
+
+relay=JRR.JackrabbitRelay()
+if relay.GetArgsLen() > 3:
+    exchangeName=relay.GetExchange()
+    account=relay.GetAccount()
+    asset=relay.GetAsset()
+    units=int(relay.GetArgs(4))
+else:
+    print("An exchange, (sub)account, and an asset must be provided.")
+    sys.exit(1)
+
+ls=LowestLotSize(relay,asset,units,1)
+
+print(ls)
