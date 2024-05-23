@@ -43,6 +43,11 @@ def GetPCTamount(relay,close):
     else:
         expire=(3650*86400)
 
+    # OverridePCTtable should probably be the default state for OliverTwist, since each trade is
+    # independant. For now though, I am going to not make this default as a safety protocol to keep trades
+    # linear and controlled. User can override this, but that really is the point. The user MUST take action
+    # to override the saety layers.
+
     if "OverridePCTtable" not in relay.Active and "OverridePCTtable" not in relay.Order:
         bal=relay.GetBalance()
         mr=float(relay.Markets[relay.Asset]['marginRate'])
@@ -263,8 +268,8 @@ def main():
         relay.JRLog.Write(f'|- Minimum Amount: {minimum:.8f}')
         relay.JRLog.Write(f'|- Minimum Cost:   {mincost:.8f}')
     else:
-        price=ticker['Ask']
         if '%' in relay.Order['Units']:
+            price=(ticker['Ask']+ticker['Bid'])/2
             amount=int(GetPCTamount(relay,price))
         else:
             amount=int(relay.Order['Units'].split('.')[0])
