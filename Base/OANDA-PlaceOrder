@@ -43,14 +43,15 @@ def GetPCTamount(relay,close):
     else:
         expire=(3650*86400)
 
+    bal=relay.GetBalance()
+    mr=float(relay.Markets[relay.Asset]['marginRate'])
+
     # OverridePCTtable should probably be the default state for OliverTwist, since each trade is
     # independant. For now though, I am going to not make this default as a safety protocol to keep trades
     # linear and controlled. User can override this, but that really is the point. The user MUST take action
     # to override the saety layers.
 
     if "OverridePCTtable" not in relay.Active and "OverridePCTtable" not in relay.Order:
-        bal=relay.GetBalance()
-        mr=float(relay.Markets[relay.Asset]['marginRate'])
         pct,PCTtype=GetPCTtype(relay.Order['Units'])
         amount,volume=GetPCTvalue(pct,close,bal,mr)
 
@@ -69,9 +70,8 @@ def GetPCTamount(relay,close):
         if (pct<0 and amount>0) or (pct>0 and amount<0):
             amount=amount*-1
     else:
-        bal=relay.GetBalance()
-        mr=float(relay.Markets[relay.Asset]['marginRate'])
-        amount=round((((float(relay.Order[currency].replace('%',''))/100)*bal)/close)/mr,8)
+        pct=float(relay.Order['Units'].replace('%',''))/100
+        amount=round(((pct*bal)/close)/mr,8)
     return amount
 
 # Find the lowest lot size used in the list of open trades. This is a good way to make

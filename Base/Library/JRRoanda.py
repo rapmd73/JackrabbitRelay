@@ -584,48 +584,57 @@ class oanda:
         IsLog=kwargs.get('Log')
         LedgerDirectory=kwargs.get('LedgerDirectory')
 
-        if 'ID' in Order:
-            Order.pop('Identity',None)
-            id=Order['ID']
-        if Response!=None:
-            Response.pop('Identity',None)
-            if 'orderCreateTransaction' in Response:
-                id=Response['orderCreateTransaction']['id']
-            elif 'longOrderCreateTransaction' in Response:
-                id=Response['longOrderCreateTransaction']['id']
-            elif 'shortOrderCreateTransaction' in Response:
-                id=Response['shortOrderCreateTransaction']['id']
+        if type(Order) is str:
+            Order=json.loads(Order)
+        if type(Response) is str:
+            Response=json.loads(Response)
 
-        detail=self.GetOrderDetails(OrderID=id)
+        try:
+            if 'ID' in Order:
+                Order.pop('Identity',None)
+                id=Order['ID']
+            if Response!=None:
+                Response.pop('Identity',None)
+                if 'orderCreateTransaction' in Response:
+                    id=Response['orderCreateTransaction']['id']
+                elif 'longOrderCreateTransaction' in Response:
+                    id=Response['longOrderCreateTransaction']['id']
+                elif 'shortOrderCreateTransaction' in Response:
+                    id=Response['shortOrderCreateTransaction']['id']
 
-        ledger={}
-        ledger['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
-        ledger['ID']=id
-        ledger['Order']=Order
-        if Response!=None:
-            ledger['Response']=Response
-        ledger['Detail']=detail
+            detail=self.GetOrderDetails(OrderID=id)
 
-        # We need the embedded order reference if comming from OliverTwist
-        if 'Order' in Order:
-            subOrder=json.loads(Order['Order'])
-        else:
-            subOrder=Order
-        if subOrder['Exchange']!=None and subOrder['Account']!=None and subOrder['Asset']!=None:
-            fname=subOrder['Exchange']+'.'+subOrder['Account']+'.'+subOrder['Asset']
-            fname=fname.replace('/','').replace('-','').replace(':','').replace(' ','')
-            lname=LedgerDirectory+'/'+fname+'.ledger'
+            ledger={}
+            ledger['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+            ledger['ID']=id
+            ledger['Order']=Order
+            if Response!=None:
+                ledger['Response']=Response
+            ledger['Detail']=detail
 
-            # Strip Identity
-            ledger.pop('Identity',None)
+            # We need the embedded order reference if comming from OliverTwist
+            if 'Order' in Order:
+                subOrder=json.loads(Order['Order'])
+            else:
+                subOrder=Order
+            if subOrder['Exchange']!=None and subOrder['Account']!=None and subOrder['Asset']!=None:
+                fname=subOrder['Exchange']+'.'+subOrder['Account']+'.'+subOrder['Asset']
+                fname=fname.replace('/','').replace('-','').replace(':','').replace(' ','')
+                lname=LedgerDirectory+'/'+fname+'.ledger'
 
-            ledgerLock=JRRsupport.Locker(lname)
-            ledgerLock.Lock()
-            JRRsupport.AppendFile(lname,json.dumps(ledger)+'\n')
-            ledgerLock.Unlock()
+                # Strip Identity
+                if 'Identity' in ledger:
+                    ledger.pop('Identity',None)
 
-            if type(IsLog)==bool and IsLog==True:
-                self.Log.Write(f"Ledgered: {subOrder['Exchange']}:{id}",stdOut=False)
+                ledgerLock=JRRsupport.Locker(lname)
+                ledgerLock.Lock()
+                JRRsupport.AppendFile(lname,json.dumps(ledger)+'\n')
+                ledgerLock.Unlock()
+
+                if type(IsLog)==bool and IsLog==True:
+                    self.Log.Write(f"Ledgered: {subOrder['Exchange']}:{id}",stdOut=False)
+        except Exception as err:
+            self.Log.Write(f"WriteLedger Code Error - {sys.exc_info()[-1].tb_lineno}/{str(err)}",stdOut=False)
 
     # Read ledger entry and locate by ID
 
