@@ -730,6 +730,11 @@ class ccxtCrypto:
         IsLog=kwargs.get('Log')
         LedgerDirectory=kwargs.get('LedgerDirectory')
 
+        if type(Order) is str:
+            Order=json.loads(Order)
+        if type(Response) is str:
+            Response=json.loads(Response)
+
         if Response!=None:
             Response.pop('Identity',None)
             id=Response['id']
@@ -798,3 +803,5 @@ class ccxtCrypto:
 
         fh.close()
         return data['Detail']
+
+

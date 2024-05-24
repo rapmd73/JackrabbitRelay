@@ -306,12 +306,11 @@ def OrderProcessor(Orphan):
 
                     # Order must be closed as it succedded
                     newOrder['ID']=oid
-                    relay.WriteLedger(Order=newOrder,Response=result)
+                    relay.WriteLedger(Order=newOrder,Response=None)
                     return 'Delete'
                 else:
                     # Give OliverTwist a response
                     relay.JRLog.Write(f"{id} -> {cid}: Order failed with {relay.GetFailedReason(result)}",stdOut=False)
-                    relay.JRLog.Write(f"{id} -> {cid}: {result}",stdOut=False)
                     return 'Waiting'
             else:
                 # Strike did not happen
