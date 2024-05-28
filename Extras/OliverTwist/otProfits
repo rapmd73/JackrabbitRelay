@@ -45,7 +45,7 @@ for i in range(1,len(sys.argv)):
         data=line.split(' ')
 
         dmy=data[0].split(' ')[0].split('-')
-        date=dmy[0]+'-'+dmy[1]  # +'-'+dmy[2]
+        date=dmy[0]+'-'+dmy[1] # +'-'+dmy[2]
 
         pdata=line.split('/')[1].strip().split(',')[0]
 

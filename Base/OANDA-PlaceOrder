@@ -254,6 +254,10 @@ def main():
     if "ReduceOnly" in relay.Active:
         ReduceOnly=True
 
+    # Initialize amount and price
+    amount=None
+    price=None
+
     # Get Minimum allowed amount (units) and cost
 
     isMinimum=False
@@ -273,6 +277,10 @@ def main():
             amount=int(GetPCTamount(relay,price))
         else:
             amount=int(relay.Order['Units'].split('.')[0])
+            if amount<0:
+                price=max(ticker['Ask'],ticker['Bid'])
+            else:
+                price=min(ticker['Ask'],ticker['Bid'])
 
         # Make sure minimum is enforced. Negative is for short.
 
@@ -366,7 +374,7 @@ def main():
     # Determine trade action and carry it out
 
     if type(amount) is int:
-        total=abs(round(amount*price,8))
+        total=abs(round(amount*price,5))
     else:
         total=abs(pBalance)
     if (type(amount) is str and amount.upper()=='ALL' and pBalance>=0) \
@@ -384,7 +392,7 @@ def main():
     if type(amount) is int:
         relay.JRLog.Write(f"|- Units: {abs(amount):.8f} {dir}")
     else:
-        relay.JRLog.Write(f"|- Units: {amount} {dir}")
+        relay.JRLog.Write(f"|- Units: {amount:.8f} {dir}")
     relay.JRLog.Write(f"|- Price: {price:.8f}")
     relay.JRLog.Write(f"|- Total: {total:.8f}")
 
