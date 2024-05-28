@@ -256,7 +256,7 @@ def main():
 
     # Initialize amount and price
     amount=None
-    price=None
+    price=(ticker['Ask']+ticker['Bid'])/2
 
     # Get Minimum allowed amount (units) and cost
 
@@ -276,15 +276,14 @@ def main():
             price=(ticker['Ask']+ticker['Bid'])/2
             amount=int(GetPCTamount(relay,price))
         else:
-            amount=int(relay.Order['Units'].split('.')[0])
-            if amount<0:
-                price=max(ticker['Ask'],ticker['Bid'])
+            if type(relay.Order['Units'])!=str:
+                amount=int(relay.Order['Units'].split('.')[0])
             else:
-                price=min(ticker['Ask'],ticker['Bid'])
+                amount=relay.Order['Units']
 
         # Make sure minimum is enforced. Negative is for short.
 
-        if abs(amount)<minimum:
+        if type(amount)!=str and abs(amount)<minimum:
             if amount>=0:
                 amount=minimum
             else:
@@ -384,17 +383,20 @@ def main():
     or (type(amount) is int and amount<0):
         dir='Short'
 
-    relay.JRLog.Write("Placing Order")
-    relay.JRLog.Write(f"|- Asset: {relay.Order['Asset']}")
-    relay.JRLog.Write(f"|- Action: {relay.Order['Action']}")
-    if 'Ticket' in relay.Order:
-        relay.JRLog.Write(f"|- Ticket: {relay.Order['Ticket']}")
-    if type(amount) is int:
-        relay.JRLog.Write(f"|- Units: {abs(amount):.8f} {dir}")
-    else:
-        relay.JRLog.Write(f"|- Units: {amount:.8f} {dir}")
-    relay.JRLog.Write(f"|- Price: {price:.8f}")
-    relay.JRLog.Write(f"|- Total: {total:.8f}")
+    try:
+        relay.JRLog.Write("Placing Order")
+        relay.JRLog.Write(f"|- Asset: {relay.Order['Asset']}")
+        relay.JRLog.Write(f"|- Action: {relay.Order['Action']}")
+        if 'Ticket' in relay.Order:
+            relay.JRLog.Write(f"|- Ticket: {relay.Order['Ticket']}")
+        if type(amount) is int:
+            relay.JRLog.Write(f"|- Units: {abs(amount):.8f} {dir}")
+        else:
+            relay.JRLog.Write(f"|- Units: {amount:.8f} {dir}")
+        relay.JRLog.Write(f"|- Price: {price:.8f}")
+        relay.JRLog.Write(f"|- Total: {total:.8f}")
+    except Exception as err:
+        relay.JRLog.Write(f"{Orphan['Key']}: Code Error - {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
 
     if (type(amount) is int and amount!=0) \
     or (type(amount) is str and amount.upper()=='ALL'):
