@@ -254,7 +254,8 @@ def main():
     if "ReduceOnly" in relay.Active:
         ReduceOnly=True
 
-    # Initialize amount and price
+    # Initialize dir, amount and price
+    dir=None
     amount=None
     price=(ticker['Ask']+ticker['Bid'])/2
 
@@ -276,10 +277,7 @@ def main():
             price=(ticker['Ask']+ticker['Bid'])/2
             amount=int(GetPCTamount(relay,price))
         else:
-            if type(relay.Order['Units'])!=str:
-                amount=int(relay.Order['Units'].split('.')[0])
-            else:
-                amount=relay.Order['Units']
+            amount=int(relay.Order['Units'].split('.')[0])
 
         # Make sure minimum is enforced. Negative is for short.
 
@@ -370,12 +368,15 @@ def main():
         elif 'Ticket' in relay.Order:
             amount=GetTicket(relay,relay.Order['Asset'],relay.Order['Ticket'],amount)
 
-    # Determine trade action and carry it out
+    # amount is a number, calculate total, otherwise amount will=ALL, use balance.
 
     if type(amount) is int:
         total=abs(round(amount*price,5))
     else:
         total=abs(pBalance)
+
+    # Figure out trade direction
+
     if (type(amount) is str and amount.upper()=='ALL' and pBalance>=0) \
     or (type(amount) is int and amount>=0):
         dir='Long'
@@ -383,20 +384,21 @@ def main():
     or (type(amount) is int and amount<0):
         dir='Short'
 
-    try:
-        relay.JRLog.Write("Placing Order")
-        relay.JRLog.Write(f"|- Asset: {relay.Order['Asset']}")
-        relay.JRLog.Write(f"|- Action: {relay.Order['Action']}")
-        if 'Ticket' in relay.Order:
-            relay.JRLog.Write(f"|- Ticket: {relay.Order['Ticket']}")
-        if type(amount) is int:
-            relay.JRLog.Write(f"|- Units: {abs(amount):.8f} {dir}")
-        else:
-            relay.JRLog.Write(f"|- Units: {amount:.8f} {dir}")
-        relay.JRLog.Write(f"|- Price: {price:.8f}")
-        relay.JRLog.Write(f"|- Total: {total:.8f}")
-    except Exception as err:
-        relay.JRLog.Write(f"{Orphan['Key']}: Code Error - {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
+    # Logging notification
+
+    relay.JRLog.Write("Placing Order")
+    relay.JRLog.Write(f"|- Asset: {relay.Order['Asset']}")
+    relay.JRLog.Write(f"|- Action: {relay.Order['Action']}")
+    if 'Ticket' in relay.Order:
+        relay.JRLog.Write(f"|- Ticket: {relay.Order['Ticket']}")
+    if type(amount) is int:
+        relay.JRLog.Write(f"|- Units: {abs(amount):.8f} {dir}")
+    else:
+        relay.JRLog.Write(f"|- Units: {amount} {dir}")
+    relay.JRLog.Write(f"|- Price: {price:.8f}")
+    relay.JRLog.Write(f"|- Total: {total:.8f}")
+
+    # Place the order
 
     if (type(amount) is int and amount!=0) \
     or (type(amount) is str and amount.upper()=='ALL'):
