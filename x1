@@ -1,0 +1,36 @@
+        current_position = self.Wallet['Wallet'].get(base, 0)
+        
+        if (current_position > 0 and actualAmount < 0) or (current_position < 0 and actualAmount > 0):
+            # Flipping logic
+            flip_proceeds = abs(current_position) * actualPrice
+            self.Wallet['Wallet'][quote] += flip_proceeds  # Cover the existing position
+            self.Wallet['Wallet'][base] = 0  # Clear the existing position
+            
+            # Open the new position with the amount provided
+            new_position_cost = abs(actualAmount) * actualPrice * (1 + fee_rate)
+            if self.Wallet['Wallet'][quote] < new_position_cost:
+                self.Wallet['Enabled'] = 'N'
+                return 'Account Liquidated!'
+            
+            self.Wallet['Wallet'][quote] -= new_position_cost
+            self.Wallet['Wallet'][base] = actualAmount  # Set the new position with the provided amount
+            
+            # Update fees
+            fee = abs(actualAmount) * actualPrice * fee_rate
+            self.Wallet['Fees'] = self.Wallet.get('Fees', 0) + fee
+            
+            # Record the order
+            order = {
+                'DateTime': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'),
+                'ID': f"{time.time() * 10000000:.0f}",
+                'Action': action,
+                'Asset': asset,
+                base: self.Wallet['Wallet'][base],
+                quote: self.Wallet['Wallet'][quote],
+                'Amount': round(actualAmount, 8),
+                'Price': round(actualPrice, 8),
+                'Fee': round(fee, 8)
+            }
+            JRRsupport.AppendFile(self.history, json.dumps(order) + '\n')
+            return order
+

@@ -258,10 +258,6 @@ def main():
     # If the amount is less then the minimum and action is to close. Sell opens
     # a short position.
 
-    if ReduceOnly==True:
-        if (pBalance>0 and amount<0) or (pBalance<0 and amount>0):
-            relay.JRLog.Error(relay.Exchange, "ReduceOnly mode active, close position first")
-
     if (abs(pBalance)<minimum or abs(pBalance*price)<mincost) \
     and relay.Order['Action'].lower()=='close':
         relay.JRLog.Error(relay.Exchange, "not enough to close position")
