@@ -1,0 +1,28 @@
+#!/bin/python3
+
+import sys
+import json
+
+def main():
+    if len(sys.argv) != 2:
+        print("Usage: python script.py <key_name>")
+        sys.exit(1)
+
+    key_name = sys.argv[1]
+
+    for line in sys.stdin:
+        try:
+            data = json.loads(line.strip())
+            if 'Order' in data and type(data['Order'])==str:
+                data = json.loads(data['Order'])
+            else:
+                data=data['Order']
+            if key_name in data:
+                print(data[key_name])
+            else:
+                print(f"Key '{key_name}' not found in JSON object")
+        except json.JSONDecodeError as e:
+            print(f"Invalid JSON: {e}")
+
+if __name__ == "__main__":
+    main()

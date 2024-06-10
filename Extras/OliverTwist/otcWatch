@@ -232,7 +232,7 @@ def main():
                 slPips=""
                 if sl!=0:
                     slPips=f"({Order['StopLoss']})"
-                print(f"{id:10} {Order['Asset']:10} {sl:.5f} {slPips:<5} {tprice:.5f}({price:.5f}) {tp:.5f} {tpPips:<5} {rpl:.5f} {abs(amount):4.0f} {dir} {duration}")
+                print(f"{id:10} {Order['Asset']:10} {sl:.5f} {slPips:<5} {tprice:.5f}({price:.5f}) {tp:.5f} {tpPips:<5} {rpl: .5f} {abs(amount):4.0f} {dir} {duration}")
     else:
         print("No conditional orders yet.")
         sys.exit(0)

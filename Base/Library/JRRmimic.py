@@ -245,53 +245,6 @@ class mimic:
     def GetOpenTrades(self,**kwargs):
         pass
 
-    # Liquidate a wallet, used for position flipping.
-
-    def LiquidateWallet(self,asset,fee_rate=0):
-        base,quote=asset.split('/')
-        if ':' in asset:
-            quote=asset.split(':')[1]
-            if '-' in quote:
-                quote=quote.split('-')[0]
-
-        # Liquidate base value
-        amount=self.Wallet['Wallet'][base]
-        self.Wallet['Wallet'][base]=0
-
-        ticker=self.Broker.GetTicker(symbol=asset)
-        if amount<0:
-            actualPrice=min(ticker['Bid'],ticker['Ask'])-ticker['Spread']   # Short
-        else:
-            actualPrice=max(ticker['Bid'],ticker['Ask'])+ticker['Spread']   # Long
-
-        # Fees WILL be paid no watter what.
-        fee=round(abs(amount) * actualPrice * fee_rate,8)
-        if 'Fees' in self.Wallet['Wallet']:
-            self.Wallet['Fees']+=fee
-        else:
-            self.Wallet['Fees']=fee  # Initialize fee balance if not present
-
-        total_proceeds=round(abs(amount) * actualPrice * (1 - fee_rate),8)
-        # Add the total proceeds minus fees to the quote currency balance
-        if quote in self.Wallet['Wallet']:
-            self.Wallet['Wallet'][quote]+=total_proceeds
-        else:
-            self.Wallet['Wallet'][quote]=total_proceeds  # Initialize quote currency balance if not present
-
-        # Update successful
-        order={}
-        order['DateTime']=(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
-        order['ID']=f"{time.time()*10000000:.0f}"
-        order['Action']='sell'
-        order['Asset']=asset
-        order[base]=self.Wallet['Wallet'][base]
-        order[quote]=self.Wallet['Wallet'][quote]
-        order['Amount']=round(amount,8)
-        order['Price']=round(actualPrice,8)
-        order['Fee']=round(fee,8)
-        JRRsupport.AppendFile(self.history,json.dumps(order)+'\n')
-        return order
-
     # Manage the wallet. This is where the dirty side of Mimic takes place.
 
     # if b>0, a>0: b+=a, q-=a
@@ -346,18 +299,29 @@ class mimic:
         # Current fees for this position
         fee=round(abs(actualAmount) * actualPrice * fee_rate,8)
 
-        if action=='buy':
+        if action=='flip':
+            # This is going to be and has been an absolute nightmare. I may have to bring in the "flip"
+            # command directly as a major subpart. The issue comes when you DON'T want to flip, but only
+            # subtract. A separe flip command would provide an explicit acction point that separates out the
+            # subtraction versus flipping motion.
+
             # Handle position flipping
             current_position = self.Wallet['Wallet'].get(base, 0)
 
-            if (current_position > 0 and actualAmount < 0) or (current_position < 0 and actualAmount > 0):
+            if abs(actualAmount)>abs(current_position) \
+            and ((current_position>0 and actualAmount<0) or (current_position<0 and actualAmount>0)):
+                self.Log.Write(f"Wallet Tracer 1, current_position: {current_position}")
+                self.Log.Write(f"Wallet Tracer 2, actualAmount: {actualAmount}")
+                self.Log.Write(f"Wallet Tracer 3, actualPrice: {actualPrice}")
                 # Flipping logic
                 flip_proceeds = abs(current_position) * actualPrice
                 self.Wallet['Wallet'][quote] += flip_proceeds  # Cover the existing position
                 self.Wallet['Wallet'][base] = 0  # Clear the existing position
+                self.Log.Write(f"Wallet Tracer 4, flip_proceeds: {flip_proceeds}")
 
                 # Open the new position with the amount provided
                 new_position_cost = abs(actualAmount) * actualPrice * (1 + fee_rate)
+                self.Log.Write(f"Wallet Tracer 5, new_position_cost: {new_position_cost}")
                 if self.Wallet['Wallet'][quote] < new_position_cost:
                     self.Wallet['Enabled'] = 'N'
                     return 'Account Liquidated!'
@@ -386,7 +350,7 @@ class mimic:
 
                 JRRsupport.AppendFile(self.history, json.dumps(order) + '\n')
                 return order
-
+        elif action=='buy':
             # Handle regular buying.
             # Check if the wallet has enough balance for the purchase including fees
             if quote in self.Wallet['Wallet'] and self.Wallet['Wallet'][quote]>=total_cost:
