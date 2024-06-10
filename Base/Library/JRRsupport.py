@@ -754,11 +754,14 @@ def ElasticSleep(s,Fuzzy=True):
         n=os.getpriority(os.PRIO_PROCESS,0)
 
         # if load is greater then the number of cpus, the renice to the lowest priority
-        if d>c:
+        if d>=c:
             renice(n+1)
         else:
             if n>MasterNice:
                 renice(n-1)
+
+        # Give up slice to kernal
+        os.sched_yield()
 
         # Convert lo into seconds
 
@@ -775,7 +778,6 @@ def ElasticSleep(s,Fuzzy=True):
         time.sleep(s+delay+throttle)
     else:
         time.sleep(s)
-
 
 # Returns milliseconds
 
