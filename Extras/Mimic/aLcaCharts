@@ -77,7 +77,7 @@ def plot_trading_data(trading_data,account,base,quot):
     
     plt.tight_layout()
 #    plt.show()
-    plt.savefig(f'{chartDir}alCaChart.mimic.{account}.{base}{quote}.png')
+    plt.savefig(f'{chartDir}aLcaChart.mimic.{account}.{base}{quote}.png')
     plt.close()
 
 # Sample data input
