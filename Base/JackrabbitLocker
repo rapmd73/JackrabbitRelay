@@ -28,7 +28,7 @@ import json
 
 import JRRsupport
 
-Version="0.0.0.1.875"
+Version="0.0.0.1.900"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
 LogDirectory="/home/JackrabbitRelay2/Logs"
@@ -62,9 +62,12 @@ def WriteLog(addr,msg):
 
 # Convience to build the status and a json payload
 
-def jsonStatus(str,Tag=None,Data=None):
+def jsonStatus(str,id=None,Tag=None,Data=None):
     res={}
     res['Status']=str
+
+    if id!=None:
+        res['ID']=id
 
     if Tag!=None and Data!=None:
         res[Tag]=Data
@@ -114,16 +117,16 @@ def ProcessPayload(data):
                 dataLock['ID']=dataDB['ID']
                 dataLock['Expire']=time.time()+float(dataDB['Expire'])
                 Locker[FileName]=dataLock
-                return jsonStatus("Locked")
+                return jsonStatus("Locked",Locker[FileName]['ID'])
             # Lock has expired, now unlocked
             elif time.time()>Locker[FileName]['Expire']:
-                Locker[FileName]['ID']=dataDB['ID']
+                Locker[FileName]['ID']=dataDB['ID'] # assign the new ID
                 Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
-                return jsonStatus("Locked")
+                return jsonStatus("Locked",Locker[FileName]['ID'])
             # The current owner wwant the lock reset to a specific duration/held longer
             elif Locker[FileName]['ID']==dataDB['ID']:
                 Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
-                return jsonStatus("Locked")
+                return jsonStatus("Locked",Locker[FileName]['ID'])
             # Lock access by a non-owner ID
             else:
                 return jsonStatus("NotOwner")
@@ -135,11 +138,11 @@ def ProcessPayload(data):
             # Verify owner and unlock
             elif Locker[FileName]['ID']==dataDB['ID']:
                 Locker[FileName]['Expire']=0
-                return jsonStatus("Unlocked")
+                return jsonStatus("Unlocked",Locker[FileName]['ID'])
             # Unock access by a non-owner ID. This may seem idiotic, but its an
             # absolute for keeping the lock from being hijacked.
             else:
-                return jsonStatus("Failure")
+                return jsonStatus("NotOwner")
         # Get memory reference
         elif action=='get':
             # Memory item doesn't exist
@@ -148,9 +151,9 @@ def ProcessPayload(data):
             # Verify owner and unlock/Erase memory
             elif Locker[FileName]['ID']==dataDB['ID']:
                 if 'DataStore' in Locker[FileName]:
-                    return jsonStatus("Done",Tag="DataStore",Data=Locker[FileName]['DataStore'])
+                    return jsonStatus("Done",Locker[FileName]['ID'],Tag="DataStore",Data=Locker[FileName]['DataStore'])
                 else:
-                    return jsonStatus("NoData")
+                    return jsonStatus("NoData",Locker[FileName]['ID'])
             # Not the rightful owner
             else:
                 return jsonStatus("NotOwner")
@@ -162,12 +165,12 @@ def ProcessPayload(data):
                 dStore['Expire']=time.time()+float(dataDB['Expire'])
                 dStore['DataStore']=dataDB['DataStore']
                 Locker[FileName]=dStore
-                return jsonStatus("Done")
+                return jsonStatus("Done",Locker[FileName]['ID'])
             # Existing memory object, verify owner and reset expiration timeout
             elif Locker[FileName]['ID']==dataDB['ID']:
                 Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
                 Locker[FileName]['DataStore']=dataDB['DataStore']
-                return jsonStatus("Done")
+                return jsonStatus("Done",Locker[FileName]['ID'])
             # Not the rightful owner
             else:
                 return jsonStatus("NotOwner")
@@ -175,13 +178,13 @@ def ProcessPayload(data):
         elif action=='erase':
             # Just pass through erase
             if FileName not in Locker:
-                return jsonStatus("Done")
+                return jsonStatus("Done",Locker[FileName]['ID'])
             # Verify owner and erase memory. Erase is just resetting expiration to 0.
             # Will be remove in main function.
             elif Locker[FileName]['ID']==dataDB['ID']:
                 Locker[FileName]['Expire']=0
                 Locker[FileName]['DataStore']=None
-                return jsonStatus("Done")
+                return jsonStatus("Done",Locker[FileName]['ID'])
             # Not the rightful owner
             else:
                 return jsonStatus("NotOwner")
