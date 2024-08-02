@@ -83,6 +83,9 @@ def main():
     openTrades={}
     tpl=0
     tlen=0
+    tmused=0
+
+    oanda=False
 
     relay=None
     ticker=None
@@ -182,6 +185,7 @@ def main():
 
                 print(f"{id} {Order['Asset']:14} {sl:.8f} {slPips:<5} {tprice:.8f}({price:.8f}) {tp:.8f} {tpPips:<5} {abs(amount):.8f} {dir}  {duration}")
             elif Data['Framework']=='oanda':
+                oanda=True
                 Resp=Data['Response']
                 id=Data['ID']
 
@@ -210,6 +214,7 @@ def main():
                         price=float(cur['price'])
                         amount=float(cur['currentUnits'])
                         rpl=float(cur['unrealizedPL'])
+                        mused=float(cur['marginUsed'])
                         break
 
                 if not found:
@@ -225,6 +230,7 @@ def main():
                     tprice=ticker['Ask']
 
                 tpl+=rpl
+                tmused+=mused
 
                 tp=round(CalculatePriceExit(Order,'TakeProfit',dir,price),5)
                 sl=round(CalculatePriceExit(Order,'StopLoss',dir,price),5)
@@ -232,7 +238,7 @@ def main():
                 slPips=""
                 if sl!=0:
                     slPips=f"({Order['StopLoss']})"
-                print(f"{id:10} {Order['Asset']:10} {sl:.5f} {slPips:<5} {tprice:.5f}({price:.5f}) {tp:.5f} {tpPips:<5} {rpl: .5f} {abs(amount):4.0f} {dir} {duration}")
+                print(f"{id:10} {Order['Asset']:10} {sl:.5f} {slPips:<5}/{abs(tprice-sl):.5f} {tprice:.5f}({price:.5f}) {tp:.5f} {tpPips:<5}/{abs(tprice-tp):.5f} {rpl: 9.5f} {abs(amount):4.0f} {mused:9.5f} {dir.upper()[0]} {duration}")
     else:
         print("No conditional orders yet.")
         sys.exit(0)
@@ -240,6 +246,8 @@ def main():
     if tpl!=0:
         print()
         print(f"Current Trades/PNL: {tlen}/{tpl:.5f}")
+        if oanda:
+            print(f"Margin Used: {tmused:.5f}")
 
 if __name__ == '__main__':
     main()

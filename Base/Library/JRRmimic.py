@@ -45,7 +45,7 @@ class mimic:
     #   placed in init and released at exit.
 
     def __init__(self,Exchange,Config,Active,DataDirectory=None):
-        self.Version="0.0.0.1.875"
+        self.Version="0.0.0.1.900"
 
         self.StableCoinUSD=['USDT','USDC','BUSD','UST','DAI','FRAX','TUSD', \
                 'USDP','LUSD','USDN','HUSD','FEI','TRIBE','RSR','OUSD','XSGD', \
@@ -299,7 +299,9 @@ class mimic:
         # Current fees for this position
         fee=round(abs(actualAmount) * actualPrice * fee_rate,8)
 
+        """
         if action=='flip':
+            print("Alpha")
             # This is going to be and has been an absolute nightmare. I may have to bring in the "flip"
             # command directly as a major subpart. The issue comes when you DON'T want to flip, but only
             # subtract. A separe flip command would provide an explicit acction point that separates out the
@@ -308,20 +310,23 @@ class mimic:
             # Handle position flipping
             current_position = self.Wallet['Wallet'].get(base, 0)
 
+            # The difficulties here are that this rule determina a flip... IF and ONLY if position size is >
+            # balance. There is a direct fallacy here though.
+
             if abs(actualAmount)>abs(current_position) \
             and ((current_position>0 and actualAmount<0) or (current_position<0 and actualAmount>0)):
-                self.Log.Write(f"Wallet Tracer 1, current_position: {current_position}")
-                self.Log.Write(f"Wallet Tracer 2, actualAmount: {actualAmount}")
-                self.Log.Write(f"Wallet Tracer 3, actualPrice: {actualPrice}")
+                print(f"Wallet Tracer 1, current_position: {current_position}")
+                print(f"Wallet Tracer 2, actualAmount: {actualAmount}")
+                print(f"Wallet Tracer 3, actualPrice: {actualPrice}")
                 # Flipping logic
                 flip_proceeds = abs(current_position) * actualPrice
                 self.Wallet['Wallet'][quote] += flip_proceeds  # Cover the existing position
                 self.Wallet['Wallet'][base] = 0  # Clear the existing position
-                self.Log.Write(f"Wallet Tracer 4, flip_proceeds: {flip_proceeds}")
+                print(f"Wallet Tracer 4, flip_proceeds: {flip_proceeds}")
 
                 # Open the new position with the amount provided
                 new_position_cost = abs(actualAmount) * actualPrice * (1 + fee_rate)
-                self.Log.Write(f"Wallet Tracer 5, new_position_cost: {new_position_cost}")
+                print(f"Wallet Tracer 5, new_position_cost: {new_position_cost}")
                 if self.Wallet['Wallet'][quote] < new_position_cost:
                     self.Wallet['Enabled'] = 'N'
                     return 'Account Liquidated!'
@@ -350,7 +355,8 @@ class mimic:
 
                 JRRsupport.AppendFile(self.history, json.dumps(order) + '\n')
                 return order
-        elif action=='buy':
+        """
+        if action=='buy':
             # Handle regular buying.
             # Check if the wallet has enough balance for the purchase including fees
             if quote in self.Wallet['Wallet'] and self.Wallet['Wallet'][quote]>=total_cost:

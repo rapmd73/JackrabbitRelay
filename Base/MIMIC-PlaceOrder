@@ -269,6 +269,7 @@ def main():
         relay.Order['Action']='sell'
         amount=pBalance
     elif relay.Order['Action'].lower()=='flip':
+        relay.Order['Action']='buy'
         pchg=amount-pBalance
         if pBalance>0 and amount<0:
             amount=-abs(pchg)

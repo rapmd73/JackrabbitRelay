@@ -22,9 +22,9 @@
 
 # ANY order (direct orphan or conditional) is an ORPHAN at all times withis THIS framework.
 
-# IMPORTANT: This fraework treats conditionals the same as orphans. The separation and distinction takes place in the
-# transactor. While this has plenty of issues to be aware of, it is the most effecient way of handling the situation since at
-# this level (dispatcher), they are syntactically the same.
+# IMPORTANT: This fraework treats conditionals the same as orphans. The separation and distinction takes
+# place in the transactor. While this has plenty of issues to be aware of, it is the most effecient way of
+# handling the situation since at this level (dispatcher), they are syntactically the same.
 
 # Framework identification, along with any other order verification, is done in the PlaceOrder
 
@@ -32,6 +32,7 @@ import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
 import importlib
+from datetime import datetime
 import time
 import json
 import random
@@ -40,7 +41,7 @@ import subprocess
 import JRRsupport
 import JackrabbitRelay as JRR
 
-Version="0.0.0.1.875"
+Version="0.0.0.1.900"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -387,6 +388,7 @@ def main():
     ReceiveOrphans('Conditional')
 
     while True:
+        StartTime=datetime.now()
         ReceiveOrphans()
 
         # Dynamic factor for memory timeouts
@@ -408,6 +410,11 @@ def main():
 
             while interceptor.GetChildren()>(NumberProcesses-1):
                 JRRsupport.ElasticSleep(1)
+
+        EndTime=datetime.now()
+        Elapsed=(EndTime-StartTime)
+        if len(keyList)>NumberProcesses:
+            JRLog.Write(f"{len(keyList)} orders scanned in "+str(Elapsed)+" seconds")
 
         JRRsupport.ElasticSleep(1)
 
