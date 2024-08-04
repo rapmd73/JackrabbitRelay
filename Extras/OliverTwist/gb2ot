@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import time
+import datetime
+import json
+
+import JRRsupport
+import JackrabbitRelay as JRR
+
+# Oliver Twist log
+# 2024-08-01 06:35:32.669979  476486 88557 -> 88528 Prft short, 71.0: 1.08271 -> 1.081480/0.08730, 4:36:21.447434
+
+chartDir='/home/JackrabbitRelay2/Data/Charts/'
+
+# Initialize global signal interceptor. prevent file trashing on CTRL-C
+
+Log=JRR.JackrabbitLog()
+interceptor=JRRsupport.SignalInterceptor(Log=Log)
+
+###
+### Main code base.
+###
+
+if len(sys.argv)<2:
+    print("At least one OANDA gridbot version 2 log file is required.")
+    sys.exit(1)
+
+entry={}
+relay={}
+lines={}
+orderList={}
+
+# Copy arg list
+
+if len(sys.argv)<2:
+    print("You must specify either (I)mage or (H)tml for output type as the first argumrnt.")
+    print("A version 2 grid bot log must be specified as the swecond argument")
+    sys.exit(1)
+
+gblog=sys.argv[1]
+
+# Remove sys arg list
+
+for i in range(1,len(sys.argv)):
+    sys.argv.remove(sys.argv[1])
+
+# Read the log file
+
+data=gblog.split('.')
+
+account=data[2]
+asset=data[3]
+
+# Add the /
+pair=data[3][:3]+'/'+data[3][3:]
+relay=JRR.JackrabbitRelay(framework='oanda',exchange=data[1],account=data[2],asset=pair)
+lines=JRRsupport.ReadFile(gblog).strip().split('\n')
+
+# Get the order IDs and read them into a dictionary.
+
+oList=[]
+nList=[]
+nLines=[]
+
+for line in lines:
+    if line=='' or ('Sell' not in line and 'ReduceBy' not in line and 'StopLoss' not in line and 'Buy' not in line):
+        continue
+
+    data=line.split(' ')
+    while '' in data:
+        data.remove('')
+
+    if 'Buy' in line:
+        oid=str(int(data[6])+1)
+        ol={}
+        ol['time']=' '.join(data[0:2])
+        ol['price']=float(data[8].replace('@',''))
+        ol['pl']=0.0
+        orderList[oid]=ol
+
+    if 'Sell' in line or 'ReduceBy' in line or 'StopLoss' in line:
+        oid=str(data[7])
+        ol={}
+        ol['time']=' '.join(data[0:2])
+        ol['units']=float(data[9])
+        ol['price']=float(data[10].replace('@',''))
+        ol['pl']=float(data[12])
+        orderList[oid]=ol
+
+# Plot trades
+
+for line in lines:
+    if line=='' or ('Sell' not in line and 'ReduceBy' not in line and 'StopLoss' not in line):
+        continue
+
+    data=line.split(' ')
+    while '' in data:
+        data.remove('')
+
+    # Sell/ReduceBy/StopLoss
+    action=data[8]
+
+    # purchase ID
+    pid=data[4]
+    # desposition ID
+    nid=data[7]
+
+    if pid not in orderList or nid not in orderList:
+        continue
+
+    pOrder=orderList[pid]
+    nOrder=orderList[nid]
+
+    bTime=orderList[pid]['time']
+    bPrice=float(orderList[pid]['price'])
+
+    sTime=orderList[nid]['time']
+    sPrice=float(orderList[nid]['price'])
+    units=float(orderList[nid]['units'])
+    rpl=float(orderList[nid]['pl'])             # >0 is profit, else loss
+
+#    parts=bTime.split('.')
+#    dsS=f"{parts[0]}.{parts[1][:6]}Z"
+    ds=datetime.datetime.strptime(bTime,'%Y-%m-%d %H:%M:%S.%f')
+
+#    parts=sTime.split('.')
+#    deS=f"{parts[0]}.{parts[1][:6]}Z"
+    de=datetime.datetime.strptime(sTime,'%Y-%m-%d %H:%M:%S.%f')
+    duration=de-ds
+
+# 2024-08-01 06:35:32.669979  476486 88557 -> 88528 Prft short, 71.0: 1.08271 -> 1.081480/0.08730, 4:36:21.447434
+    if rpl>=0:
+        LogMSG=f"{sTime} {os.getpid():7} {pid} -> {nid} Prft Shrt, {units}: {bPrice:.5f} -> {sPrice:5f}/{abs(rpl):.5f}, {duration}"
+    else:
+        LogMSG=f"{sTime} {os.getpid():7} {pid} -> {nid} Loss Shrt, {units}: {bPrice:.5f} -> {sPrice:5f}/{abs(rpl):.5f}, {duration}"
+    print(LogMSG)

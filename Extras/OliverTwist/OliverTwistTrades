@@ -112,7 +112,7 @@ print("Phase 2: making the chart")
 # Plot trades
 
 for line in lines:
-    if line=='' or ('Prft' not in line and 'Loss' not in line):
+    if line=='' or ('Prft' not in line and 'Loss' not in line and 'Rduc' not in line):
         continue
 
     data=line.split(' ')
@@ -151,6 +151,8 @@ for line in lines:
         col="rgba(128,128,0,1)"
     elif action.lower()=='prft' and rpl<0:      # Loss by slippage
         col="rgba(255,128,0,0.5)"
+    elif action.lower()=='rduc':                # ReduceBy
+        col="rgba(0,255,255,0.01)"
     elif action.lower()=='loss':                # Stoploss
         col="rgba(128,0,0,0.5)"
     else:
