@@ -137,78 +137,85 @@ def ReduceLotSize(relay,pair,val):
 
 # Process a single order and log it. Handles bot profit and loss.
 
-def ProcessOrder(relay,cid,strikePrice,ds):
-    # Get the action
-    saction=relay.Order['SellAction'].lower()
-    # Get the direction of the trade, long/short
-    dir=relay.Order['Direction'].lower()
-    # Build "strike" order. TakeProfit or StopLoss has been triggered
-    newOrder={}
-    newOrder['OliverTwist']='Conditional'
-    newOrder['Exchange']=relay.Order['Exchange']
-    newOrder['Account']=relay.Order['Account']
-    newOrder['Asset']=relay.Order['Asset']
-    newOrder['Action']=relay.Order['SellAction'].lower()
-    if 'EnforceFIFO' in relay.Order:
-        newOrder['EnforceFIFO']=relay.Order['EnforceFIFO']
-    newOrder['Price']=str(strikePrice)
-    if saction=='close':
-        # Set trade polarity
-        if dir=='long':
-            newOrder['Units']='ALL'
+def ProcessOrder(relay,cid,price,strikePrice,ds):
+    try:
+        # Get the action
+        saction=relay.Order['SellAction'].lower()
+        # Get the direction of the trade, long/short
+        dir=relay.Order['Direction'].lower()
+        units=relay.Order['Units']
+
+        # Build "strike" order. TakeProfit or StopLoss has been triggered
+        newOrder={}
+        newOrder['OliverTwist']='Conditional'
+        newOrder['Exchange']=relay.Order['Exchange']
+        newOrder['Account']=relay.Order['Account']
+        newOrder['Asset']=relay.Order['Asset']
+        newOrder['Action']=relay.Order['SellAction'].lower()
+        if 'EnforceFIFO' in relay.Order:
+            newOrder['EnforceFIFO']=relay.Order['EnforceFIFO']
+        newOrder['Price']=str(strikePrice)
+        if saction=='close':
+            # Set trade polarity
+            if dir=='long':
+                newOrder['Units']='ALL'
+            else:
+                newOrder['Units']='-ALL'
         else:
-            newOrder['Units']='-ALL'
-    else:
-        newOrder['Units']=relay.Order['Units']
-        newOrder['Ticket']=str(cid)
-    if 'OrderType' in relay.Order:
-        newOrder['OrderType']=relay.Order['OrderType']
-    else:
-        newOrder['OrderType']='market'
-
-    newOrder['Identity']=relay.Active['Identity']
-
-    # Feed the new order to Relay
-    result=relay.SendWebhook(newOrder)
-    oid=relay.GetOrderID(result)
-    if oid!=None:
-        orderDetail=relay.GetOrderDetails(OrderID=oid)
-
-        # find trade close time and  duration
-        parts=orderDetail[0]['time'].split('.')
-        deS=f"{parts[0]}.{parts[1][:6]}Z"
-        de=datetime.datetime.strptime(deS,'%Y-%m-%dT%H:%M:%S.%fZ')
-        duration=de-ds
-
-        rpl=float(orderDetail[-1]['pl'])
-        sprice=float(orderDetail[-1]['price'])
-
-        # rpl is reported by broker. This is the actual profit/loss of trade.
-        if rpl>=0:
-            LogMSG=f"{oid} -> {cid} Prft {dir}, {units}: {price:.5f} -> {sprice:5f}/{abs(rpl):.5f}, {duration}"
+            newOrder['Units']=relay.Order['Units']
+            newOrder['Ticket']=str(cid)
+        if 'OrderType' in relay.Order:
+            newOrder['OrderType']=relay.Order['OrderType']
         else:
-            LogMSG=f"{oid} -> {cid} Loss {dir}, {units}: {price:.5f} -> {sprice:5f}/{abs(rpl):.5f}, {duration}"
-        relay.JRLog.Write(f"{LogMSG}",stdOut=False)
+            newOrder['OrderType']='market'
 
-        if rpl>0:
-            # Don't reduce if we have a loss
+        newOrder['Identity']=relay.Active['Identity']
 
-            if 'ReduceBy' in relay.Active:
-                val=abs(int(relay.Active['ReduceBy']))
-                if val>0:
-                    ReduceLotSize(relay,relay.Order['Asset'],val)
-            elif 'ReduceBy' in relay.Order:
-                val=abs(int(relay.Order['ReduceBy']))
-                if val>0:
-                    ReduceLotSize(relay,relay.Order['Asset'],val)
+        # Feed the new order to Relay
+        result=relay.SendWebhook(newOrder)
+        oid=relay.GetOrderID(result)
+        if oid!=None:
+            orderDetail=relay.GetOrderDetails(OrderID=oid)
 
-        # Order must be closed as it succedded
-        newOrder['ID']=oid
-        relay.WriteLedger(Order=newOrder,Response=None)
-        return 'Delete'
-    else:
-        # Give OliverTwist a response
-        relay.JRLog.Write(f"{id} -> {cid}: Order failed with {relay.GetFailedReason(result)}",stdOut=False)
+            # find trade close time and  duration
+            parts=orderDetail[0]['time'].split('.')
+            deS=f"{parts[0]}.{parts[1][:6]}Z"
+            de=datetime.datetime.strptime(deS,'%Y-%m-%dT%H:%M:%S.%fZ')
+            duration=de-ds
+
+            rpl=float(orderDetail[-1]['pl'])
+            sprice=float(orderDetail[-1]['price'])
+
+            # rpl is reported by broker. This is the actual profit/loss of trade.
+            if rpl>=0:
+                LogMSG=f"{oid} -> {cid} Prft {dir}, {units}: {price:.5f} -> {sprice:5f}/{abs(rpl):.5f}, {duration}"
+            else:
+                LogMSG=f"{oid} -> {cid} Loss {dir}, {units}: {price:.5f} -> {sprice:5f}/{abs(rpl):.5f}, {duration}"
+            relay.JRLog.Write(f"{LogMSG}",stdOut=False)
+
+            if rpl>0:
+                # Don't reduce if we have a loss
+
+                if 'ReduceBy' in relay.Active:
+                    val=abs(int(relay.Active['ReduceBy']))
+                    if val>0:
+                        ReduceLotSize(relay,relay.Order['Asset'],val)
+                elif 'ReduceBy' in relay.Order:
+                    val=abs(int(relay.Order['ReduceBy']))
+                    if val>0:
+                        ReduceLotSize(relay,relay.Order['Asset'],val)
+
+            # Order must be closed as it succedded
+            newOrder['ID']=oid
+            relay.WriteLedger(Order=newOrder,Response=None)
+            return 'Delete'
+        else:
+            # Give OliverTwist a response
+            relay.JRLog.Write(f"{id} -> {cid}: Order failed with {relay.GetFailedReason(result)}",stdOut=False)
+            return 'Waiting'
+    except Exception as e:
+        # Something broke or went horrible wrong
+        relay.JRLog.Write(f"ProcessOrder: {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
         return 'Waiting'
 
 ###
@@ -338,7 +345,7 @@ def OrderProcessor(Orphan):
                     StrikeHappened=True
 
             if StrikeHappened==True:
-                return ProcessOrder(relay,cid,strikePrice,ds)
+                return ProcessOrder(relay,cid,price,strikePrice,ds)
             else:
                 # Strike did not happen
                 return 'Waiting'
