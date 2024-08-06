@@ -137,13 +137,12 @@ def ReduceLotSize(relay,pair,val):
 
 # Process a single order and log it. Handles bot profit and loss.
 
-def ProcessOrder(relay,cid,price,strikePrice,ds):
+def ProcessOrder(relay,cid,units,price,strikePrice,ds):
     try:
         # Get the action
         saction=relay.Order['SellAction'].lower()
         # Get the direction of the trade, long/short
         dir=relay.Order['Direction'].lower()
-        units=relay.Order['Units']
 
         # Build "strike" order. TakeProfit or StopLoss has been triggered
         newOrder={}
@@ -345,7 +344,7 @@ def OrderProcessor(Orphan):
                     StrikeHappened=True
 
             if StrikeHappened==True:
-                return ProcessOrder(relay,cid,price,strikePrice,ds)
+                return ProcessOrder(relay,cid,units,price,strikePrice,ds)
             else:
                 # Strike did not happen
                 return 'Waiting'
