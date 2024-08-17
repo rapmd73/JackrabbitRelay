@@ -18,12 +18,67 @@ import plotly.subplots as ps
 import JRRsupport
 import JackrabbitRelay as JRR
 
-chartDir='/home/JackrabbitRelay2/Data/Charts/'
-
 # Initialize global signal interceptor. prevent file trashing on CTRL-C
 
 Log=JRR.JackrabbitLog()
 interceptor=JRRsupport.SignalInterceptor(Log=Log)
+
+# Directories
+
+DataDirectory='/home/JackrabbitRelay2/Data'
+chartDir=DataDirectory+'/Charts/'
+Storehouse=DataDirectory+'/OliverTwist.Storehouse'
+
+# For reading the storehouse
+
+OliverTwistLock=JRRsupport.Locker("OliverTwist")
+
+# Read the store house and return a list of the open orders being tracked.
+
+def ReadStorehouse(exchange,account,asset):
+    global OliverTwistLock
+
+    OrphanList=[]
+
+    WorkingStorehouse=Storehouse
+
+    while OliverTwistLock.Lock()!='locked':
+        JRRsupport.ElasticSleep(1)
+
+    if os.path.exists(WorkingStorehouse):
+        buffer=JRRsupport.ReadFile(WorkingStorehouse).strip()
+        if buffer!=None and buffer!='':
+            Orphans=buffer.split('\n')
+            for Entry in Orphans:
+                # Force set InMotion to False
+                Entry=Entry.strip()
+                if Entry=='':
+                    continue
+                # Break down entry and set up memory locker
+                try:
+                    Orphan=Entry
+                    while type(Orphan)==str:
+                        Orphan=json.loads(Orphan)
+                except:
+                    JRLog.Write(f"Broken: {Entry}")
+                    continue
+
+                if 'Order' in Orphan:
+                    if type(Orphan['Order'])==str:
+                        order=json.loads(Orphan['Order'])
+                        order.pop('Identity',None)
+                        Orphan['Order']=order
+                if 'Detail' in Orphan:
+                    if type(Orphan['Detail'])==str:
+                        detail=json.loads(Orphan['Detail'])
+                        detail.pop('Identity',None)
+                        Orphan['Detail']=detail
+
+                if Orphan['Order']['Exchange']==exchange and Orphan['Order']['Account']==account and Orphan['Order']['Asset']==asset:
+                    OrphanList.append(Orphan)
+
+    OliverTwistLock.Unlock()
+    return OrphanList
 
 # Find start date fom ending data an duration
 
@@ -43,7 +98,6 @@ def FindStartDateTime(end_date_str, duration_str):
     # Display start date in the same format as end date
     start_date_formatted = start_date.strftime('%Y-%m-%d %H:%M:%S.%f')
     return start_date_formatted
-
 
 ###
 ### Main code base.
@@ -86,10 +140,47 @@ if len(data)==5:
     pair=data[3][:3]+'/'+data[3][3:]
 else:
     asset=data[4]
-    pair=data[3]+'/'+data[4]
+    pair=data[4][:3]+'/'+data[4][3:]
 
-#relay=JRR.JackrabbitRelay(framework='oanda',exchange=data[1],account=data[2],asset=pair)
+# For Mimic, use the Details section to get the Price
+
+OpenOrders=ReadStorehouse(exchange,account,pair)
+if OpenOrders!=[]:
+    OpenOrderDT=datetime.datetime.strptime(OpenOrders[0]['DateTime'], '%Y-%m-%d %H:%M:%S.%f')
+    OpenEpoch=int(time.mktime(OpenOrderDT.timetuple()))
+
+    # Get ending date for lines
+
+    EndOrderDate=str(datetime.datetime.now())
+    EndOrderDT=datetime.datetime.strptime(EndOrderDate, '%Y-%m-%d %H:%M:%S.%f')
+else:
+    # Needed to ensure StartEpoch is lower if this exchange is NOT oanda
+    OpenOrderDT=datetime.datetime.strptime(str(datetime.datetime.now()), '%Y-%m-%d %H:%M:%S.%f')
+    OpenEpoch=int(time.mktime(OpenOrderDT.timetuple()))
+
+# Read log file
+
 lines=JRRsupport.ReadFile(gblog).strip().split('\n')
+
+# Figure out first DT in log
+
+StartDate=lines[0].split(' ')[0]
+StartDT=datetime.datetime.strptime(StartDate, '%Y-%m-%d')
+StartEpoch=int(time.mktime(StartDT.timetuple()))
+
+# Get the oldest DT
+
+OldestEpoch=min(OpenEpoch,StartEpoch)
+
+ohlcv=[]
+relay=JRR.JackrabbitRelay(framework='oanda',exchange=data[1],account=data[2],asset=pair)
+for tf in relay.Timeframes:
+    ohlcv=relay.GetOHLCV(symbol=pair,timeframe=tf,limit=5000)
+    firstCandle=ohlcv[0][0]/1000
+    if firstCandle<OldestEpoch:
+        break
+
+ChartTF=tf
 
 # Make the chart inline to reading the data. Large numbers of orders will break web browsers.
 # Chart header
@@ -100,14 +191,53 @@ else:
     fn=chartDir+f'Trades.{exchange}.{account}.{asset}.png'
 
 en=exchange
-ts=f"OliverTwist Trades: {account} - {pair}"
+ts=f"OliverTwist Trades: {account} - {pair} ({ChartTF})"
 
 fig1=ps.make_subplots(specs=[[{"secondary_y":False}]])
 
 # Process the data and produce the graph. This section can use a lot of memory, but it is very fast as the data
 # is loaded already.
 
+#go.Ohlc(x=df['Date'], open=df['AAPL.Open'], high=df['AAPL.High'], low=df['AAPL.Low'], close=df['AAPL.Close'])
+
 print("Phase 2: making the chart")
+
+# Plot candles of timeframe just above log
+
+dt=[]
+do=[]
+dh=[]
+dl=[]
+dc=[]
+for slice in ohlcv:
+    dt.append(datetime.datetime.fromtimestamp(slice[0]/1000))
+    do.append(slice[1])
+    dh.append(slice[2])
+    dl.append(slice[3])
+    dc.append(slice[4])
+fig1.add_trace(go.Candlestick(x=dt,open=do,high=dh,low=dl,close=dc,increasing_line_color='#a0ffff',decreasing_line_color= '#ffa0ff'),secondary_y=False)
+
+# Process open opders for oanda
+
+dt=[]
+dp=[]
+
+for order in OpenOrders:
+    dt=order['DateTime']
+
+    if exchange=='oanda':
+        oDetails=relay.GetOrderDetails(OrderID=order['ID'])[-1]
+        dp=float(oDetails['price'])
+        du=int(oDetails['units'])
+    elif exchange=='mimic':
+        du=float(order['Response']['Details']['Amount'])
+        dp=float(order['Response']['Details']['Price'])
+    else: # CCXT framework fall through
+        du=float(order['Response']['Details']['Amount'])
+        dp=float(order['Response']['Details']['price'])
+
+    htxt=f"{order['ID']}: {du:.0f}@{dp:.5f}"
+    fig1.add_trace(go.Scatter(x=[dt,EndOrderDate],y=[dp,dp],marker_color="rgba(128,128,197,1)",mode='lines',hovertemplate=htxt),secondary_y=False)
 
 # Plot trades
 
@@ -137,13 +267,12 @@ for line in lines:
     sTime=dt
     sPrice=float(data[11].split('/')[0])
 
-    if dir=='long':
-        rpl=(sPrice-bPrice)*amount #float(data[11].split('/')[1].strip(','))
-    else:
-        rpl=(bPrice-sPrice)*amount #float(data[11].split('/')[1].strip(','))
+    # Figure out profit/loss based on price action
 
-#    if action.lower()=='loss':
-#        rpl*=-1
+    if dir=='long':
+        rpl=(sPrice-bPrice)*amount
+    else:
+        rpl=(bPrice-sPrice)*amount
 
     if action.lower()=='prft' and rpl>0:        # Profit
         col="rgba(0,128,0,1)"
@@ -184,6 +313,7 @@ if os.path.exists('/home/JackrabbitRelay2/Data/logo.png'):
         ))
 fig1.update_yaxes(title_text='Price',secondary_y=False)
 fig1.update_layout(title={"text":ts,"x":0.5,"xanchor":"center","yanchor":"top"},template='plotly_white',showlegend=False)
+fig1.update(layout_xaxis_rangeslider_visible=False)
 
 if ih=='h':
     fig1.write_html(fn)

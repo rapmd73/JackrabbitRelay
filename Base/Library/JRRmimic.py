@@ -451,7 +451,7 @@ class mimic:
         if ro==True and self.Wallet['Wallet'][base]!=0:
             if (amount<0 and self.Wallet['Wallet'][base]>0) \
             or (amount>0 and self.Wallet['Wallet'][base]<0):
-                return 'Position direction flipping disabled, close first'
+                self.Log.Error("PlaceOrder",'Position direction flipping disabled, close first')
 
         result=self.UpdateWallet(action,pair,amount,price,Fee)
 
