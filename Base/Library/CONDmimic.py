@@ -204,7 +204,7 @@ def OrderProcessor(Orphan):
             else:
                 # Amount > Balance
                 relay.JRLog.Write(f"{id}: Amount {amount:.8f} > Balance {bal:.8f} {base}, purge",stdOut=False)
-                return 'Delete'
+                return 'Waiting'
         else:
             # Strike did not happen
             return 'Waiting'
