@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+import datetime
+import time
+
+import JRRsupport
+import JackrabbitRelay as JRR
+
+# Return the oldest trade in the list
+
+def GetOldestTrade(relay,pair):
+    openTrades=relay.GetOpenTrades(symbol=pair)
+
+    if openTrades==[]:
+        return None
+
+    # Find the OLDEST entry in the trades for reduction
+    oldestTrade=None
+    oldestTime=time.time()
+    for trade in openTrades:
+        # find trade open time
+        parts=trade['openTime'].split('.')
+        dsS=f"{parts[0]}.{parts[1][:6]}Z"
+        ds=datetime.datetime.strptime(dsS,'%Y-%m-%dT%H:%M:%S.%fZ')
+        ts=ds.timestamp()
+
+        if ts<oldestTime:
+            oldestTime=ts
+            oldestTrade=trade
+
+    return oldestTrade
+
+###
+### Main Driver
+###
+
+relay=JRR.JackrabbitRelay()
+if relay.GetArgsLen() > 3:
+    exchangeName=relay.GetExchange()
+    account=relay.GetAccount()
+    asset=relay.GetAsset()
+else:
+    print("An exchange, (sub)account, and an asset must be provided.")
+    sys.exit(1)
+
+o=GetOldestTrade(relay,asset)
+
+iu=int(o['currentUnits'])
+price=float(o['price'])
+upl=float(o['unrealizedPL'])
+fin=float(o['financing'])
+if iu>=0:
+    side='L'
+else:
+    side='S'
+print(f"{o['openTime']} {o['id']:>7} {side} {abs(iu):4.0f} {price:10.5f} {upl:9.5f} {fin:9.5f}")

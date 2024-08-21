@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+import datetime
+
+import JRRsupport
+import JackrabbitRelay as JRR
+
+# Directories
+
+DataDirectory='/home/JackrabbitRelay2/Data'
+chartDir=DataDirectory+'/Charts/'
+Storehouse=DataDirectory+'/OliverTwist.Storehouse'
+
+# For reading the storehouse
+
+OliverTwistLock=JRRsupport.Locker("OliverTwist")
+
+# Read the store house and return a list of the open orders being tracked.
+
+def ReadStorehouse(exchange,account,asset):
+    global OliverTwistLock
+
+    OrphanList=[]
+
+    WorkingStorehouse=Storehouse
+
+    while OliverTwistLock.Lock()!='locked':
+        JRRsupport.ElasticSleep(1)
+
+    if os.path.exists(WorkingStorehouse):
+        buffer=JRRsupport.ReadFile(WorkingStorehouse).strip()
+        if buffer!=None and buffer!='':
+            Orphans=buffer.split('\n')
+            for Entry in Orphans:
+                # Force set InMotion to False
+                Entry=Entry.strip()
+                if Entry=='':
+                    continue
+                # Break down entry and set up memory locker
+                try:
+                    Orphan=Entry
+                    while type(Orphan)==str:
+                        Orphan=json.loads(Orphan)
+                except:
+                    JRLog.Write(f"Broken: {Entry}")
+                    continue
+
+                if 'Order' in Orphan:
+                    if type(Orphan['Order'])==str:
+                        order=json.loads(Orphan['Order'])
+                        order.pop('Identity',None)
+                        Orphan['Order']=order
+                if 'Detail' in Orphan:
+                    if type(Orphan['Detail'])==str:
+                        detail=json.loads(Orphan['Detail'])
+                        detail.pop('Identity',None)
+                        Orphan['Detail']=detail
+
+                if Orphan['Order']['Exchange']==exchange and Orphan['Order']['Account']==account and Orphan['Order']['Asset']==asset:
+                    OrphanList.append(Orphan)
+
+    OliverTwistLock.Unlock()
+    return OrphanList
+
+    # Create a conditional order and deliver to OliverTwist
+
+def MakeConditionalOrder(id,Order):
+    orphanLock=JRRsupport.Locker("OliverTwist")
+
+    resp=Order['Response']
+    Order.pop('Response',None)
+
+    # Strip Identity
+
+    Order.pop('Identity',None)
+
+    Conditional={}
+    Conditional['Status']='Open'
+    Conditional['Framework']='oanda'
+    Conditional['ID']=id
+    Conditional['DateTime']=(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+    Conditional['Order']=json.dumps(Order)
+    Conditional['Response']=resp
+    Conditional['Class']='Conditional'
+
+    nsf=f"{DataDirectory}/OliverTwist.Receiver"
+
+    orphanLock.Lock()
+    JRRsupport.AppendFile(nsf,json.dumps(Conditional)+'\n')
+    orphanLock.Unlock()
+
+###
+### Main Driver
+###
+
+relay=JRR.JackrabbitRelay()
+if relay.GetArgsLen() > 3:
+    exchange=relay.GetExchange()
+    account=relay.GetAccount()
+    asset=relay.GetAsset()
+else:
+    print("An exchange, (sub)account, and an asset must be provided.")
+    sys.exit(1)
+
+CondOrder={}
+CondOrder["Recipe"]='otVerify'
+CondOrder["Action"]="Buy"
+CondOrder["Exchange"]=exchange
+CondOrder["Account"]=account
+CondOrder["Asset"]=asset
+CondOrder["Units"]="-0.01%"
+CondOrder["ReduceBy"]="1"
+CondOrder["EnforceFIFO"]="Yes"
+CondOrder["Conditional"]="Yes"
+CondOrder["Direction"]="Short"
+CondOrder["SellAction"]="Sell"
+CondOrder["TakeProfit"]="5p"
+CondOrder["StopLoss"]="405p"
+
+OpenOrders=ReadStorehouse(exchange,account,asset)
+oo=relay.GetOpenTrades(symbol=asset)
+
+for o in oo:
+    # is the order in the Oliver Twist storehouse
+    found=False
+    for order in OpenOrders:
+        if o['id']==order['ID']:
+            found=True
+            break
+    if found==True:
+        continue
+
+    iu=int(o['currentUnits'])
+    price=float(o['price'])
+    upl=float(o['unrealizedPL'])
+    fin=float(o['financing'])
+
+    CondOrder['Units']=str(iu)
+    orderDetail=relay.GetOrderDetails(OrderID=o['id'])[-1]
+    CondOrder['Response']=json.dumps(orderDetail)
+
+    MakeConditionalOrder(o['id'],CondOrder)
+
+    if iu>=0:
+        side='L'
+    else:
+        side='S'
+    print(f"{o['openTime']} {o['id']:>7} {side} {abs(iu):4.0f} {price:10.5f} {upl:9.5f} {fin:9.5f}")
+
+
