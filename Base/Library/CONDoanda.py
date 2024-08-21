@@ -255,6 +255,7 @@ def OrderProcessor(Orphan):
         MarginStrike=False
         if float(relay.Broker.Summary['account']['marginAvailable'])<=0:
             oldestTrade=GetOldestTrade(relay,relay.Order['Asset'])
+            relay.JRLog.Write(f"{id} -> {cid}: {json.dumps(oldest)}",stdOut=False)
             if oldestTrade!=None and oldestTrade['ID']==cid:
                 MarginStrike=True
 
@@ -274,7 +275,7 @@ def OrderProcessor(Orphan):
             # no open trades
             if openTrades==[]:
                 # Fall through. No order matching the ID.
-                return 'Delete'
+                return 'Waiting'
 
             for cur in openTrades:
                 if cur['id']==cid:
@@ -350,7 +351,7 @@ def OrderProcessor(Orphan):
                 return 'Waiting'
 
         # Fall through. No order matching the ID.
-        return 'Delete'
+        return 'Waiting'
     except Exception as e:
         # Something broke or went horrible wrong
         relay.JRLog.Write(f"{Orphan['Key']}: Code Error - {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
