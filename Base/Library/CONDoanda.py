@@ -255,8 +255,7 @@ def OrderProcessor(Orphan):
         MarginStrike=False
         if float(relay.Broker.Summary['account']['marginAvailable'])<=0:
             oldestTrade=GetOldestTrade(relay,relay.Order['Asset'])
-            relay.JRLog.Write(f"{id} -> {cid}: {json.dumps(oldest)}",stdOut=False)
-            if oldestTrade!=None and oldestTrade['ID']==cid:
+            if oldestTrade!=None and oldestTrade['id']==cid:
                 MarginStrike=True
 
         # Manage average and close extire position
