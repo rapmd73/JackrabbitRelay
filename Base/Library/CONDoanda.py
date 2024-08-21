@@ -330,14 +330,14 @@ def OrderProcessor(Orphan):
             StrikeHappened=False
             if dir=='long':
                 if 'Diagnostics' in relay.Active:
-                    relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{units} {dir} Price: {price}, Bid: {ticker['Bid']} TP: {tp}/{relay.Order['TakeProfit']}, SL {sl}/{relay.Order['StopLoss']}",stdOut=False)
+                    relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{units} {dir} Price: {price}, Bid: {ticker['Bid']}/{ticker['Spread']} TP: {tp}/{relay.Order['TakeProfit']}, SL {sl}/{relay.Order['StopLoss']}",stdOut=False)
 
                 if MarginStrike==True or (ticker['Bid']>(tp+ticker['Spread']) or ('StopLoss' in relay.Order and ticker['Bid']<(sl-ticker['Spread']))):
                     strikePrice=ticker['Bid']
                     StrikeHappened=True
             else:
                 if 'Diagnostics' in relay.Active:
-                    relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{abs(units)} {dir} Price: {price}, Ask: {ticker['Ask']} TP: {tp}/{relay.Order['TakeProfit']}, SL {sl}/{relay.Order['StopLoss']}",stdOut=False)
+                    relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{abs(units)} {dir} Price: {price}, Ask: {ticker['Ask']}/{ticker['Spread']} TP: {tp}/{relay.Order['TakeProfit']}, SL {sl}/{relay.Order['StopLoss']}",stdOut=False)
 
                 if MarginStrike==True or (ticker['Ask']<(tp-ticker['Spread']) or ('StopLoss' in relay.Order and ticker['Ask']>(sl+ticker['Spread']))):
                     strikePrice=ticker['Ask']
