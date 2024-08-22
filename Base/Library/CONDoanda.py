@@ -214,7 +214,7 @@ def ProcessOrder(relay,cid,units,price,strikePrice,ds):
             return 'Waiting'
     except Exception as e:
         # Something broke or went horrible wrong
-        relay.JRLog.Write(f"ProcessOrder: {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
+        relay.JRLog.Write(f"CONDoanda: {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
         return 'Waiting'
 
 ###
@@ -348,10 +348,11 @@ def OrderProcessor(Orphan):
             else:
                 # Strike did not happen
                 return 'Waiting'
-
-        # Fall through. No order matching the ID.
-        return 'Waiting'
+        else:
+            # Fall through. No order matching the ID.
+            relay.JRLog.Write(f"{id} -> {cid}: Ticket not found on broker",stdOut=False)
+            return 'Delete'
     except Exception as e:
         # Something broke or went horrible wrong
         relay.JRLog.Write(f"{Orphan['Key']}: Code Error - {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
-        return 'Waiting'
+    return 'Waiting'

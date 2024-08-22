@@ -139,16 +139,27 @@ for o in oo:
     if found==True:
         continue
 
+    # Test the actual order
+    orderDetail=relay.GetOrderDetails(OrderID=o['id'])[-1]
+    found=False
+    for order in OpenOrders:
+        if orderDetail['id']==order['ID']:
+            found=True
+            break
+    if found==True:
+        continue
+
+    # onlt if the order and actual response order are not present.
+
     iu=int(o['currentUnits'])
     price=float(o['price'])
     upl=float(o['unrealizedPL'])
     fin=float(o['financing'])
 
     CondOrder['Units']=str(iu)
-    orderDetail=relay.GetOrderDetails(OrderID=o['id'])[-1]
     CondOrder['Response']=json.dumps(orderDetail)
 
-    MakeConditionalOrder(o['id'],CondOrder)
+#    MakeConditionalOrder(o['id'],CondOrder)
 
     if iu>=0:
         side='L'
