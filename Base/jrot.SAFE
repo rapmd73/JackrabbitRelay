@@ -41,7 +41,7 @@ import subprocess
 import JRRsupport
 import JackrabbitRelay as JRR
 
-Version="0.0.0.1.910"
+Version="0.0.0.1.905"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -182,20 +182,14 @@ def WriteOrphanList():
     global OrphanList
     global ConditionalList
 
-    rc=0
-    StartTime=datetime.now()
     interceptor.Critical(True)
 
     fh=open(Storehouse,"w")
     for cur in OrphanList:
         fh.write(json.dumps(OrphanList[cur])+'\n')
-        rc+=1
     fh.close()
 
     interceptor.Critical(False)
-    EndTime=datetime.now()
-    Elapsed=(EndTime-StartTime)
-    JRLog.Write(f"{rc} order(s) committed in {str(Elapsed)} seconds")
 
 # Check the receiver file for new orders.
 
@@ -276,8 +270,6 @@ def ReceiveOrphans(cl=None):
 # PlaceOrder system. The Conditional framework will be a logistical nightmare. Emphasis has to be on speed in
 # processing the conditions.
 
-# CHILD PROCESS, it can NOT directly interact with the list.
-
 def ProcessOrphan(**kwargs):
     global OliverTwistCount
     global JRLog
@@ -294,8 +286,6 @@ def ProcessOrphan(**kwargs):
             Processor=importlib.import_module(f"COND{Orphan['Framework']}")
 
         State=Processor.OrderProcessor(Orphan)
-        if State.lower()=='delete':
-            JRLog.Write(f"Delete {Orphan['Class'].lower()}: {Orphan['ID']}/{Orphan['Key']}")
     except Exception as err:
         JRLog.Write(f"Broke: {Orphan['Key']}, {err}")
 
@@ -304,6 +294,7 @@ def ProcessOrphan(**kwargs):
     otLock.Lock()
     Memory.Put(OliverTwistTimeout*OliverTwistCount,State)
     otLock.Unlock()
+    return
 
 # Process each child. Handles both orphans and conditionals
 
@@ -351,7 +342,7 @@ def ProcessChild(Orphan):
         WriteOrphanList()
         OliverTwistLock.Unlock()
 
-        JRLog.Write(f"Processed {Orphan['Class'].lower()}: {Orphan['ID']}/{Orphan['Key']}")
+        JRLog.Write(f"Processed {Orphan['Class'].lower()}: {Orphan['Key']}")
     else:
         OliverTwistLock.Lock()
 
@@ -417,8 +408,6 @@ def main():
 
             while interceptor.GetChildren()>(NumberProcesses-1):
                 JRRsupport.ElasticSleep(1)
-
-        interceptor.SafeExit()
 
         EndTime=datetime.now()
         Elapsed=(EndTime-StartTime)

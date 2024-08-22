@@ -13,10 +13,11 @@ def main():
     for line in sys.stdin:
         try:
             data = json.loads(line.strip())
-            if 'Order' in data and type(data['Order'])==str:
-                data = json.loads(data['Order'])
-            else:
-                data=data['Order']
+            if key_name not in data:
+                if 'Order' in data and type(data['Order'])==str:
+                    data = json.loads(data['Order'])
+                else:
+                    data=data['Order']
             if key_name in data:
                 print(data[key_name])
             else:

@@ -213,4 +213,4 @@ def OrderProcessor(Orphan):
         relay.JRLog.Write(f"{Orphan['Key']}: CONDmimic {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
         if 'Diagnostics' in relay.Active:
             relay.JRLog.Write(f"{Orphan['Key']}: {data}",stdOut=False)
-        return 'Waiting'
+    return 'Waiting'
