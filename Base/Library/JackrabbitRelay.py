@@ -28,7 +28,7 @@ import JRRsupport
 #   -> spot.kucoin.adausdt
 
 class JackrabbitLog:
-    def __init__(self,filename=None,Base=None,Directory=None):
+    def __init__(self,filename=None,Base=None,Directory=None,RaiseError=False):
         if Directory==None:
             self.LogDirectory="/home/JackrabbitRelay2/Logs"
         else:
@@ -40,6 +40,7 @@ class JackrabbitLog:
         if self.basename==None:
             self.basename=os.path.basename(sys.argv[0])
         self.SetLogName(filename)
+        self.Error=RaiseError
 
     def SetLogDirectory(self,dirname):
         if dirname!=None:
@@ -83,7 +84,10 @@ class JackrabbitLog:
         msg=f+' failed with: '+s
         self.Write(msg)
         self.Elapsed()
-        sys.exit(3)
+        if self.Error==False:
+            sys.exit(3)
+        else:
+            raise Exception(msg.strip())
 
     def Success(self,f,s):
         msg=f+' successful with: '+s
@@ -104,9 +108,9 @@ class JackrabbitLog:
 # relay=JackrabbitRelay()
 
 class JackrabbitRelay:
-    def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,secondary=None,NoIdentityVerification=False,Usage=None):
+    def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,secondary=None,NoIdentityVerification=False,Usage=None,RaiseError=False):
         # All the default locations
-        self.Version="0.0.0.1.910"
+        self.Version="0.0.0.1.940"
         self.NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
         self.Directories={}
         self.Directories['Base']='/home/JackrabbitRelay2/Base'
@@ -133,7 +137,7 @@ class JackrabbitRelay:
         self.Limiter=None
 
         # Initialize The log to just the basename of the program.
-        self.JRLog=JackrabbitLog(None)
+        self.JRLog=JackrabbitLog(RaiseError=RaiseError)
 
         # the raw payload, or command line
         self.Payload=payload

@@ -65,7 +65,7 @@ def OrderProcessor(Orphan):
     else:
         order=Orphan['Order']
 
-    relay=JRR.JackrabbitRelay(framework=Orphan['Framework'],payload=order,NoIdentityVerification=True)
+    relay=JRR.JackrabbitRelay(framework=Orphan['Framework'],payload=order,NoIdentityVerification=True,RaiseError=True)
     relay.JRLog.SetBaseName('OliverTwist')
 
     try:

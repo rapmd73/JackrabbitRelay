@@ -140,7 +140,7 @@ for o in oo:
         continue
 
     # Test the actual order
-    orderDetail=relay.GetOrderDetails(OrderID=o['id'])[-1]
+    orderDetail=relay.GetOrderDetails(OrderID=o['id'])[0]
     found=False
     for order in OpenOrders:
         if orderDetail['id']==order['ID']:
@@ -159,12 +159,12 @@ for o in oo:
     CondOrder['Units']=str(iu)
     CondOrder['Response']=json.dumps(orderDetail)
 
-#    MakeConditionalOrder(o['id'],CondOrder)
+    MakeConditionalOrder(o['id'],CondOrder)
 
     if iu>=0:
         side='L'
     else:
         side='S'
-    print(f"{o['openTime']} {o['id']:>7} {side} {abs(iu):4.0f} {price:10.5f} {upl:9.5f} {fin:9.5f}")
+    print(f"{o['openTime']} {o['id']:>7}>{orderDetail['id']:>7} {side} {abs(iu):4.0f} {price:10.5f} {upl:9.5f} {fin:9.5f}")
 
 

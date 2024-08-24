@@ -511,11 +511,6 @@ class oanda:
         # 'tradeReduced' if we reduce a trade size
         # 'tradeClose' if we close a trade altogether
 
-#        if 'tradeClose' in self.Results['transaction']:
-#            nid=int(self.Results['transaction']['tradeClose']['tradeID'])
-#            if nid<int(ticket):
-#                FinalResults.append(self.GetOrderDetails(OrderID=str(nid)))
-
         if 'transaction' not in self.Results:
             return None
 
@@ -530,8 +525,6 @@ class oanda:
                 return self.GetOrderDetails(OrderID=str(nid))
 
         FinalResults.append(self.Results['transaction'])
-
-#        return FinalResults
 
         tid=int(self.Results['transaction']['id'])
         ltid=int(self.Results['lastTransactionID'])
