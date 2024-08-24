@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import json
+import datetime
+
+import JackrabbitRelay as JRR
+
+# Process a single order and log it. Handles bot profit and loss.
+
+def ProcessOrder(relay,cid,units,price,strikePrice,ds):
+    try:
+        # Build "strike" order. TakeProfit or StopLoss has been triggered
+        newOrder={}
+        newOrder['BruteSeller']='Forced'
+        newOrder['Exchange']=relay.Order['Exchange']
+        newOrder['Account']=relay.Order['Account']
+        newOrder['Asset']=relay.Order['Asset']
+        newOrder['Action']='sell'
+        newOrder['EnforceFIFO']='Yes'
+        newOrder['Price']=str(strikePrice)
+        newOrder['Units']=relay.Order['Units']
+        newOrder['Ticket']=str(cid)
+        newOrder['OrderType']='market'
+
+        newOrder['Identity']=relay.Active['Identity']
+
+        # Feed the new order to Relay
+        result=relay.SendWebhook(newOrder)
+        oid=relay.GetOrderID(result)
+        if oid!=None:
+            orderDetail=relay.GetOrderDetails(OrderID=oid)
+
+            # find trade close time and  duration
+            parts=orderDetail[0]['time'].split('.')
+            deS=f"{parts[0]}.{parts[1][:6]}Z"
+            de=datetime.datetime.strptime(deS,'%Y-%m-%dT%H:%M:%S.%fZ')
+            duration=de-ds
+
+            rpl=float(orderDetail[-1]['pl'])
+            sprice=float(orderDetail[-1]['price'])
+
+            # rpl is reported by broker. This is the actual profit/loss of trade.
+            if rpl>=0:
+                LogMSG=f"{oid} -> {cid} Prft {dir}, {units}: {price:.5f} -> {sprice:5f}/{abs(rpl):.5f}, {duration}"
+            else:
+                LogMSG=f"{oid} -> {cid} Loss {dir}, {units}: {price:.5f} -> {sprice:5f}/{abs(rpl):.5f}, {duration}"
+            relay.JRLog.Write(f"{LogMSG}")
+    except Exception as e:
+        # Something broke or went horrible wrong
+        relay.JRLog.Write(f"BruteSell: {sys.exc_info()[-1].tb_lineno}/{str(e)}")
+
+###
+### MAIN Driver
+###
+
+relay=JRR.JackrabbitRelay(RaiseError=True)
+if relay.GetArgsLen() > 3:
+    exchangeName=relay.GetExchange()
+    account=relay.GetAccount()
+    asset=relay.GetAsset()
+else:
+    print("An exchange, (sub)account, and an asset must be provided.")
+    sys.exit(1)
+
+if abs(float(relay.Markets[asset]['pipLocation']))==2:
+    onePip=0.01
+else:
+    onePip=0.0001
+tp=onePip*10
+
+while True:
+    startTime=datetime.datetime.now()
+
+    try:
+        oo=relay.GetOpenTrades(symbol=asset)
+    except Exception as err:
+        print(err)
+        continue
+
+    for o in oo:
+        try:
+            ticker=relay.GetTicker(symbol=asset)
+        except Exception as err:
+            print(err)
+            continue
+
+        # find trade open time
+        parts=o['openTime'].split('.')
+        dsS=f"{parts[0]}.{parts[1][:6]}Z"
+        dt=datetime.datetime.strptime(dsS,'%Y-%m-%dT%H:%M:%S.%fZ')
+        epoch=dt.timestamp()
+
+        iu=int(o['currentUnits'])
+        price=float(o['price'])
+        upl=float(o['unrealizedPL'])
+
+        if iu>=0:
+            side='L'
+        else:
+            side='S'
+
+        if iu>0:
+            if ticker['Bid']>price+tp:
+                ProcessOrder(relay,cid,iu,price,ticker['Bid'],dt)
+            print(f"  {o['openTime']} {o['id']:>7} {side} {abs(iu):4.0f} {ticker['Bid']:10.5f} {price+tp:10.5f} {upl:9.5f}")
+        else:
+            if ticker['Ask']<price-tp:
+                ProcessOrder(relay,cid,iu,price,ticker['Bid'],dt)
+            print(f"  {o['openTime']} {o['id']:>7} {side} {abs(iu):4.0f} {ticker['Ask']:10.5f} {price-tp:10.5f} {upl:9.5f}")
+    print(f"Scanning {len(oo)} trades took {datetime.datetime.now()-startTime} Seconds")

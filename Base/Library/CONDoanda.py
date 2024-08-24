@@ -90,50 +90,54 @@ def GetOldestTrade(relay,pair):
 # strategic approach to constantly reduce margin while still profiting as a whole.
 
 def ReduceLotSize(relay,pair,val):
-    oldestTrade=GetOldestTrade(relay,pair)
-    if oldestTrade==None:
-        return
+    try:
+        oldestTrade=GetOldestTrade(relay,pair)
+        if oldestTrade==None:
+            return
 
-    lossID=oldestTrade['id']
-    lossIU=int(oldestTrade['currentUnits'])
-    price=float(oldestTrade['price'])
+        lossID=oldestTrade['id']
+        lossIU=int(oldestTrade['currentUnits'])
+        price=float(oldestTrade['price'])
 
-    # Get the direction of the reduction trade right.
+        # Get the direction of the reduction trade right.
 
-    if lossIU<0:
-        runits=val
-        Dir='short'
-        Action='Buy'
-    else:
-        runits=val*-1
-        Dir='long'
-        Action='Sell'
+        if lossIU<0:
+            runits=val
+            Dir='short'
+            Action='Buy'
+        else:
+            runits=val*-1
+            Dir='long'
+            Action='Sell'
 
-    newOrder={}
-    newOrder['OliverTwist']='Conditional ReduceBy'
-    newOrder['Exchange']=relay.Order['Exchange']
-    newOrder['Account']=relay.Order['Account']
-    newOrder['Asset']=relay.Order['Asset']
-    newOrder['Action']=Action.lower()
-    if 'EnforceFIFO' in relay.Order:
-        newOrder['EnforceFIFO']=relay.Order['EnforceFIFO']
-    newOrder['Units']=runits
-    newOrder['Ticket']=str(lossID)
-    if 'OrderType' in relay.Order:
-        newOrder['OrderType']=relay.Order['OrderType']
-    else:
-        newOrder['OrderType']='market'
-    newOrder['Identity']=relay.Active['Identity']
+        newOrder={}
+        newOrder['OliverTwist']='Conditional ReduceBy'
+        newOrder['Exchange']=relay.Order['Exchange']
+        newOrder['Account']=relay.Order['Account']
+        newOrder['Asset']=relay.Order['Asset']
+        newOrder['Action']=Action.lower()
+        if 'EnforceFIFO' in relay.Order:
+            newOrder['EnforceFIFO']=relay.Order['EnforceFIFO']
+        newOrder['Units']=runits
+        newOrder['Ticket']=str(lossID)
+        if 'OrderType' in relay.Order:
+            newOrder['OrderType']=relay.Order['OrderType']
+        else:
+            newOrder['OrderType']='market'
+        newOrder['Identity']=relay.Active['Identity']
 
-    # Feed the new order to Relay
-    result=relay.SendWebhook(newOrder)
-    oid=relay.GetOrderID(result)
-    if oid!=None:
-        orderDetail=relay.GetOrderDetails(OrderID=oid)
+        # Feed the new order to Relay
+        result=relay.SendWebhook(newOrder)
+        oid=relay.GetOrderID(result)
+        if oid!=None:
+            orderDetail=relay.GetOrderDetails(OrderID=oid)
 
-        sprice=float(orderDetail[-1]['price'])
-        rpl=float(orderDetail[-1]['pl'])
-        relay.JRLog.Write(f"{lossID} -> {oid} Rduc {Dir}, {val}: {price:.5f} -> {sprice:5f}/{rpl:.5f}")
+            sprice=float(orderDetail[-1]['price'])
+            rpl=float(orderDetail[-1]['pl'])
+            relay.JRLog.Write(f"{lossID} -> {oid} Rduc {Dir}, {val}: {price:.5f} -> {sprice:5f}/{rpl:.5f}")
+    except Exception as e:
+        # Something broke or went horrible wrong
+        relay.JRLog.Write(f"ReduceLotSize: {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
 
 # Process a single order and log it. Handles bot profit and loss.
 
@@ -228,7 +232,7 @@ def OrderProcessor(Orphan):
     else:
         order=Orphan['Order']
 
-    relay=JRR.JackrabbitRelay(framework=Orphan['Framework'],payload=order,NoIdentityVerification=True)
+    relay=JRR.JackrabbitRelay(framework=Orphan['Framework'],payload=order,NoIdentityVerification=True,RaiseError=True)
     relay.JRLog.SetBaseName('OliverTwist')
     LogMSG=None
 
@@ -354,5 +358,5 @@ def OrderProcessor(Orphan):
             return 'Delete'
     except Exception as e:
         # Something broke or went horrible wrong
-        relay.JRLog.Write(f"{Orphan['Key']}: Code Error - {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
+        relay.JRLog.Write(f"CONDoanda {Orphan['Key']}: Code Error - {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
     return 'Waiting'
