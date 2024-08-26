@@ -28,7 +28,7 @@ import json
 
 import JRRsupport
 
-Version="0.0.0.1.940"
+Version="0.0.0.1.950"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
 LogDirectory="/home/JackrabbitRelay2/Logs"
@@ -123,7 +123,7 @@ def ProcessPayload(data):
                 Locker[FileName]['ID']=dataDB['ID'] # assign the new ID
                 Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
                 return jsonStatus("Locked",Locker[FileName]['ID'])
-            # The current owner wwant the lock reset to a specific duration/held longer
+            # The current owner want the lock reset to a specific duration/held longer
             elif Locker[FileName]['ID']==dataDB['ID']:
                 Locker[FileName]['Expire']=time.time()+float(dataDB['Expire'])
                 return jsonStatus("Locked",Locker[FileName]['ID'])
@@ -178,7 +178,7 @@ def ProcessPayload(data):
         elif action=='erase':
             # Just pass through erase
             if FileName not in Locker:
-                return jsonStatus("Done",Locker[FileName]['ID'])
+                return jsonStatus("NotFound")
             # Verify owner and erase memory. Erase is just resetting expiration to 0.
             # Will be remove in main function.
             elif Locker[FileName]['ID']==dataDB['ID']:

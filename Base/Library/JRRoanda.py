@@ -354,6 +354,9 @@ class oanda:
     # buying, selling from the entire position (FIFO rule), selling an
     # individual trade with an explicit ticket number.
 
+    # DO NOT TRY TO GET THE ORDER DETAILS WITHIN THIS FUNCTION. Trying to do so causes some of the
+    # strangest and most difficult errors I've ever encountered.
+
     def PlaceOrder(self,**kwargs):
         pair=kwargs.get('pair').replace('/','_')
         m=kwargs.get('orderType').upper()
@@ -478,7 +481,6 @@ class oanda:
         else:
             self.Log.Error("PlaceOrder","Action is neither BUY nor SELL")
 
-        self.Results['Details']=self.GetOrderDetails(id=order['id'],symbol=pair)[-1]
         return self.Results
 
     # This is mostly a place holder and not used for OANDA as the minimum units

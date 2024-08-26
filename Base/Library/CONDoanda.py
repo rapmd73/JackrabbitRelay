@@ -358,5 +358,5 @@ def OrderProcessor(Orphan):
             return 'Delete'
     except Exception as e:
         # Something broke or went horrible wrong
-        relay.JRLog.Write(f"CONDoanda {Orphan['Key']}: Code Error - {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
+        relay.JRLog.Write(f"CONDoanda {Orphan['Key']}: {id} {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
     return 'Waiting'

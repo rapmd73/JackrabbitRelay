@@ -15,20 +15,25 @@ import JackrabbitRelay as JRR
 
 # Process a single order and log it. Handles bot profit and loss.
 
-def ProcessOrder(relay,cid,units,price,strikePrice,ds):
+def ProcessOrder(relay,cid,units,price,strikePrice,ds,account,asset):
     try:
         # Build "strike" order. TakeProfit or StopLoss has been triggered
         newOrder={}
         newOrder['BruteSeller']='Forced'
-        newOrder['Exchange']=relay.Order['Exchange']
-        newOrder['Account']=relay.Order['Account']
-        newOrder['Asset']=relay.Order['Asset']
+        newOrder['Exchange']='oanda'
+        newOrder['Account']=account
+        newOrder['Asset']=asset
         newOrder['Action']='sell'
         newOrder['EnforceFIFO']='Yes'
         newOrder['Price']=str(strikePrice)
-        newOrder['Units']=relay.Order['Units']
+        newOrder['Units']=str(units)
         newOrder['Ticket']=str(cid)
         newOrder['OrderType']='market'
+
+        if units>0:
+            dir='Long'
+        else:
+            dir='Shrt'
 
         newOrder['Identity']=relay.Active['Identity']
 
@@ -109,10 +114,13 @@ while True:
 
         if iu>0:
             if ticker['Bid']>price+tp:
-                ProcessOrder(relay,cid,iu,price,ticker['Bid'],dt)
-            print(f"  {o['openTime']} {o['id']:>7} {side} {abs(iu):4.0f} {ticker['Bid']:10.5f} {price+tp:10.5f} {upl:9.5f}")
+                ProcessOrder(relay,o['id'],iu,price,ticker['Bid'],dt,account,asset)
+            if upl>0:
+                print(f"  {o['openTime']} {o['id']:>7} {side} {abs(iu):4.0f} {ticker['Bid']:10.4f} {price+tp:10.4f} {upl:9.5f}")
         else:
-            if ticker['Ask']<price-tp:
-                ProcessOrder(relay,cid,iu,price,ticker['Bid'],dt)
-            print(f"  {o['openTime']} {o['id']:>7} {side} {abs(iu):4.0f} {ticker['Ask']:10.5f} {price-tp:10.5f} {upl:9.5f}")
+            print(ticker['Ask']<(price-tp))
+            if ticker['Ask']<(price-tp):
+                ProcessOrder(relay,o['id'],iu,price,ticker['Ask'],dt,account,asset)
+            if upl>0:
+                print(f"  {o['openTime']} {o['id']:>7} {side} {abs(iu):4.0f} {ticker['Ask']:10.4f} {price-tp:10.4f} {upl:9.5f}")
     print(f"Scanning {len(oo)} trades took {datetime.datetime.now()-startTime} Seconds")
