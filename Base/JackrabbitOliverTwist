@@ -31,6 +31,7 @@
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
+import atexit
 import importlib
 import datetime
 import time
@@ -41,7 +42,7 @@ import subprocess
 import JRRsupport
 import JackrabbitRelay as JRR
 
-Version="0.0.0.1.940"
+Version="0.0.0.1.950"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -313,12 +314,20 @@ def ProcessChild(Orphan):
             Orphan['lID']=OliverTwistLock.ID
             Orphan['mID']=OrphanMemory[Orphan['Key']].ID
             OrphanMemory[Orphan['Key']].Put(OliverTwistTimeout*OliverTwistCount,"Running")
-            interceptor.StartProcess(ProcessOrphan,kwargs=Orphan)
+            if NumberProcesses>1:
+                interceptor.StartProcess(ProcessOrphan,kwargs=Orphan)
+            else:
+                ProcessOrphan(**Orphan)
 
         OliverTwistLock.Unlock()
 
         # Process any signals received during critical section
         interceptor.SafeExit()
+
+def CleanUp():
+    OliverTwistLock.Unlock()
+    for mem in list(OrphanMemory.keys()):
+        OrphanMemory[mem].Erase()
 
 def main():
     # Required as the globals are modified
@@ -334,6 +343,8 @@ def main():
     if len(sys.argv)>1:
         NumberProcesses=int(sys.argv[1])
     JRLog.Write(f'Spawning {NumberProcesses} sub-processes')
+
+#    atexit.register(CleanUp)
 
     ReadStorehoue()
     ReadStorehoue(cltype='Orphan')
