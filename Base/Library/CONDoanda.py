@@ -218,7 +218,7 @@ def ProcessOrder(relay,cid,units,price,strikePrice,ds):
             return 'Waiting'
     except Exception as e:
         # Something broke or went horrible wrong
-        relay.JRLog.Write(f"CONDoanda: {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
+        relay.JRLog.Write(f"CONDoanda {id}: {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
         return 'Waiting'
 
 ###
@@ -240,9 +240,14 @@ def OrderProcessor(Orphan):
         # Check to see if order is still open and return current state
         # Handle OANDa's weird order id sequencing
         id=Orphan['ID']
-        orderDetail=relay.GetOrderDetails(OrderID=Orphan['ID'])
-        # Figure out a way to handle when an order ID nolong exists.
-        cid=orderDetail[-1]['id']
+        if 'cID' in Orphan:
+            cid=Orphan['cID']
+        else:
+            # Figure out a way to handle when an order ID nolong exists.
+            orderDetail=relay.GetOrderDetails(OrderID=Orphan['ID'])
+            cid=orderDetail[-1]['id']
+
+        # Get selling action
         saction=relay.Order['SellAction'].lower()
 
         # Get the direction of the trade, long/short
@@ -262,7 +267,7 @@ def OrderProcessor(Orphan):
             if oldestTrade!=None and oldestTrade['id']==cid:
                 MarginStrike=True
 
-        # Manage average and close extire position
+        # Manage average and close extire position. MUST be checked every time
         if saction=='close':
             positions=relay.GetPositions()
             if positions!=None:
@@ -274,19 +279,24 @@ def OrderProcessor(Orphan):
                         break
         else:
             # Manage a single ticket
-            openTrades=relay.GetOpenTrades(symbol=relay.Order['Asset'])
-            # no open trades
-            if openTrades==[]:
-                # Fall through. No order matching the ID.
-                return 'Waiting'
+            if 'Price' in Orphan:
+                price=float(Orphan['Price'])
+                foundPrice=True
+            else:
+                # Brute force find the price.
+                openTrades=relay.GetOpenTrades(symbol=relay.Order['Asset'])
+                # no open trades
+                if openTrades==[]:
+                    # Fall through. No order matching the ID.
+                    return 'Waiting'
 
-            for cur in openTrades:
-                if cur['id']==cid:
-                    # Get the fill price from the response entry
-                    foundPrice=True
-                    price=float(cur['price'])
-                    units=abs(float(cur['currentUnits']))
-                    break
+                for cur in openTrades:
+                    if cur['id']==cid:
+                        # Get the fill price from the response entry
+                        foundPrice=True
+                        price=float(cur['price'])
+                        units=abs(float(cur['currentUnits']))
+                        break
 
         # Process the position
         if foundPrice==True:
@@ -323,11 +333,6 @@ def OrderProcessor(Orphan):
             if 'StopLoss' in relay.Order:
                 sl=round(CalculatePriceExit(relay.Order,'StopLoss',dir,price,relay.Broker.onePip),5)
 
-            # find trade open time
-            parts=orderDetail[0]['time'].split('.')
-            dsS=f"{parts[0]}.{parts[1][:6]}Z"
-            ds=datetime.datetime.strptime(dsS,'%Y-%m-%dT%H:%M:%S.%fZ')
-
             # Get the "strikePrice". This handles both TakeProfit and StopLoss. It doesn't matter which as both
             # are processed the same way.
 
@@ -348,6 +353,13 @@ def OrderProcessor(Orphan):
                     StrikeHappened=True
 
             if StrikeHappened==True:
+                # find trade open time
+                orderDetail=relay.GetOrderDetails(OrderID=Orphan['ID'])
+                parts=orderDetail[0]['time'].split('.')
+                dsS=f"{parts[0]}.{parts[1][:6]}Z"
+                ds=datetime.datetime.strptime(dsS,'%Y-%m-%dT%H:%M:%S.%fZ')
+                units=abs(float(orderDetail[-1]['units']))
+
                 return ProcessOrder(relay,cid,units,price,strikePrice,ds)
             else:
                 # Strike did not happen
@@ -358,5 +370,5 @@ def OrderProcessor(Orphan):
             return 'Delete'
     except Exception as e:
         # Something broke or went horrible wrong
-        relay.JRLog.Write(f"CONDoanda {Orphan['Key']}: {id} {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
+        relay.JRLog.Write(f"CONDoanda {id}: {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
     return 'Waiting'

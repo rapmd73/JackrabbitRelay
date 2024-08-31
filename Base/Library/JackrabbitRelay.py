@@ -87,7 +87,8 @@ class JackrabbitLog:
         if self.Error==False:
             sys.exit(3)
         else:
-            raise Exception(msg.strip())
+            emsg=f"{sys.exc_info()[-1].tb_lineno}/{msg.strip()}"
+            raise Exception(emsg)
 
     def Success(self,f,s):
         msg=f+' successful with: '+s
@@ -110,7 +111,7 @@ class JackrabbitLog:
 class JackrabbitRelay:
     def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,secondary=None,NoIdentityVerification=False,Usage=None,RaiseError=False):
         # All the default locations
-        self.Version="0.0.0.1.950"
+        self.Version="0.0.0.1.970"
         self.NOhtml='<html><title>NO!</title><body style="background-color:#ffff00;display:flex;weight:100vw;height:100vh;align-items:center;justify-content:center"><h1 style="color:#ff0000;font-weight:1000;font-size:10rem">NO!</h1></body></html>'
         self.Directories={}
         self.Directories['Base']='/home/JackrabbitRelay2/Base'
