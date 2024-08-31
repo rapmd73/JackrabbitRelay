@@ -28,6 +28,16 @@
 
 # Framework identification, along with any other order verification, is done in the PlaceOrder
 
+# MIGRATE to checking the highest (take profit) and lowat prices (stop loss), rather then checking every
+# order. This will optimize heavy usagevsystem to handle the most relevant orders first. Will need rethings
+# on order list processing approach and methedology.
+
+# MOVE to reading storehouse every pass and write price data into main store house... Reading orderdetails
+# is 3 minutes for order sweep, pre processing orders brings the time down to 0.00015 seconds. Be re-reading
+# the storehouse each pass, we can update order as received to maintain sweepspeed. Reading the ticker will
+# slow thing down, but breaking the storehouse down to exchange/account/asset with high/low extreme analysis
+# will dramatically improve performance.
+
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
@@ -42,7 +52,7 @@ import subprocess
 import JRRsupport
 import JackrabbitRelay as JRR
 
-Version="0.0.0.1.950"
+Version="0.0.0.1.970"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -149,6 +159,7 @@ def ReadStorehoue(cltype=None,receiver=False):
     while OliverTwistLock.Lock()!='locked':
         JRRsupport.ElasticSleep(1)
 
+    Changed=False
     rc=0
     if os.path.exists(WorkingStorehouse):
         buffer=JRRsupport.ReadFile(WorkingStorehouse).strip()
@@ -194,6 +205,23 @@ def ReadStorehoue(cltype=None,receiver=False):
                 elif cltype=='Conditional':
                     Orphan['Class']='Conditional'
 
+                if 'Price' not in Orphan:
+                    if Orphan['Framework']=='oanda':
+                        try:
+                            relay=JRR.JackrabbitRelay(exchange=Orphan['Order']['Exchange'],account=Orphan['Order']['Account'],asset=Orphan['Order']['Asset'],RaiseError=True)
+                            od=relay.GetOrderDetails(OrderID=Orphan['ID'])[-1]
+                            Orphan['cID']=od['id']
+                            Orphan['Price']=od['price']
+                            Changed=True
+                        except Exception as err:
+                            pass
+                    elif Orphan['Framework']=='mimic':
+                        Orphan['Price']=Orphan['Response']['Price']
+                        Changed=True
+                    elif Orphan['Framework']=='ccxt':
+                        Orphan['Price']=Orphan['Response']['price']
+                        Changed=True
+
                 OrphanList[Orphan['Key']]=Orphan
 
                 OrphanMemory[Orphan['Key']]=JRRsupport.Locker(Orphan['Key'])
@@ -207,11 +235,12 @@ def ReadStorehoue(cltype=None,receiver=False):
                     JRLog.Write(f"{rc} record(s) received")
 
             # If this is an older file, delete it after te order are processed.
-            if cltype!=None or receiver==True:
+            if Changed==True and receiver==False:
+                WriteStorehouse()
+            elif (cltype!=None or receiver==True):
                 WriteStorehouse()
                 if WorkingStorehouse!=Storehouse:
                     os.remove(WorkingStorehouse)
-
     OliverTwistLock.Unlock()
 
 # This spins up the orphan manager to ensure each orphan is handled. This is NOT part of the main process, but
@@ -239,11 +268,8 @@ def ProcessOrphan(**kwargs):
             Processor=importlib.import_module(f"COND{Orphan['Framework']}")
 
         State=Processor.OrderProcessor(Orphan)
-
-        if State.lower()=='delete':
-            JRLog.Write(f"Delete {Orphan['Class'].lower()}: {Orphan['Key']}")
     except Exception as err:
-        JRLog.Write(f"Broke: {Orphan['Key']}, {err}")
+        JRLog.Write(f"Broke {sys.exc_info()[-1].tb_lineno}: {Orphan['Key']}, {err}")
 
     otLock=JRRsupport.Locker("OliverTwist",ID=Orphan['lID'])
     Memory=JRRsupport.Locker(Orphan['Key'],ID=Orphan['mID'])
@@ -384,4 +410,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
