@@ -40,7 +40,7 @@ class JackrabbitLog:
         if self.basename==None:
             self.basename=os.path.basename(sys.argv[0])
         self.SetLogName(filename)
-        self.Error=RaiseError
+        self.RaiseError=RaiseError
 
     def SetLogDirectory(self,dirname):
         if dirname!=None:
@@ -84,11 +84,10 @@ class JackrabbitLog:
         msg=f+' failed with: '+s
         self.Write(msg)
         self.Elapsed()
-        if self.Error==False:
+        if self.RaiseError==False:
             sys.exit(3)
         else:
-            emsg=f"{sys.exc_info()[-1].tb_lineno}/{msg.strip()}"
-            raise Exception(emsg)
+            raise Exception(f"{msg.strip()}")
 
     def Success(self,f,s):
         msg=f+' successful with: '+s
@@ -267,7 +266,7 @@ class JackrabbitRelay:
             else:
                 self.JRLog.Error("Login","An exchange and an account must be provided")
         else:
-            if self.Usage:
+            if self.Usage!=None:
                 self.Usage(self.args,self.argslen)
             else:
                 self.JRLog.Error("Initialization","An exchange and an account must be provided")

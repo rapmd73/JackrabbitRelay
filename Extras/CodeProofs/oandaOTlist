@@ -86,7 +86,53 @@ else:
 
 OpenOrders=ReadStorehouse(exchange,account,asset)
 
+StartTime=datetime.datetime.now()
 for o in OpenOrders:
-    print(o)
-    print()
+    if 'Price' not in o:
+        print(f"{o['ID']} NO price data")
+        continue
+
+    ticker=relay.GetTicker(symbol=asset)
+    if ticker['Ask']<float(o['Price'])-0.0010: # 10 pip profit
+        Print(f"{o['ID']} in profit")
+    else:
+        print(f"{o['ID']} {abs(float(o['Price'])-ticker['Ask']):.5f} unrealized loss")
+
+print()
+EndTime=datetime.datetime.now()
+print(f"Elapsed Full Sweep: {EndTime-StartTime} seconds")
+
+print()
+
+start=datetime.datetime.now()
+hPrice=float('-inf')
+lPrice=float('inf')
+hTrade=None
+lTrade=None
+
+for o in OpenOrders:
+    if 'Price' not in o:
+        print(f"{o['ID']} NO price data")
+        continue
+
+    price=float(o['Price'])
+    if price<lPrice:
+        lTrade=o
+        lPrice=price
+    if price>hPrice:
+        hTrade=o
+        hPrice=price
+
+ticker=relay.GetTicker(symbol=asset)
+if ticker['Ask']<lPrice-0.0010: # 10 pip profit
+    Print(f"{o['ID']} in profit")
+else:
+    print(f"{o['ID']} {abs(lPrice-ticker['Ask']):.5f} unrealized loss")
+
+end=datetime.datetime.now()
+
+print(f"Highest: {hTrade['ID']:>7} {float(hTrade['Price']):10.5f}")
+print(f"Lowest:  {lTrade['ID']:>7} {float(lTrade['Price']):10.5f}")
+print(f"Elapsed High/Low Sweep: {end-start} seconds")
+
 

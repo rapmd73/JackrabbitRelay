@@ -669,7 +669,7 @@ class DList:
 # Create a directory
 
 def mkdir(fn):
-    if not os.path.exists(fn):
+    if not os.path.isdir(fn):
         os.makedirs(fn)
 
 # Get Yesterday's date
