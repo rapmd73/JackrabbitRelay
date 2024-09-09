@@ -373,15 +373,17 @@ def main():
 #    atexit.register(CleanUp)
 
     ReadStorehoue()
+    """
     ReadStorehoue(cltype='Orphan')
     ReadStorehoue(cltype='Conditional')
 
     ReadStorehoue(cltype='Orphan',receiver=True)
     ReadStorehoue(cltype='Conditional', receiver=True)
+    """
 
     while True:
         StartTime=datetime.datetime.now()
-        ReadStorehoue(receiver=True)
+#        ReadStorehoue(receiver=True)
 
         # Dynamic factor for memory timeouts
         OliverTwistCount=len(OrphanList)
