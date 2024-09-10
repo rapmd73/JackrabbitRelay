@@ -125,8 +125,7 @@ class ccxtCrypto:
                     if x.find('429000')>-1:
                         retry429+=1
                 if retry>=RetryLimit:
-                    self.Log.Error(function,str(e))
-#                    self.Log.Error(function,JRRsupport.StopHTMLtags(str(e)))
+                    self.Log.Error(function,JRRsupport.StopHTMLtags(str(e)))
                 else:
                     if not self.KuCoinSuppress429:
                         self.Log.Write(function+' Retrying ('+str(retry+1)+'), '+JRRsupport.StopHTMLtags(str(e)))

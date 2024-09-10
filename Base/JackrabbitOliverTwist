@@ -14,11 +14,17 @@
 # simultaneously. The memory of a single process managing a thousand orders would be absolutely thrashed. The orphan manager
 # will follow the same conventions of the PlaceOrder program, ie:
 
+# Old:
 #    Orphan.ccxt
 #    Orphan.oanda
 #    Conditional.ccxt
 #    Conditional.oanda
 #    Conditional.mimic
+
+# New:
+#   OliverTwist-ccxt
+#   OliverTwist-mimic
+#   OliverTwist-oanda
 
 # ANY order (direct orphan or conditional) is an ORPHAN at all times withis THIS framework.
 
@@ -52,20 +58,22 @@ import subprocess
 import JRRsupport
 import JackrabbitRelay as JRR
 
-Version="0.0.0.1.970"
+Version="0.0.0.1.990"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
 LogDirectory="/home/JackrabbitRelay2/Logs"
-
+OliverTwistData=DataDirectory+'/OliverTwist'
 Receiver=DataDirectory+'/OliverTwist.Receiver'
-Storehouse=DataDirectory+'/OliverTwist.Storehouse'
+
+# Get the number of active CPUs
 
 NumberProcesses=os.cpu_count()
 
 # Set up the logging system
 
 JRLog=JRR.JackrabbitLog()
+JRLog.SetBaseName('JackrabbitOliverTwist')
 
 # Set up signal interceptor
 
@@ -76,8 +84,7 @@ interceptor=JRRsupport.SignalInterceptor(Log=JRLog)
 # Testing has show that only a few seconds is actually requred. The extended amount
 # is just to compensate for an overloaded server.
 
-OliverTwistTimeout=(15*60)
-OliverTwistCount=1
+OliverTwistTimeout=60   # (15*60)
 
 # This lock guards the lists. Both PlaceOrder.olivertwist and
 # JackrabbitOliverTwist will access this file. Collisions must not be allowed to
@@ -85,10 +92,8 @@ OliverTwistCount=1
 
 OliverTwistLock=JRRsupport.Locker("OliverTwist")
 
-# The list of orphaned orders to track and manage. Must be global, but after
-# compare function declared.
+# This will be used for memory locks and data transfer between parent/child
 
-OrphanList={}
 OrphanMemory={}
 
 # Generate a random ID
@@ -111,66 +116,39 @@ def GetID():
         pw+=oc
     return pw
 
-def WriteStorehouse():
-    global OliverTwistLock
-    global OrphanList
-    global ConditionalList
+# Split the complete list stored on disk, if it exists. Supports both orphans and conditionals.
+# RUNS ONLY ONCE, no locking needed as this runs at the very start, if it runs at all.
+# At some FUTURE point, this will be REMOVED.
 
-    StartTime=datetime.datetime.now()
-    interceptor.Critical(True)
-
-    fh=open(Storehouse,"w")
-    for cur in OrphanList:
-        fh.write(json.dumps(OrphanList[cur])+'\n')
-    fh.close()
-
-    interceptor.Critical(False)
-    JRLog.Write(f"{len(OrphanList)} order(s) written in {str(datetime.datetime.now()-StartTime)} seconds")
-
-# Read the complete list stored on disk, if it exists. Supports both orphans and conditionals.
-
-def ReadStorehoue(cltype=None,receiver=False):
+def SplitStorehouse(cltype=None):
     # Required as the blobals are modified
-    global OliverTwistCount
     global OliverTwistLock
-    global OrphanList
-    global OrphanMemory
     global JRLog
+
+    # Check if Directory exists
+    JRRsupport.mkdir(OliverTwistData)
 
     # Setup mechanism to switch between orphan and conditional storehouses
     if cltype=='Orphan':
-        if receiver==True:
-            WorkingStorehouse=DataDirectory+'/OliverTwist.Orphans.Receiver'
-        else:
-            WorkingStorehouse=DataDirectory+'/OliverTwist.Orphans.Storehouse'
+        WorkingStorehouse=DataDirectory+'/OliverTwist.Orphans.Storehouse'
     elif cltype=='Conditional':
-        if receiver==True:
-            WorkingStorehouse=DataDirectory+'/OliverTwist.Conditional.Receiver'
-        else:
-            WorkingStorehouse=DataDirectory+'/OliverTwist.Conditional.Storehouse'
+        WorkingStorehouse=DataDirectory+'/OliverTwist.Conditional.Storehouse'
     else:
-        if receiver==True:
-            WorkingStorehouse=Receiver
-        else:
-            WorkingStorehouse=Storehouse
+        WorkingStorehouse=DataDirectory+'/OliverTwist.Storehouse'
 
-    # Wait until the file is Unlocked
-
-    while OliverTwistLock.Lock()!='locked':
-        JRRsupport.ElasticSleep(1)
-
-    Changed=False
     rc=0
     if os.path.exists(WorkingStorehouse):
         buffer=JRRsupport.ReadFile(WorkingStorehouse).strip()
         if buffer!=None and buffer!='':
             Orphans=buffer.split('\n')
-            OliverTwistCount=len(Orphans)
+
+            # Remove empty lines
+            while '' in Orphans:
+                Orphans.remove('')
+
             for Entry in Orphans:
                 # Force set InMotion to False
                 Entry=Entry.strip()
-                if Entry=='':
-                    continue
                 # Break down entry and set up memory locker
                 try:
                     Orphan=Entry
@@ -180,30 +158,113 @@ def ReadStorehoue(cltype=None,receiver=False):
                     JRLog.Write(f"Broken: {Entry}")
                     continue
 
+                # I need to be able to extract Exchange, account, and asset to build the separate pair
+                # files.
+
+                if 'Order' in Orphan:
+                    if type(Orphan['Order'])==str:
+                        order=json.loads(Orphan['Order'])
+                    else:
+                        order=Orphan['Order']
+                    order.pop('Identity',None)
+                else:
+                    JRLog.Write(f"Broken: {Entry}")
+                    continue
+
+                # Now we have the needed information.
+
+                exchange=order['Exchange']
+                account=order['Account']
+                asset=order['Asset'].replace('/','').replace('-','').replace(':','').replace(' ','')
+                idx=f"{exchange}.{account}.{asset}"
+                fname=f"{OliverTwistData}/{idx}.Storehouse"
+
+                # Write out the new storehouse. We already have the complete line from the original, just
+                # use it. This is not about preprocessing, only converting.
+
+                JRRsupport.AppendFile(fname,Entry+'\n')
+                rc+=1
+
+            if rc>0:
+                JRLog.Write(f"{rc} record(s) converted")
+
+# Read the complete list stored on disk, if it exists. Supports both orphans and conditionals.
+
+def ReadReceiver():
+    # Required as the blobals are modified
+    global OliverTwistLock
+    global JRLog
+
+    # Check if Directory exists
+    JRRsupport.mkdir(OliverTwistData)
+
+    WorkingStorehouse=Receiver
+
+    # Wait until the file is Unlocked
+
+    while OliverTwistLock.Lock()!='locked':
+        JRRsupport.ElasticSleep(1)
+
+    rc=0
+    if os.path.exists(WorkingStorehouse):
+        buffer=JRRsupport.ReadFile(WorkingStorehouse).strip()
+        if buffer!=None and buffer!='':
+            Orphans=buffer.split('\n')
+
+            # Remove empty lines
+            while '' in Orphans:
+                Orphans.remove('')
+
+            for Entry in Orphans:
+                # Force set InMotion to False
+                Entry=Entry.strip()
+
+                # Break down entry and set up memory locker
+                try:
+                    Orphan=Entry
+                    while type(Orphan)==str:
+                        Orphan=json.loads(Orphan)
+                except:
+                    JRLog.Write(f"Broken: {Entry}")
+                    continue
+
+                # Don't add duplicates
                 if 'Key' in Orphan and Orphan['Key'] in OrphanList:
                     continue
 
                 if 'Order' in Orphan:
                     if type(Orphan['Order'])==str:
                         order=json.loads(Orphan['Order'])
-                        order.pop('Identity',None)
-                        Orphan['Order']=order
+                    else:
+                        order=Orphan['Order']
+                    order.pop('Identity',None)
+                else:
+                    JRLog.Write(f"Broken: {Entry}")
+                    continue
+                Orphan['Order']=order
+
                 if 'Response' in Orphan:
                     if type(Orphan['Response'])==str:
                         resp=json.loads(Orphan['Response'])
                         Orphan['Response']=resp
 
+                # Assign a key, if not already present.
+
                 if 'Key' not in Orphan:
                     Orphan['Key']=f"{time.time()*10000000:.0f}.{GetID()}"
 
-                # Make sure there are NO duplicate keys
-                while Orphan['Key'] in OrphanList:
-                    Orphan['Key']=f"{time.time()*10000000:.0f}.{GetID()}"
+                # Only LIMIT orders are orphans, everything else is conditional
 
-                if cltype=='Orphan':
-                    Orphan['Class']='Orphan'
-                elif cltype=='Conditional':
-                    Orphan['Class']='Conditional'
+                try:
+                    if 'OrderType' in order and 'limit' in order['OrderType'].lower():
+                        Orphan['Class']='Orphan'
+                    elif 'Conditional' in order:
+                        Orphan['Class']='Conditional'
+                except Exception as err:
+                    JRLog.Write(f"Broken classifier: {Entry}")
+                    continue
+
+                # Make sure price IS of orphan data
 
                 if 'Price' not in Orphan:
                     if Orphan['Framework']=='oanda':
@@ -212,89 +273,227 @@ def ReadStorehoue(cltype=None,receiver=False):
                             od=relay.GetOrderDetails(OrderID=Orphan['ID'])[-1]
                             Orphan['cID']=od['id']
                             Orphan['Price']=od['price']
-                            Changed=True
                         except Exception as err:
                             pass
                     elif Orphan['Framework']=='mimic':
                         Orphan['Price']=Orphan['Response']['Price']
-                        Changed=True
                     elif Orphan['Framework']=='ccxt':
                         Orphan['Price']=Orphan['Response']['price']
-                        Changed=True
 
-                OrphanList[Orphan['Key']]=Orphan
+                # Now we have the needed information.
 
-                OrphanMemory[Orphan['Key']]=JRRsupport.Locker(Orphan['Key'])
-                OrphanMemory[Orphan['Key']].Put(OliverTwistTimeout*OliverTwistCount,"Waiting")
+                exchange=order['Exchange']
+                account=order['Account']
+                asset=order['Asset'].replace('/','').replace('-','').replace(':','').replace(' ','')
+                idx=f"{exchange}.{account}.{asset}"
+                fname=f"{OliverTwistData}/{idx}.Storehouse"
+
+                # Write out the new storehouse.
+
+                JRRsupport.AppendFile(fname,json.dumps(Orphan)+'\n')
                 rc+=1
 
             if rc>0:
-                if receiver==False:
-                    JRLog.Write(f"{rc} record(s) read")
-                else:
-                    JRLog.Write(f"{rc} record(s) received")
-
-            # If this is an older file, delete it after te order are processed.
-            if Changed==True and receiver==False:
-                WriteStorehouse()
-            elif (cltype!=None or receiver==True):
-                WriteStorehouse()
-                if WorkingStorehouse!=Storehouse:
-                    os.remove(WorkingStorehouse)
+                JRLog.Write(f"{rc} record(s) received")
+                os.remove(WorkingStorehouse)
     OliverTwistLock.Unlock()
 
-# This spins up the orphan manager to ensure each orphan is handled. This is NOT part of the main process, but
-# rather a child process. NONE o the global or main variables are available. The ONLY information know is what is
-# EXPLICTLY given.
+# Get the list of storehouses, and build an index.
 
-# An Orphan transactor will process orphans. A relatively easy process compared to the Conditional transactor.
-# The Condiional transactor will need to back feed orders into Relay, usingsimilat techniques compared to the
-# PlaceOrder system. The Conditional framework will be a logistical nightmare. Emphasis has to be on speed in
-# processing the conditions.
+def ReadStorehouseIndex():
+    StorehouseIDX={}
+    shf=os.listdir(OliverTwistData)
 
-def ProcessOrphan(**kwargs):
-    global OliverTwistCount
+    for idx in shf:
+        if '.Storehouse' in idx:
+            ind=idx.replace('.Storehouse','')
+            StorehouseIDX[ind]=f"{OliverTwistData}/{idx}"
+    return StorehouseIDX
+
+# Write this orphan list to disk
+
+def WriteStorehouse(idx,OrphanList,deleteKey=None):
+    Storehouse=f"{OliverTwistData}/{idx}.Storehouse"
+
+    StartTime=datetime.datetime.now()
+    interceptor.Critical(True)
+
+    fh=open(Storehouse,"w")
+    for cur in OrphanList:
+        if deleteKey==None or OrphanList[cur]['Key']!=deleteKey:
+            fh.write(json.dumps(OrphanList[cur])+'\n')
+    fh.close()
+
+    interceptor.Critical(False)
+    JRLog.Write(f"{idx}/{len(OrphanList)} order(s) written in {str(datetime.datetime.now()-StartTime)} seconds")
+
+# Read the complete list stored on disk, if it exists. Supports both orphans and conditionals.
+
+def ReadStorehouse(idx=None,OrigOrphanList=None):
+    # Required as the blobals are modified
+    global OliverTwistLock
     global JRLog
 
-    # The entire kwargs payload is the orphan JSON...
-    Orphan=kwargs
+    # Check if Directory exists
+    JRRsupport.mkdir(OliverTwistData)
+
+    if idx==None:
+        Storehouse=None
+        WorkingStorehouse=Receiver
+    else:
+        Storehouse=f"{OliverTwistData}/{idx}.Storehouse"
+        WorkingStorehouse=Storehouse
+
+    if OrigOrphanList==None:
+        OrphanList={}
+    else:
+        OrphanList=OrigOrphanList.copy()
+
+    # Wait until the file is Unlocked
+
+    while OliverTwistLock.Lock()!='locked':
+        JRRsupport.ElasticSleep(1)
+
+    rc=0
+    if os.path.exists(WorkingStorehouse):
+        buffer=JRRsupport.ReadFile(WorkingStorehouse).strip()
+        if buffer!=None and buffer!='':
+            Orphans=buffer.split('\n')
+
+            # Remove empty lines
+            while '' in Orphans:
+                Orphans.remove('')
+
+            for Entry in Orphans:
+                # Force set InMotion to False
+                Entry=Entry.strip()
+
+                # Break down entry and set up memory locker
+                try:
+                    Orphan=Entry
+                    while type(Orphan)==str:
+                        Orphan=json.loads(Orphan)
+                except:
+                    JRLog.Write(f"Broken: {Entry}")
+                    continue
+
+                # No duplicate ntries
+                if 'Key' in Orphan and Orphan['Key'] in OrphanList:
+                    continue
+
+                if 'Order' in Orphan:
+                    if type(Orphan['Order'])==str:
+                        order=json.loads(Orphan['Order'])
+                    else:
+                        order=Orphan['Order']
+                    order.pop('Identity',None)
+                else:
+                    JRLog.Write(f"Broken: {Entry}")
+                    continue
+                Orphan['Order']=order
+
+                if 'Response' in Orphan:
+                    if type(Orphan['Response'])==str:
+                        resp=json.loads(Orphan['Response'])
+                        Orphan['Response']=resp
+
+                # Assign a key, if not already present.
+
+                if 'Key' not in Orphan:
+                    Orphan['Key']=f"{time.time()*10000000:.0f}.{GetID()}"
+
+                # Only LIMIT orders are orphans, everything else is conditional
+                try:
+                    if 'OrderType' in order and 'limit' in order['OrderType'].lower():
+                        Orphan['Class']='Orphan'
+                    elif 'Conditional' in order:
+                        Orphan['Class']='Conditional'
+                except Exception as err:
+                    JRLog.Write(f"Broken classifier: {Entry}")
+                    continue
+
+                # Remove old unnessary data from Storehouse
+
+                if 'mID' in Orphan:
+                    Orphan.pop('mID',None)
+                if 'lID' in Orphan:
+                    Orphan.pop('lID',None)
+
+                # Make sure price IS of orphan data
+
+                if 'Price' not in Orphan:
+                    if Orphan['Framework']=='oanda':
+                        try:
+                            relay=JRR.JackrabbitRelay(exchange=Orphan['Order']['Exchange'],account=Orphan['Order']['Account'],asset=Orphan['Order']['Asset'],RaiseError=True)
+                            od=relay.GetOrderDetails(OrderID=Orphan['ID'])[-1]
+                            Orphan['cID']=od['id']
+                            Orphan['Price']=od['price']
+                        except Exception as err:
+                            pass
+                    elif Orphan['Framework']=='mimic':
+                        Orphan['Price']=Orphan['Response']['Price']
+                    elif Orphan['Framework']=='ccxt':
+                        Orphan['Price']=Orphan['Response']['price']
+
+                OrphanList[Orphan['Key']]=Orphan
+
+    OliverTwistLock.Unlock()
+    return OrphanList
+
+# Process the individual orphan storehouse
+# osh Orphan Storehouse
+
+# --> CHILD LEVEL
+
+def ProcessOrphan(**kwargs):
+    global JRLog
+
+    osh=kwargs
     State='Waiting'
 
+    # Massive headache: One of the most significant issues is that we don't know anything about any of the
+    # orders, so the processor needs to deal with everthing now in a layered approach. At the level we are
+    # at in this function, we only know the index and framework. Orphan and Conditional status is completely
+    # unknown...
+
     try:
-        # Figure out which order processor is needed
-        if Orphan['Class']=='Orphan':
-            Processor=importlib.import_module(f"ORPHAN{Orphan['Framework']}")
-        elif Orphan['Class']=='Conditional':
-            Processor=importlib.import_module(f"COND{Orphan['Framework']}")
+        # We NEED the framework.
+        idxList=osh['IDX'].split('.')
+        relay=JRR.JackrabbitRelay(exchange=idxList[0],account=idxList[1],asset=idxList[2])
 
-        State=Processor.OrderProcessor(Orphan)
+        # IMPORTANT: Modules loaded this way do NOT have access to anything of the parent. These
+        # modules are in complete and total isolation.
+
+        Processor=importlib.import_module(f"OliverTwist-{relay.Framework}")
+        State=Processor.OrderProcessor(osh)
     except Exception as err:
-        JRLog.Write(f"Broke {sys.exc_info()[-1].tb_lineno}: {Orphan['Key']}, {err}")
+        JRLog.Write(f"Broke {sys.exc_info()[-1].tb_lineno}: {osh['IDX']}, {err}")
 
-    otLock=JRRsupport.Locker("OliverTwist",ID=Orphan['lID'])
-    Memory=JRRsupport.Locker(Orphan['Key'],ID=Orphan['mID'])
+    otLock=JRRsupport.Locker("OliverTwist",ID=osh['lID'])
+    Memory=JRRsupport.Locker(osh['IDX'],ID=osh['mID'])
     otLock.Lock()
-    Memory.Put(OliverTwistTimeout*OliverTwistCount,State)
+    Memory.Put(OliverTwistTimeout,State)
     otLock.Unlock()
-    return
 
-# Process each child. Handles both orphans and conditionals
+# Process the individual index and handle all multi process functionality
+#    OrphanList=ReadStorehouse(idx=idx)
 
-# IMPORTANT: Deletes aren't removed from the storehouse in realtime, but rather on the next list sweep.
+# --> PARENT LEVEL
 
-def ProcessChild(Orphan):
+def ProcessChild(idx):
     # Required as the globals are modified
     global NumberProcesses
-    global OliverTwistCount
     global OliverTwistLock
-    global OrphanList
     global OrphanMemory
     global JRLog
 
     # Get result from Locker
 
     OliverTwistLock.Lock()
-    sData=json.loads(OrphanMemory[Orphan['Key']].Get())
+    if idx in OrphanMemory:
+        sData=json.loads(OrphanMemory[idx].Get())
+    else:
+        sData={ "Status":"waiting" }
     OliverTwistLock.Unlock()
 
     if 'DataStore' in sData:
@@ -304,65 +503,38 @@ def ProcessChild(Orphan):
 
     # This check must contain all possible expected values.
 
-    if status!='delete' and status!='running':
-        if status=='done' \
-        or status=='notfound' \
-        or status=='notowner' \
-        or status=='waiting':
-            status='waiting'
-        else:
-            JRLog.Error("Corruption",f"{Orphan['Key']}: {sData}")
+    if status!='running':
+        status='waiting'
 
-    if status=='delete':
-        # This is the ONLY way to properly handle deletions that won't risk trashing memory, as this part of the
-        # program is guarenteed to be non-parrellel.
+    OliverTwistLock.Lock()
 
-        OliverTwistLock.Lock()
-        OrphanMemory[Orphan['Key']].Erase()
-        OrphanMemory.pop(Orphan['Key'],None)
-        OrphanList.pop(Orphan['Key'],None)
-        WriteStorehouse()
-        OliverTwistLock.Unlock()
+    # Only run if not already running. It is possible for this state to
+    # occur, especially if there are only a few orders to process or a
+    # very fast broker.
 
-        JRLog.Write(f"Processed {Orphan['Class'].lower()}: {Orphan['Key']}")
-    else:
-        OliverTwistLock.Lock()
+    # ID *MUST* be dynamic for security. Howver, the child process has
+    # to have it in order to access the data store. orphan lock and
+    # orphan memory IDs will be different.
 
-        # Only run if not already running. It is possible for this state to
-        # occur, especially if there are only a few orders to process or a
-        # very fast broker.
+    if status=='waiting':
+        osh={}  # Orphan Storehouse data
+        osh['IDX']=idx
+        osh['lID']=OliverTwistLock.ID
+        osh['mID']=OrphanMemory[idx].ID
+        OrphanMemory[idx].Put(OliverTwistTimeout,"Running")
+        interceptor.StartProcess(ProcessOrphan,kwargs=osh)
 
-        # ID *MUST* be dynamic for security. Howver, the child process has
-        # to have it in order to access the data store. orphan lock and
-        # orphan memory IDs will be different.
-
-        if status=='waiting':
-            Orphan['lID']=OliverTwistLock.ID
-            Orphan['mID']=OrphanMemory[Orphan['Key']].ID
-            OrphanMemory[Orphan['Key']].Put(OliverTwistTimeout*OliverTwistCount,"Running")
-            if NumberProcesses>1:
-                interceptor.StartProcess(ProcessOrphan,kwargs=Orphan)
-            else:
-                ProcessOrphan(**Orphan)
-
-        OliverTwistLock.Unlock()
-
-        # Process any signals received during critical section
-        interceptor.SafeExit()
-
-def CleanUp():
     OliverTwistLock.Unlock()
-    for mem in list(OrphanMemory.keys()):
-        OrphanMemory[mem].Erase()
+
+    # Process any signals received during critical section
+    interceptor.SafeExit()
+
+###
+### Main driver
+###
 
 def main():
-    # Required as the globals are modified
     global NumberProcesses
-    global OliverTwistCount
-    global OliverTwistLock
-    global OrphanList
-    global OrphanMemory
-    global JRLog
 
     JRLog.Write('OliverTwist '+Version)
 
@@ -370,45 +542,56 @@ def main():
         NumberProcesses=int(sys.argv[1])
     JRLog.Write(f'Spawning {NumberProcesses} sub-processes')
 
-#    atexit.register(CleanUp)
+    # Flush the command line
+    for i in range(1,len(sys.argv)):
+        sys.argv.remove(sys.argv[1])
 
-    ReadStorehoue()
-    """
-    ReadStorehoue(cltype='Orphan')
-    ReadStorehoue(cltype='Conditional')
+    # Start with nothing.
+    OrphanList=None
 
-    ReadStorehoue(cltype='Orphan',receiver=True)
-    ReadStorehoue(cltype='Conditional', receiver=True)
-    """
+    # Deal with the old storehouse and build the new storehouses
+    if not os.path.isdir(OliverTwistData):
+        SplitStorehouse()
+
+    # Start the main loop
 
     while True:
         StartTime=datetime.datetime.now()
-#        ReadStorehoue(receiver=True)
 
-        # Dynamic factor for memory timeouts
-        OliverTwistCount=len(OrphanList)
+        # Read the list of storehouses
+        ReadReceiver()
+        StorehouseIDX=ReadStorehouseIndex()
+        for idx in StorehouseIDX:
+            # Create the orphan memory and assign it to Waiting
+            if idx not in OrphanMemory:
+                OrphanMemory[idx]=JRRsupport.Locker(idx)
+                OrphanMemory[idx].Put(OliverTwistTimeout,"Waiting")
 
-        # Deleted will break the system otherwise.
-        keyList=list(OrphanList.keys())
-        for cur in keyList:
-            # Process each order
-
-            ProcessChild(OrphanList[cur])
+            # Multiprocess functionality goes here
+            ProcessChild(idx)
 
             # Process any signals received during critical section
             interceptor.SafeExit()
 
             # Only allow "NumberProcesses" children to run as once.
-
             while interceptor.GetChildren()>(NumberProcesses-1):
+                JRRsupport.ElasticSleep(1)
+
+        # Wait for all children to finish
+        if os.path.exists(f"{DataDirectory}/OliverTwist.rest"):
+            while interceptor.GetChildren()>0:
                 JRRsupport.ElasticSleep(1)
 
         EndTime=datetime.datetime.now()
         Elapsed=(EndTime-StartTime)
-        if len(keyList)>NumberProcesses:
-            JRLog.Write(f"{len(keyList)} orders scanned in "+str(Elapsed)+" seconds")
+        if len(idx)>NumberProcesses:
+            JRLog.Write(f"{len(StorehouseIDX)} assets scanned in "+str(Elapsed)+" seconds")
 
         JRRsupport.ElasticSleep(1)
+        # Safe way of cleanly existing to tracking and diagnostics
+        if os.path.exists(f"{DataDirectory}/OliverTwist.rest"):
+            sys.exit(0)
 
-if __name__ == '__main__':
+if __name__=='__main__':
     main()
+
