@@ -19,10 +19,10 @@ AssetList=['BTC/USDT','ETH/USDT','BNB/USDT','LTC/USDT','XRP/USDT','TRX/USDT']
 NewOrder={"Recipe":"BuyEveryMinute Conditional","Action":"Buy","Exchange":"binance","Market":"spot","Account":"Sandbox","Asset":"TRX/USDT","USD":"7","OrderType":"Market","Conditional":"Yes","Direction":"Long","SellAction":"Sell","TakeProfit":"1.5%","StopLoss":"1%" }
 
 def PushOrder(NewOrder):
-    relay=JRR.JackrabbitRelay(payload=json.dumps(NewOrder),NoIdentityVerification=True,RaiseError=True)
-    relay.Order['Identity']=relay.Active['Identity']
-
     try:
+        relay=JRR.JackrabbitRelay(payload=json.dumps(NewOrder),NoIdentityVerification=True,RaiseError=True)
+        relay.Order['Identity']=relay.Active['Identity']
+
         # Feed the new order to Relay
         result=relay.SendWebhook(relay.Order)
         oid=relay.GetOrderID(result)
