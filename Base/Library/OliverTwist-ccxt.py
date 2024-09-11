@@ -283,8 +283,10 @@ def ProcessOrder(relay,Order,cid,amount,price,strikePrice,ds):
             reason=relay.GetFailedReason(result).lower()
             relay.JRLog.Write(f"{cid}: Order failed with {reason}")
             # If there isnt enough balance, remove the order
-            if 'insufficient balance' in reason or 'not enough to sell/close' in reason:
-                return 'PURGE'
+            if 'insufficient balance' in reason \
+            or 'not enough to sell/close' in reason \
+            or 'not enough balance' in reason:
+                return True
             return False
     except Exception as e:
         # Something broke or went horrible wrong
@@ -378,7 +380,7 @@ def CheckTakeProfit(relay,Orphan,lowestTrade):
             if type(res) is bool and res==True:
                return Orphan['Key']
             elif type(res)==str and res=='PURGE':
-                return 'PURGE'
+                return True
             return None
         else:
             # Strike did not happen
