@@ -14,9 +14,9 @@ import time
 import JRRsupport
 import JackrabbitRelay as JRR
 
-AssetList=['BTC/USDT','ETH/USDT','BNB/USDT','LTC/USDT','XRP/USDT','TRX/USDT']
+AssetList=['BTC/USD','ETH/USD','ADA/USD','LTC/USD','XRP/USD','TRX/USD','SOL/USD','DOGE/USD']
 
-NewOrder={"Recipe":"BuyEveryMinute Conditional","Action":"Buy","Exchange":"binance","Market":"spot","Account":"Sandbox","Asset":"TRX/USDT","USD":"7","OrderType":"Market","Conditional":"Yes","Direction":"Long","SellAction":"Sell","TakeProfit":"1.5%","StopLoss":"1%" }
+NewOrder={"Recipe":"BuyEveryMinute Conditional","Action":"Buy","Exchange":"mimic","Market":"spot","Account":"Kraken02","Asset":"TRX/USD","USD":"7","OrderType":"Market","Conditional":"Yes","Direction":"Long","SellAction":"Sell","TakeProfit":"1.5%","StopLoss":"1%" }
 
 def PushOrder(NewOrder):
     try:
@@ -29,7 +29,7 @@ def PushOrder(NewOrder):
         if oid!=None:
             bal=relay.GetBalance(Base=relay.Order['Asset'].split('/')[0])
             detail=relay.GetOrderDetails(id=oid,symbol=relay.Order['Asset'])
-            print(f"{relay.Order['Asset']} {oid:>16} {round(detail['price'],8):16.8f} {round(bal,8):16.8f}")
+            print(f"{relay.Order['Asset']:10} {oid:>16} {round(detail['Price'],8):16.8f} {round(bal,8):16.8f}")
     except Exception as err:
         print(err)
 
@@ -38,11 +38,11 @@ def PushOrder(NewOrder):
 ###
 
 def main():
-    while True:
+#    while True:
         for asset in AssetList:
             NewOrder['Asset']=asset
             PushOrder(NewOrder)
-        JRRsupport.ElasticSleep(60)
+#        JRRsupport.ElasticSleep(60)
 
 if __name__ == '__main__':
     main()
