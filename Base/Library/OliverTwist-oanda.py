@@ -230,13 +230,12 @@ def ReduceLotSize(relay,oldestTrade=None,val=1):
         if oldestTrade==None:
             return
         Order=lowestTrade['Order']
-#        print("RLS A")
-        relay.JRLog.Write(f"RLS: {json.dumps(oldestTrade)}")
+        relay.JRLog.Write(f"RLS A: {json.dumps(oldestTrade)}")
         pair=Order['Asset']
 
         # Verify the trade exists. If it doesn't, delete the key
         if not TradeExists(relay,oldestTrade['ID'],pair):
-#            print("RLS B",oldestTrade['id'])
+            print("RLS B",oldestTrade['id'])
             return
 
         lossID=oldestTrade['ID']
@@ -252,7 +251,7 @@ def ReduceLotSize(relay,oldestTrade=None,val=1):
             Dir='long'
             Action='Sell'
 
-#        print("RLS C")
+        print("RLS C")
         newOrder={}
         newOrder['OliverTwist']='Conditional ReduceBy'
         newOrder['Exchange']=Order['Exchange']
@@ -340,6 +339,7 @@ def ProcessOrder(relay,Order,cid,units,price,strikePrice,ds,lowestOrder=None):
                 LogMSG=f"{oid} -> {cid} Loss {dir}, {units}: {price:.5f} -> {sprice:5f}/{abs(rpl):.5f}, {duration}"
             relay.JRLog.Write(f"{LogMSG}")
 
+            relay.JRLog.Write(f"{rpl}")
             if rpl>0:
                 # Don't reduce if we have a loss
 
