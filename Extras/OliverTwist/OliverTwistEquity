@@ -58,7 +58,7 @@ else:
 lines=JRRsupport.ReadFile(sys.argv[2]).strip().split('\n')
 
 for line in lines:
-    if line=='' or ('Prft' not in line and 'Loss' not in line):
+    if line=='' or ('Prft' not in line and 'Loss' not in line and 'Rduc' not in line):
         continue
 
     data=line.split(' ')
@@ -69,7 +69,7 @@ for line in lines:
 
     if 'Prft' in line:
         pnl+=float(pdata)
-    if 'Loss' in line:
+    if 'Loss' in line or 'Rduc' in line:
         pnl-=float(pdata)
 
     xps.append(dt)

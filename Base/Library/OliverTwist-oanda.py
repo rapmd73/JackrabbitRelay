@@ -124,13 +124,6 @@ def ReadStorehouse(idx=None,OrigOrphanList=None):
                 except Exception as err:
                     continue
 
-                # Remove old unnessary data from Storehouse
-
-                if 'mID' in Orphan:
-                    Orphan.pop('mID',None)
-                if 'lID' in Orphan:
-                    Orphan.pop('lID',None)
-
                 # Make sure price IS of orphan data
 
                 if 'Price' not in Orphan:
@@ -151,8 +144,8 @@ def ReadStorehouse(idx=None,OrigOrphanList=None):
 
                 rc+=1
 
-    if rc==0:
-        os.remove(WorkingStorehouse)
+#    if rc==0:
+#        os.remove(WorkingStorehouse)
     return OrphanList
 
 # Get the hiest and lowest priced orders.
@@ -227,10 +220,10 @@ def CalculatePriceExit(order,ts,dir,price,onePip):
 
 def ReduceLotSize(relay,oldestTrade=None,val=1):
     try:
+        relay.JRLog.Write(f"RLS A: {json.dumps(oldestTrade)}")
         if oldestTrade==None:
             return
         Order=lowestTrade['Order']
-        relay.JRLog.Write(f"RLS A: {json.dumps(oldestTrade)}")
         pair=Order['Asset']
 
         # Verify the trade exists. If it doesn't, delete the key
@@ -339,7 +332,7 @@ def ProcessOrder(relay,Order,cid,units,price,strikePrice,ds,lowestOrder=None):
                 LogMSG=f"{oid} -> {cid} Loss {dir}, {units}: {price:.5f} -> {sprice:5f}/{abs(rpl):.5f}, {duration}"
             relay.JRLog.Write(f"{LogMSG}")
 
-            relay.JRLog.Write(f"{rpl}")
+            relay.JRLog.Write(f"RPL: {rpl}")
             if rpl>0:
                 # Don't reduce if we have a loss
 
@@ -490,7 +483,7 @@ def CheckTakeProfit(relay,Orphan,lowestTrade):
             ds=datetime.datetime.strptime(dsS,'%Y-%m-%dT%H:%M:%S.%fZ')
             units=abs(float(orderDetail[-1]['units']))
 
-            ProcessOrder(relay,Order,cid,units,price,strikePrice,ds)
+            ProcessOrder(relay,Order,cid,units,price,strikePrice,ds,lowestOrder=lowestTrade)
             return Orphan['Key']
         else:
             # Strike did not happen

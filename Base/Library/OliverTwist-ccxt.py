@@ -125,13 +125,6 @@ def ReadStorehouse(idx=None,OrigOrphanList=None):
                     JRLog.Write(f"Broken: {order}")
                     continue
 
-                # Remove old unnessary data from Storehouse
-
-                if 'mID' in Orphan:
-                    Orphan.pop('mID',None)
-                if 'lID' in Orphan:
-                    Orphan.pop('lID',None)
-
                 # Make sure price IS of orphan data
 
                 if 'Price' not in Orphan:
@@ -151,8 +144,8 @@ def ReadStorehouse(idx=None,OrigOrphanList=None):
                 OrphanList[Orphan['Key']]=Orphan
                 rc+=1
 
-    if rc==0:
-        os.remove(WorkingStorehouse)
+#    if rc==0:
+#        os.remove(WorkingStorehouse)
     return OrphanList
 
 # Get the hiest and lowest priced orders.
