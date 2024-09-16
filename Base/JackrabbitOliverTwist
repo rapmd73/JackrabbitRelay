@@ -5,14 +5,16 @@
 # 2021 Copyright © Robert APM Darin
 # All rights reserved unconditionally.
 
-# This is the Jackrabbit limit order manager. Its purpose is to track and maintain "orphaned" orders. Orphan orders are liit
-# order that the parent or order initiator does not wat a response for. TradingView is an example, but the situation applies
-# to any process that does not manage or maintain limit orders on their own.
+# This is the Jackrabbit limit order manager. Its purpose is to track and maintain "orphaned" orders. Orphan
+# orders are liit order that the parent or order initiator does not wat a response for. TradingView is an
+# example, but the situation applies to any process that does not manage or maintain limit orders on their
+# own.
 
-# IMPORTANT: Under no circumstances should THIS program manage an individual order. It is to be managed by a separate process,
-# called an orphan manager. This is simply because there is no way on knowing how many exchanges/brokers might be used
-# simultaneously. The memory of a single process managing a thousand orders would be absolutely thrashed. The orphan manager
-# will follow the same conventions of the PlaceOrder program, ie:
+# IMPORTANT: Under no circumstances should THIS program manage an individual order. It is to be managed by a
+# separate process, called an orphan manager. This is simply because there is no way on knowing how many
+# exchanges/brokers might be used simultaneously. The memory of a single process managing a thousand orders
+# would be absolutely thrashed. The orphan manager will follow the same conventions of the PlaceOrder
+# program, ie:
 
 # Old:
 #    Orphan.ccxt
@@ -412,13 +414,6 @@ def ReadStorehouse(idx=None,OrigOrphanList=None):
                     JRLog.Write(f"Broken classifier: {Entry}")
                     continue
 
-                # Remove old unnessary data from Storehouse
-
-                if 'mID' in Orphan:
-                    Orphan.pop('mID',None)
-                if 'lID' in Orphan:
-                    Orphan.pop('lID',None)
-
                 # Make sure price IS of orphan data
 
                 if 'Price' not in Orphan:
@@ -594,4 +589,3 @@ def main():
 
 if __name__=='__main__':
     main()
-
