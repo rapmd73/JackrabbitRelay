@@ -143,8 +143,9 @@ def ReadStorehouse(idx=None,OrigOrphanList=None):
 
                 rc+=1
 
-#    if rc==0:
-#        os.remove(WorkingStorehouse)
+    if rc==0:
+        os.remove(WorkingStorehouse)
+        return []
     return OrphanList
 
 # Get the hiest and lowest priced orders.
@@ -274,7 +275,7 @@ def ProcessOrder(relay,Order,cid,amount,price,strikePrice,ds):
             # Give OliverTwist a response
             relay.JRLog.Write(f"{cid}: Order failed with {relay.GetFailedReason(result)}")
             # If there isnt enough balance, remove the order
-            if 'not enough balance' in result:
+            if 'not enough balance' in result.lower():
                 return True
             return False
     except Exception as e:
@@ -537,6 +538,6 @@ def OrderProcessor(osh):
 #    shLock.Unlock()
 
     EndTime=datetime.datetime.now()
-    JRLog.Write(f"OP MIMIC Elapsed {idx}/{len(OrphanList)}: {EndTime-StartTime} seconds")
+#    JRLog.Write(f"OP MIMIC Elapsed {idx}/{len(OrphanList)}: {EndTime-StartTime} seconds")
 
     return 'Waiting'
