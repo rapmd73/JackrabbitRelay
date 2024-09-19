@@ -144,8 +144,8 @@ def ReadStorehouse(idx=None,OrigOrphanList=None):
                 OrphanList[Orphan['Key']]=Orphan
                 rc+=1
 
-#    if rc==0:
-#        os.remove(WorkingStorehouse)
+    if rc==0:
+        os.remove(WorkingStorehouse)
     return OrphanList
 
 # Get the hiest and lowest priced orders.
@@ -276,9 +276,9 @@ def ProcessOrder(relay,Order,cid,amount,price,strikePrice,ds):
             reason=relay.GetFailedReason(result).lower()
             relay.JRLog.Write(f"{cid}: Order failed with {reason}")
             # If there isnt enough balance, remove the order
-            if 'insufficient balance' in reason \
-            or 'not enough to sell/close' in reason \
-            or 'not enough balance' in reason:
+            if 'insufficient balance' in reason.lower() \
+            or 'not enough to sell/close' in reason.lower() \
+            or 'not enough balance' in reason.lower():
                 return True
             return False
     except Exception as e:
@@ -557,6 +557,6 @@ def OrderProcessor(osh):
         relay.JRLog.Write(f"OT CCXT Broke {sys.exc_info()[-1].tb_lineno}: {idx}, {err}",stdOut=False)
 
     EndTime=datetime.datetime.now()
-    JRLog.Write(f"OP CCXT Elapsed {idx}/{len(OrphanList)}: {EndTime-StartTime} seconds")
+#    JRLog.Write(f"OP CCXT Elapsed {idx}/{len(OrphanList)}: {EndTime-StartTime} seconds")
 
     return 'Waiting'
