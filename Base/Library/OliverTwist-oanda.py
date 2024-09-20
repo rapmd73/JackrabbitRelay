@@ -240,6 +240,7 @@ def ReduceLotSize(relay,oldestTrade=None,val=1):
             return
 
         lossID=oldestTrade['ID']
+        lossIU=float(oldestTrade['Response']['units'])
 
         # Get the direction of the reduction trade right.
 
@@ -697,6 +698,6 @@ def OrderProcessor(osh):
 #    shLock.Unlock()
 
     EndTime=datetime.datetime.now()
-    JRLog.Write(f"OP OANDA Elapsed {idx}/{len(OrphanList)}: {EndTime-StartTime} seconds")
+#    JRLog.Write(f"OP OANDA Elapsed {idx}/{len(OrphanList)}: {EndTime-StartTime} seconds")
 
     return 'Waiting'

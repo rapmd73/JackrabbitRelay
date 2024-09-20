@@ -562,6 +562,6 @@ def OrderProcessor(osh):
         relay.JRLog.Write(f"OT CCXT Broke {sys.exc_info()[-1].tb_lineno}: {idx}, {err}",stdOut=False)
 
     EndTime=datetime.datetime.now()
-    JRLog.Write(f"OP CCXT Elapsed {idx}/{len(OrphanList)}: {EndTime-StartTime} seconds")
+#    JRLog.Write(f"OP CCXT Elapsed {idx}/{len(OrphanList)}: {EndTime-StartTime} seconds")
 
     return 'Waiting'

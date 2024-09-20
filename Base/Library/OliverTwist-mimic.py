@@ -541,6 +541,6 @@ def OrderProcessor(osh):
 #    shLock.Unlock()
 
     EndTime=datetime.datetime.now()
-    JRLog.Write(f"OP MIMIC Elapsed {idx}/{len(OrphanList)}: {EndTime-StartTime} seconds")
+#    JRLog.Write(f"OP MIMIC Elapsed {idx}/{len(OrphanList)}: {EndTime-StartTime} seconds")
 
     return 'Waiting'
