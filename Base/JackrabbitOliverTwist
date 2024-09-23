@@ -579,11 +579,7 @@ def main():
 
         EndTime=datetime.datetime.now()
         Elapsed=(EndTime-StartTime)
-<<<<<<< HEAD
-#        if len(idx)>NumberProcesses:
-=======
 #        if len(idx)>(NumberProcesses*3):
->>>>>>> 5d61423a9edba516e8e042b0785b61fad6cfaa1e
 #            JRLog.Write(f"{len(StorehouseIDX)} assets scanned in "+str(Elapsed)+" seconds")
 
         JRRsupport.ElasticSleep(1)
