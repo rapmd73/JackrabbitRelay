@@ -123,13 +123,6 @@ def ReadStorehouse(idx=None,OrigOrphanList=None):
                     JRLog.Write(f"Broken: {order}")
                     continue
 
-                # Remove old unnessary data from Storehouse
-
-                if 'mID' in Orphan:
-                    Orphan.pop('mID',None)
-                if 'lID' in Orphan:
-                    Orphan.pop('lID',None)
-
                 # Make sure price IS of orphan data
 
                 if 'Price' not in Orphan:
@@ -152,6 +145,7 @@ def ReadStorehouse(idx=None,OrigOrphanList=None):
 
     if rc==0:
         os.remove(WorkingStorehouse)
+        return []
     return OrphanList
 
 # Get the hiest and lowest priced orders.
@@ -279,7 +273,10 @@ def ProcessOrder(relay,Order,cid,amount,price,strikePrice,ds):
             return True
         else:
             # Give OliverTwist a response
-            relay.JRLog.Write(f"{id} -> {cid}: Order failed with {relay.GetFailedReason(result)}")
+            relay.JRLog.Write(f"{cid}: Order failed with {relay.GetFailedReason(result)}")
+            # If there isnt enough balance, remove the order
+            if 'not enough balance' in result.lower():
+                return True
             return False
     except Exception as e:
         # Something broke or went horrible wrong

@@ -124,13 +124,6 @@ def ReadStorehouse(idx=None,OrigOrphanList=None):
                 except Exception as err:
                     continue
 
-                # Remove old unnessary data from Storehouse
-
-                if 'mID' in Orphan:
-                    Orphan.pop('mID',None)
-                if 'lID' in Orphan:
-                    Orphan.pop('lID',None)
-
                 # Make sure price IS of orphan data
 
                 if 'Price' not in Orphan:
@@ -227,16 +220,15 @@ def CalculatePriceExit(order,ts,dir,price,onePip):
 
 def ReduceLotSize(relay,oldestTrade=None,val=1):
     try:
+        relay.JRLog.Write(f"RLS A: {json.dumps(oldestTrade)}")
         if oldestTrade==None:
             return
-        Order=lowestTrade['Order']
-#        print("RLS A")
-        relay.JRLog.Write(f"RLS: {json.dumps(oldestTrade)}")
+        Order=oldestTrade['Order']
         pair=Order['Asset']
 
         # Verify the trade exists. If it doesn't, delete the key
         if not TradeExists(relay,oldestTrade['ID'],pair):
-#            print("RLS B",oldestTrade['id'])
+            relay.JRLog.Write("RLS B",oldestTrade)
             return
 
         lossID=oldestTrade['ID']
@@ -253,7 +245,7 @@ def ReduceLotSize(relay,oldestTrade=None,val=1):
             Dir='long'
             Action='Sell'
 
-#        print("RLS C")
+        relay.JRLog.Write("RLS C")
         newOrder={}
         newOrder['OliverTwist']='Conditional ReduceBy'
         newOrder['Exchange']=Order['Exchange']
@@ -270,10 +262,11 @@ def ReduceLotSize(relay,oldestTrade=None,val=1):
             newOrder['OrderType']='market'
         newOrder['Identity']=relay.Active['Identity']
 
-#        print("RLS D")
+        relay.JRLog.Write("RLS D")
         # Feed the new order to Relay
         result=relay.SendWebhook(newOrder)
         oid=relay.GetOrderID(result)
+        relay.JRLog.Write(f"RLS E: {oid}")
         if oid!=None:
             orderDetail=relay.GetOrderDetails(OrderID=oid)
 
@@ -341,6 +334,8 @@ def ProcessOrder(relay,Order,cid,units,price,strikePrice,ds,lowestOrder=None):
                 LogMSG=f"{oid} -> {cid} Loss {dir}, {units}: {price:.5f} -> {sprice:5f}/{abs(rpl):.5f}, {duration}"
             relay.JRLog.Write(f"{LogMSG}")
 
+#            relay.JRLog.Write(f"RPL: {rpl}")
+#            relay.JRLog.Write(f"LO: {lowestOrder}")
             if rpl>0:
                 # Don't reduce if we have a loss
 
@@ -373,13 +368,18 @@ def ProcessOrder(relay,Order,cid,units,price,strikePrice,ds,lowestOrder=None):
 
 def TradeExists(relay,id,asset):
     try:
+        # Get ID from actual current order
+        orderDetail=relay.GetOrderDetails(OrderID=id)
+        cid=orderDetail[-1]['id']
+
+        # Get current open trades
         openTrades=relay.GetOpenTrades(symbol=asset)
         # no open trades
         if openTrades==[]:
             return False
 
         for cur in openTrades:
-            if cur['id']==id:
+            if cur['id']==cid:
                 return True
     except Exception as e:
         # Something broke or went horrible wrong
@@ -491,7 +491,7 @@ def CheckTakeProfit(relay,Orphan,lowestTrade):
             ds=datetime.datetime.strptime(dsS,'%Y-%m-%dT%H:%M:%S.%fZ')
             units=abs(float(orderDetail[-1]['units']))
 
-            ProcessOrder(relay,Order,cid,units,price,strikePrice,ds)
+            ProcessOrder(relay,Order,cid,units,price,strikePrice,ds,lowestOrder=lowestTrade)
             return Orphan['Key']
         else:
             # Strike did not happen
