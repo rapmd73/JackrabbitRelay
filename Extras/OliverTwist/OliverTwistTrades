@@ -233,7 +233,7 @@ for order in OpenOrders:
         du=float(order['Response']['Details']['Amount'])
         dp=float(order['Response']['Details']['Price'])
     else: # CCXT framework fall through
-        du=float(order['Response']['Details']['Amount'])
+        du=float(order['Response']['Details']['amount'])
         dp=float(order['Response']['Details']['price'])
 
     htxt=f"{order['ID']}: {du:.0f}@{dp:.5f}"
