@@ -254,7 +254,7 @@ def ReduceLotSize(relay,oldestTrade=None,val=1):
         newOrder['Action']=Action.lower()
         if 'EnforceFIFO' in Order:
             newOrder['EnforceFIFO']=Order['EnforceFIFO']
-        newOrder['Units']=runits
+        newOrder['Units']=str(runits)       # Must be a string
         newOrder['Ticket']=str(lossID)
         if 'OrderType' in Order:
             newOrder['OrderType']=Order['OrderType']
@@ -266,7 +266,7 @@ def ReduceLotSize(relay,oldestTrade=None,val=1):
         # Feed the new order to Relay
         result=relay.SendWebhook(newOrder)
         oid=relay.GetOrderID(result)
-        relay.JRLog.Write(f"RLS E: {oid}")
+        relay.JRLog.Write(f"RLS E: {result}")
         if oid!=None:
             orderDetail=relay.GetOrderDetails(OrderID=oid)
 
