@@ -27,7 +27,7 @@ interceptor=JRRsupport.SignalInterceptor(Log=Log)
 
 DataDirectory='/home/JackrabbitRelay2/Data'
 chartDir=DataDirectory+'/Charts/'
-Storehouse=DataDirectory+'/OliverTwist.Storehouse'
+OliverTwistData=DataDirectory+'/OliverTwist'
 
 # For reading the storehouse
 
@@ -38,6 +38,7 @@ OliverTwistLock=JRRsupport.Locker("OliverTwist")
 def ReadStorehouse(exchange,account,asset):
     global OliverTwistLock
 
+    Storehouse=f"{OliverTwistData}/{exchange}.{account}.{asset}.Storehouse"
     OrphanList=[]
 
     WorkingStorehouse=Storehouse
@@ -74,8 +75,7 @@ def ReadStorehouse(exchange,account,asset):
                         detail.pop('Identity',None)
                         Orphan['Detail']=detail
 
-                if Orphan['Order']['Exchange']==exchange and Orphan['Order']['Account']==account and Orphan['Order']['Asset']==asset:
-                    OrphanList.append(Orphan)
+                OrphanList.append(Orphan)
 
     OliverTwistLock.Unlock()
     return OrphanList
@@ -90,7 +90,7 @@ def FindStartDateTime(end_date_str, duration_str):
     time_parts = duration_parts[1].split(':')
     hours = int(time_parts[0])
     minutes = int(time_parts[1])
-    seconds = float(time_parts[2])
+    seconds = float(time_parts[2].replace(',',''))
 
     # Calculate start date
     start_date = end_date - datetime.timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds)
@@ -132,7 +132,7 @@ for i in range(1,len(sys.argv)):
 print("Phase 1: read log file")
 data=gblog.split('.')
 
-exchange=data[1].lower()
+exchange=data[1]
 account=data[2]
 
 if len(data)==5:
@@ -144,7 +144,7 @@ else:
 
 # For Mimic, use the Details section to get the Price
 
-OpenOrders=ReadStorehouse(exchange,account,pair)
+OpenOrders=ReadStorehouse(exchange,account,asset)
 if OpenOrders!=[]:
     OpenOrderDT=datetime.datetime.strptime(OpenOrders[0]['DateTime'], '%Y-%m-%d %H:%M:%S.%f')
     OpenEpoch=int(time.mktime(OpenOrderDT.timetuple()))
@@ -202,14 +202,23 @@ fig1=ps.make_subplots(specs=[[{"secondary_y":False}]])
 
 print("Phase 2: making the chart")
 
-# Plot candles of timeframe just above log
+# Get the first candle of the trades to set the start of the chart.
+fid=lines[0].split(' ')[4]
+oDetails=relay.GetOrderDetails(OrderID=fid)[0]
+print(oDetails['time'])
+sdt=datetime.datetime.strptime(oDetails['time'].split('T')[0], '%Y-%m-%d').timestamp()
 
+# Plot candles of timeframe just above log
 dt=[]
 do=[]
 dh=[]
 dl=[]
 dc=[]
 for slice in ohlcv:
+    cdt=slice[0]/1000
+    # Do not add candles before forst trade
+    if cdt<sdt:
+        continue
     dt.append(datetime.datetime.fromtimestamp(slice[0]/1000))
     do.append(slice[1])
     dh.append(slice[2])
@@ -217,7 +226,7 @@ for slice in ohlcv:
     dc.append(slice[4])
 fig1.add_trace(go.Candlestick(x=dt,open=do,high=dh,low=dl,close=dc,increasing_line_color='#a0ffff',decreasing_line_color= '#ffa0ff'),secondary_y=False)
 
-# Process open opders for oanda
+# Process open orders for oanda
 
 dt=[]
 dp=[]
@@ -242,7 +251,10 @@ for order in OpenOrders:
 # Plot trades
 
 for line in lines:
-    if line=='' or ('Prft' not in line and 'Loss' not in line and 'Rduc' not in line):
+    line=line.lower()
+    if line=='' or ('prft' not in line and 'loss' not in line and 'rduc' not in line):
+        continue
+    if 'broke' in line:
         continue
 
     data=line.split(' ')
@@ -255,12 +267,12 @@ for line in lines:
         dur=f"{data[12]} {data[13]} {data[14]}"
     else:
         dur=f"0 days, {data[12]}"
+    bTime=FindStartDateTime(dt,dur)
 
     # Prft/Loss
     action=data[6]
-    dir=data[7].split(',')[0].lower()
+    dir=data[7].split(',')[0]
 
-    bTime=FindStartDateTime(dt,dur)
     amount=abs(float(data[8].split(':')[0]))
     bPrice=float(data[9])
 
@@ -274,15 +286,15 @@ for line in lines:
     else:
         rpl=(bPrice-sPrice)*amount
 
-    if action.lower()=='prft' and rpl>0:        # Profit
+    if action=='prft' and rpl>0:        # Profit
         col="rgba(0,128,0,1)"
-    elif action.lower()=='prft' and rpl==0:     # Breakeven
+    elif action=='prft' and rpl==0:     # Breakeven
         col="rgba(128,128,0,1)"
-    elif action.lower()=='prft' and rpl<0:      # Loss by slippage
+    elif action=='prft' and rpl<0:      # Loss by slippage
         col="rgba(255,128,0,0.5)"
-    elif action.lower()=='rduc':                # ReduceBy
+    elif action=='rduc':                # ReduceBy
         col="rgba(0,255,255,0.01)"
-    elif action.lower()=='loss':                # Stoploss
+    elif action=='loss':                # Stoploss
         col="rgba(128,0,0,0.5)"
     else:
         print('L:',line)

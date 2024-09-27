@@ -61,6 +61,8 @@ for line in lines:
     line=line.lower()
     if line=='' or ('prft' not in line and 'loss' not in line and 'rduc' not in line):
         continue
+    if 'broke' in line:
+        continue
 
     data=line.split(' ')
 
@@ -69,9 +71,9 @@ for line in lines:
     pdata=line.split('/')[1].strip().split(',')[0]
 
     if 'prft' in line.lower():
-        pnl+=float(pdata)
+        pnl+=abs(float(pdata))
     if 'loss' in line or 'rduc' in line:
-        pnl-=float(pdata)
+        pnl-=abs(float(pdata))
 
     xps.append(dt)
     equity.append(pnl)

@@ -220,7 +220,7 @@ def CalculatePriceExit(order,ts,dir,price,onePip):
 
 def ReduceLotSize(relay,oldestTrade=None,val=1):
     try:
-        relay.JRLog.Write(f"RLS A: {json.dumps(oldestTrade)}")
+#        relay.JRLog.Write(f"RLS A: {json.dumps(oldestTrade)}")
         if oldestTrade==None:
             return
         Order=oldestTrade['Order']
@@ -228,11 +228,15 @@ def ReduceLotSize(relay,oldestTrade=None,val=1):
 
         # Verify the trade exists. If it doesn't, delete the key
         if not TradeExists(relay,oldestTrade['ID'],pair):
-            relay.JRLog.Write("RLS B",oldestTrade)
+#            relay.JRLog.Write("RLS B",oldestTrade)
             return
 
         lossID=oldestTrade['ID']
         lossIU=float(oldestTrade['Response']['units'])
+        parts=oldestTrade['Response']['time'].split('.')
+        dsS=f"{parts[0]}.{parts[1][:6]}Z"
+        ds=datetime.datetime.strptime(dsS,'%Y-%m-%dT%H:%M:%S.%fZ')
+        price=float(oldestTrade['Price'])
 
         # Get the direction of the reduction trade right.
 
@@ -245,7 +249,7 @@ def ReduceLotSize(relay,oldestTrade=None,val=1):
             Dir='long'
             Action='Sell'
 
-        relay.JRLog.Write("RLS C")
+#        relay.JRLog.Write("RLS C")
         newOrder={}
         newOrder['OliverTwist']='Conditional ReduceBy'
         newOrder['Exchange']=Order['Exchange']
@@ -262,17 +266,22 @@ def ReduceLotSize(relay,oldestTrade=None,val=1):
             newOrder['OrderType']='market'
         newOrder['Identity']=relay.Active['Identity']
 
-        relay.JRLog.Write("RLS D")
+#        relay.JRLog.Write("RLS D")
         # Feed the new order to Relay
         result=relay.SendWebhook(newOrder)
         oid=relay.GetOrderID(result)
-        relay.JRLog.Write(f"RLS E: {result}")
+#        relay.JRLog.Write(f"RLS E: {result}")
         if oid!=None:
             orderDetail=relay.GetOrderDetails(OrderID=oid)
+            # find trade close time and  duration
+            parts=orderDetail[-1]['time'].split('.')
+            deS=f"{parts[0]}.{parts[1][:6]}Z"
+            de=datetime.datetime.strptime(deS,'%Y-%m-%dT%H:%M:%S.%fZ')
+            duration=de-ds
 
             sprice=float(orderDetail[-1]['price'])
             rpl=float(orderDetail[-1]['pl'])
-            relay.JRLog.Write(f"{lossID} -> {oid} Rduc {Dir}, {val}: {price:.5f} -> {sprice:5f}/{rpl:.5f}")
+            relay.JRLog.Write(f"{lossID} -> {oid} Rduc {Dir}, {val}: {price:.5f} -> {sprice:5f}/{abs(rpl):.5f}, {duration}")
     except Exception as e:
         # Something broke or went horrible wrong
         relay.JRLog.Write(f"ReduceLotSize: {sys.exc_info()[-1].tb_lineno}/{str(e)}")
