@@ -200,68 +200,30 @@ class oanda:
     # Get candlestick (OHLCV) data
 
     def GetOHLCV(self,**kwargs):
-        RFC3339="%Y-%m-%dT%H:%M:%SZ"
         symbol=kwargs.get('symbol').replace('/','_')
         pair=symbol.replace('_','')
         timeframe=kwargs.get('timeframe')
         limit=str(kwargs.get('limit',None))
-        tffrom=str(kwargs.get('tffrom',None))
-        tfto=str(kwargs.get('tfto',None))
-        stime=None
-        etime=None
 
         if limit!=None and limit!="None":
             params={"granularity":timeframe.upper(), "count":limit }
-        elif tffrom!=None:
-            stime=v20Generic.secs2time(int(tffrom)/1000).strftime(RFC3339)
-            if limit==None or limit=="None":
-                limit=5000
-            if tfto==None or tfto=="None":
-                etime=v20Generic.secs2time(time.time()).strftime(RFC3339)
-            else:
-                etime=v20Generic.secs2time(int(tfto)/1000).strftime(RFC3339)
-            params={"granularity":timeframe.upper(), "from":stime, "to":etime, "count":limit }
 
         candles=[]
         self.SetPipValue(symbol)
 
-        if 'from' not in params:
-            res=v20Instruments.InstrumentsCandles(instrument=symbol,params=params)
-            self.Results=self.API("GetOHLCV",request=res)
+        res=v20Instruments.InstrumentsCandles(instrument=symbol,params=params)
+        self.Results=self.API("GetOHLCV",request=res)
 
-            for cur in self.Results['candles']:
-                candle=[]
-                candle.append(int(datetime.strptime(cur['time'],'%Y-%m-%dT%H:%M:%S.000000000Z').timestamp())*1000)
-                candle.append(float(cur['mid']['o']))
-                candle.append(float(cur['mid']['h']))
-                candle.append(float(cur['mid']['l']))
-                candle.append(float(cur['mid']['c']))
-                candle.append(float(cur['volume']))
-                candles.append(candle)
-            return candles
-        else:
-            # Fetch full history. This will NOT be fast as S5 goes back to 2005...
-
-            # Too big for memory so save in Data Directory. I'm going this way because I need ratelimit and
-            # retry functionality already built into Relay. This will have to be written to disk and post
-            # processed.
-
-            ParamList=v20Factories.InstrumentsCandlesFactory(instrument=symbol,params=params)
-            fn=f"{self.DataDirectory}/{pair}.{timeframe}.csv"
-            for r in ParamList:
-                sParams=r.__dict__['params']
-                result=v20Instruments.InstrumentsCandles(instrument=symbol,params=sParams)
-                res=self.API("GetOHLCV",request=result)
-
-                for cur in res['candles']:
-                    dt=int(datetime.strptime(cur['time'],'%Y-%m-%dT%H:%M:%S.000000000Z').timestamp())*1000
-                    o=float(cur['mid']['o'])
-                    h=float(cur['mid']['h'])
-                    l=float(cur['mid']['l'])
-                    c=float(cur['mid']['c'])
-                    v=float(cur['volume'])
-                    JRRsupport.AppendFile(fn,f'{dt},{o:.5f},{h:.5f},{l:.5f},{c:.5f},{v:.5f}\n')
-            return fn
+        for cur in self.Results['candles']:
+            candle=[]
+            candle.append(int(datetime.strptime(cur['time'],'%Y-%m-%dT%H:%M:%S.000000000Z').timestamp())*1000)
+            candle.append(float(cur['mid']['o']))
+            candle.append(float(cur['mid']['h']))
+            candle.append(float(cur['mid']['l']))
+            candle.append(float(cur['mid']['c']))
+            candle.append(float(cur['volume']))
+            candles.append(candle)
+        return candles
 
     # Get the bid/ask values of the curent ticker
 
