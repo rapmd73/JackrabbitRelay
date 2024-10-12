@@ -137,10 +137,12 @@ account=data[2]
 
 if len(data)==5:
     asset=data[3]
-    pair=data[3][:3]+'/'+data[3][3:]
+    l=len(data[3])
+    pair=data[3][:l-3]+'/'+data[3][-3:]
 else:
     asset=data[4]
-    pair=data[4][:3]+'/'+data[4][3:]
+    l=len(data[3])
+    pair=data[4][:l-3]+'/'+data[4][-3:]
 
 # For Mimic, use the Details section to get the Price
 
@@ -148,6 +150,7 @@ OpenOrders=ReadStorehouse(exchange,account,asset)
 if OpenOrders!=[]:
     OpenOrderDT=datetime.datetime.strptime(OpenOrders[0]['DateTime'], '%Y-%m-%d %H:%M:%S.%f')
     OpenEpoch=int(time.mktime(OpenOrderDT.timetuple()))
+    pair=OpenOrders[0]['Order']['Asset']
 
     # Get ending date for lines
 
@@ -203,10 +206,16 @@ fig1=ps.make_subplots(specs=[[{"secondary_y":False}]])
 print("Phase 2: making the chart")
 
 # Get the first candle of the trades to set the start of the chart.
-fid=lines[0].split(' ')[4]
-oDetails=relay.GetOrderDetails(OrderID=fid)[0]
-print(oDetails['time'])
-sdt=datetime.datetime.strptime(oDetails['time'].split('T')[0], '%Y-%m-%d').timestamp()
+dline=lines[0].split(' ')
+while '' in dline:
+    dline.remove('')
+fid=dline[3]
+std=None
+try:
+    oDetails=relay.GetOrderDetails(OrderID=fid)[0]
+    sdt=datetime.datetime.strptime(oDetails['time'].split('T')[0], '%Y-%m-%d').timestamp()
+except Exception as err:
+    sdt=StartEpoch
 
 # Plot candles of timeframe just above log
 dt=[]
@@ -235,9 +244,13 @@ for order in OpenOrders:
     dt=order['DateTime']
 
     if exchange=='oanda':
-        oDetails=relay.GetOrderDetails(OrderID=order['ID'])[-1]
-        dp=float(oDetails['price'])
-        du=int(oDetails['units'])
+        try:
+            oDetails=relay.GetOrderDetails(OrderID=order['ID'])[-1]
+            dp=float(oDetails['price'])
+            du=int(oDetails['units'])
+        except Exception as err:
+            print("Check OpenOrders",err)
+            continue
     elif exchange=='mimic':
         du=float(order['Response']['Details']['Amount'])
         dp=float(order['Response']['Details']['Price'])
