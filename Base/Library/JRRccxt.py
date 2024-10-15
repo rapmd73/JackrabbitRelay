@@ -436,9 +436,7 @@ class ccxtCrypto:
                 params['reduce_only']=ro
 
         if 'binance' in self.Broker.id:
-            params['quoteOrderQty']=amount
-#        else:
-#            amount=float(amount)
+            params['quoteOrderQty']=amount*price
 
         # Pure market orders break (phemex) when price in included.
         if m=='market' and "createMarketBuyOrderRequiresPrice" not in self.Broker.options:
@@ -490,7 +488,7 @@ class ccxtCrypto:
 
         if diagnostics:
             self.Log.Write("Minimum asset analysis")
-            self.Log.Write("|- Base: "+base)
+#            self.Log.Write("|- Base: "+base)
             self.Log.Write(f"| |- Minimum: {minimum:.8f}")
             self.Log.Write(f"| |- Min Cost: {mincost:.8f}")
 
@@ -498,16 +496,17 @@ class ccxtCrypto:
             # for the overhead of pulling quote currency. Quote currency
             # OVERRIDES base ALWAYS.
 
-            self.Log.Write("|- Quote: "+quote)
+#            self.Log.Write("|- Quote: "+quote)
 
-        if quote not in self.StableCoinUSD or forceQuote:
-            bpair=self.FindMatchingPair(quote)
-            if bpair!=None:
-                minimum,mincost=self.GetAssetMinimum(bpair,diagnostics)
+#        if quote not in self.StableCoinUSD or forceQuote:
+#            bpair=self.FindMatchingPair(quote)
+#            if bpair!=None:
+#                minimum,mincost=self.GetAssetMinimum(bpair,diagnostics)
 
-                if diagnostics:
-                    self.Log.Write(f"| |- Minimum: {minimum:.8f}")
-                    self.Log.Write(f"| |- Min Cost: {mincost:.8f}")
+#                if diagnostics:
+#                    self.Log.Write("|- Quote: "+quote)
+#                    self.Log.Write(f"| |- Minimum: {minimum:.8f}")
+#                    self.Log.Write(f"| |- Min Cost: {mincost:.8f}")
 
         if minimum==0.0:
             self.Log.Error("Asset Analysis","minimum position size returned as 0")
@@ -525,7 +524,7 @@ class ccxtCrypto:
 
         # This is the lowest accepted price of market order
 
-        close=ticker['Ask']
+        close=max(ticker['Ask'],ticker['Bid'])
 
         # Check if there is an overide in place
 
@@ -579,7 +578,7 @@ class ccxtCrypto:
                     minimum=float('0.'+str(z[:factor-1])+'1')
                     mincost=minimum*close
 
-            if 'binance' in self.Broker.id:
+            if 'binance' in exchangeName: # self.Broker.id:
                 mincost+=0.3
                 minimum=mincost/close
 

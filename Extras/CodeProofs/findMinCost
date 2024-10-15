@@ -24,8 +24,9 @@ else:
     print("An exchange, (sub)account, and an asset must be provided.")
     sys.exit(1)
 
+print(relay.Markets[asset]['precision'])
 minimum,mincost=relay.GetMinimum(symbol=asset)
 
 print(f"Minimum Amount/Units: {minimum:16.8f}")
-print(f"Minimum Cost: {mincost:16.8f}")
+print(f"Minimum Cost:         {mincost:16.8f}")
 
