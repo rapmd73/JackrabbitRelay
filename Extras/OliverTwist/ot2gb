@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import time
+import datetime
+import json
+
+import JRRsupport
+import JackrabbitRelay as JRR
+
+# Oliver Twist log
+# 2024-08-01 06:35:32.669979  476486 88557 -> 88528 Prft short, 71.0: 1.08271 -> 1.081480/0.08730, 4:36:21.447434
+
+chartDir='/home/JackrabbitRelay2/Data/Charts/'
+
+# Initialize global signal interceptor. prevent file trashing on CTRL-C
+
+Log=JRR.JackrabbitLog()
+interceptor=JRRsupport.SignalInterceptor(Log=Log)
+
+###
+### Main code base.
+###
+
+if len(sys.argv)<2:
+    print("An least OliverTwist log file is required.")
+    sys.exit(1)
+
+entry={}
+relay={}
+lines={}
+orderList={}
+
+# Copy arg list
+gblog=sys.argv[1]
+
+# Remove sys arg list
+
+for i in range(1,len(sys.argv)):
+    sys.argv.remove(sys.argv[1])
+
+# Read the log file
+
+data=gblog.split('.')
+
+account=data[2]
+asset=data[3]
+
+# Add the /
+pair=asset[:3]+'/'+asset[3:]
+relay=JRR.JackrabbitRelay(framework='oanda',exchange=data[1],account=account,asset=pair)
+lines=JRRsupport.ReadFile(gblog).strip().split('\n')
+
+# Get the order IDs and read them into a dictionary.
+
+oList=[]
+nList=[]
+nLines=[]
+
+for line in lines:
+    line=line.lower()
+    if line=='' or ('prft' not in line and 'rduc' not in line and 'loss' not in line):
+        continue
+
+    data=line.split(' ')
+    while '' in data:
+        data.remove('')
+
+    # Selling date/time
+    sdt=data[0]+' '+data[1]
+    pid=data[2]
+    id=data[3]
+    cid=data[5]
+    act=data[6]
+    dir=data[7].replace(',','')
+    amt=data[8].replace(':','')
+    bp=data[9]
+    sp,rpl=data[11].split('/')
+    dur=' '.join(data[12:])
+
+    oDetail=relay.GetOrderDetails(OrderID=id)[-1]
+
+    # Buying date/time
+    parts=oDetail['time'].replace('T',' ').replace('Z','').split('.')
+    bdt=f"{parts[0]}.{parts[1][:6]}"
+    if act=='rduc':
+        amt=oDetail['units']
+    bal=oDetail['accountBalance']
+
+    if dir=='shrt' or dir=='short':
+        dir='Short'
+
+    nav=float(bp)*abs(float(amt))
+
+    if act=='prft' or act=='loss':
+        print(f"{bdt} {pid} OT   {dir} - {id} Buy @{bp} -> {amt}")
+        print(f"{sdt} {pid} OT   {id} {dir} - {cid} Sell {amt} @{sp} -> {rpl} {bal}/{nav:.5f} {dur}")
+
+    if act=='rduc':
+        print(f"{sdt} {pid} OT   {id} {dir} - {cid} ReduceBy {1} @{sp} -> {rpl} {bal}/{nav:.5f}")
