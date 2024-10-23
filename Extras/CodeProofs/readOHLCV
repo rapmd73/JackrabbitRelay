@@ -36,5 +36,4 @@ markets=relay.GetMarkets()
 ohlcv=relay.GetOHLCV(symbol=asset,timeframe=tf,limit=count)
 
 for slice in ohlcv:
-    print(slice)
-
+    print(','.join(f'{value:.5f}' for value in slice))

@@ -5,16 +5,18 @@
 # 2021 Copyright © Robert APM Darin
 # All rights reserved unconditionally.
 
-# This is the Jackrabbit limit order manager. Its purpose is to track and maintain "orphaned" orders. Orphan
-# orders are liit order that the parent or order initiator does not wat a response for. TradingView is an
-# example, but the situation applies to any process that does not manage or maintain limit orders on their
-# own.
+# This is the Jackrabbit limit order manager. Its purpose is to track and maintain
+# "orphaned" orders. Orphan orders are liit order that the parent or order
+# initiator does not wat a response for. TradingView is an example, but the
+# situation applies to any process that does not manage or maintain limit orders on
+# their own.
 
-# IMPORTANT: Under no circumstances should THIS program manage an individual order. It is to be managed by a
-# separate process, called an orphan manager. This is simply because there is no way on knowing how many
-# exchanges/brokers might be used simultaneously. The memory of a single process managing a thousand orders
-# would be absolutely thrashed. The orphan manager will follow the same conventions of the PlaceOrder
-# program, ie:
+# IMPORTANT: Under no circumstances should THIS program manage an individual order.
+# It is to be managed by a separate process, called an orphan manager. This is
+# simply because there is no way on knowing how many exchanges/brokers might be
+# used simultaneously. The memory of a single process managing a thousand orders
+# would be absolutely thrashed. The orphan manager will follow the same conventions
+# of the PlaceOrder program, ie:
 
 # Old:
 #    Orphan.ccxt
@@ -28,23 +30,28 @@
 #   OliverTwist-mimic
 #   OliverTwist-oanda
 
-# ANY order (direct orphan or conditional) is an ORPHAN at all times withis THIS framework.
+# ANY order (direct orphan or conditional) is an ORPHAN at all times withis THIS
+# framework.
 
-# IMPORTANT: This fraework treats conditionals the same as orphans. The separation and distinction takes
-# place in the transactor. While this has plenty of issues to be aware of, it is the most effecient way of
-# handling the situation since at this level (dispatcher), they are syntactically the same.
+# IMPORTANT: This fraework treats conditionals the same as orphans. The separation
+# and distinction takes place in the transactor. While this has plenty of issues to
+# be aware of, it is the most effecient way of handling the situation since at this
+# level (dispatcher), they are syntactically the same.
 
-# Framework identification, along with any other order verification, is done in the PlaceOrder
+# Framework identification, along with any other order verification, is done in the
+# PlaceOrder
 
-# MIGRATE to checking the highest (take profit) and lowat prices (stop loss), rather then checking every
-# order. This will optimize heavy usagevsystem to handle the most relevant orders first. Will need rethings
-# on order list processing approach and methedology.
+# MIGRATE to checking the highest (take profit) and lowat prices (stop loss),
+# rather then checking every order. This will optimize heavy usagevsystem to handle
+# the most relevant orders first. Will need rethings on order list processing
+# approach and methedology.
 
-# MOVE to reading storehouse every pass and write price data into main store house... Reading orderdetails
-# is 3 minutes for order sweep, pre processing orders brings the time down to 0.00015 seconds. Be re-reading
-# the storehouse each pass, we can update order as received to maintain sweepspeed. Reading the ticker will
-# slow thing down, but breaking the storehouse down to exchange/account/asset with high/low extreme analysis
-# will dramatically improve performance.
+# MOVE to reading storehouse every pass and write price data into main store
+# house... Reading orderdetails is 3 minutes for order sweep, pre processing orders
+# brings the time down to 0.00015 seconds. Be re-reading the storehouse each pass,
+# we can update order as received to maintain sweepspeed. Reading the ticker will
+# slow thing down, but breaking the storehouse down to exchange/account/asset with
+# high/low extreme analysis will dramatically improve performance.
 
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
@@ -60,7 +67,7 @@ import subprocess
 import JRRsupport
 import JackrabbitRelay as JRR
 
-Version="0.0.0.1.1000"
+Version="0.0.0.1.1005"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
@@ -118,9 +125,9 @@ def GetID():
         pw+=oc
     return pw
 
-# Split the complete list stored on disk, if it exists. Supports both orphans and conditionals.
-# RUNS ONLY ONCE, no locking needed as this runs at the very start, if it runs at all.
-# At some FUTURE point, this will be REMOVED.
+# Split the complete list stored on disk, if it exists. Supports both orphans and
+# conditionals. RUNS ONLY ONCE, no locking needed as this runs at the very start,
+# if it runs at all. At some FUTURE point, this will be REMOVED.
 
 def SplitStorehouse(cltype=None):
     # Required as the blobals are modified
@@ -160,8 +167,8 @@ def SplitStorehouse(cltype=None):
                     JRLog.Write(f"Broken: {Entry}")
                     continue
 
-                # I need to be able to extract Exchange, account, and asset to build the separate pair
-                # files.
+                # I need to be able to extract Exchange, account, and asset to
+                # build the separate pair files.
 
                 if 'Order' in Orphan:
                     if type(Orphan['Order'])==str:
@@ -181,8 +188,9 @@ def SplitStorehouse(cltype=None):
                 idx=f"{exchange}.{account}.{asset}"
                 fname=f"{OliverTwistData}/{idx}.Storehouse"
 
-                # Write out the new storehouse. We already have the complete line from the original, just
-                # use it. This is not about preprocessing, only converting.
+                # Write out the new storehouse. We already have the complete line
+                # from the original, just use it. This is not about preprocessing,
+                # only converting.
 
                 JRRsupport.AppendFile(fname,Entry+'\n')
                 rc+=1
@@ -190,7 +198,8 @@ def SplitStorehouse(cltype=None):
             if rc>0:
                 JRLog.Write(f"{rc} record(s) converted")
 
-# Read the complete list stored on disk, if it exists. Supports both orphans and conditionals.
+# Read the complete list stored on disk, if it exists. Supports both orphans and
+# conditionals.
 
 def ReadReceiver():
     # Required as the blobals are modified
@@ -329,7 +338,8 @@ def WriteStorehouse(idx,OrphanList,deleteKey=None):
     interceptor.Critical(False)
     JRLog.Write(f"{idx}/{len(OrphanList)} order(s) written in {str(datetime.datetime.now()-StartTime)} seconds")
 
-# Read the complete list stored on disk, if it exists. Supports both orphans and conditionals.
+# Read the complete list stored on disk, if it exists. Supports both orphans and
+# conditionals.
 
 def ReadStorehouse(idx=None,OrigOrphanList=None):
     # Required as the blobals are modified
@@ -446,18 +456,19 @@ def ProcessOrphan(**kwargs):
     osh=kwargs
     State='Waiting'
 
-    # Massive headache: One of the most significant issues is that we don't know anything about any of the
-    # orders, so the processor needs to deal with everthing now in a layered approach. At the level we are
-    # at in this function, we only know the index and framework. Orphan and Conditional status is completely
-    # unknown...
+    # Massive headache: One of the most significant issues is that we don't know
+    # anything about any of the orders, so the processor needs to deal with
+    # everthing now in a layered approach. At the level we are at in this function,
+    # we only know the index and framework. Orphan and Conditional status is
+    # completely unknown...
 
     try:
         # We NEED the framework.
         idxList=osh['IDX'].split('.')
         relay=JRR.JackrabbitRelay(exchange=idxList[0],account=idxList[1],asset=idxList[2])
 
-        # IMPORTANT: Modules loaded this way do NOT have access to anything of the parent. These
-        # modules are in complete and total isolation.
+        # IMPORTANT: Modules loaded this way do NOT have access to anything of the
+        # parent. These modules are in complete and total isolation.
 
         Processor=importlib.import_module(f"OliverTwist-{relay.Framework}")
         State=Processor.OrderProcessor(osh)
