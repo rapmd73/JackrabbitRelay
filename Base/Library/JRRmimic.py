@@ -34,18 +34,21 @@ class mimic:
     # Account ID and bearer token will be in Active. Logging framework and
     # identity are embedded here as well.
 
-    # This framework doesn't need an API/Secret methodology. It must emulate both cryptocurrency exchanges
-    # and forex brokers reasonable well.
+    # This framework doesn't need an API/Secret methodology. It must
+    # emulate both cryptocurrency exchanges and forex brokers reasonable
+    # well.
 
     # Special situation:
 
-    #   This class must exclusive lock at init to prevent corruption of simulated wallet. If thos were a
-    #   standalone server, like locker, thn the method of usage would beserialized.Two processes can NOT
-    #   manipulate a wallet at the same time without corrupting the position table and balance. The lock is
-    #   placed in init and released at exit.
+    #   This class must exclusive lock at init to prevent corruption of
+    #   simulated wallet. If this were a standalone server, like locker,
+    #   then the method of usage would be serialized. Two processes can
+    #   NOT manipulate a wallet at the same time without corrupting the
+    #   position table and balance. The lock is placed in init and
+    #   released at exit.
 
     def __init__(self,Exchange,Config,Active,DataDirectory=None):
-        self.Version="0.0.0.1.1005"
+        self.Version="0.0.0.1.1010"
 
         self.StableCoinUSD=['USDT','USDC','BUSD','UST','DAI','FRAX','TUSD', \
                 'USDP','LUSD','USDN','HUSD','FEI','TRIBE','RSR','OUSD','XSGD', \
@@ -278,7 +281,8 @@ class mimic:
         else:           # long
             actualAmount=amount-dust
 
-        # Need to get the actual price of the asset at THIS time, not the price the user wwanted.
+        # Need to get the actual price of the asset at THIS time, not the
+        # price the user wwanted.
 
         ticker=self.Broker.GetTicker(symbol=asset)
         if actualAmount<0:
@@ -286,7 +290,8 @@ class mimic:
         else:
             actualPrice=max(ticker['Bid'],ticker['Ask'])+ticker['Spread']   # Long
 
-        # If the exchange is Binance, these values are going to be expressed in QUOTE currency, NOT base
+        # If the exchange is Binance, these values are going to be
+        # expressed in QUOTE currency, NOT base
 
         minimum,mincost=self.Broker.GetMinimum(symbol=asset)
         if self.ForceQuote==True:
@@ -348,8 +353,12 @@ class mimic:
                 return 'Nothing to sell'
             if base in self.Wallet['Wallet'] and self.Wallet['Wallet'][base]==0:
                 return 'Nothing to sell'
+            if abs(actualAmount)>abs(self.Wallet['Wallet'][base]):
+                return 'Not enough balance!'
 
-            # Check if the base currency is present in the base currency wallet and the amount to sell is available
+            # Check if the base currency is present in the base currency
+            # wallet and the amount to sell is available
+
             if quote in self.Wallet['Wallet'] and self.Wallet['Wallet'][quote]>=0:
                 # Add the total proceeds minus fees to the quote currency balance
                 # quote MUST be >=0.
@@ -362,6 +371,11 @@ class mimic:
                 elif self.Wallet['Wallet'][base]>0 and actualAmount<0 \
                 or self.Wallet['Wallet'][base]<0 and actualAmount>0:
                     self.Wallet['Wallet'][base]+=actualAmount
+
+                # Strictly spot only
+                if self.NoLiquidation==True and self.Wallet['Wallet'][base]<0:
+                    self.Wallet['Wallet'][base]=0
+
                 # Update fee balance
                 fee = round(abs(actualAmount) * actualPrice * fee_rate,8)
                 if 'Fees' in self.Wallet['Wallet']:

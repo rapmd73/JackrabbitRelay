@@ -49,12 +49,6 @@ exchange=data[1]
 account=data[2]
 pair=data[3]
 
-if 'mimic' in sys.argv[2].lower():
-    asset=data[4]
-    pair=data[4]
-else:
-    asset=data[3][:3]+'/'+data[3][3:]
-
 lines=JRRsupport.ReadFile(sys.argv[2]).strip().split('\n')
 
 for line in lines:
@@ -85,7 +79,7 @@ if ih=='h':
 else:
     fn=chartDir+f'Equity.{exchange}.{account}.{pair}.png'
 
-ts=f"OliverTwist Equity Curve: {account} - {asset}"
+ts=f"OliverTwist Equity Curve: {account} - {pair}"
 
 fig1=ps.make_subplots(specs=[[{"secondary_y":False}]])
 

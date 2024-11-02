@@ -6,7 +6,10 @@ cd $BaseDir
 
 while true ; do
     $BaseDir/JackrabbitOliverTwist $@
-    sleep 180
+    echo
+    echo REST
+    echo
+    sleep 60
 done
 
 
