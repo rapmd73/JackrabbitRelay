@@ -167,6 +167,7 @@ def GetHighestLowest(OrphanList):
             continue
 
         price=float(order['Price'])
+#        print(f"{order['ID']:8} {lPrice:.5f} < {hPrice:.5f}")
         if price<lPrice:
             lTrade=order
             lPrice=price
@@ -483,7 +484,7 @@ def CheckTakeProfit(relay,Orphan,lowestTrade):
             if 'Diagnostics' in relay.Active:
                 relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{abs(units)} {dir} Price: {price}, Ask: {ticker['Ask']}/{ticker['Spread']} TP: {tp}/{Order['TakeProfit']}, SL {sl}/{Order['StopLoss']}")
 
-#            print(f"CTP C {id} -> {cid}: {relay.Asset} {dir} Price: {ticker['Ask']}, TP: {tp-ticker['Spread']:.5f} {price}")
+#            print(f"CTP C {id} -> {cid}: {relay.Asset} {dir} Price: {ticker['Ask']}, TP: {tp-ticker['Spread']:.5f} B: {price}")
 #            print("CTP D",ticker['Ask'],(tp-ticker['Spread']),price)
 
             if ticker['Ask']<(tp-ticker['Spread']):
@@ -670,7 +671,7 @@ def OrderProcessor(osh):
         # Check stop loss. If a margin strike occured, force the stoploss
 #        print("OP D")
         if lowestTrade['Order']['Direction'].lower()=='long':
-            DeleteKey=CheckStopLoss(relay,lowestestTrade,MarginStrike)
+            DeleteKey=CheckStopLoss(relay,lowestTrade,MarginStrike)
         else:
             DeleteKey=CheckStopLoss(relay,highestTrade,MarginStrike)
 
