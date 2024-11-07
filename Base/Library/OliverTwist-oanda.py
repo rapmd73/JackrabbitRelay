@@ -364,15 +364,15 @@ def ProcessOrder(relay,Order,cid,units,price,strikePrice,ds,lowestOrder=None):
             # Write out the ledger entry
             relay.WriteLedger(Order=newOrder,Response=None)
 
-            return
+            return oid
         else:
             # Give OliverTwist a response
             relay.JRLog.Write(f"{id} -> {cid}: Order failed with {relay.GetFailedReason(result)}")
-            return
+            return None
     except Exception as e:
         # Something broke or went horrible wrong
         relay.JRLog.Write(f"CONDoanda {id}: {sys.exc_info()[-1].tb_lineno}/{str(e)}",stdOut=False)
-        return
+        return None
 
 # Make sure the trade exists on the broker.
 
@@ -501,8 +501,10 @@ def CheckTakeProfit(relay,Orphan,lowestTrade):
             ds=datetime.datetime.strptime(dsS,'%Y-%m-%dT%H:%M:%S.%fZ')
             units=abs(float(orderDetail[-1]['units']))
 
-            ProcessOrder(relay,Order,cid,units,price,strikePrice,ds,lowestOrder=lowestTrade)
-            return Orphan['Key']
+            DeleteKey=ProcessOrder(relay,Order,cid,units,price,strikePrice,ds,lowestOrder=lowestTrade)
+            if DeleteKey:
+                return Orphan['Key']
+            return None
         else:
             # Strike did not happen
             return None
@@ -589,8 +591,10 @@ def CheckStopLoss(relay,Orphan,MarginStrike):
             ds=datetime.datetime.strptime(dsS,'%Y-%m-%dT%H:%M:%S.%fZ')
             units=abs(float(orderDetail[-1]['units']))
 
-            ProcessOrder(relay,Order,cid,units,price,strikePrice,ds)
-            return Orphan['Key']
+            DeleteKey=ProcessOrder(relay,Order,cid,units,price,strikePrice,ds)
+            if DeleteKey:
+                return Orphan['Key']
+            return None
         else:
             # Strike did not happen
             return None
