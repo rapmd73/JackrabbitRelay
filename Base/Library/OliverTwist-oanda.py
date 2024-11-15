@@ -634,7 +634,7 @@ def OrderProcessor(osh):
 
 #    shLock.Lock()
     try:
-        if not os.path.exits(idx):
+        if not os.path.exists(idx):
             return 'Waiting'
 
         OrphanList=ReadStorehouse(idx=idx)
