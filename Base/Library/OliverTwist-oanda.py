@@ -615,7 +615,7 @@ def CheckStopLoss(relay,Orphan,MarginStrike):
 def OrderProcessor(osh):
     StartTime=datetime.datetime.now()
 
-#    print("OP A")
+#    print("OP A:")
 
     # Split off the parts we need.
     idx=osh['IDX']
@@ -634,13 +634,12 @@ def OrderProcessor(osh):
 
 #    shLock.Lock()
     try:
-        if not os.path.exists(idx):
-            return 'Waiting'
-
+#        print("OP B1")
         OrphanList=ReadStorehouse(idx=idx)
         if len(OrphanList)==0:
             return 'Waiting'
 
+#        print("OP B2",len(OrphanList))
         # Process conditional orders
 
         # For long positions, highestTrade will be closest to take profit, lowest for stop loss
@@ -664,6 +663,7 @@ def OrderProcessor(osh):
         # Take profit starts at the lowest order priced and works upward for long.
 
         # Check take profit
+#        print("OP C")
 #        print("OP C1",highestTrade)
 #        print("OP C2",lowestTrade)
         if lowestTrade['Order']['Direction'].lower()=='long':
