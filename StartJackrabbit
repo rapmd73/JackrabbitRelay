@@ -4,6 +4,12 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 BaseDir="/home/JackrabbitRelay2/Base"
 
+# Make sure the virtual environment is active
+
+if [ -d "/home/RAPMD" ] ; then
+    source /home/RAPMD/bin/activate
+fi
+
 cd $BaseDir
 
 Port=$1
@@ -37,3 +43,4 @@ sleep 3
 sleep 3
 ( $BaseDir/LauncherRelay $Port & ) > /dev/null 2>&1
 
+deactivate
