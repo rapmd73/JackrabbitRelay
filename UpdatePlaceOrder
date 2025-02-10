@@ -3,6 +3,12 @@
 # Crontab entry ( without has mark #
 # @reboot ( /home/JackrabbitRelay/Base/RelayLauncher & ) > /dev/null 2>&1
 
+# Make sure virtual environment is active
+
+if [ -d "/home/RAPMD" ] ; then
+    source /home/RAPMD/bin/activate
+fi
+
 BaseDir="/home/JackrabbitRelay2/Base"
 GitHubBase="/home/GitHub/JackrabbitRelay/Base"
 
@@ -45,3 +51,5 @@ if [ "x$1" != "x" ] ; then
       shift
   done
 fi
+
+deactivate

@@ -1,4 +1,11 @@
 #!/bin/bash
+
+# Make sure virtual environment is active
+
+if [ -d "/home/RAPMD" ] ; then
+    source /home/RAPMD/bin/activate
+fi
+
 pip3=`which pip3`
 if [ "x$pip3" == "x" ] ; then
     echo PIP3 not installed. Please install it first, then re-run this script.
@@ -51,3 +58,5 @@ if [ "$NFS" != "$OFS" ] ; then
     echo Running update again...
     /home/GitHub/JackrabbitRelay/install nopull
 fi
+
+deactivate

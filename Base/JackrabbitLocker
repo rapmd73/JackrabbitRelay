@@ -28,7 +28,7 @@ import json
 
 import JRRsupport
 
-Version="0.0.0.1.1020"
+Version="0.0.0.1.1050"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
 LogDirectory="/home/JackrabbitRelay2/Logs"
@@ -203,6 +203,9 @@ def main():
     dataStore={}
     port=37373
 
+    if len(sys.argv)>1:
+        port=int(sys.argv[1])
+
     WritePID(port)
 
     # Open the port.
@@ -212,7 +215,7 @@ def main():
         lockerSocket.setblocking(0)
         lockerSocket.bind(('', port))
         lockerSocket.listen(1024)
-    except OSError as err:
+    except Exception as err:
         x=str(err)
         if x.find('Address already in use')>-1:
             x='Another program is using this port: '+str(port)
@@ -288,7 +291,7 @@ def main():
             if now>Locker[k]['Expire']:
                 Locker.pop(k,None)
         # for testing memory leaks (Python 3.10)
-        #gc.collect()
+        gc.collect()
 
 if __name__ == '__main__':
     main()
