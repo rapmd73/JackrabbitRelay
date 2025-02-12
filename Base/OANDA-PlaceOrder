@@ -175,7 +175,8 @@ def main():
     relay.JRLog.Write('PlaceOrder OANDA '+relay.Version)
 
     # Make sure conditional orders with any action other the BUY are ignored
-    # This is neccessary for TradingView strategies or any framework where 1 alret handles both buying and selling.
+    # This is neccessary for TradingView strategies or any framework where 1 alret
+    # handles both buying and selling.
 
     # This works bcause OANDA allows buying short with negative unit numbers.
 
@@ -226,12 +227,12 @@ def main():
 
     if 'Spread' in relay.Active:
         if ticker['Spread']>=float(relay.Active['Spread']):
-            s=f"too large, {spread:.8f} > {relay.Active['Spread']:.8f}"
-            relay.JRLog.Error("Spread", s)
+            s=f"too large, {ticker['Spread']:.4f} > {float(relay.Active['Spread']):.4f}"
+            relay.JRLog.Error(f"Spread", s)
 
     if 'Spread' in relay.Order:
         if ticker['Spread']>=float(relay.Order['Spread']):
-            s=f"too large, {spread:.8f} > {relay.Order['Spread']:.8f}"
+            s=f"too large, {ticker['Spread']:.4f} > {float(relay.Order['Spread']):.4f}"
             relay.JRLog.Error("Spread", s)
 
     # Check for maximum allowed assets

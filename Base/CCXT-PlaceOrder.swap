@@ -143,12 +143,12 @@ def main():
 
     if 'Spread' in relay.Active:
         if ticker['Spread']>=float(relay.Active['Spread']):
-            s=f"too large, {spread:.8f} > {relay.Active['Spread']:.8f}"
+            s=f"too large, {ticker['Spread']:.8f} > {float(relay.Active['Spread']):.8f}"
             relay.JRLog.Error("Spread", s)
 
     if 'Spread' in relay.Order:
         if ticker['Spread']>=float(relay.Order['Spread']):
-            s=f"too large, {spread:.8f} > {relay.Order['Spread']:.8f}"
+            s=f"too large, {ticker['Spread']:.8f} > {float(relay.Active['Spread']):.8f}"
             relay.JRLog.Error("Spread", s)
 
     # Check for maximum allowed assets
