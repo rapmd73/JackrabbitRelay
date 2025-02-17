@@ -33,8 +33,10 @@ answer=input("If you are sure, answer 'Yes' >")
 if answer.lower()=='yes':
     walletLock=JRRsupport.Locker(acn,ID=acn)
     walletLock.Lock()
-    os.remove(acn)
-    os.remove(awn)
+    if os.path.exists(acn):
+        os.remove(acn)
+    if os.path.exists(awn):
+        os.remove(awn)
     walletLock.Unlock()
 
     print(f"{account} has been fully reset")
