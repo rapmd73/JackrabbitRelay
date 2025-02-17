@@ -172,8 +172,8 @@ def main():
 
     isMinimum=False
     minimum,mincost=relay.GetMinimum(symbol=relay.Order['Asset'])
-    if 'binance' in relay.Active['DataExchange']:
-        minimum=minimum/price
+#    if 'binance' in relay.Active['DataExchange']:
+#        minimum=minimum/price
 
     # Handle various currencies and verifications
 

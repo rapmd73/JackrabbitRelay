@@ -50,7 +50,7 @@ from JackrabbitRelay import JackrabbitLog
 class JackrabbitProxy:
     def __init__(self,framework=None,payload=None,exchange=None,account=None,asset=None,Usage=None):
         # All the default locations
-        self.Version="0.0.0.1.1060"
+        self.Version="0.0.0.1.1065"
         self.BaseDirectory='/home/JackrabbitRelay2/Base'
         self.ConfigDirectory='/home/JackrabbitRelay2/Config'
         self.DataDirectory="/home/JackrabbitRelay2/Data"

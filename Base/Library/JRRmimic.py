@@ -48,7 +48,7 @@ class mimic:
     #   released at exit.
 
     def __init__(self,Exchange,Config,Active,DataDirectory=None):
-        self.Version="0.0.0.1.1060"
+        self.Version="0.0.0.1.1065"
 
         self.StableCoinUSD=['USDT','USDC','BUSD','UST','DAI','FRAX','TUSD', \
                 'USDP','LUSD','USDN','HUSD','FEI','TRIBE','RSR','OUSD','XSGD', \
@@ -294,8 +294,9 @@ class mimic:
         # expressed in QUOTE currency, NOT base
 
         minimum,mincost=self.Broker.GetMinimum(symbol=asset)
-        if self.ForceQuote==True:
-            minimum=minimum/abs(actualPrice)
+#        if self.ForceQuote==True:
+#            minimum=minimum/abs(actualPrice)
+#            actualAmount=actualAmount/abs(actualPrice)
 
         # Make sure order is above minimum requirements
         if abs(actualAmount)<minimum or (abs(actualAmount)*actualPrice)<mincost:
