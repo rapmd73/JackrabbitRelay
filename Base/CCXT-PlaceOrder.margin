@@ -309,7 +309,7 @@ def main():
     try:
         if "set_leverage" in relay.Broker and "Leverage" in relay.Order:
             relay.Broker.set_leverage(relay.Order['Leverage'],relay.Order['Asset'])
-            relay.JRLog.Write("|- Leverage: "+Order['Leverage'])
+            relay.JRLog.Write("|- Leverage: "+relay.Order['Leverage'])
     except:
         pass
 
@@ -318,7 +318,7 @@ def main():
     try: # Isolated or Crossed
         if "set_margin_mode" in relay.Broker and "Margin" in relay.Order:
             relay.Broker.set_margin_mode(relay.Order['Asset'],relay.Order['Margin'].upper())
-            relay.JRLog.Write("|- Margin: "+Order['Margin'])
+            relay.JRLog.Write("|- Margin: "+relay.Order['Margin'])
     except:
         pass
 

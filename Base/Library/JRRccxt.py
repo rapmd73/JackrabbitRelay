@@ -363,7 +363,7 @@ class ccxtCrypto:
         Pair['DateTime']=datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
         Pair['Ask']=min(ask,bid)
         Pair['Bid']=max(bid,ask)
-        Pair['Spread']=round(abs(Pair['Bid']-Pair['Ask']),8)
+        Pair['Spread']=Pair['Bid']-Pair['Ask']
 
         return Pair
 
