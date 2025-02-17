@@ -29,5 +29,5 @@ markets=relay.GetMarkets()
 
 while True:
     ticker=relay.GetTicker(symbol=asset)
-    print(ticker)
+    print(f"{ticker['DateTime']} {ticker['Ask']:.8f} {ticker['Spread']:.8f} {ticker['Bid']:.8f}")
 
