@@ -38,14 +38,13 @@ for d in Base Base/Library Data Extras Logs Ledger ; do
 done
 
 if [ x$1 != 'xnopull' ] ; then
-    python3 -m pip install --upgrade pip --break-system-packages
+    python3 -m pip install --upgrade pip
 
     for i in `cat requirements.txt` ; do
-        # --break-system-packages
-        $pip3 install -U $i --break-system-packages
+        $pip3 install -U $i
     done
 
-    for i in $BaseDir/Data/*.symbolmap ; do 
+    for i in $BaseDir/Data/*.symbolmap ; do
         N=`echo $i | cut -d/ -f5 | cut -d. -f1`
         A=`echo $i | cut -d/ -f5 | cut -d. -f2`
         $BaseDir/Extras/TV2Exchange $N $A
