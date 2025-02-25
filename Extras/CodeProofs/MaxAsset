@@ -19,11 +19,12 @@ if relay.GetArgsLen() < 3:
     print("An exchange and a (sub)account must be provided.")
     sys.exit(1)
 
-fn=relay.DataDirectory+'/'+relay.Exchange+'.'+relay.Account+'.MaxAssets'
+fn=relay.Directories['Data']+'/'+relay.Exchange+'.'+relay.Account+'.MaxAssets'
 tList=JRRsupport.TimedList("MaxAssets",fn,Timeout=300)
 dataDB=tList.read()
 
 for asset in dataDB:
     item=json.loads(dataDB[asset])
     e=(item['Expire']-time.time())/86400
-    print(f"{asset:20} {e:.8f}")
+    if e>0:
+        print(f"{asset:20} {e:.8f}")
