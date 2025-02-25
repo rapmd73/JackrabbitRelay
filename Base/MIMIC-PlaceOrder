@@ -155,7 +155,7 @@ def main():
             if relay.Order['Action'].lower()=='close':
                 expire=0
             else:
-                expire=(7*86400)
+                expire=(31*86400)
             results=maxAssetsList.update(relay.Order['Asset'],json.dumps(relay.Order),expire)
             if results['Status']=='ErrorLimit' and relay.Order['Action']=='buy':
                 relay.JRLog.Error("MaxAssets","maximum limit exceeded")

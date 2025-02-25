@@ -55,7 +55,7 @@ def ReadStorehouse(idx=None,OrigOrphanList=None):
 
     if idx==None:
         Storehouse=None
-        WorkingStorehouse=Receiver
+        WorkingStorehouse=f"{DataDirectory}/OliverTwist.Receiver"
     else:
         Storehouse=f"{OliverTwistData}/{idx}.Storehouse"
         WorkingStorehouse=Storehouse
@@ -110,7 +110,7 @@ def ReadStorehouse(idx=None,OrigOrphanList=None):
                 # Assign a key, if not already present.
 
                 if 'Key' not in Orphan:
-                    Orphan['Key']=f"{time.time()*10000000:.0f}.{GetID()}"
+                    continue
 
                 # Only LIMIT orders are orphans, everything else is conditional
 
@@ -321,13 +321,13 @@ def CheckTakeProfit(relay,Orphan,lowestTrade):
         if 'Spread' in relay.Active:
             if ticker['Spread']>=float(relay.Active['Spread']):
                 s=f"excessivew spread, {Order['SellAction'].lower()} delayed, {ticker['Spread']:.5f} > {relay.Active['Spread']:.5f}"
-                relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{units} {dir} {s}")
+                relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{amount} {dir} {s}")
                 return None
 
         if 'Spread' in Order:
             if ticker['Spread']>=float(Order['Spread']):
                 s=f"excessivew spread, {Order['SellAction'].lower()} delayed, {ticker['Spread']:.5f} > {Order['Spread']:.5f}"
-                relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{units} {dir} {s}")
+                relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{amount} {dir} {s}")
                 return None
 
 #        print("CTP C")
@@ -344,15 +344,15 @@ def CheckTakeProfit(relay,Orphan,lowestTrade):
 #        print("CTP D")
         StrikeHappened=False
         if dir=='long':
-            if 'Diagnostics' in relay.Active:
-                relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{units} {dir} Price: {price}, Bid: {ticker['Bid']}/{ticker['Spread']} TP: {tp}/{Order['TakeProfit']}, SL {sl}/{Order['StopLoss']}")
+#            if 'Diagnostics' in relay.Active:
+#                relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{units} {dir} Price: {price}, Bid: {ticker['Bid']}/{ticker['Spread']} TP: {tp}/{Order['TakeProfit']}, SL {sl}/{Order['StopLoss']}")
 
             if ticker['Bid']>(tp+ticker['Spread']):
                 strikePrice=ticker['Bid']
                 StrikeHappened=True
         else:
-            if 'Diagnostics' in relay.Active:
-                relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{abs(units)} {dir} Price: {price}, Ask: {ticker['Ask']}/{ticker['Spread']} TP: {tp}/{Order['TakeProfit']}, SL {sl}/{Order['StopLoss']}")
+#            if 'Diagnostics' in relay.Active:
+#                relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{abs(units)} {dir} Price: {price}, Ask: {ticker['Ask']}/{ticker['Spread']} TP: {tp}/{Order['TakeProfit']}, SL {sl}/{Order['StopLoss']}")
 
             if ticker['Ask']<(tp-ticker['Spread']):
                 strikePrice=ticker['Ask']
@@ -425,15 +425,15 @@ def CheckStopLoss(relay,Orphan):
 #        print("CSL D")
         StrikeHappened=False
         if dir=='long':
-            if 'Diagnostics' in relay.Active:
-                relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{units} {dir} Price: {price}, Bid: {ticker['Bid']}/{ticker['Spread']} TP: {tp}/{Order['TakeProfit']}, SL {sl}/{Order['StopLoss']}")
+#            if 'Diagnostics' in relay.Active:
+#                relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{units} {dir} Price: {price}, Bid: {ticker['Bid']}/{ticker['Spread']} TP: {tp}/{Order['TakeProfit']}, SL {sl}/{Order['StopLoss']}")
 
             if ticker['Bid']<(sl-ticker['Spread']):
                 strikePrice=ticker['Bid']
                 StrikeHappened=True
         else:
-            if 'Diagnostics' in relay.Active:
-                relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{abs(units)} {dir} Price: {price}, Ask: {ticker['Ask']}/{ticker['Spread']} TP: {tp}/{Order['TakeProfit']}, SL {sl}/{Order['StopLoss']}")
+#            if 'Diagnostics' in relay.Active:
+#                relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{abs(units)} {dir} Price: {price}, Ask: {ticker['Ask']}/{ticker['Spread']} TP: {tp}/{Order['TakeProfit']}, SL {sl}/{Order['StopLoss']}")
 
             if ticker['Ask']>(sl+ticker['Spread']):
                 strikePrice=ticker['Ask']

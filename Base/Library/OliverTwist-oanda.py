@@ -57,7 +57,7 @@ def ReadStorehouse(idx=None,OrigOrphanList=None):
 
     if idx==None:
         Storehouse=None
-        WorkingStorehouse=Receiver
+        WorkingStorehouse=f"{DataDirectory}/OliverTwist.Receiver"
     else:
         Storehouse=f"{OliverTwistData}/{idx}.Storehouse"
         WorkingStorehouse=Storehouse
@@ -109,10 +109,10 @@ def ReadStorehouse(idx=None,OrigOrphanList=None):
                         resp=json.loads(Orphan['Response'])
                         Orphan['Response']=resp
 
-                # Assign a key, if not already present.
+                # If not key at this point, we have a problem.
 
                 if 'Key' not in Orphan:
-                    Orphan['Key']=f"{time.time()*10000000:.0f}.{GetID()}"
+                    continue
 
                 # Only LIMIT orders are orphans, everything else is conditional
 
@@ -482,7 +482,7 @@ def CheckTakeProfit(relay,Orphan,lowestTrade):
                 StrikeHappened=True
         else:
             if 'Diagnostics' in relay.Active:
-                relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset}/{abs(units)} {dir} Price: {price}, Ask: {ticker['Ask']}/{ticker['Spread']} TP: {tp}/{Order['TakeProfit']}, SL {sl}/{Order['StopLoss']}")
+                relay.JRLog.Write(f"{id} -> {cid}: {relay.Asset} {dir} Price: {price}, Bid: {ticker['Bid']}/{ticker['Spread']} TP: {tp}/{Order['TakeProfit']}")
 
 #            print(f"CTP C {id} -> {cid}: {relay.Asset} {dir} Price: {ticker['Ask']}, TP: {tp-ticker['Spread']:.5f} B: {price}")
 #            print("CTP D",ticker['Ask'],(tp-ticker['Spread']),price)
