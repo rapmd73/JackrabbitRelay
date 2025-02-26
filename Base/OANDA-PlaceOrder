@@ -246,7 +246,7 @@ def main():
             else:
                 expire=(31*86400)
             results=maxAssetsList.update(relay.Order['Asset'],json.dumps(relay.Order),expire)
-            if results['Status']=='ErrorLimit' and relay.Order['Action']=='buy':
+            if results['Status']=='Error' and relay.Order['Action']=='buy':
                 relay.JRLog.Error("MaxAssets","maximum limit exceeded")
 
     # Check for reduce only in active config. This is a futures only setting.

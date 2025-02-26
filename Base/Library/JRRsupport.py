@@ -835,15 +835,17 @@ class TimedList():
     def read(self):
         dataDB=None
 
-        self.fw.Lock()
-        try:
-            data=ReadFile(self.fname)
-            dataDB=json.loads(data)
-        except:
-            pass
-        self.fw.Unlock()
+        l=self.fw.Lock()
+        if l=='locked':
+            try:
+                data=ReadFile(self.fname)
+                dataDB=json.loads(data)
+            except:
+                pass
+            self.fw.Unlock()
 
-        return dataDB
+            return dataDB
+        return False
 
     # Return a count that does NOT include expired items
 
@@ -861,62 +863,66 @@ class TimedList():
         dataDB={}
         results={}
 
-        self.fw.Lock()
-        try:
-            data=ReadFile(self.fname)
+        l=self.fw.Lock()
+        if l=='locked':
+            try:
+                data=ReadFile(self.fname)
 
-            if data!=None and data!='':
-                dataDB=json.loads(data)
-                if dataDB!=None:
-                    if key in dataDB:
-                        dataItem=json.loads(dataDB[key])
-                        if dataItem['Expire']>time.time():
-                            # Found and not expired, return result
-                            if expire==0:
-                                # Force kill item
-                                dataItem['Expire']=expire
-                                dataDB[key]=json.dumps(dataItem)
-                                results['Status']='Expired'
-                                results['Payload']=dataItem
-                            else:
-                                results['Status']='Found'
-                                results['Payload']=dataItem
-                        else: # Found and expired, replace old data with new data
+                if data!=None and data!='':
+                    dataDB=json.loads(data)
+                    if dataDB!=None:
+                        if key in dataDB:
+                            dataItem=json.loads(dataDB[key])
+                            if dataItem['Expire']>time.time():
+                                # Found and not expired, return result
+                                if expire==0:
+                                    # Force kill item
+                                    dataItem['Expire']=expire
+                                    dataDB[key]=json.dumps(dataItem)
+                                    results['Status']='Expired'
+                                    results['Payload']=dataItem
+                                else:
+                                    results['Status']='Found'
+                                    results['Payload']=dataItem
+                            else: # Found and expired, replace old data with new data
+                                c=self.countDB(dataDB)
+                                if (self.maxsize==0) or (self.maxsize>0 and c<self.maxsize):
+                                    dataItem['Expire']=time.time()+expire
+                                    dataItem['Payload']=payload
+                                    dataDB[key]=json.dumps(dataItem)
+                                    results['Status']='Replaced'
+                                    results['Payload']=dataItem
+                                else: # Size limit hit
+                                    results['Status']='Error'
+                                    results['Payload']='Maximum size limit exceeded'
+                        else: # New item
+                            # Needs to deal with expired item not being counted in limits
                             c=self.countDB(dataDB)
                             if (self.maxsize==0) or (self.maxsize>0 and c<self.maxsize):
+                                dataItem={}
                                 dataItem['Expire']=time.time()+expire
                                 dataItem['Payload']=payload
                                 dataDB[key]=json.dumps(dataItem)
-                                results['Status']='Replaced'
+                                results['Status']='Added'
                                 results['Payload']=dataItem
                             else: # Size limit hit
                                 results['Status']='Error'
                                 results['Payload']='Maximum size limit exceeded'
-                    else: # New item
-                        # Needs to deal with expired item not being counted in limits
-                        c=self.countDB(dataDB)
-                        if (self.maxsize==0) or (self.maxsize>0 and c<self.maxsize):
-                            dataItem={}
-                            dataItem['Expire']=time.time()+expire
-                            dataItem['Payload']=payload
-                            dataDB[key]=json.dumps(dataItem)
-                            results['Status']='Added'
-                            results['Payload']=dataItem
-                        else: # Size limit hit
-                            results['Status']='ErrorLimit'
-                            results['Payload']='Maximum size limit exceeded'
-            else: # First Item
-                dataItem={}
-                dataItem['Expire']=time.time()+expire
-                dataItem['Payload']=payload
-                dataDB[key]=json.dumps(dataItem)
-                results['Status']='Added'
-                results['Payload']=dataItem
+                else: # First Item
+                    dataItem={}
+                    dataItem['Expire']=time.time()+expire
+                    dataItem['Payload']=payload
+                    dataDB[key]=json.dumps(dataItem)
+                    results['Status']='Added'
+                    results['Payload']=dataItem
 
-            WriteFile(self.fname,json.dumps(dataDB))
-            self.fw.Unlock()
-        except:
-            self.fw.Unlock()
+                WriteFile(self.fname,json.dumps(dataDB))
+                self.fw.Unlock()
+            except:
+                self.fw.Unlock()
+        else:
+            results['Status']='Error'
+            results['Payload']='Locked Failed'
         return results
 
     # Search for a specific item
@@ -939,22 +945,23 @@ class TimedList():
 
     def purge(self):
         dataDB={}
-        self.fw.Lock()
-        try:
-            data=ReadFile(self.fname)
-            if data!=None and data!='':
-                dataDB=json.loads(data)
+        l=self.fw.Lock()
+        if l=='locked':
+            try:
+                data=ReadFile(self.fname)
+                if data!=None and data!='':
+                    dataDB=json.loads(data)
 
-                # Remove expired entries
-                NewDataDB={}
-                for cur in dataDB:
-                    dataItem=json.loads(dataDB[cur])
-                    if dataItem['Expire']>time.time():
-                        NewDataDB[cur]=dataDB[cur]
-                WriteFile(self.fname,json.dumps(NewDataDB))
-            self.fw.Unlock()
-        except:
-            self.fw.Unlock()
+                    # Remove expired entries
+                    NewDataDB={}
+                    for cur in dataDB:
+                        dataItem=json.loads(dataDB[cur])
+                        if dataItem['Expire']>time.time():
+                            NewDataDB[cur]=dataDB[cur]
+                    WriteFile(self.fname,json.dumps(NewDataDB))
+                self.fw.Unlock()
+            except:
+                self.fw.Unlock()
 
 ###
 ### End of module
