@@ -5,4 +5,4 @@ ccxt
 oandapyV20
 plotly
 matplotlib
-
+kaleido
