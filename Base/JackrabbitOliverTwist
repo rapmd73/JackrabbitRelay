@@ -477,9 +477,9 @@ def ProcessOrphan(**kwargs):
 
     otLock=JRRsupport.Locker("OliverTwist",ID=osh['lID'])
     Memory=JRRsupport.Locker(osh['IDX'],ID=osh['mID'])
-    otLock.Lock()
-    Memory.Put(OliverTwistTimeout,State)
-    otLock.Unlock()
+    if otLock.Lock()=='locked':
+        Memory.Put(OliverTwistTimeout,State)
+        otLock.Unlock()
 
 # Process the individual index and handle all multi process functionality
 #    OrphanList=ReadStorehouse(idx=idx)
@@ -493,9 +493,11 @@ def ProcessChild(idx):
     global OrphanMemory
     global JRLog
 
-    # Get result from Locker
+    # We don't have the lock, we don't continue
 
-    OliverTwistLock.Lock()
+    if OliverTwistLock.Lock()!='locked':
+        return
+
     if idx in OrphanMemory:
         sData=json.loads(OrphanMemory[idx].Get())
     else:
@@ -512,7 +514,10 @@ def ProcessChild(idx):
     if status!='running':
         status='waiting'
 
-    OliverTwistLock.Lock()
+    # We don't have the lock, we don't continue
+
+    if OliverTwistLock.Lock()!='locked':
+        return
 
     # Only run if not already running. It is possible for this state to
     # occur, especially if there are only a few orders to process or a
