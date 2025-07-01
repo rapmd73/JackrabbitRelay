@@ -40,9 +40,9 @@ else:
 
 # Figure out worst case price based upon 5000 candles on the monthly time frame.
 
+mh=float('-inf')
+ml=float('inf')
 wcp=0
-mh=0
-ml=9999999
 mms=0
 maxMonth=[]
 spList=[]
@@ -181,4 +181,28 @@ lsp=len(spList)
 print(f"Total {relay.Timeframes[tf]}s analyzed: {lsp}")
 print(f"{relay.Timeframes[tf]}s above average:  {maa} ({(maa/lsp)*100:.2f}%)")
 
+#
+# Find average spread of candles
+#
 
+tfl=len(relay.Timeframes)
+avg=[]
+for tf in range(0,tfl):
+    mh=float('-inf')
+    ml=float('inf')
+    spList=[]
+    ohlcv=relay.GetOHLCV(symbol=asset,timeframe=relay.Timeframes[tf],limit=5000)
+
+    for slice in ohlcv:
+        cs=0
+        for i in range(1,5):
+            mh=max(slice[i],mh)
+            ml=min(slice[i],ml)
+            spList.append(mh-ml)
+
+    avgsp=sum(spList)/len(spList)
+    avg.append(avgsp)
+#    print(f"{relay.Timeframes[tf]:3} {avgsp:.4f}")
+
+avgsp=sum(avg)/len(avg)
+print(f"\nAverage pip spread/all TF: {avgsp:.4f}")

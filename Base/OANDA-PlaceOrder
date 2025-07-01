@@ -35,15 +35,19 @@ def GetPCTvalue(pct,close,bal,mr):
     amount=round((volume/close)/mr,8)
     return amount,volume
 
-def GetPCTamount(relay,close):
+def GetPCTamount(relay,close,margin=False):
     fn=relay.Directories['Data']+'/'+relay.Exchange+'.'+relay.Account+'.PCTtable'
     PCTtable=JRRsupport.TimedList("PCTtable",fn,Log=relay.JRLog)
-    if relay.Order['Action'].lower()=='close' or relay.Order['Action'].lower()=='flip':
+    if relay.Order['Action'].lower()=='close':
         expire=0
     else:
         expire=(3650*86400)
 
-    bal=relay.GetBalance()
+    # If margin base sizing not set, use balance
+    if not margin:
+        bal=relay.GetBalance()
+    else: # get percentage based on margin available
+        bal=float(relay.Broker.Summary['account']['marginAvailable'])
     mr=float(relay.Markets[relay.Asset]['marginRate'])
 
     # OverridePCTtable should probably be the default state for OliverTwist, since each trade is
@@ -274,9 +278,12 @@ def main():
         relay.JRLog.Write(f'|- Minimum Amount: {minimum:.8f}')
         relay.JRLog.Write(f'|- Minimum Cost:   {mincost:.8f}')
     else:
-        if '%' in relay.Order['Units']:
+        if '%' in relay.Order['Units'] or '%b' in relay.Order['Units']:
             price=(ticker['Ask']+ticker['Bid'])/2
             amount=int(GetPCTamount(relay,price))
+        elif '%%' in relay.Order['Units'] or '%m' in relay.Order['Units']:
+            price=(ticker['Ask']+ticker['Bid'])/2
+            amount=int(GetPCTamount(relay,price,margin=True))
         else:
             amount=int(relay.Order['Units'].split('.')[0])
 
