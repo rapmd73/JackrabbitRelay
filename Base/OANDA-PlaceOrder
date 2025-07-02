@@ -278,12 +278,12 @@ def main():
         relay.JRLog.Write(f'|- Minimum Amount: {minimum:.8f}')
         relay.JRLog.Write(f'|- Minimum Cost:   {mincost:.8f}')
     else:
-        if '%' in relay.Order['Units'] or '%b' in relay.Order['Units']:
-            price=(ticker['Ask']+ticker['Bid'])/2
-            amount=int(GetPCTamount(relay,price))
-        elif '%%' in relay.Order['Units'] or '%m' in relay.Order['Units']:
+        if '%%' in relay.Order['Units'] or '%m' in relay.Order['Units']:
             price=(ticker['Ask']+ticker['Bid'])/2
             amount=int(GetPCTamount(relay,price,margin=True))
+        elif '%' in relay.Order['Units'] or '%b' in relay.Order['Units']:
+            price=(ticker['Ask']+ticker['Bid'])/2
+            amount=int(GetPCTamount(relay,price))
         else:
             amount=int(relay.Order['Units'].split('.')[0])
 
