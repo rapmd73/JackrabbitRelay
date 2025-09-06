@@ -25,7 +25,7 @@ import JackrabbitRelay as JRR
 
 def GetPCTtype(currency):
     c=currency.lower().replace(' ','')
-    vs=c.replace('%','').strip()
+    vs=c.replace('%m','').replace('%b','').replace('%','').strip()
     PCTtype='B'
     pct=float(vs)
     return pct,PCTtype
@@ -74,7 +74,7 @@ def GetPCTamount(relay,close,margin=False):
         if (pct<0 and amount>0) or (pct>0 and amount<0):
             amount=amount*-1
     else:
-        pct=float(relay.Order['Units'].replace('%',''))/100
+        pct=float(relay.Order['Units'].replace('%m','').replace('%b','').replace('%',''))/100
         amount=round(((pct*bal)/close)/mr,8)
     return amount
 
@@ -158,7 +158,7 @@ def AlreadyBought(relay,asset,price,pipDistance):
 def ConvertPctPips2Value(relay,str):
     # Percentage
     if '%' in str:
-        val=float(str.replace('%','').strip())/100
+        val=float(str.replace('%m','').replace('%b','').replace('%','').strip())/100
         # Pips
     elif 'p' in str.lower():
         val=float(str.lower().replace('p','').strip())*relay.Broker.onePip

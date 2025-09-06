@@ -14,9 +14,7 @@ import time
 import JRRsupport
 import JackrabbitRelay as JRR
 
-AssetList=['BTC/USD','ETH/USD','ADA/USD','LTC/USD','XRP/USD','TRX/USD','SOL/USD','DOGE/USD']
-
-NewOrder={"Recipe":"BuyEveryMinute Conditional","Action":"Buy","Exchange":"mimic","Market":"spot","Account":"Kraken02","Asset":"TRX/USD","USD":"7","OrderType":"Market","Conditional":"Yes","Direction":"Long","SellAction":"Sell","TakeProfit":"1.5%","StopLoss":"1%" }
+NewOrder={"Recipe":"BuyEveryMinute Conditional","Action":"Buy","Exchange":"mimic","Market":"spot","Account":"Kraken04","Asset":"ARB/USD","USD":"10","OrderType":"Market","Conditional":"Yes","Direction":"Long","SellAction":"Sell","TakeProfit":"2%" }
 
 def PushOrder(NewOrder):
     try:
@@ -38,11 +36,9 @@ def PushOrder(NewOrder):
 ###
 
 def main():
-#    while True:
-        for asset in AssetList:
-            NewOrder['Asset']=asset
-            PushOrder(NewOrder)
-#        JRRsupport.ElasticSleep(60)
+    while True:
+        PushOrder(NewOrder)
+        JRRsupport.ElasticSleep(60)
 
 if __name__ == '__main__':
     main()

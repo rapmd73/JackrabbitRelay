@@ -61,8 +61,6 @@ for pair in sorted(Wallet.keys()):
     if len(sys.argv)>2 and sys.argv[2]!=pair:
         continue
 
-    print(f"{pair}: {fees[pair]:.8f} paid in fees")
-
     # This will become the initial balance of the wallet.
     balance=0
 
@@ -84,8 +82,8 @@ for pair in sorted(Wallet.keys()):
 
         dt=data['DateTime']
         act=data['Action'].upper()[0]
-        bw=float(data[base])            # base wallet
-        qw=float(data[quote])           # quote wallet
+        bw=float(data[base])
+        qw=float(data[quote])
         a=float(data['Amount'])
         p=float(data['Price'])
         f=float(data['Fee'])
@@ -93,9 +91,8 @@ for pair in sorted(Wallet.keys()):
         if balance==0:
             balance=qw+f+(abs(bw)*p)
 
-        pnl=(qw+(abs(bw)*p))-f
+        pnl=(qw+(abs(bw)*p))
 
-        str=f"  {dt} {act} {bw:14.8f} {qw:14.8f} {a:14.8f} {p:.8f} {f:.8f} {pnl:.8f}"
-        print(str)
+    str=f"{pair:16} {fees[pair]:12.8f} {pnl:16.8f}"
+    print(str)
 
-    print()

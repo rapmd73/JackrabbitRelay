@@ -20,13 +20,14 @@ if len(sys.argv)<2:
     print("At least one Oliver Twwist log file is required.")
     sys.exit(1)
 
+summary=False
+if len(sys.argv)>2:
+    summary=True
+
 tt=0
 sl=0
 rs=0
 for i in range(1,len(sys.argv)):
-    if len(sys.argv)>2:
-        print(sys.argv[i])
-
     if 'oanda' in sys.argv[i]:
         perc=4
     else:
@@ -66,7 +67,8 @@ for i in range(1,len(sys.argv)):
             sl+=1
 
     for d in sorted(day.keys()):
-        print(f"{d} {round(day[d],4):14.{perc}f}")
+        exac=sys.argv[i].split('.')
+        print(f"{d} {exac[2]:<10} {exac[3]:<20} {round(day[d],4):14.{perc}f}")
 
 print()
 

@@ -106,6 +106,7 @@ def main():
         y=delta.years
         m=delta.months
         d=delta.days
+
         # duration
         dstr=""
         if y>0:
