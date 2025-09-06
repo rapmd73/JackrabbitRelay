@@ -34,7 +34,7 @@ if relay.GetFramework()=='ccxt':
             fre=float(balances['free'][coin])
             tot=float(balances['total'][coin])
             if fre>0.0 and tot>0.0:
-                print(f"{coin:20} {fre:16.8f} {tot:16.8f}")
+                print(f"{coin:20} {fre:24.8f} {tot:25.8f}")
 
         if 'Market' in relay.Active \
         and relay.Active['Market'].lower()!='spot':
@@ -49,7 +49,7 @@ if relay.GetFramework()=='ccxt':
                         side=pos['side']
                         if side==None:
                             side='unkn'
-                        print(f"{pos['symbol']:20} {abs(bal):16.8f} {side:5} {val:16.8f}")
+                        print(f"{pos['symbol']:20} {abs(bal):24.8f} {side:5} {val:24.8f}")
 elif relay.GetFramework()=='oanda':
     balance=relay.GetBalance()
     if balance!=None:
@@ -75,4 +75,4 @@ elif relay.GetFramework()=='mimic':
                 side='short'
             else:
                 side='long'
-            print(f"{coin:7} {abs(bal):.8f} {side}")
+            print(f"{coin:7} {abs(bal):24.8f} {side}")
