@@ -57,12 +57,22 @@ for line in lines:
 
     Wallet[data['Asset']].append(line)
 
+maxbuys=0
+maxsells=0
+maxfees=0
+maxbal=0
+maxpmax=0
+
 for pair in sorted(Wallet.keys()):
     if len(sys.argv)>2 and sys.argv[2]!=pair:
         continue
 
     # This will become the initial balance of the wallet.
     balance=0
+    buys=0
+    sells=0
+    maxpos=0
+    curpos=0
 
     # Scan thie current pair
     for line in Wallet[pair]:
@@ -82,17 +92,39 @@ for pair in sorted(Wallet.keys()):
 
         dt=data['DateTime']
         act=data['Action'].upper()[0]
-        bw=float(data[base])
-        qw=float(data[quote])
+        bw=float(data[base])            # base wallet
+        qw=float(data[quote])           # quote wallet
         a=float(data['Amount'])
         p=float(data['Price'])
         f=float(data['Fee'])
 
-        if balance==0:
-            balance=qw+f+(abs(bw)*p)
+#        if balance==0:
+#            balance=qw+f+(abs(bw)*p)
 
-        pnl=(qw+(abs(bw)*p))
+#        pnl=(qw+(abs(bw)*p))-f-balance
+        if act=='B':
+            balance-=(abs(a)*p)+f
+            buys+=1
+            curpos+=1
+        else:
+            balance+=(abs(a)*p)-f
+            sells+=1
+            curpos-=1
+            if curpos<0:
+                curpos=0
 
-    str=f"{pair:16} {fees[pair]:12.8f} {pnl:16.8f}"
-    print(str)
+        if curpos>maxpos:
+            maxpos=curpos
 
+#        str=f"  {dt} {act} {bw:14.8f} {qw:14.8f} {a:14.8f} {p:.8f} {f:.8f} {balance:.8f}"
+#        print(str)
+
+    maxbal+=balance
+    maxbuys+=buys
+    maxsells+=sells
+    maxfees+=fees[pair]
+    maxpmax+=maxpos
+
+    print(f"{pair:<16} {buys:5.0f} {sells:5.0f} {buys-sells:8.0f} {maxpos:4.0f} {fees[pair]:16.8f} {balance:20.8f}")
+
+print(f"{" ":16} {maxbuys:5.0f} {maxsells:5.0f} {maxbuys-maxsells:8.0f} {maxpmax:4.0f} {maxfees:16.8f} {maxbal:20.8f}")

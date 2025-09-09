@@ -88,8 +88,13 @@ for line in lines:
 
     if balance==0:
         balance=qw+f+(abs(bw)*p)
+        pnl=balance
 
-    pnl=(qw+(abs(bw)*p))-balance
+#    pnl=(qw+(abs(bw)*p))-balance
+    if act=='B':
+        pnl-=(abs(a)*p)+f
+    else:
+        pnl+=(abs(a)*p)-f
 
     xps.append(dt)
     if base not in StableCoinUSD:
