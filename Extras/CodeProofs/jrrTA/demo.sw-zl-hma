@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay Technical Analysis example
+
+# 2021-2025 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import math
+import json
+import datetime
+import time
+
+import JackrabbitRelay as JRR
+import JRRtechnical as jrTA
+
+def main():
+    ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',197)
+    ohlcv=ta.ReadOHLCV('ADAUSD.txt')
+
+    SlowLength=50
+
+    Opening=1
+    HighIDX=2
+    LowIDX=3
+    Closing=4
+    Volume=5
+
+    for slice in ohlcv:
+        ta.Rolling(slice)
+
+        # IMPORTANT: Hull Moving Average (HMA) needs 4 columns.
+        # The calculation is layered, and each step is preserved in its own column.
+        #
+        # Given a chosen source column (Close is example, but could be ANY column):
+        #
+        #   Column 0:  WMA(source, length/2)      # half-length weighted moving average
+        #   Column 1:  WMA(source, length)        # full-length weighted moving average
+        #   Column 2:  2 * (Column 0) - (Column 1)  # "raw hull" smoothing
+        #   Column 3:  WMA(Column 2, sqrt(length)) # final Hull MA
+        #
+        # The ACTUAL HMA value is Column 3.
+        #
+        # This is why we set hmaIDX=9 below: columns [6,7,8,9] in the rolling
+        # window are reserved for this chain of HMA calculations. If you only
+        # look at column 9, you’re seeing the final usable HMA. The others are
+        # intermediates, which can also be re-used if you want to layer
+        # indicators in more complex ways, for example: a double HMA.
+
+        hmaIDX=9
+        zlIDX=10
+        swIDX=11
+
+        ta.HMA(Closing,SlowLength)         # HMA
+        ta.ZeroLag(hmaIDX,SlowLength)      # ZL-HMA
+        ta.SineWeight(zlIDX,SlowLength)    # Sine weighted: SW-ZL-HMA
+
+        ta.Display(-1)
+
+if __name__=='__main__':
+    main()
+
+###
+### End demo
+###
+

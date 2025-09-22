@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay Technical Analysis example
+
+# 2021-2025 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import math
+import json
+import datetime
+import time
+
+import JackrabbitRelay as JRR
+import JRRtechnical as jrTA
+
+# Example output:
+
+# Header is NOT inclused in output, I added it here to demonstrate the way the
+# code works as you build the rolling window. This CAN and WILL get very
+# complicated as you add indicators and layers to your analysis.
+
+# 9/Crossing distance is the distance between the first value and the second value.
+# 10/Crossing, 1 fast (first value) crosses over slow (second value), bullish.
+#              -1, Bearish, opposite of bullish, 0 no crossing.
+
+#     0/Date and Time           1/Open           2/High            3/Low          4/Close         5/Volume            6/+DI            7/-DI            8/ADX     9/Cross Dist      10/Crossing
+# 2025-09-20 11:38:00       0.88973000       0.89000000       0.88970000       0.89000000     868.53787000 ---------------- ---------------- ---------------- ---------------- ----------------
+# 2025-09-20 11:39:00       0.89056000       0.89060000       0.89056000       0.89060000   73747.03466000      42.12806933      45.97977853       4.37158470 ---------------- ----------------
+# 2025-09-20 11:40:00       0.89060000       0.89092000       0.89060000       0.89092000   36793.91174000      46.29913221      41.09239408       5.95794393       5.20673813       1.00000000
+# 2025-09-20 11:41:00       0.89092000       0.89110000       0.89092000       0.89110000   19803.87053000      45.71723426      41.53766770       1.07580130       4.17956656       0.00000000
+# 2025-09-20 11:42:00       0.89143000       0.89183000       0.89143000       0.89183000  263069.34027000      47.00251889      40.55415617       0.14729574       6.44836272       0.00000000
+
+def main():
+    ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',197)
+    ohlcv=ta.ReadOHLCV('ADAUSD.txt')
+
+    Period=14
+
+    Opening=1
+    HighIDX=2
+    LowIDX=3
+    Closing=4
+    Volume=5
+
+    # Colums representing +DI and -DI
+
+    diP=6           # +DI
+    diM=7           # -DI
+
+    for slice in ohlcv:
+        ta.Rolling(slice)
+
+        ta.ADX(HighIDX,LowIDX,Closing,Period)
+        ta.Cross(diP,diM) # +DI>-DI bullish, +DI<-DI bearish, these as crossings
+
+        ta.Display(-1)
+
+if __name__=='__main__':
+    main()
+
+###
+### End demo
+###
+
+

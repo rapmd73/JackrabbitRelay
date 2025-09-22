@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay Technical Analysis example
+
+# 2021-2025 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import math
+import json
+import datetime
+import time
+
+import JackrabbitRelay as JRR
+import JRRtechnical as jrTA
+
+def main():
+    ohlcv=[]
+
+    ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',197)
+
+    # Read data file and process it
+
+    ohlcv=ta.ReadOHLCV('ADAUSD.txt')
+
+    print(f"Candles read: {len(ohlcv)}")
+
+    # Build the rolling window. This IS required to any technical analysis
+
+    for s in ohlcv:
+        ta.Rolling(s)
+
+    # Display the window, last 10
+    for s in range(len(ta.window)-10,len(ta.window)):
+        ta.Display(s)
+
+if __name__=='__main__':
+    main()
