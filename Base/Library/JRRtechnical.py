@@ -52,6 +52,20 @@ class TechnicalAnalysis:
         except Exception as err:
             print(f"{err}")
 
+    # Return the last row back to the user
+
+    def LastRow(self):
+        if self.window:
+            return self.window[-1]
+        return []
+
+    # Add a column to the rolling windows
+
+    def AddColumn(self,value):
+        if len(self.window)>0:
+            self.window[-1].append(value) # Update the last slice with value
+        return self.window
+
     # Rolling window
 
     def Rolling(self,slice=None):
@@ -919,6 +933,113 @@ class TechnicalAnalysis:
         # Smooth %D using moving average (d_smooth) of smoothed %K
         self.window = ma_func(d_idx, d_smooth)
 
+        return self.window
+
+    # Williams %R
+
+    def WilliamsR(self, high_idx, low_idx, close_idx, period=14):
+        """
+        Calculate Williams %R for the last candle in the window.
+
+        Parameters:
+            high_idx (int): Column index for high prices
+            low_idx (int): Column index for low prices
+            close_idx (int): Column index for close prices
+            period (int): Lookback period (default 14)
+
+        Appends to self.window[-1]:
+            Williams %R
+        """
+
+        n = len(self.window)
+        if n < period:
+            self.window[-1].append(None)
+            return self.window
+
+        highs = [row[high_idx] for row in self.window[-period:] if len(row) > high_idx and row[high_idx] is not None]
+        lows = [row[low_idx] for row in self.window[-period:] if len(row) > low_idx and row[low_idx] is not None]
+        closes = [row[close_idx] for row in self.window[-period:] if len(row) > close_idx and row[close_idx] is not None]
+
+        if len(highs) < period or len(lows) < period or len(closes) < period:
+            self.window[-1].append(None)
+            return self.window
+
+        high_max = max(highs)
+        low_min = min(lows)
+        close_last = closes[-1]
+
+        if high_max == low_min:
+            wr = 0.0
+        else:
+            wr = -100 * (high_max - close_last) / (high_max - low_min)
+
+        self.window[-1].append(wr)
+        return self.window
+
+    # Find the current support level
+
+    def Support(self, low_idx=3, period=14):
+        """
+        Calculate support levels for a specified column over a rolling window.
+
+        Parameters:
+            low_idx (int): Index of the column representing lows (e.g., low prices)
+            period (int): Number of candles to consider for support (default 14)
+
+        Returns:
+            self.window: The rolling window updated with a support level appended
+                         to the last row.
+        """
+        # Ensure enough history exists
+        if len(self.window) < period:
+            self.window[-1].append(None)
+            return self.window
+
+        # Extract lows from the last 'period' candles
+        lows = [row[low_idx] for row in self.window[-period:] if len(row) > low_idx and row[low_idx] is not None]
+
+        if len(lows)<period:
+            self.window[-1].append(None)
+            return self.window
+
+        # Support level = minimum low in the period
+        support_level = min(lows)
+
+        # Append to the last row of the rolling window
+        self.window[-1].append(support_level)
+        return self.window
+
+    # Find resistance levels
+
+    def Resistance(self, high_idx=2, period=14):
+        """
+        Calculate resistance levels for a specified column over a rolling window.
+
+        Parameters:
+            high_idx (int): Index of the column representing highs (e.g., high prices)
+            period (int): Number of candles to consider for resistance (default 14)
+
+        Returns:
+            self.window: The rolling window updated with a resistance level appended
+                         to the last row.
+        """
+        # Ensure enough history exists
+        if len(self.window) < period:
+            self.window[-1].append(None)
+            return self.window
+
+        # Extract highs from the last 'period' candles
+        highs = [row[high_idx] for row in self.window[-period:] if len(row) > high_idx and row[high_idx] is not None]
+
+        if len(highs)<period:
+            self.window[-1].append(None)
+            return self.window
+
+        # Resistance level = maximum high in the period
+        resistance_level = max(highs)
+
+        # Append to the last row of the rolling window
+        self.window[-1].append(resistance_level)
         return self.window
 
 ###

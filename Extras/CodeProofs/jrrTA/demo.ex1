@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay Technical Analysis example
+
+# 2021-2025 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import math
+import json
+import datetime
+import time
+
+import JackrabbitRelay as JRR
+import JRRtechnical as jrTA
+
+def main():
+#    ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',197)
+#    ohlcv=ta.ReadOHLCV('ADAUSD.txt')
+    ta=jrTA.TechnicalAnalysis('oanda','CherryBlossom','EUR/USD','1m',197)
+    ohlcv=ta.ReadOHLCV('EURUSD.txt')
+
+    Opening=1
+    HighIDX=2
+    LowIDX=3
+    Closing=4
+    Volume=5
+
+    for slice in ohlcv:
+        ta.Rolling(slice)
+
+        rIDX=6
+        sIDX=7
+
+        ta.Resistance(HighIDX,50)
+        ta.Support(LowIDX,50)
+
+        atrIDX=9
+        ta.ATR(HighIDX,LowIDX,Closing,14,smooth_func=ta.SMA)
+
+        # Get the last row of the window
+
+        row=ta.LastRow()
+
+        # This is a way to add a trailing ATR or channel for trading. Possible
+        # examples could be a buy signal with closing price crosses above
+        # support. Selling signal could be closing price dropping below
+        # restance.
+
+        # add/subtract ATR from high low. This looks for a pullback effect.
+
+        h=l=None
+        if row[rIDX] is not None and row[sIDX] is not None and row[atrIDX] is not None:
+            h=row[rIDX]-(row[atrIDX])
+            l=row[sIDX]+(row[atrIDX])
+
+        hIDX=10
+        lIDX=11
+
+        ta.AddColumn(h)
+        ta.AddColumn(l)
+
+        # Figure out crossing for resistance, looking for under (-1)
+
+        rcIDX=13
+        ta.Cross(Closing,hIDX)
+
+        # Figure out crossing for support, looking for over (1)
+
+        scIDX=15
+        ta.Cross(Closing,lIDX)
+
+        # Potential signals
+
+        row=ta.LastRow()
+        if row[rcIDX]==-1:
+            print("Sell Signal");
+        if row[scIDX]==1:
+            print("Buy Signal");
+
+        ta.Display(-1)
+
+if __name__=='__main__':
+    main()
+
+###
+### End demo
+###
+
