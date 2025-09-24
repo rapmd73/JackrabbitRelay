@@ -21,8 +21,6 @@ def main():
     ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',197)
     ohlcv=ta.ReadOHLCV('ADAUSD.txt')
 
-    SlowLength=50
-
     Opening=1
     HighIDX=2
     LowIDX=3
@@ -50,11 +48,30 @@ def main():
         # intermediates, which can also be re-used if you want to layer
         # indicators in more complex ways, for example: a double HMA.
 
-        hmaIDX=9
-        zlIDX=10
-        swIDX=11
+        SlowLength=50
+        period=21
 
-        ta.HMA(Closing,SlowLength)         # HMA
+        wmaIDX=6    # WMA of Closing, for period
+        wma2IDX=7   # WMA of Closing, for period/2
+        synIDX=8    # 2*WMA(p/2) - WMA(p)
+        sqpIDX=9    # sqrt(p)
+
+        hmaIDX=10
+        zlIDX=11
+        swIDX=12
+
+        # WMA can be ANY desired moving average, and even DIFFERENT moving
+        # averages. To get a FULL HMA, ALL four of these lines are required.
+        # Total of 5 columns are required for a complete Hull moving average.
+        # NEVER forget: Your edge is really YOU, not the indicators.
+
+        ta.WMA(Closing,period)         # WMA(p)                     <---*
+        ta.WMA(Closing,int(period/2))  # WMA(p/2)                       |
+        ta.HMA(wmaIDX,wma2IDX,period)  # HMA math                       |
+        ta.WMA(synIDX,sqpIDX)          # Actual HMA based on WMA, this example
+
+        # Zero lag and sine weighted values
+
         ta.ZeroLag(hmaIDX,SlowLength)      # ZL-HMA
         ta.SineWeight(zlIDX,SlowLength)    # Sine weighted: SW-ZL-HMA
 
