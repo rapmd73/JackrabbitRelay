@@ -19,18 +19,20 @@ import time
 import JackrabbitRelay as JRR
 
 class TechnicalAnalysis:
-    def __init__(self, exchange, account, asset, timeframe, count=200):
+    def __init__(self, exchange, account, asset, timeframe, count=200,length=16,precision=8):
         self.exchange = exchange
         self.account = account
         self.asset = asset
         self.tf = timeframe
         self.count = count+1 # historical (count) + live candles
         self.window = []
+        self.length=16
+        self.precision=8
         self.relay = JRR.JackrabbitRelay(exchange=self.exchange,account=self.account)
 
     # Print the fancy numbers
 
-    def Display(self,idx,length=16,precision=8):
+    def Display(self,idx):
         if idx==-1 and len(self.window)<1:
             return
 
@@ -44,25 +46,31 @@ class TechnicalAnalysis:
             slice=self.window[idx]
             for i in range(1,len(slice)):
                 if slice[i]!=None:
-                    out+=f"{float(slice[i]):{length}.{precision}f} "
+                    out+=f"{float(slice[i]):{self.length}.{self.precision}f} "
                 else:
                     dashes='-'*80
-                    out+=f"{dashes[:length]:{length}} "
+                    out+=f"{dashes[:self.length]:{self.length}} "
             print(out)
         except Exception as err:
             print(f"{err}")
 
+    # Return a row from the rolling window. Can be absolute or relative
+
+    def GetRow(self,row):
+        if not self.window or row<0 or row>len(self.window):
+            return []
+
+        return self.window[row]
+
     # Return the last row back to the user
 
     def LastRow(self):
-        if self.window:
-            return self.window[-1]
-        return []
+        return self.GetRow(-1)
 
     # Add a column to the rolling windows
 
     def AddColumn(self,value):
-        if len(self.window)>0:
+        if self.window and len(self.window)>0:
             self.window[-1].append(value) # Update the last slice with value
         return self.window
 
@@ -223,8 +231,8 @@ class TechnicalAnalysis:
     def Cross(self,idx1,idx2):
         # Ensure there are at least two data points to compare
         if len(self.window) < 2:
-            self.window[-1].append(None)  # Not enough data to calculate difference or crossing
-            self.window[-1].append(None)
+            self.AddColumn(None)  # Not enough data to calculate difference or crossing
+            self.AddColumn(None)
             return self.window
 
         try:
@@ -234,14 +242,14 @@ class TechnicalAnalysis:
             curr_idx1 = self.window[-1][idx1]  # Current value of idx1
             curr_idx2 = self.window[-1][idx2]  # Current value of idx2
         except Exception as err:
-            self.window[-1].append(None)  # Not enough data to calculate difference or crossing
-            self.window[-1].append(None)
+            self.AddColumn(None)  # Not enough data to calculate difference or crossing
+            self.AddColumn(None)
             return self.window
 
         # Check if all values are valid for detecting difference and crossing
         if prev_idx1 is None or prev_idx2 is None or curr_idx1 is None or curr_idx2 is None:
-            self.window[-1].append(None)  # Not enough data to calculate difference or crossing
-            self.window[-1].append(None)
+            self.AddColumn(None)  # Not enough data to calculate difference or crossing
+            self.AddColumn(None)
             return self.window
 
         # Calculate the difference between idx1 and idx2
@@ -259,8 +267,8 @@ class TechnicalAnalysis:
             cross_value = 0  # No crossing
 
         # Append both the difference and the crossing result to the current slice
-        self.window[-1].append(difference)   # Append the difference
-        self.window[-1].append(cross_value)  # Append the crossing result
+        self.AddColumn(difference)   # Append the difference
+        self.AddColumn(cross_value)  # Append the crossing result
 
         return self.window
 
@@ -268,7 +276,7 @@ class TechnicalAnalysis:
 
     def SMA(self,idx,period=17):
         if len(self.window)<period+1:
-            self.window[-1].append(None) # Update the last slice with None
+            self.AddColumn(None) # Update the last slice with None
             return self.window  # Not enough valid closing prices to calculate SMA
 
         # Get the last 'period' closing prices (index 4), extract closing price
@@ -276,13 +284,13 @@ class TechnicalAnalysis:
 
         # Check if we have exactly the required number of closing prices
         if len(idxptr) < period:
-            self.window[-1].append(None) # Update the last slice with None
+            self.AddColumn(None) # Update the last slice with None
             return self.window  # Not enough valid closing prices to calculate SMA
 
         # Calculate the SMA of the last `period` closing prices
         sma = sum(idxptr) / period
 
-        self.window[-1].append(sma)  # Update the last slice with the SMA
+        self.AddColumn(sma)  # Update the last slice with the SMA
 
         return self.window
 
@@ -294,7 +302,7 @@ class TechnicalAnalysis:
 
         # Check if we have exactly the required number of closing prices
         if len(idxptr) < period:
-            self.window[-1].append(None)  # Update the last slice with None
+            self.AddColumn(None)  # Update the last slice with None
             return self.window  # Not enough valid closing prices to calculate EMA
 
         # Smoothing factor
@@ -308,7 +316,7 @@ class TechnicalAnalysis:
             ema = (price * k) + (ema * (1 - k))
 
         # Append EMA to the last slice
-        self.window[-1].append(ema)
+        self.AddColumn(ema)
 
         return self.window
 
@@ -320,7 +328,7 @@ class TechnicalAnalysis:
 
         # Check if we have exactly the required number of closing prices
         if len(idxptr) < period:
-            self.window[-1].append(None)  # Update the last slice with None
+            self.AddColumn(None)  # Update the last slice with None
             return self.window  # Not enough valid closing prices to calculate WMA
 
         # Standard WMA weights: 1, 2, ..., period
@@ -333,7 +341,7 @@ class TechnicalAnalysis:
         wma = weighted_sum / sum(weights)
 
         # Append WMA to the last slice
-        self.window[-1].append(wma)
+        self.AddColumn(wma)
 
         return self.window
 
@@ -368,7 +376,10 @@ class TechnicalAnalysis:
         # Step 0: Ensure enough historical data
         closes = [row[idx] for row in self.window[-period:] if len(row)>idx and row[idx] is not None]
         if len(closes) < period:
-            self.window[-1].extend([None, None, None, None])
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
             return self.window
 
         # Step 1: WMA(period/2)
@@ -381,12 +392,13 @@ class TechnicalAnalysis:
 
         # Check validity
         if wma_half is None or wma_full is None:
-            self.window[-1].extend([None, None])  # synthetic + HMA placeholders
+            self.AddColumn(None)
+            self.AddColumn(None)
             return self.window
 
         # Step 3: Synthetic = 2*WMA(p/2) - WMA(p)
         synthetic_value = (2 * wma_half) - wma_full
-        self.window[-1].append(synthetic_value)
+        self.AddColumn(synthetic_value)
 
         # Step 4: WMA(synthetic, sqrt(period))
         sqrt_period = max(1, int(period ** 0.5))
@@ -404,7 +416,7 @@ class TechnicalAnalysis:
 
         # Ensure we have enough data
         if len(prices) < period or len(volumes) < period:
-            self.window[-1].append(None)  # Append None if not enough data
+            self.AddColumn(None)  # Append None if not enough data
             return self.window
 
         # Calculate VWMA = sum(price * volume) / sum(volume)
@@ -417,7 +429,7 @@ class TechnicalAnalysis:
             vwma = weighted_sum / total_volume
 
         # Append VWMA to the last slice
-        self.window[-1].append(vwma)
+        self.AddColumn(vwma)
 
         return self.window
 
@@ -453,7 +465,7 @@ class TechnicalAnalysis:
                 history.append(row[idx])
 
         if not history:
-            self.window[-1].append(None)
+            self.AddColumn(None)
             return self.window
 
         # If this is the first RMA (less than period candles), use simple average
@@ -464,7 +476,7 @@ class TechnicalAnalysis:
             prev_rma = history[-2] if len(history) > 1 else history[0]
             rma = (prev_rma * (period - 1) + history[-1]) / period
 
-        self.window[-1].append(rma)
+        self.AddColumn(rma)
         return self.window
 
     # Calculate a generalized Zero-Lag value for any indicator column
@@ -488,7 +500,7 @@ class TechnicalAnalysis:
         """
 
         if len(self.window[-1])<idx:
-            self.window[-1].append(None)
+            self.AddColumn(None)
             return self.window
 
         lag = (period - 1) // 2
@@ -496,7 +508,7 @@ class TechnicalAnalysis:
         # Ensure sufficient history
         if len(self.window) <= lag or self.window[-1][idx] is None or self.window[-lag-1][idx] is None:
             # Append None for zero-lag column
-            self.window[-1].append(None)
+            self.AddColumn(None)
             return self.window
 
         # Compute zero-lag value
@@ -505,7 +517,7 @@ class TechnicalAnalysis:
         zero_lag_value = current_value + (current_value - lagged_value)
 
         # Append the zero-lag value to the last row
-        self.window[-1].append(zero_lag_value)
+        self.AddColumn(zero_lag_value)
 
         return self.window
 
@@ -530,7 +542,7 @@ class TechnicalAnalysis:
         """
 
         if len(self.window[-1])<idx:
-            self.window[-1].append(None)
+            self.AddColumn(None)
             return self.window
 
         # Extract last 'period' values from the selected column
@@ -538,12 +550,12 @@ class TechnicalAnalysis:
 
         # Ensure sufficient history
         if len(series) < period:
-            self.window[-1].append(None)
+            self.AddColumn(None)
             return self.window
 
         # If any value is None, return None
         if any(v is None for v in series):
-            self.window[-1].append(None)
+            self.AddColumn(None)
             return self.window
 
         # Generate sine weights (0 -> pi)
@@ -554,7 +566,7 @@ class TechnicalAnalysis:
         sine_weighted_value = weighted_sum / sum(weights)
 
         # Append sine-weighted value to the last row
-        self.window[-1].append(sine_weighted_value)
+        self.AddColumn(sine_weighted_value)
 
         return self.window
 
@@ -566,7 +578,7 @@ class TechnicalAnalysis:
 
         if len(prices) < period + 1:
             # Not enough data to calculate RSI
-            self.window[-1].append(None)
+            self.AddColumn(None)
             return self.window
 
         # Calculate gains and losses
@@ -593,7 +605,7 @@ class TechnicalAnalysis:
             rsi = 100 - (100 / (1 + rs))
 
         # Append RSI to the last slice
-        self.window[-1].append(rsi)
+        self.AddColumn(rsi)
 
         return self.window
 
@@ -617,7 +629,9 @@ class TechnicalAnalysis:
 
         # Not enough history
         if n < period + 1:
-            self.window[-1].extend([None, None, None])
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
             return self.window
 
         # Prepare lists for TR, +DM, -DM
@@ -633,11 +647,15 @@ class TechnicalAnalysis:
                 prev_low = self.window[i-1][low_idx]
                 prev_close = self.window[i-1][close_idx]
             except Exception:
-                self.window[-1].extend([None, None, None])
+                self.AddColumn(None)
+                self.AddColumn(None)
+                self.AddColumn(None)
                 return self.window
 
             if None in [high, low, prev_high, prev_low, prev_close]:
-                self.window[-1].extend([None, None, None])
+                self.AddColumn(None)
+                self.AddColumn(None)
+                self.AddColumn(None)
                 return self.window
 
             tr = max(high - low, abs(high - prev_close), abs(low - prev_close))
@@ -657,8 +675,8 @@ class TechnicalAnalysis:
         plus_di = 100 * sm_plus_dm / sm_tr if sm_tr != 0 else 0
         minus_di = 100 * sm_minus_dm / sm_tr if sm_tr != 0 else 0
 
-        self.window[-1].append(plus_di)
-        self.window[-1].append(minus_di)
+        self.AddColumn(plus_di)
+        self.AddColumn(minus_di)
 
         # DX = abs(+DI - -DI) / (+DI + -DI) * 100
         dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di) if (plus_di + minus_di) != 0 else 0
@@ -670,7 +688,7 @@ class TechnicalAnalysis:
         else:
             adx = dx  # first ADX = first DX
 
-        self.window[-1].append(adx)
+        self.AddColumn(adx)
 
         return self.window
 
@@ -679,19 +697,27 @@ class TechnicalAnalysis:
         Calculate Bollinger Bands using an existing moving average column (idx).
 
         Appends to self.window[-1]:
-            Upper Band, Lower Band
+            Mean, Variance, STD, Upper Band, Lower Band
         """
 
         n = len(self.window)
 
         if n < period:
-            self.window[-1].extend([None, None])
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
             return self.window
 
         series = [row[idx] for row in self.window[-period:] if len(row) > idx and row[idx] is not None]
 
         if len(series) < period:
-            self.window[-1].extend([None, None])
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
             return self.window
 
         middle_band = self.window[-1][idx]  # existing MA
@@ -702,7 +728,11 @@ class TechnicalAnalysis:
         upper_band = middle_band + stddev_mult * stddev
         lower_band = middle_band - stddev_mult * stddev
 
-        self.window[-1].extend([upper_band, lower_band])
+        self.AddColumn(mean)
+        self.AddColumn(variance)
+        self.AddColumn(stddev)
+        self.AddColumn(upper_band)
+        self.AddColumn(lower_band)
 
         return self.window
 
@@ -740,7 +770,7 @@ class TechnicalAnalysis:
 
         # MACD line
         macd_value = fast - slow
-        self.window[-1].append(macd_value)
+        self.AddColumn(macd_value)
 
         # If no custom signal_func is provided, use EMA as default
         if signal_func is None:
@@ -749,7 +779,7 @@ class TechnicalAnalysis:
         # Prepare a synthetic column for MACD line temporarily
         temp_idx = len(self.window[-1]) - 1  # MACD column index
         # Apply the moving average function to get the signal line
-        self.window = signal_func(temp_idx, period)
+        signal_func(temp_idx, period)
 
         # The signal line is appended at the last column
         signal_idx = len(self.window[-1]) - 1
@@ -757,7 +787,7 @@ class TechnicalAnalysis:
 
         # Histogram = MACD - Signal
         histogram = macd_value - signal_value if signal_value is not None else None
-        self.window[-1].append(histogram)
+        self.AddColumn(histogram)
 
         return self.window
 
@@ -806,7 +836,7 @@ class TechnicalAnalysis:
         prev_close = prev_row[close_idx]
 
         tr = max(high - low, abs(high - prev_close), abs(low - prev_close))
-        self.window[-1].append(tr)
+        self.AddColumn(tr)
         tr_idx = len(self.window[-1]) - 1  # index of TR in row
 
         # Collect TR values for initial ATR calculation
@@ -818,64 +848,14 @@ class TechnicalAnalysis:
         # If we have exactly 'period' TRs, set initial ATR as simple average
         if len(TRs) == period:
             initial_atr = sum(TRs) / period
-            self.window[-1].append(initial_atr)
+            self.AddColumn(initial_atr)
         else:
             # Apply chosen smoothing function to TR
             smooth_func(tr_idx, malen)
 
         return self.window
 
-    # Stochastic indicators
-
-
-    def Stochastic(self, k_col, period=14, d_period=3, d_func=None):
-        """
-        Stochastic Oscillator (%K, D line, %D), ATR/MACD style
-
-        Parameters:
-            k_col   : index of %K column in self.window
-            period  : lookback for raw %K (default 14)
-            d_period: smoothing period for %D (default 3)
-            d_func  : function to smooth %D (default SMA)
-
-        Appends to self.window[-1] in order:
-            %K, D line (smoothed), %D (smoothed value)
-        """
-
-        if d_func is None:
-            d_func = self.SMA  # default smoothing
-
-        # Filter rows with valid high/low
-        recent_rows = [row for row in self.window[-period:] if len(row) > 3 and row[2] is not None and row[3] is not None]
-
-        if not recent_rows:
-            self.window[-1].extend([None, None, None])
-            return self.window
-
-        # Compute %K if k_col is empty or invalid
-        if k_col >= len(self.window[-1]) or self.window[-1][k_col] is None:
-            highest_high = max(row[2] for row in recent_rows)
-            lowest_low = min(row[3] for row in recent_rows)
-            close = self.window[-1][4] if len(self.window[-1]) > 4 and self.window[-1][4] is not None else None
-            if close is None or highest_high == lowest_low:
-                k_value = 0.0 if close is not None else None
-            else:
-                k_value = ((close - lowest_low) / (highest_high - lowest_low)) * 100.0
-        else:
-            k_value = self.window[-1][k_col]
-
-        # Append %K to the last row
-        self.window[-1].append(k_value)
-        k_idx = len(self.window[-1]) - 1
-
-        # Apply smoothing to get %D (D line)
-        d_func(k_idx, d_period)        # D line
-        d_value = self.window[-1][-1]  # smoothed value
-
-        # Append D line and final %D after %K
-        self.window[-1].append(d_value)  # %D
-
-        return self.window
+    # Stochastic indicator
 
     def Stochastic(self, high_idx, low_idx, close_idx, k_period=14, k_smooth=3, d_smooth=3, ma_func=None):
         """
@@ -918,7 +898,7 @@ class TechnicalAnalysis:
             raw_k = 100 * (close_last - low_min) / (high_max - low_min)
 
         # Append raw %K first
-        self.window[-1].append(raw_k)
+        self.AddColumn(raw_k)
         k_idx = len(self.window[-1]) - 1
 
         # Smooth %K using moving average (k_smooth)
@@ -931,7 +911,7 @@ class TechnicalAnalysis:
         d_idx = len(self.window[-1]) - 1
 
         # Smooth %D using moving average (d_smooth) of smoothed %K
-        self.window = ma_func(d_idx, d_smooth)
+        ma_func(d_idx, d_smooth)
 
         return self.window
 
@@ -953,7 +933,7 @@ class TechnicalAnalysis:
 
         n = len(self.window)
         if n < period:
-            self.window[-1].append(None)
+            self.AddColumn(None)
             return self.window
 
         highs = [row[high_idx] for row in self.window[-period:] if len(row) > high_idx and row[high_idx] is not None]
@@ -961,7 +941,7 @@ class TechnicalAnalysis:
         closes = [row[close_idx] for row in self.window[-period:] if len(row) > close_idx and row[close_idx] is not None]
 
         if len(highs) < period or len(lows) < period or len(closes) < period:
-            self.window[-1].append(None)
+            self.AddColumn(None)
             return self.window
 
         high_max = max(highs)
@@ -973,7 +953,7 @@ class TechnicalAnalysis:
         else:
             wr = -100 * (high_max - close_last) / (high_max - low_min)
 
-        self.window[-1].append(wr)
+        self.AddColumn(wr)
         return self.window
 
     # Find the current support level
@@ -992,21 +972,21 @@ class TechnicalAnalysis:
         """
         # Ensure enough history exists
         if len(self.window) < period:
-            self.window[-1].append(None)
+            self.AddColumn(None)
             return self.window
 
         # Extract lows from the last 'period' candles
         lows = [row[low_idx] for row in self.window[-period:] if len(row) > low_idx and row[low_idx] is not None]
 
         if len(lows)<period:
-            self.window[-1].append(None)
+            self.AddColumn(None)
             return self.window
 
         # Support level = minimum low in the period
         support_level = min(lows)
 
         # Append to the last row of the rolling window
-        self.window[-1].append(support_level)
+        self.AddColumn(support_level)
         return self.window
 
     # Find resistance levels
@@ -1025,21 +1005,21 @@ class TechnicalAnalysis:
         """
         # Ensure enough history exists
         if len(self.window) < period:
-            self.window[-1].append(None)
+            self.AddColumn(None)
             return self.window
 
         # Extract highs from the last 'period' candles
         highs = [row[high_idx] for row in self.window[-period:] if len(row) > high_idx and row[high_idx] is not None]
 
         if len(highs)<period:
-            self.window[-1].append(None)
+            self.AddColumn(None)
             return self.window
 
         # Resistance level = maximum high in the period
         resistance_level = max(highs)
 
         # Append to the last row of the rolling window
-        self.window[-1].append(resistance_level)
+        self.AddColumn(resistance_level)
         return self.window
 
     # Parabolic SAR
@@ -1226,6 +1206,43 @@ class TechnicalAnalysis:
         # Add OBV as a new column
         self.AddColumn(obv)
         return self.window
+
+    ## Future additions (No particular order)
+
+    ## Volume-based
+
+    # Chaikin Money Flow (CMF)
+    # Accumulation/Distribution Line (A/D)
+    # Money Flow Index (MFI)
+    # Volume Price Trend (VPT)
+
+    ## Volatility / Band-based
+
+    # Keltner Channels
+    # Donchian Channels
+
+    ## Trend / Moving Average Variants
+
+    # Ichimoku Cloud
+    # Triangular Moving Average (TMA)
+    # Exponential Hull / Jurik-style smoothing
+
+    ## Oscillators
+
+    # CCI (Commodity Channel Index)
+    # Ultimate Oscillator
+    # Chaikin Oscillator
+    # TRIX – triple-smoothed EMA measuring momentum.
+
+    ## Trend Strength / Direction
+
+    # Aroon Indicator
+    # Vortex Indicator
+
+    ## Other
+
+    # Pivot Points
+    # Fibonacci Retracements / Extensions
 
 ###
 ### END of code
