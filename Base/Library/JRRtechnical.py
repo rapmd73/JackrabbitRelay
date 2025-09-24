@@ -346,9 +346,11 @@ class TechnicalAnalysis:
         return self.window
 
     # Calculate a Hull Moving Average (HMA) using the existing WMA
-    # Problem Child.
 
-    def HMA(self, idx, period=21):
+    # The default is WMA, but by using a column, I can give ANY moving average
+    # to HMA or even change the WMA parameters externally.
+
+    def HMA(self, wmaIDX, wma2IDX, period=21):
         """
         Calculate the Hull Moving Average (HMA) for the series at column `idx`.
 
@@ -374,21 +376,21 @@ class TechnicalAnalysis:
         """
 
         # Step 0: Ensure enough historical data
-        closes = [row[idx] for row in self.window[-period:] if len(row)>idx and row[idx] is not None]
-        if len(closes) < period:
-            self.AddColumn(None)
-            self.AddColumn(None)
+        if len(self.window)<period+1:
             self.AddColumn(None)
             self.AddColumn(None)
             return self.window
 
-        # Step 1: WMA(period/2)
-        self.WMA(idx, period // 2)
-        wma_half = self.window[-1][-1]
+        if len(self.window[-1])<wmaIDX+1 or len(self.window[-1])<wma2IDX+1:
+            self.AddColumn(None)
+            self.AddColumn(None)
+            return self.window
 
-        # Step 2: WMA(period)
-        self.WMA(idx, period)
-        wma_full = self.window[-1][-1]
+        # Step 1: WMA(period)
+        wma_full = self.window[-1][wmaIDX]
+
+        # Step 2: WMA(period/2)
+        wma_half = self.window[-1][wma2IDX]
 
         # Check validity
         if wma_half is None or wma_full is None:
@@ -402,8 +404,7 @@ class TechnicalAnalysis:
 
         # Step 4: WMA(synthetic, sqrt(period))
         sqrt_period = max(1, int(period ** 0.5))
-        synthetic_idx = len(self.window[-1]) - 1
-        self.WMA(synthetic_idx, sqrt_period)    # HMA value, last column
+        self.AddColumn(sqrt_period)
 
         return self.window
 
@@ -758,14 +759,18 @@ class TechnicalAnalysis:
 
         # Ensure enough history
         if len(self.window) < 1 or len(self.window[-1]) <= max(idxFAST, idxSLOW):
-            self.window[-1].extend([None, None, None])
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
             return self.window
 
         fast = self.window[-1][idxFAST]
         slow = self.window[-1][idxSLOW]
 
         if fast is None or slow is None:
-            self.window[-1].extend([None, None, None])
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
             return self.window
 
         # MACD line
@@ -814,20 +819,20 @@ class TechnicalAnalysis:
 
         # Ensure at least one previous candle exists
         if len(self.window) < 2:
-            self.window[-1].extend([None, None])
+            self.AddColumn(None)
+            self.AddColumn(None)
             return self.window
 
         row = self.window[-1]
         prev_row = self.window[-2]
 
         # Check for missing data
-        if (len(row) <= max(high_idx, low_idx, close_idx) or
-            len(prev_row) <= close_idx or
-            row[high_idx] is None or
-            row[low_idx] is None or
-            row[close_idx] is None or
-            prev_row[close_idx] is None):
-            self.window[-1].extend([None, None])
+        if (len(row) <= max(high_idx, low_idx, close_idx)
+        or len(prev_row) <= close_idx or row[high_idx] is None
+        or row[low_idx] is None or row[close_idx] is None
+        or prev_row[close_idx] is None):
+            self.AddColumn(None)
+            self.AddColumn(None)
             return self.window
 
         # Calculate True Range (TR)
@@ -876,7 +881,9 @@ class TechnicalAnalysis:
 
         n = len(self.window)
         if n < k_period:
-            self.window[-1].extend([None, None, None])
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
             return self.window
 
         # Extract last k_period highs, lows, closes
@@ -885,7 +892,9 @@ class TechnicalAnalysis:
         closes = [row[close_idx] for row in self.window[-k_period:] if len(row) > close_idx and row[close_idx] is not None]
 
         if len(highs) < k_period or len(lows) < k_period or len(closes) < k_period:
-            self.window[-1].extend([None, None,None])
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
             return self.window
 
         high_max = max(highs)
