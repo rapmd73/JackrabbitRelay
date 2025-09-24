@@ -40,24 +40,24 @@ class TechnicalAnalysis:
             epoch=float(self.window[idx][0])
             dt=datetime.datetime.utcfromtimestamp(int(epoch/1000))
             sdt=dt.strftime('%Y-%m-%d %H:%M:%S')
-
-            out=f"{sdt} "
-
-            slice=self.window[idx]
-            for i in range(1,len(slice)):
-                if slice[i]!=None:
-                    out+=f"{float(slice[i]):{self.length}.{self.precision}f} "
-                else:
-                    dashes='-'*80
-                    out+=f"{dashes[:self.length]:{self.length}} "
-            print(out)
         except Exception as err:
-            print(f"{err}")
+            sdt=self.window[idx][0]
+
+        out=f"{sdt} "
+
+        slice=self.window[idx]
+        for i in range(1,len(slice)):
+            if slice[i]!=None:
+                out+=f"{float(slice[i]):{self.length}.{self.precision}f} "
+            else:
+                dashes='-'*80
+                out+=f"{dashes[:self.length]:{self.length}} "
+        print(out)
 
     # Return a row from the rolling window. Can be absolute or relative
 
     def GetRow(self,row):
-        if not self.window or row<0 or row>len(self.window):
+        if not self.window or abs(row)>len(self.window):
             return []
 
         return self.window[row]
@@ -369,10 +369,6 @@ class TechnicalAnalysis:
                 * Synthetic value = 2*WMA(p/2) - WMA(p)
                 * HMA(p)
             - If there is not enough valid history, it still appends 4 None values.
-
-        Returns:
-            self.window (list of lists): Updated rolling data window with 4 new values
-            (either floats or None).
         """
 
         # Step 0: Ensure enough historical data

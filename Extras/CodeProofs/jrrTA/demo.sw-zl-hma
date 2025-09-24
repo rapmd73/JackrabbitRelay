@@ -14,12 +14,18 @@ import json
 import datetime
 import time
 
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.subplots as ps
+
 import JackrabbitRelay as JRR
 import JRRtechnical as jrTA
 
 def main():
-    ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',197)
-    ohlcv=ta.ReadOHLCV('ADAUSD.txt')
+#    ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',197)
+#    ohlcv=ta.ReadOHLCV('ADAUSD.txt')
+    ta=jrTA.TechnicalAnalysis('oanda','CherryBlossom','EUR/USD','1m',5000)
+    ohlcv=ta.ReadOHLCV('EURUSD.txt')
 
     Opening=1
     HighIDX=2
@@ -27,7 +33,41 @@ def main():
     Closing=4
     Volume=5
 
+    # Chart setup
+
+    ChartName=f'demo.sw-zl-hma'
+    Title="Sine Weighted, Zero Lag, Hull Moving Average"
+    fig1=ps.make_subplots(specs=[[{"secondary_y":False}]])
+
+    # Prepare for loop
+
+    dt=[]
+    do=[]
+    dh=[]
+    dl=[]
+    dc=[]
+
+    wma1=[]
+    wma2=[]
+    hma=[]
+    zl=[]
+    sw=[]
+    mom=[]
+
     for slice in ohlcv:
+        # Plot candles of timeframe just above log
+        try:
+            dt.append(datetime.datetime.fromtimestamp(int(float(slice[0])/1000)))
+        except Exception as err:
+            dt.append(slice[0])
+
+        do.append(slice[1])
+        dh.append(slice[2])
+        dl.append(slice[3])
+        dc.append(slice[4])
+
+        # Build the rolling window
+
         ta.Rolling(slice)
 
         # IMPORTANT: Hull Moving Average (HMA) needs 4 columns.
@@ -60,6 +100,8 @@ def main():
         zlIDX=11
         swIDX=12
 
+        momIDX=13
+
         # WMA can be ANY desired moving average, and even DIFFERENT moving
         # averages. To get a FULL HMA, ALL four of these lines are required.
         # Total of 5 columns are required for a complete Hull moving average.
@@ -75,7 +117,38 @@ def main():
         ta.ZeroLag(hmaIDX,SlowLength)      # ZL-HMA
         ta.SineWeight(zlIDX,SlowLength)    # Sine weighted: SW-ZL-HMA
 
+        # Momentum
+
+        ta.SMA(Closing,200)
+        ta.RateOfChange(momIDX)
+
+        lr=ta.LastRow()
+        if lr!=[]:
+            wma1.append(lr[wmaIDX])
+            wma2.append(lr[wma2IDX])
+            hma.append(lr[hmaIDX])
+            zl.append(lr[zlIDX])
+            sw.append(lr[swIDX])
+            mom.append(lr[momIDX])
+
         ta.Display(-1)
+
+    # Plot and save the chart
+
+    fig1.add_trace(go.Candlestick(x=dt,open=do,high=dh,low=dl,close=dc,increasing_line_color='#a0ffff',decreasing_line_color= '#ffa0ff',name="Candlesticks"),secondary_y=False)
+    fig1.add_trace(go.Scatter(x=dt,y=wma1,mode='lines',name="WMA(p)"),secondary_y=False)
+    fig1.add_trace(go.Scatter(x=dt,y=wma2,mode='lines',name="WMA(p/2)"),secondary_y=False)
+    fig1.add_trace(go.Scatter(x=dt,y=hma,mode='lines',name="HMA"),secondary_y=False)
+    fig1.add_trace(go.Scatter(x=dt,y=zl,mode='lines',name="Zero Lag"),secondary_y=False)
+    fig1.add_trace(go.Scatter(x=dt,y=sw,mode='lines',name="Sine Weighted"),secondary_y=False)
+    fig1.add_trace(go.Scatter(x=dt,y=mom,mode='lines',name="Momentum"),secondary_y=False)
+
+    fig1.update_yaxes(title_text='Price',secondary_y=False)
+    fig1.update_layout(title={"text":Title,"x":0.5,"xanchor":"center","yanchor":"top"},template='plotly_white',showlegend=True)
+    fig1.update(layout_xaxis_rangeslider_visible=False)
+
+    fig1.write_html(ChartName+'.html')
+    fig1.write_image(ChartName+'.png',width=1920,height=1024)
 
 if __name__=='__main__':
     main()
@@ -84,3 +157,78 @@ if __name__=='__main__':
 ### End demo
 ###
 
+"""
+for order in OpenOrders:
+    dt=order['DateTime']
+
+    if exchange=='oanda':
+        try:
+            oDetails=relay.GetOrderDetails(OrderID=order['ID'])[-1]
+            dp=float(oDetails['price'])
+            du=int(oDetails['units'])
+        except Exception as err:
+            print("Check OpenOrders",err)
+            continue
+    elif exchange=='mimic':
+        du=float(order['Response']['Details']['Amount'])
+        dp=float(order['Response']['Details']['Price'])
+    else: # CCXT framework fall through
+        du=float(order['Response']['Details']['amount'])
+        dp=float(order['Response']['Details']['price'])
+
+    htxt=f"{order['ID']}: {du:.0f}@{dp:.5f}"
+    fig1.add_trace(go.Scatter(x=[dt,EndOrderDate],y=[dp,dp],marker_color="rgba(128,128,197,1)",mode='lines',hovertemplate=htxt),secondary_y=False)
+
+# Plot trades
+
+for line in lines:
+    line=line.lower()
+    if line=='' or ('prft' not in line and 'loss' not in line and 'rduc' not in line):
+        continue
+    if 'broke' in line:
+        continue
+
+    data=line.split(' ')
+    while '' in data:
+        data.remove('')
+
+    # Date and time, duration
+    dt=' '.join(line.split(' ')[0:2])
+    if "days," in line or "day," in line:
+        dur=f"{data[12]} {data[13]} {data[14]}"
+    else:
+        dur=f"0 days, {data[12]}"
+    bTime=FindStartDateTime(dt,dur)
+
+    # Prft/Loss
+    action=data[6]
+    dir=data[7].split(',')[0]
+
+    amount=abs(float(data[8].split(':')[0]))
+    bPrice=float(data[9])
+
+    sTime=dt
+    sPrice=float(data[11].split('/')[0])
+
+    # Figure out profit/loss based on price action
+
+    if dir=='long':
+        rpl=(sPrice-bPrice)*amount
+    else:
+        rpl=(bPrice-sPrice)*amount
+
+    if action=='prft' and rpl>0:        # Profit
+        col="rgba(0,128,0,1)"
+    elif action=='prft' and rpl==0:     # Breakeven
+        col="rgba(128,128,0,1)"
+    elif action=='prft' and rpl<0:      # Loss by slippage
+        col="rgba(255,128,0,0.5)"
+    elif action=='rduc':                # ReduceBy
+        col="rgba(0,255,255,0.01)"
+    elif action=='loss':                # Stoploss
+        col="rgba(128,0,0,0.5)"
+    else:
+        print('L:',line)
+        continue
+
+"""
