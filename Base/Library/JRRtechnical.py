@@ -1042,6 +1042,191 @@ class TechnicalAnalysis:
         self.window[-1].append(resistance_level)
         return self.window
 
+    # Parabolic SAR
+
+    def PSAR(self, HighIDX=2, LowIDX=3, startAF=0.02, stepAF=0.02, maxAF=0.2):
+        """
+        Compute Parabolic SAR for the current window, fully transparent,
+        and append all intermediate values as new columns:
+        SAR, Trend (1=up, -1=down), Extreme Point (EP), Acceleration Factor (AF)
+        """
+        n = len(self.window)
+
+        # Ensure enough data to compute
+        if n < 2 or self.window[-2][HighIDX] is None or self.window[-2][LowIDX] is None:
+            self.AddColumn(None)  # SAR
+            self.AddColumn(None)  # Trend
+            self.AddColumn(None)  # EP
+            self.AddColumn(None)  # AF
+            return self.window
+
+        prev_row = self.window[-2]
+        curr_row = self.window[-1]
+
+        sarIDX=len(prev_row)-4
+
+        # Read previous SAR, trend, EP, AF if they exist
+        prev_sar = prev_row[sarIDX] if prev_row[sarIDX] is not None else prev_row[LowIDX]  # initial guess
+        prev_trend = prev_row[sarIDX+1] if len(prev_row) > sarIDX+1 and prev_row[sarIDX+1] is not None else 1               # assume uptrend
+        prev_ep = prev_row[sarIDX+2] if len(prev_row) > sarIDX+2 and prev_row[sarIDX+2] is not None else prev_row[HighIDX]
+        prev_af = prev_row[sarIDX+3] if len(prev_row) > sarIDX+3 and prev_row[sarIDX+3] is not None else startAF
+
+        # Determine current trend
+        trend = prev_trend
+        ep = prev_ep
+        af = prev_af
+        sar = prev_sar
+
+        # Update SAR
+        sar = sar + af * (ep - sar)
+
+        # Check for trend reversal
+        if trend == 1:  # Uptrend
+            if curr_row[LowIDX] < sar:
+                trend = -1
+                sar = ep
+                ep = curr_row[LowIDX]
+                af = startAF
+            else:
+                if curr_row[HighIDX] > ep:
+                    ep = curr_row[HighIDX]
+                    af = min(af + stepAF, maxAF)
+        else:  # Downtrend
+            if curr_row[HighIDX] > sar:
+                trend = 1
+                sar = ep
+                ep = curr_row[HighIDX]
+                af = startAF
+            else:
+                if curr_row[LowIDX] < ep:
+                    ep = curr_row[LowIDX]
+                    af = min(af + stepAF, maxAF)
+
+        # Append results as new columns
+        self.AddColumn(sar)     # SAR
+        self.AddColumn(trend)   # Trend: 1=up, -1=down
+        self.AddColumn(ep)      # Extreme Point
+        self.AddColumn(af)      # Acceleration Factor
+
+        return self.window
+
+    # Momentum indicator
+
+    def Momentum(self, colIDX, period=10):
+        """
+        Calculate momentum for a given column index and period.
+        Momentum = Current value - value N periods ago
+        Appends the result as a new column in the rolling window.
+
+        :param colIDX: int, the column index in the rolling window to calculate momentum on
+        :param period: int, number of periods to look back
+        """
+
+        # Get the last row
+        last_row = self.LastRow()
+
+        # Ensure there is enough history
+        if len(self.window) < period+1:
+            self.AddColumn(None)
+            return self.window
+
+        # Calculate momentum
+        if len(self.window[-(period + 1)])<colIDX+1:
+            self.AddColumn(None)
+            return self.window
+
+        past_value = self.window[-(period + 1)][colIDX]
+        if past_value is None:
+            self.AddColumn(None)
+            return self.window
+
+        current_value = last_row[colIDX]
+
+        if past_value is not None and current_value is not None:
+            momentum = current_value - past_value
+        else:
+            momentum = None
+
+        # Add momentum as new column
+        self.AddColumn(momentum)
+        return self.window
+
+    def RateOfChange(self, colIDX, period=10):
+        """
+        Calculate the Rate of Change (ROC) for a given column index over a specified period.
+        ROC = ((current value - value N periods ago) / value N periods ago) * 100
+        The result is appended as a new column to the rolling window.
+
+        Parameters:
+            colIDX (int): Column index to calculate ROC from
+            period (int): Number of periods for the ROC calculation
+        """
+        last_row = self.LastRow()
+
+        # Check if enough rows exist
+        if len(self.window) > period:
+            past_row = self.window[-period-1]  # Row N periods ago
+            if len(past_row)<colIDX+1:
+                roc = None
+            else:
+                current_value = last_row[colIDX]
+                past_value = past_row[colIDX]
+
+                if current_value is not None and past_value not in (None, 0):
+                    roc = ((current_value - past_value) / past_value) * 100
+                else:
+                    roc = None
+        else:
+            roc = None
+
+        # Add ROC as a new column
+        self.AddColumn(roc)
+        return self.window
+
+    # On Balance Volume
+
+    def OBV(self, closeIDX=4, volumeIDX=5):
+        """
+        Calculate On-Balance Volume (OBV) based on closing prices and volume.
+        OBV increases by volume when the closing price rises,
+        decreases by volume when the closing price falls,
+        remains unchanged if the price is the same.
+
+        Parameters:
+            closeIDX (int): Column index of the closing price
+            volumeIDX (int): Column index of the volume
+        """
+        if len(self.window)<1:
+            self.AddColumn(None)
+            return self.window
+
+        last_row = self.LastRow()
+        prevIDX=len(last_row)   # Get the right idx for the OBV
+        prev_row = self.window[-2]  # Previous row
+
+        close_now = last_row[closeIDX]
+        close_prev = prev_row[closeIDX]
+        vol_now = last_row[volumeIDX]
+        if len(prev_row)<prevIDX+1:
+            self.AddColumn(vol_now)
+            return self.window
+
+        obv_prev = prev_row[prevIDX] if prev_row[prevIDX] is not None else vol_now  # Use last column as previous OBV
+
+        if close_now is not None and close_prev is not None and vol_now is not None:
+            if close_now > close_prev:
+                obv = obv_prev + vol_now
+            elif close_now < close_prev:
+                obv = obv_prev - vol_now
+            else:
+                obv = obv_prev
+        else:
+            obv = vol_now
+
+        # Add OBV as a new column
+        self.AddColumn(obv)
+        return self.window
+
 ###
 ### END of code
 ###
