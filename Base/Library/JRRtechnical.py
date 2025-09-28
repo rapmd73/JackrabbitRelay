@@ -225,6 +225,10 @@ class TechnicalAnalysis:
 
         return [epoch, o, h, l, c, v]
 
+    ##
+    ## Technical Indicators
+    ##
+
     # Calculate difference between two moving averages and where or not they
     # crossed over/user each other
 
@@ -1212,7 +1216,51 @@ class TechnicalAnalysis:
         self.AddColumn(obv)
         return self.window
 
-    ## Future additions (No particular order)
+    ##
+    ## Candlestick patterns
+    ##
+
+    # Detect a Doji candlestick pattern
+
+    def Doji(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=0.1):
+        if len(self.window)<1:
+            self.AddColumn(None)    # body
+            self.AddColumn(None)    # range
+            self.AddColumn(None)    # ratio
+            self.AddColumn(None)    # upper wick/shadow
+            self.AddColumn(None)    # lowwer wick/shadow
+            self.AddColumn(None)    # is doji (1=yes)
+            return self.window
+
+        last_row=self.LastRow()
+
+        o=last_row[OpenIDX]
+        h=last_row[HighIDX]
+        l=last_row[LowIDX]
+        c=last_row[CloseIDX]
+
+        isDoji=0
+        b=abs(o-c)                  # Body of candle
+        r=h-l                       # Range of candle
+        ratio=b/r if r!=0 else 0    # body to range ratio
+
+        us=h-max(o,c)   # length of upper wick/shadow
+        ls=max(o,c)-l   # length of lower wick/shadow
+
+        self.AddColumn(b)
+        self.AddColumn(r)
+        self.AddColumn(ratio)
+        self.AddColumn(us)
+        self.AddColumn(ls)
+
+        if ratio<=threshold:
+            isDoji=1
+
+        self.AddColumn(isDoji)
+
+        return self.window
+
+    ## Future indicator additions (No particular order)
 
     ## Volume-based
 
