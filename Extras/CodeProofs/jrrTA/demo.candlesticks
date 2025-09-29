@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay Technical Analysis example
+
+# 2021-2025 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import math
+import json
+import datetime
+import time
+
+import JackrabbitRelay as JRR
+import JRRtechnical as jrTA
+
+def main():
+    ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',197)
+    ohlcv=ta.ReadOHLCV('ADAUSD.txt')
+
+    Opening=1
+    HighIDX=2
+    LowIDX=3
+    Closing=4
+    Volume=5
+
+    for slice in ohlcv:
+        ta.Rolling(slice)
+
+        # ta.Doji()
+        # ta.TriStarDoji()
+        # ta.BullishMarubozu()
+        # ta.BearishMarubozu()
+        ta.Hammer()
+        ta.InvertedHammer()
+
+        ta.Display(-1)
+
+if __name__=='__main__':
+    main()
+
+###
+### End demo
+###
+

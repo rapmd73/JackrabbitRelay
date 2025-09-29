@@ -1216,11 +1216,49 @@ class TechnicalAnalysis:
         self.AddColumn(obv)
         return self.window
 
+    ## Future indicator additions (No particular order)
+
+    ## Volume-based
+
+    # Chaikin Money Flow (CMF)
+    # Accumulation/Distribution Line (A/D)
+    # Money Flow Index (MFI)
+    # Volume Price Trend (VPT)
+
+    ## Volatility / Band-based
+
+    # Keltner Channels
+    # Donchian Channels
+
+    ## Trend / Moving Average Variants
+
+    # Ichimoku Cloud
+    # Triangular Moving Average (TMA)
+    # Exponential Hull / Jurik-style smoothing
+
+    ## Oscillators
+
+    # CCI (Commodity Channel Index)
+    # Ultimate Oscillator
+    # Chaikin Oscillator
+    # TRIX – triple-smoothed EMA measuring momentum.
+
+    ## Trend Strength / Direction
+
+    # Aroon Indicator
+    # Vortex Indicator
+
+    ## Other
+
+    # Pivot Points
+    # Fibonacci Retracements / Extensions
+
     ##
     ## Candlestick patterns
     ##
 
     # Detect a Doji candlestick pattern
+    # o=h=l=c Four Price Doji
 
     def Doji(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=0.1):
         if len(self.window)<1:
@@ -1260,42 +1298,342 @@ class TechnicalAnalysis:
 
         return self.window
 
-    ## Future indicator additions (No particular order)
+    # Tri-Star Doji (Three Dojis in a row)
 
-    ## Volume-based
+    def TriStarDoji(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold1=0.1,threshold2=0.1,threshold3=0.1):
+        # If not enough candles, fill with None
+        if len(self.window) < 3:
+            self.AddColumn(None)    # doji 1
+            self.AddColumn(None)    # doji 2
+            self.AddColumn(None)    # doji 3
+            self.AddColumn(None)    # is tri-star doji (1=yes)
+            return self.window
 
-    # Chaikin Money Flow (CMF)
-    # Accumulation/Distribution Line (A/D)
-    # Money Flow Index (MFI)
-    # Volume Price Trend (VPT)
+        # The current index of the list, each doji is 6 columns
+        # Get the three dojis
 
-    ## Volatility / Band-based
+        self.Doji(OpenIDX,HighIDX,LowIDX,CloseIDX,threshold1)
+        self.Doji(OpenIDX,HighIDX,LowIDX,CloseIDX,threshold2)
+        self.Doji(OpenIDX,HighIDX,LowIDX,CloseIDX,threshold3)
 
-    # Keltner Channels
-    # Donchian Channels
+        lIDX=len(self.window[-1])-1
 
-    ## Trend / Moving Average Variants
+        if len(self.window[-3])-12<=0:
+            self.AddColumn(None)    # is tri-star doji (1=yes)
+            return self.window
 
-    # Ichimoku Cloud
-    # Triangular Moving Average (TMA)
-    # Exponential Hull / Jurik-style smoothing
+        # Get last 3 rows
+        row1 = self.window[-1]
+        row2 = self.window[-2]
+        row3 = self.window[-3]
 
-    ## Oscillators
+        doji1=row1[lIDX-12]     # Candle row 1
+        doji2=row2[lIDX-6]      # Candle row 2
+        doji3=row3[lIDX]        # Candle row 3
 
-    # CCI (Commodity Channel Index)
-    # Ultimate Oscillator
-    # Chaikin Oscillator
-    # TRIX – triple-smoothed EMA measuring momentum.
+        # Tri-Star requires all 3 to be Doji
+        isTriStar = 1 if (doji1==1 and doji2==1 and doji3==1) else 0
 
-    ## Trend Strength / Direction
+        # Add results to output
+        self.AddColumn(isTriStar)
 
-    # Aroon Indicator
-    # Vortex Indicator
+        return self.window
 
-    ## Other
+    # Hammer candlestick pattern
 
-    # Pivot Points
-    # Fibonacci Retracements / Extensions
+    def Hammer(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4):
+        if len(self.window)<1:
+            self.AddColumn(None)    # is hammer (1=yes)
+            return self.window
+
+        last_row=self.LastRow()
+
+        o=last_row[OpenIDX]
+        h=last_row[HighIDX]
+        l=last_row[LowIDX]
+        c=last_row[CloseIDX]
+
+        isHammer=0
+
+        b=abs(o-c)                  # Body of candle
+
+        us=h-max(o,c)   # length of upper wick/shadow
+        ls=max(o,c)-l   # length of lower wick/shadow
+
+        if ls>2*b and us>2*b: # spinning top
+            isHammer=0
+        if ls>2*b and us<b:
+            isHammer=1
+
+        self.AddColumn(isHammer)
+
+        return self.window
+
+    # Inverted Hammer candlestick pattern
+
+    def InvertedHammer(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4):
+        if len(self.window)<1:
+            self.AddColumn(None)    # is inverted hammer (1=yes)
+            return self.window
+
+        last_row=self.LastRow()
+
+        o=last_row[OpenIDX]
+        h=last_row[HighIDX]
+        l=last_row[LowIDX]
+        c=last_row[CloseIDX]
+
+        isInvHammer=0
+
+        b=abs(o-c)                  # Body of candle
+
+        us=h-max(o,c)   # length of upper wick/shadow
+        ls=max(o,c)-l   # length of lower wick/shadow
+
+        if ls>2*b and us>2*b: # spinning top
+            isInvHammer=0
+        if us>2*b and ls<b:
+            isInvHammer=1
+
+        self.AddColumn(isInvHammer)
+
+        return self.window
+
+    # Spinning Top candlestick pattern
+
+    def SpinningTop(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4):
+        if len(self.window)<1:
+            self.AddColumn(None)    # is spinning top (1=yes)
+            return self.window
+
+        last_row=self.LastRow()
+
+        o=last_row[OpenIDX]
+        h=last_row[HighIDX]
+        l=last_row[LowIDX]
+        c=last_row[CloseIDX]
+
+        isSpinTop=0
+
+        b=abs(o-c)                  # Body of candle
+
+        us=h-max(o,c)   # length of upper wick/shadow
+        ls=max(o,c)-l   # length of lower wick/shadow
+
+        if ls>2*b and us>2*b: # spinning top
+            isSpinTop=1
+
+        self.AddColumn(isSpinTop)
+
+        return self.window
+
+    # Hanging Man candlestick pattern
+
+    def HangingMan(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4):
+        if len(self.window)<1:
+            self.AddColumn(None)    # is hammer (1=yes)
+            return self.window
+
+        last_row=self.LastRow()
+
+        o=last_row[OpenIDX]
+        h=last_row[HighIDX]
+        l=last_row[LowIDX]
+        c=last_row[CloseIDX]
+
+        isHang=0
+
+        b=abs(o-c)                  # Body of candle
+
+        us=h-max(o,c)   # length of upper wick/shadow
+        ls=max(o,c)-l   # length of lower wick/shadow
+
+        if ls>2*b and us<2*b:
+            isHang=1
+
+        self.AddColumn(isHang)
+
+        return self.window
+
+    # Shooting Star candlestick pattern
+
+    def ShootingStar(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4):
+        if len(self.window)<1:
+            self.AddColumn(None)    # is hammer (1=yes)
+            return self.window
+
+        last_row=self.LastRow()
+
+        o=last_row[OpenIDX]
+        h=last_row[HighIDX]
+        l=last_row[LowIDX]
+        c=last_row[CloseIDX]
+
+        isShootStar=0
+
+        b=abs(o-c)                  # Body of candle
+
+        us=h-max(o,c)   # length of upper wick/shadow
+        ls=max(o,c)-l   # length of lower wick/shadow
+
+        if ls<2*b and us>2*b: # spinning top
+            isShootStar=1
+
+        self.AddColumn(isShootStar)
+
+        return self.window
+
+    # Detect a Bullish Marubozu candlestick pattern
+
+    def BullishMarubozu(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=0.1):
+        if len(self.window)<1:
+            self.AddColumn(None)
+            return self.window
+
+        last_row=self.LastRow()
+
+        o=last_row[OpenIDX]
+        h=last_row[HighIDX]
+        l=last_row[LowIDX]
+        c=last_row[CloseIDX]
+
+        isBM=0
+        b=c-o
+
+        us=h-c
+        ls=o-l
+
+        if b>0 and us<threshold*b and ls<threshold*b:
+            isBM=1
+
+        self.AddColumn(isBM)
+
+        return self.window
+
+    # Detect a Bearish Marubozu candlestick pattern
+
+    def BearishMarubozu(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=0.1):
+        if len(self.window)<1:
+            self.AddColumn(None)
+            return self.window
+
+        last_row=self.LastRow()
+
+        o=last_row[OpenIDX]
+        h=last_row[HighIDX]
+        l=last_row[LowIDX]
+        c=last_row[CloseIDX]
+
+        isBM=0
+        b=c-o
+
+        us=h-o
+        ls=c-l
+
+        if b<0 and us<threshold*abs(b) and ls<threshold*abs(b):
+            isBM=1
+
+        self.AddColumn(isBM)
+
+        return self.window
+
+    # Highwave candlestick pattern
+
+    def Highwave(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=2):
+        if len(self.window)<1:
+            self.AddColumn(None)    # is hammer (1=yes)
+            return self.window
+
+        last_row=self.LastRow()
+
+        o=last_row[OpenIDX]
+        h=last_row[HighIDX]
+        l=last_row[LowIDX]
+        c=last_row[CloseIDX]
+
+        isHW=0
+
+        b=abs(o-c)                  # Body of candle
+
+        us=h-max(o,c)   # length of upper wick/shadow
+        ls=max(o,c)-l   # length of lower wick/shadow
+
+        if ls>threshold*b and us>threshold*b: # spinning top
+            isHW=1
+
+        self.AddColumn(isHW)
+
+        return self.window
+
+    ## Single Candlestick Patterns
+
+    # Belt Hold (Bullish Belt Hold, Bearish Belt Hold)
+
+    ## Double Candlestick Patterns
+
+    # Bullish Engulfing
+    # Bearish Engulfing
+    # Tweezer Tops
+    # Tweezer Bottoms
+    # Piercing Line
+    # Dark Cloud Cover
+    # Bullish Harami
+    # Bearish Harami
+    # Bullish Harami Cross
+    # Bearish Harami Cross
+    # Matching Low
+    # Mat Hold
+    # Separating Lines (Bullish Separating Line, Bearish Separating Line)
+    # Kicking Pattern (Bullish Kicker, Bearish Kicker)
+    # Kicking by Length
+
+    ## Triple Candlestick Patterns
+
+    # Morning Star
+    # Evening Star
+    # Morning Doji Star
+    # Evening Doji Star
+    # Three White Soldiers
+    # Three Black Crows
+    # Three Inside Up
+    # Three Inside Down
+    # Three Outside Up
+    # Three Outside Down
+    # Three Line Strike (Bullish, Bearish)
+    # Three Stars in the South
+    # Three Advancing White Soldiers (variation of White Soldiers)
+
+    ## Extended / Rare Multi-Candle Patterns
+
+    # Abandoned Baby (Bullish & Bearish)
+    # Rising Three Methods
+    # Falling Three Methods
+    # Upside Gap Two Crows
+    # Downside Gap Two Rabbits (variation name)
+    # Two Crows
+    # Concealing Baby Swallow
+    # Deliberation Pattern (Stalled Pattern)
+    # Advance Block
+    # Ladder Bottom
+    # Ladder Top
+    # On Neck Pattern
+    # In Neck Pattern
+    # Thrusting Pattern
+    # Counterattack Lines (Bullish Counterattack, Bearish Counterattack)
+    # Meeting Lines
+    # Homing Pigeon
+    # Stick Sandwich
+    # Side-by-Side White Lines
+    # Unique Three River Bottom
+    # Tower Top
+    # Tower Bottom
+    # Rickshaw Man (variation of Long-Legged Doji)
+    # Tasuki Gap (Upward Tasuki Gap, Downward Tasuki Gap)
+    # Side-by-Side Black Lines
+    # Doji Star (Bullish & Bearish)
+    # Long Line Candle (variation of Marubozu)
+    # Advance Block Soldiers
+    # Strong Line Patterns
 
 ###
 ### END of code
