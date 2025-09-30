@@ -24,7 +24,7 @@ class TechnicalAnalysis:
         self.account = account
         self.asset = asset
         self.tf = timeframe
-        self.count = count+1 # historical (count) + live candles
+        self.count = count+1 if count<5000 else 5000 # historical (count) + live candles
         self.window = []
         self.length=16
         self.precision=8
@@ -122,29 +122,17 @@ class TechnicalAnalysis:
         return ohlcv
 
     # Pull the OHLCV data to the limit requested.
+    # Return the RAW ohlcv data. Do NOT add it to the rolling window.
 
     def GetOHLCV(self):
         try:
             ohlcv=self.relay.GetOHLCV(symbol=self.asset,timeframe=self.tf, limit=self.count)
-        except Exception:
-            ohlcv=[]
-
-        if not ohlcv:
+        except Exception as err:
+            print(err)
             # Return a blank padded window if fetch fails
-            self.window=[[None,None,None,None,None,None] for _ in range(self.count)]
-            return self.window
+            ohlcv=None
 
-        # Replace the window entirely with new data
-        self.window=[list(slice_) for slice_ in ohlcv]
-
-        # Enforce fixed window size
-        if len(self.window)>self.count:
-            self.window=self.window[-self.count:]
-        elif len(self.window)<self.count:
-            padding=[[None,None,None,None,None,None] for _ in range(self.count-len(self.window))]
-            self.window=padding+self.window
-
-        return self.window
+        return ohlcv
 
     # Update the window with the last two OHLCV values. This replaces the
     # incomplete candle from the previous call.
@@ -1360,7 +1348,7 @@ class TechnicalAnalysis:
         us=h-max(o,c)   # length of upper wick/shadow
         ls=max(o,c)-l   # length of lower wick/shadow
 
-        if ls>2*b and us>2*b: # spinning top
+        if b==0 or (ls>2*b and us>2*b): # spinning top
             isHammer=0
         if ls>2*b and us<b:
             isHammer=1
@@ -1390,7 +1378,7 @@ class TechnicalAnalysis:
         us=h-max(o,c)   # length of upper wick/shadow
         ls=max(o,c)-l   # length of lower wick/shadow
 
-        if ls>2*b and us>2*b: # spinning top
+        if b==0 or (ls>2*b and us>2*b): # spinning top
             isInvHammer=0
         if us>2*b and ls<b:
             isInvHammer=1
@@ -1539,7 +1527,7 @@ class TechnicalAnalysis:
 
     # Highwave candlestick pattern
 
-    def Highwave(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=2):
+    def HighWave(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=2):
         if len(self.window)<1:
             self.AddColumn(None)    # is hammer (1=yes)
             return self.window
@@ -1565,9 +1553,63 @@ class TechnicalAnalysis:
 
         return self.window
 
-    ## Single Candlestick Patterns
+    # Bullish Belt Hold
 
-    # Belt Hold (Bullish Belt Hold, Bearish Belt Hold)
+    def BullishBeltHold(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=0.1):
+        if len(self.window)<1:
+            self.AddColumn(None)    # is hammer (1=yes)
+            return self.window
+
+        last_row=self.LastRow()
+
+        o=last_row[OpenIDX]
+        h=last_row[HighIDX]
+        l=last_row[LowIDX]
+        c=last_row[CloseIDX]
+
+        isBeltHold=0
+
+        b=c-o
+
+        if b>0:
+            us=h-c
+            ls=o-l
+
+            if ls<=(threshold*b) and b>0 and c>o:
+                isBeltHold=1
+
+        self.AddColumn(isBeltHold)
+
+        return self.window
+
+    # Bearish Belt Hold
+
+    def BearishBeltHold(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=0.1):
+        if len(self.window)<1:
+            self.AddColumn(None)    # is hammer (1=yes)
+            return self.window
+
+        last_row=self.LastRow()
+
+        o=last_row[OpenIDX]
+        h=last_row[HighIDX]
+        l=last_row[LowIDX]
+        c=last_row[CloseIDX]
+
+        isBeltHold=0
+
+        b=o-c
+
+        if b>0:
+            us=h-o
+            ls=c-l
+
+            if us<=(threshold*b) and b>0 and o>c:
+                isBeltHold=1
+
+        self.AddColumn(isBeltHold)
+
+        return self.window
 
     ## Double Candlestick Patterns
 

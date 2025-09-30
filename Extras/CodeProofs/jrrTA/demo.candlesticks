@@ -18,8 +18,17 @@ import JackrabbitRelay as JRR
 import JRRtechnical as jrTA
 
 def main():
-    ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',197)
-    ohlcv=ta.ReadOHLCV('ADAUSD.txt')
+    if len(sys.argv) > 4:
+        exchangeName=sys.argv[1]
+        account=sys.argv[2]
+        asset=sys.argv[3]
+        tf=sys.argv[4]
+    else:
+        print("An exchange, (sub)account, an asset, and a timeframe must be provided.")
+        sys.exit(1)
+
+    ta=jrTA.TechnicalAnalysis(exchangeName,account,asset,tf,5000)
+    ohlcv=ta.GetOHLCV()
 
     Opening=1
     HighIDX=2
@@ -32,10 +41,16 @@ def main():
 
         # ta.Doji()
         # ta.TriStarDoji()
+        # ta.Hammer()
+        # ta.InvertedHammer()
+        # ta.SpinningTop()
+        # ta.HangingMan()
+        # ta.ShootingStar()
         # ta.BullishMarubozu()
         # ta.BearishMarubozu()
-        ta.Hammer()
-        ta.InvertedHammer()
+        # ta.HighWave()
+        # ta.BullishBeltHold()
+        # ta.BearishBeltHold()
 
         ta.Display(-1)
 
