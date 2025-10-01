@@ -1611,23 +1611,539 @@ class TechnicalAnalysis:
 
         return self.window
 
+    # Bullish Engulfing candlestick pattern
+
+    def BullishEngulfing(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(None)    # is bullish engulfing (1=yes)
+            return self.window
+
+        prev_row = self.GetRow(-2)
+        last_row = self.LastRow()
+
+        o1 = prev_row[OpenIDX]
+        h1 = prev_row[HighIDX]
+        l1 = prev_row[LowIDX]
+        c1 = prev_row[CloseIDX]
+
+        o2 = last_row[OpenIDX]
+        h2 = last_row[HighIDX]
+        l2 = last_row[LowIDX]
+        c2 = last_row[CloseIDX]
+
+        isBullEngulf = 0
+
+        # First candle bearish
+        if c1 < o1:
+            # Second candle bullish
+            if c2 > o2:
+                # Engulfing condition
+                if o2 <= c1 and c2 >= o1:
+                    isBullEngulf = 1
+
+        self.AddColumn(isBullEngulf)
+        return self.window
+
+    # Bearish Engulfing candlestick pattern
+
+    def BearishEngulfing(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(None)    # is bearish engulfing (1=yes)
+            return self.window
+
+        prev_row = self.GetRow(-2)
+        last_row = self.LastRow()
+
+        o1 = prev_row[OpenIDX]
+        h1 = prev_row[HighIDX]
+        l1 = prev_row[LowIDX]
+        c1 = prev_row[CloseIDX]
+
+        o2 = last_row[OpenIDX]
+        h2 = last_row[HighIDX]
+        l2 = last_row[LowIDX]
+        c2 = last_row[CloseIDX]
+
+        isBearEngulf = 0
+
+        # First candle bullish
+        if c1 > o1:
+            # Second candle bearish
+            if c2 < o2:
+                # Engulfing condition
+                if o2 >= c1 and c2 <= o1:
+                    isBearEngulf = 1
+
+        self.AddColumn(isBearEngulf)
+        return self.window
+
+    # Tweezer Tops candlestick pattern
+
+    def TweezerTops(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(None)    # is tweezer tops (1=yes)
+            return self.window
+
+        prev_row = self.GetRow(-2)
+        last_row = self.LastRow()
+
+        o1 = prev_row[OpenIDX]
+        h1 = prev_row[HighIDX]
+        l1 = prev_row[LowIDX]
+        c1 = prev_row[CloseIDX]
+
+        o2 = last_row[OpenIDX]
+        h2 = last_row[HighIDX]
+        l2 = last_row[LowIDX]
+        c2 = last_row[CloseIDX]
+
+        isTweezerTop = 0
+
+        # First candle bullish, second bearish
+        if c1 > o1 and c2 < o2:
+            # Highs nearly equal (within tolerance)
+            # tol = tolerance factor (e.g., 0.001 = 0.1%), allows small differences
+            if abs(h1 - h2) <= tol * max(h1, h2):
+                isTweezerTop = 1
+
+        self.AddColumn(isTweezerTop)
+        return self.window
+
+    # Tweezer Bottoms candlestick pattern
+
+    def TweezerBottoms(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(None)    # is tweezer bottoms (1=yes)
+            return self.window
+
+        prev_row = self.GetRow(-2)
+        last_row = self.LastRow()
+
+        o1 = prev_row[OpenIDX]
+        h1 = prev_row[HighIDX]
+        l1 = prev_row[LowIDX]
+        c1 = prev_row[CloseIDX]
+
+        o2 = last_row[OpenIDX]
+        h2 = last_row[HighIDX]
+        l2 = last_row[LowIDX]
+        c2 = last_row[CloseIDX]
+
+        isTweezerBottom = 0
+
+        # First candle bearish, second bullish
+        if c1 < o1 and c2 > o2:
+            # Lows nearly equal (within tolerance)
+            # tol = tolerance factor (e.g., 0.001 = 0.1%), allows small differences
+            if abs(l1 - l2) <= tol * min(l1, l2):
+                isTweezerBottom = 1
+
+        self.AddColumn(isTweezerBottom)
+        return self.window
+
+    # Piercing Line candlestick pattern
+
+    def PiercingLine(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(None)    # is piercing line (1=yes)
+            return self.window
+
+        prev_row = self.GetRow(-2)
+        last_row = self.LastRow()
+
+        o1 = prev_row[OpenIDX]
+        h1 = prev_row[HighIDX]
+        l1 = prev_row[LowIDX]
+        c1 = prev_row[CloseIDX]
+
+        o2 = last_row[OpenIDX]
+        h2 = last_row[HighIDX]
+        l2 = last_row[LowIDX]
+        c2 = last_row[CloseIDX]
+
+        isPiercing = 0
+
+        # First candle bearish, second bullish
+        if c1 < o1 and c2 > o2:
+            # Second opens below first close and closes above midpoint of first body
+            if o2 < c1 and c2 > (o1 + c1) / 2:
+                isPiercing = 1
+
+        self.AddColumn(isPiercing)
+        return self.window
+
+    # Dark Cloud Cover candlestick pattern
+
+    def DarkCloudCover(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(None)    # is dark cloud cover (1=yes)
+            return self.window
+
+        prev_row = self.GetRow(-2)
+        last_row = self.LastRow()
+
+        o1 = prev_row[OpenIDX]
+        h1 = prev_row[HighIDX]
+        l1 = prev_row[LowIDX]
+        c1 = prev_row[CloseIDX]
+
+        o2 = last_row[OpenIDX]
+        h2 = last_row[HighIDX]
+        l2 = last_row[LowIDX]
+        c2 = last_row[CloseIDX]
+
+        isDarkCloud = 0
+
+        # First candle bullish, second bearish
+        if c1 > o1 and c2 < o2:
+            # Second opens above first close and closes below midpoint of first body
+            if o2 > c1 and c2 < (o1 + c1) / 2:
+                isDarkCloud = 1
+
+        self.AddColumn(isDarkCloud)
+        return self.window
+
+    # Bullish Harami candlestick pattern
+
+    def BullishHarami(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(None)    # is bullish harami (1=yes)
+            return self.window
+
+        prev_row = self.GetRow(-2)
+        last_row = self.LastRow()
+
+        o1 = prev_row[OpenIDX]
+        h1 = prev_row[HighIDX]
+        l1 = prev_row[LowIDX]
+        c1 = prev_row[CloseIDX]
+
+        o2 = last_row[OpenIDX]
+        h2 = last_row[HighIDX]
+        l2 = last_row[LowIDX]
+        c2 = last_row[CloseIDX]
+
+        isBullHarami = 0
+
+        # First candle bearish, second bullish
+        if c1 < o1 and c2 > o2:
+            # Second body completely inside first body
+            if o2 > c1 and c2 < o1:
+                isBullHarami = 1
+
+        self.AddColumn(isBullHarami)
+        return self.window
+
+    # Bearish Harami candlestick pattern
+
+    def BearishHarami(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(None)    # is bearish harami (1=yes)
+            return self.window
+
+        prev_row = self.GetRow(-2)
+        last_row = self.LastRow()
+
+        o1 = prev_row[OpenIDX]
+        h1 = prev_row[HighIDX]
+        l1 = prev_row[LowIDX]
+        c1 = prev_row[CloseIDX]
+
+        o2 = last_row[OpenIDX]
+        h2 = last_row[HighIDX]
+        l2 = last_row[LowIDX]
+        c2 = last_row[CloseIDX]
+
+        isBearHarami = 0
+
+        # First candle bullish, second bearish
+        if c1 > o1 and c2 < o2:
+            # Second body completely inside first body
+            if o2 < c1 and c2 > o1:
+                isBearHarami = 1
+
+        self.AddColumn(isBearHarami)
+        return self.window
+
+    # Bullish Harami Cross candlestick pattern
+
+    def BullishHaramiCross(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(None)    # is bullish harami cross (1=yes)
+            return self.window
+
+        prev_row = self.GetRow(-2)
+        last_row = self.LastRow()
+
+        o1 = prev_row[OpenIDX]
+        h1 = prev_row[HighIDX]
+        l1 = prev_row[LowIDX]
+        c1 = prev_row[CloseIDX]
+
+        o2 = last_row[OpenIDX]
+        h2 = last_row[HighIDX]
+        l2 = last_row[LowIDX]
+        c2 = last_row[CloseIDX]
+
+        isBullHaramiCross = 0
+
+        # First candle bearish, second is Doji
+        if c1 < o1 and abs(c2 - o2) <= tol:
+            # Second candle inside first candle's body
+            if o2 > c1 and c2 < o1:
+                isBullHaramiCross = 1
+
+        self.AddColumn(isBullHaramiCross)
+        return self.window
+
+    # Bearish Harami Cross candlestick pattern
+
+    def BearishHaramiCross(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(None)    # is bearish harami cross (1=yes)
+            return self.window
+
+        prev_row = self.GetRow(-2)
+        last_row = self.LastRow()
+
+        o1 = prev_row[OpenIDX]
+        h1 = prev_row[HighIDX]
+        l1 = prev_row[LowIDX]
+        c1 = prev_row[CloseIDX]
+
+        o2 = last_row[OpenIDX]
+        h2 = last_row[HighIDX]
+        l2 = last_row[LowIDX]
+        c2 = last_row[CloseIDX]
+
+        isBearHaramiCross = 0
+
+        # First candle bullish, second is Doji
+        if c1 > o1 and abs(c2 - o2) <= tol:
+            # Second candle inside first candle's body
+            if o2 < c1 and c2 > o1:
+                isBearHaramiCross = 1
+
+        self.AddColumn(isBearHaramiCross)
+        return self.window
+
+    # Matching Low candlestick pattern
+
+    def MatchingLow(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(None)    # is matching low (1=yes)
+            return self.window
+
+        prev_row = self.GetRow(-2)
+        last_row = self.LastRow()
+
+        o1 = prev_row[OpenIDX]
+        h1 = prev_row[HighIDX]
+        l1 = prev_row[LowIDX]
+        c1 = prev_row[CloseIDX]
+
+        o2 = last_row[OpenIDX]
+        h2 = last_row[HighIDX]
+        l2 = last_row[LowIDX]
+        c2 = last_row[CloseIDX]
+
+        isMatchingLow = 0
+
+        # Both candles bearish
+        if c1 < o1 and c2 < o2:
+            # Lows nearly equal (within tolerance)
+            if abs(l1 - l2) <= tol * min(l1, l2):
+                isMatchingLow = 1
+
+        self.AddColumn(isMatchingLow)
+        return self.window
+
+    # Bullish Mat Hold (3) candlestick pattern (simplified, bullish)
+
+    def BullishMatHold3(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+        if len(self.window) < 3 or self.window[-2][0] is None or self.window[-3][0] is None:
+            self.AddColumn(None)    # is Mat Hold (1=yes)
+            return self.window
+
+        first = self.GetRow(-3)
+        middle = self.GetRow(-2)
+        last = self.LastRow()
+
+        o1, h1, l1, c1 = first[OpenIDX], first[HighIDX], first[LowIDX], first[CloseIDX]
+        o2, h2, l2, c2 = middle[OpenIDX], middle[HighIDX], middle[LowIDX], middle[CloseIDX]
+        o3, h3, l3, c3 = last[OpenIDX], last[HighIDX], last[LowIDX], last[CloseIDX]
+
+        isMatHold = 0
+
+        # First candle bullish
+        if c1 > o1:
+            # Middle candle body contained within first candle
+            if o2 >= o1 and c2 <= c1:
+                # Last candle bullish and closes above first candle
+                if c3 > o3 and c3 > c1:
+                    isMatHold = 1
+
+        self.AddColumn(isMatHold)
+        return self.window
+
+    # Bearish Mat Hold candlestick pattern (simplified)
+
+    def BearishMatHold(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+        if len(self.window) < 3 or self.window[-2][0] is None or self.window[-3][0] is None:
+            self.AddColumn(None)    # is bearish Mat Hold (1=yes)
+            return self.window
+
+        first = self.GetRow(-3)
+        middle = self.GetRow(-2)
+        last = self.LastRow()
+
+        o1, h1, l1, c1 = first[OpenIDX], first[HighIDX], first[LowIDX], first[CloseIDX]
+        o2, h2, l2, c2 = middle[OpenIDX], middle[HighIDX], middle[LowIDX], middle[CloseIDX]
+        o3, h3, l3, c3 = last[OpenIDX], last[HighIDX], last[LowIDX], last[CloseIDX]
+
+        isBearMatHold = 0
+
+        # First candle bearish
+        if c1 < o1:
+            # Middle candle body contained within first candle
+            if o2 <= o1 and c2 >= c1:
+                # Last candle bearish and closes below first candle
+                if c3 < o3 and c3 < c1:
+                    isBearMatHold = 1
+
+        self.AddColumn(isBearMatHold)
+        return self.window
+
+    # 5-candle Bullish Mat Hold candlestick pattern
+
+    def BullishMatHold5(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+        if len(self.window) < 5 \
+        or self.window[-2][0] is None or self.window[-3][0] is None \
+        or self.window[-4][0] is None or self.window[-5][0] is None:
+            self.AddColumn(None)    # is Mat Hold 5-candle (1=yes)
+            return self.window
+
+        # Extract the 5 candles
+        first   = self.GetRow(-5)
+        second  = self.GetRow(-4)
+        third   = self.GetRow(-3)
+        fourth  = self.GetRow(-2)
+        fifth   = self.LastRow()
+
+        candles = [first, second, third, fourth, fifth]
+
+        o1, h1, l1, c1 = first[OpenIDX], first[HighIDX], first[LowIDX], first[CloseIDX]
+        o5, h5, l5, c5 = fifth[OpenIDX], fifth[HighIDX], fifth[LowIDX], fifth[CloseIDX]
+
+        isMatHold = 0
+
+        # First candle bullish
+        if c1 > o1:
+            # Middle three candles body contained within first candle's body
+            contained = True
+            for mid in candles[1:4]:
+                o, c = mid[OpenIDX], mid[CloseIDX]
+                if o < o1 - tol * o1 or c > c1 + tol * c1:
+                    contained = False
+                    break
+
+            # Fifth candle bullish and closes above first candle's close
+            if contained and c5 > o5 and c5 > c1:
+                isMatHold = 1
+
+        self.AddColumn(isMatHold)
+        return self.window
+
+    # 5-candle Bearish Mat Hold candlestick pattern
+
+    def BearishMatHold5(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+        if len(self.window) < 5 \
+        or self.window[-2][0] is None or self.window[-3][0] is None \
+        or self.window[-4][0] is None or self.window[-5][0] is None:
+            self.AddColumn(None)    # is Bearish Mat Hold 5-candle (1=yes)
+            return self.window
+
+        # Extract the 5 candles
+        first   = self.GetRow(-5)
+        second  = self.GetRow(-4)
+        third   = self.GetRow(-3)
+        fourth  = self.GetRow(-2)
+        fifth   = self.LastRow()
+
+        candles = [first, second, third, fourth, fifth]
+
+        o1, h1, l1, c1 = first[OpenIDX], first[HighIDX], first[LowIDX], first[CloseIDX]
+        o5, h5, l5, c5 = fifth[OpenIDX], fifth[HighIDX], fifth[LowIDX], fifth[CloseIDX]
+
+        isMatHoldBearish = 0
+
+        # First candle bearish
+        if c1 < o1:
+            # Middle three candles body contained within first candle's body
+            contained = True
+            for mid in candles[1:4]:
+                o, c = mid[OpenIDX], mid[CloseIDX]
+                if o > o1 + tol * o1 or c < c1 - tol * c1:
+                    contained = False
+                    break
+
+            # Fifth candle bearish and closes below first candle's close
+            if contained and c5 < o5 and c5 < c1:
+                isMatHoldBearish = 1
+
+        self.AddColumn(isMatHoldBearish)
+        return self.window
+
+    # Bullish Kicking by Length candlestick pattern
+
+    def BullishKickingByLength(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(None)    # is Kicking by Length (1=yes)
+            return self.window
+
+        first = self.GetRow(-2)
+        second = self.LastRow()
+
+        o1, h1, l1, c1 = first[OpenIDX], first[HighIDX], first[LowIDX], first[CloseIDX]
+        o2, h2, l2, c2 = second[OpenIDX], second[HighIDX], second[LowIDX], second[CloseIDX]
+
+        isKicking = 0
+
+        # Bullish Kicking: first bearish Marubozu, second bullish Marubozu with gap up
+        if abs(c1 - o1) > tol * o1 and abs(c2 - o2) > tol * o2:
+            if c1 < o1 and c2 > o2 and o2 > c1:
+                isKicking = 1
+
+        self.AddColumn(isKicking)
+        return self.window
+
+    # Bearish Kicking by Length candlestick pattern
+
+    def BearishKickingByLength(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(None)    # is Kicking by Length (1=yes)
+            return self.window
+
+        first = self.GetRow(-2)
+        second = self.LastRow()
+
+        o1, h1, l1, c1 = first[OpenIDX], first[HighIDX], first[LowIDX], first[CloseIDX]
+        o2, h2, l2, c2 = second[OpenIDX], second[HighIDX], second[LowIDX], second[CloseIDX]
+
+        isKicking = 0
+
+        # Bearish Kicking: first bullish Marubozu, second bearish Marubozu with gap down
+        if abs(c1 - o1) > tol * o1 and abs(c2 - o2) > tol * o2:
+            if c1 > o1 and c2 < o2 and o2 < c1:
+                isKicking = 1
+
+        self.AddColumn(isKicking)
+        return self.window
+
     ## Double Candlestick Patterns
 
-    # Bullish Engulfing
-    # Bearish Engulfing
-    # Tweezer Tops
-    # Tweezer Bottoms
-    # Piercing Line
-    # Dark Cloud Cover
-    # Bullish Harami
-    # Bearish Harami
-    # Bullish Harami Cross
-    # Bearish Harami Cross
-    # Matching Low
-    # Mat Hold
     # Separating Lines (Bullish Separating Line, Bearish Separating Line)
     # Kicking Pattern (Bullish Kicker, Bearish Kicker)
-    # Kicking by Length
 
     ## Triple Candlestick Patterns
 

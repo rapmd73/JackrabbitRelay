@@ -51,6 +51,11 @@ def main():
         # ta.HighWave()
         # ta.BullishBeltHold()
         # ta.BearishBeltHold()
+        # ta.BullishEngulfing()
+        # ta.BearishEngulfing()
+        # ta.TweezerTops()
+        # ta.TweezerBottoms()
+        ta.MatHold5()
 
         ta.Display(-1)
 
