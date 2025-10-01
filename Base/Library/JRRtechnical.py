@@ -564,6 +564,106 @@ class TechnicalAnalysis:
 
         return self.window
 
+    # Jurik moving average
+
+    # The phase parameter in the JMA controls the relative shift of the smoothed
+    # line with respect to the source price. Essentially, it allows the moving
+    # average to be slightly advanced or delayed** in time. A negative phase**
+    # moves the JMA slightly forward, which can reduce lag and make the
+    # indicator respond faster to recent price changes, but it may also
+    # introduce some overshoot. A positive phase** shifts the line backward,
+    # increasing stability but also increasing lag. The phase value is scaled
+    # and applied in the second stage of the JMA calculation, where it
+    # multiplies the intermediate difference (`det0`) between the smoothed
+    # EMA-like stage and the raw price, effectively adjusting the output along
+    # the time axis.
+
+    # The factor parameter, sometimes called the smoothing factor or “power,”
+    # determines how strongly the JMA responds to changes in the input price. A
+    # lower factor produces a smoother curve by reducing the weight of new
+    # price movements, which filters out short-term noise but increases lag. A
+    # higher factor increases sensitivity, allowing the JMA to follow price
+    # more closely, but at the cost of more potential noise in the signal. In
+    # the algorithm, the factor is used to compute the adaptive smoothing
+    # coefficient (beta), which controls the recursive weighting of the
+    # previous smoothed value versus the new input. This coefficient directly
+    # influences the three-stage calculation that defines the JMA.
+
+    # Together, the phase and factor parameters allow the JMA to balance
+    # responsiveness and smoothness. Phase controls the horizontal alignment
+    # of the moving average relative to price changes, while factor adjusts the
+    # vertical responsiveness or sensitivity. By tuning these two parameters,
+    # traders can achieve a moving average that is smoother than a standard EMA
+    # or SMA while also reacting faster to trends, making the JMA a versatile
+    # tool for trend detection and noise filtering.
+
+    def JMA(self, idx=4, period=14, phase=0, factor=0.45):
+        """
+        Robust Jurik Moving Average (JMA) for rolling window.
+        Works with any number of existing columns in the window.
+        Automatically detects its own 4 state columns (ma1, det0, det1, jma).
+
+        Appends 4 columns per row:
+            [ma1, det0, det1, jma]
+        """
+
+        # Current source (default: close)
+
+        source = self.window[-1][idx] if len(self.window) > 0 else None
+        if source is None:
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
+            return self.window
+
+        # Determine start of JMA columns in previous row
+        # If previous row exists and has >= 4 columns for JMA, use last 4 columns
+        last_row = self.window[-2] if len(self.window) > 1 else None
+        if last_row is None or last_row[0] is None:
+            # First call: initialize previous JMA state
+            last_ma1 = source
+            last_det0 = 0.0
+            last_det1 = 0.0
+            last_jma = source
+        else:
+            # Always take the **last 4 columns of the previous row** as prior JMA state
+            last_ma1, last_det0, last_det1, last_jma = last_row[-4:]
+
+        # Pre-calculate constants
+        phase_value = min(max((phase * 0.01) + 1.5, 0.5), 2.5)
+        beta = factor * (period - 1) / ((factor * (period - 1)) + 2)
+        len1 = max((math.log(math.sqrt(0.5 * (period - 1))) / math.log(2.0)) + 2.0, 0)
+        pow1 = max(len1 - 2.0, 0.5)
+        pow1Reciprocal = 1.0 / pow1
+
+        # Adaptive smoothing parameters
+        rvolty = 1.0  # fixed for strict JMA
+        pow2 = rvolty ** pow1
+        alpha = beta ** pow2
+        alphaSquared = alpha ** 2
+        oneMinusAlpha = 1.0 - alpha
+        oneMinusAlphaSquared = oneMinusAlpha ** 2
+
+        # Stage 1 - preliminary smoothing (adaptive EMA)
+        ma1 = source + (alpha * (last_ma1 - source))
+
+        # Stage 2 - Kalman-style adjustment
+        det0 = (source - ma1) * (1 - beta) + beta * last_det0
+        ma2 = ma1 + (phase_value * det0)
+
+        # Stage 3 - final smoothing
+        det1 = ((ma2 - last_jma) * oneMinusAlphaSquared) + (alphaSquared * last_det1)
+        jma = last_jma + det1
+
+        # Append new JMA columns to the current row
+        self.AddColumn(ma1)
+        self.AddColumn(det0)
+        self.AddColumn(det1)
+        self.AddColumn(jma)
+
+        return self.window
+
     # Calculate Relative Strength Index (RSI) for the last candle in the window.
 
     def RSI(self, idx, period=14):
@@ -1226,15 +1326,12 @@ class TechnicalAnalysis:
     ## Trend / Moving Average Variants
 
     # Ichimoku Cloud
-    # Triangular Moving Average (TMA)
-    # Exponential Hull / Jurik-style smoothing
 
     ## Oscillators
 
     # CCI (Commodity Channel Index)
     # Ultimate Oscillator
     # Chaikin Oscillator
-    # TRIX – triple-smoothed EMA measuring momentum.
 
     ## Trend Strength / Direction
 

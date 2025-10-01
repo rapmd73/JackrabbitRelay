@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay Technical Analysis example
+
+# 2021-2025 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import math
+import json
+import datetime
+import time
+
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.subplots as ps
+
+import JackrabbitRelay as JRR
+import JRRtechnical as jrTA
+
+def main():
+    ta=jrTA.TechnicalAnalysis('oanda','CherryBlossom','EUR/USD','M1',5000)
+    ohlcv=ta.GetOHLCV()
+
+    Opening=1
+    HighIDX=2
+    LowIDX=3
+    Closing=4
+    Volume=5
+
+    for slice in ohlcv:
+        # Build the rolling window
+
+        ta.Rolling(slice)
+
+        period=14
+
+        # Jurik Moving Average
+
+        ta.JMA(Closing,period)
+
+        ta.Display(-1)
+
+if __name__=='__main__':
+    main()
+
+###
+### End demo
+###

@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay Technical Analysis example
+
+# 2021-2025 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import math
+import json
+import datetime
+import time
+
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.subplots as ps
+
+import JackrabbitRelay as JRR
+import JRRtechnical as jrTA
+
+def main():
+    ta=jrTA.TechnicalAnalysis('oanda','CherryBlossom','EUR/USD','M1',5000)
+    ohlcv=ta.GetOHLCV()
+
+    Opening=1
+    HighIDX=2
+    LowIDX=3
+    Closing=4
+    Volume=5
+
+    for slice in ohlcv:
+        # Build the rolling window
+
+        ta.Rolling(slice)
+
+        period=5
+        sma1IDX=6      # First SMA
+        sma2IDX=7      # Second SMA of first SMA (TMA)
+
+        # Calculating a trangular moving average (TMA) or Double SMA. This is
+        # standard on ALL moving averages. A Triple SMA is just SMA(sma2IDX).
+
+        ta.SMA(Closing,period)
+        ta.SMA(sma1IDX,period)
+
+        ta.Display(-1)
+
+if __name__=='__main__':
+    main()
+
+###
+### End demo
+###

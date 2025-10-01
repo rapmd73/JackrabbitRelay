@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay Technical Analysis example
+
+# 2021-2025 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import math
+import json
+import datetime
+import time
+
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.subplots as ps
+
+import JackrabbitRelay as JRR
+import JRRtechnical as jrTA
+
+def main():
+#    ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',197)
+#    ohlcv=ta.ReadOHLCV('ADAUSD.txt')
+    ta=jrTA.TechnicalAnalysis('oanda','CherryBlossom','EUR/USD','M1',5000)
+    ohlcv=ta.GetOHLCV()
+
+    Opening=1
+    HighIDX=2
+    LowIDX=3
+    Closing=4
+    Volume=5
+
+    for slice in ohlcv:
+        # Build the rolling window
+
+        ta.Rolling(slice)
+
+        # HEMO (EHMA) is Hull using EMA instead of WMA
+
+        SlowLength=50
+        period=21
+
+        emaIDX=6    # EMA of Closing, for period
+        ema2IDX=7   # EMA of Closing, for period/2
+        synIDX=8    # 2*EMA(p/2) - EMA(p)
+        sqpIDX=9    # sqrt(p)
+
+        hmaIDX=10
+
+        ta.EMA(Closing,period)         # EMA(p)                     <---*
+        ta.EMA(Closing,int(period/2))  # EMA(p/2)                       |
+        ta.HMA(emaIDX,ema2IDX,period)  # HMA math                       |
+        ta.EMA(synIDX,sqpIDX)          # Actual HMA based on EMA, this example
+
+        ta.Display(-1)
+
+if __name__=='__main__':
+    main()
+
+###
+### End demo
+###
