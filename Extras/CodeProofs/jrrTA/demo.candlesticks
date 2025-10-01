@@ -55,7 +55,7 @@ def main():
         # ta.BearishEngulfing()
         # ta.TweezerTops()
         # ta.TweezerBottoms()
-        ta.MatHold5()
+        ta.BullishMatHold5()
 
         ta.Display(-1)
 

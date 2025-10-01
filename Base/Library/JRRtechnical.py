@@ -82,12 +82,50 @@ class TechnicalAnalysis:
             self.window=[[None]*6 for _ in range(self.count)]
 
         # Append the new data slice to the window
-        if slice is not None:
+        last=None
+        if len(self.window)>0:
+            last=self.window[-1][0]
+
+        if slice is not None and (last is None or slice[0]>last):
             self.window.append(slice)
 
         # Ensure the window only contains the last 'size' elements
         if len(self.window)>self.count:
             self.window=self.window[-self.count:]  # Keep only the last `size` elements
+
+        return self.window
+
+    # Update the window with the last two OHLCV values. This replaces the
+    # incomplete candle from the previous call. If a LIVE market, the previous
+    # PARTIAL candle MUST be removed from the window and replaced the new
+    # CLOSED candle.
+
+    def UpdateOHLCVRolling(self,live=True):
+        try:
+            ohlcv=self.relay.GetOHLCV(symbol=self.asset, timeframe=self.tf, limit=2)
+        except Exception:
+            ohlcv=[]
+
+        # If no data is returned, append two None entries at the bottom
+        if not ohlcv or len(ohlcv)<2 or len(ohlcv[0])<6 or len(ohlcv[1])<6:
+            self.window.append([None, None, None, None, None, None])
+            if live:
+                self.window.append([None, None, None, None, None, None])
+            # Enforce fixed window size
+            if len(self.window) > self.count:
+                self.window = self.window[-self.count:]
+            return self.window
+
+        if live:
+            # Replace the last candle with the first fetched slice
+            if self.window and len(self.window)>0:
+                self.window[-1] = list(ohlcv[0])
+            else:
+                self.Rolling(ohlcv[0])
+
+        # Add the new candle
+
+        self.Rolling(ohlcv[1])
 
         return self.window
 
@@ -134,39 +172,6 @@ class TechnicalAnalysis:
 
         return ohlcv
 
-    # Update the window with the last two OHLCV values. This replaces the
-    # incomplete candle from the previous call.
-
-    def UpdateOHLCV(self):
-        try:
-            ohlcv=self.relay.GetOHLCV(symbol=self.asset, timeframe=self.tf, limit=2)
-        except Exception:
-            ohlcv=[]
-
-        # If no data is returned, append two None entries at the bottom
-        if not ohlcv:
-            self.window.append([None, None, None, None, None, None])
-            self.window.append([None, None, None, None, None, None])
-            # Enforce fixed window size
-            if len(self.window) > self.count:
-                self.window = self.window[-self.count:]
-            return self.window
-
-        # Replace the last candle with the first fetched slice
-        if self.window:
-            self.window[-1] = list(ohlcv[0])
-        else:
-            self.Rolling(ohlcv[0])
-
-        # Append the second fetched slice as the new last candle
-        self.window.append(list(ohlcv[1]))
-
-        # Enforce fixed window size
-        if len(self.window) > self.count:
-            self.window = self.window[-self.count:]
-
-        return self.Rolling(ohlcv[1])
-
     # Make an OHLCV record. No partial records generated.
 
     def MakeOHLCV(self,days=0,hours=0,minutes=0,seconds=60):
@@ -190,7 +195,7 @@ class TechnicalAnalysis:
             return []
 
         # Initialize OHLCV
-        o=h=l=c=None
+        o=h=l=c=v=None
 
         start_time = time.time()
         epoch = int(start_time)
@@ -2140,10 +2145,109 @@ class TechnicalAnalysis:
         self.AddColumn(isKicking)
         return self.window
 
-    ## Double Candlestick Patterns
+    # Bullish Separating Lines candlestick pattern
 
-    # Separating Lines (Bullish Separating Line, Bearish Separating Line)
-    # Kicking Pattern (Bullish Kicker, Bearish Kicker)
+    def BullishSeparatingLines(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(None)    # is bullish separating lines (1=yes)
+            return self.window
+
+        prev_row = self.GetRow(-2)
+        last_row = self.LastRow()
+
+        o1, h1, l1, c1 = prev_row[OpenIDX], prev_row[HighIDX], prev_row[LowIDX], prev_row[CloseIDX]
+        o2, h2, l2, c2 = last_row[OpenIDX], last_row[HighIDX], last_row[LowIDX], last_row[CloseIDX]
+
+        isBullSep = 0
+
+        # First candle bearish
+        if c1 < o1:
+            # Second candle bullish
+            if c2 > o2:
+                # Opens at (or very near) same level as first candle's open
+                if abs(o2 - o1) <= tol:
+                    isBullSep = 1
+
+        self.AddColumn(isBullSep)
+        return self.window
+
+    # Bearish Separating Lines candlestick pattern
+
+    def BearishSeparatingLines(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(None)    # is bearish separating lines (1=yes)
+            return self.window
+
+        prev_row = self.GetRow(-2)
+        last_row = self.LastRow()
+
+        o1, h1, l1, c1 = prev_row[OpenIDX], prev_row[HighIDX], prev_row[LowIDX], prev_row[CloseIDX]
+        o2, h2, l2, c2 = last_row[OpenIDX], last_row[HighIDX], last_row[LowIDX], last_row[CloseIDX]
+
+        isBearSep = 0
+
+        # First candle bullish
+        if c1 > o1:
+            # Second candle bearish
+            if c2 < o2:
+                # Opens at (or very near) same level as first candle's open
+                if abs(o2 - o1) <= tol:
+                    isBearSep = 1
+
+        self.AddColumn(isBearSep)
+        return self.window
+
+    # Bullish Kicker candlestick pattern
+
+    def BullishKicker(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(None)    # is bullish kicker (1=yes)
+            return self.window
+
+        prev_row = self.GetRow(-2)
+        last_row = self.LastRow()
+
+        o1, h1, l1, c1 = prev_row[OpenIDX], prev_row[HighIDX], prev_row[LowIDX], prev_row[CloseIDX]
+        o2, h2, l2, c2 = last_row[OpenIDX], last_row[HighIDX], last_row[LowIDX], last_row[CloseIDX]
+
+        isBullKicker = 0
+
+        # First candle bearish
+        if c1 < o1:
+            # Second candle bullish
+            if c2 > o2:
+                # Open of second candle gaps above high of first candle
+                if o2 > h1:
+                    isBullKicker = 1
+
+        self.AddColumn(isBullKicker)
+        return self.window
+
+    # Bearish Kicker candlestick pattern
+
+    def BearishKicker(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(None)    # is bearish kicker (1=yes)
+            return self.window
+
+        prev_row = self.GetRow(-2)
+        last_row = self.LastRow()
+
+        o1, h1, l1, c1 = prev_row[OpenIDX], prev_row[HighIDX], prev_row[LowIDX], prev_row[CloseIDX]
+        o2, h2, l2, c2 = last_row[OpenIDX], last_row[HighIDX], last_row[LowIDX], last_row[CloseIDX]
+
+        isBearKicker = 0
+
+        # First candle bullish
+        if c1 > o1:
+            # Second candle bearish
+            if c2 < o2:
+                # Open of second candle gaps below low of first candle
+                if o2 < l1:
+                    isBearKicker = 1
+
+        self.AddColumn(isBearKicker)
+        return self.window
 
     ## Triple Candlestick Patterns
 

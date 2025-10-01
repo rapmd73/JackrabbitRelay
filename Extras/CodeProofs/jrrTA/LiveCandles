@@ -26,8 +26,8 @@ def main():
     c=0
     while c<10:
         # Automaricalling adds to rolling window
-        ta.UpdateOHLCV()
-        ta.Display(-1)
+        ta.UpdateOHLCVRolling()
+        ta.Display(-2)  # Last Closed candle
         c+=1
         time.sleep(60) # for 1 minute candles
 

@@ -28,7 +28,8 @@ def main():
     c=0
     while c<10:
         ohlcv=ta.MakeOHLCV(seconds=60)
-        print(ohlcv)
+        ta.Rolling(ohlcv)
+        ta.Display(-1)
         c+=1
 
 if __name__=='__main__':
