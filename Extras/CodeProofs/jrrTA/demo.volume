@@ -32,8 +32,11 @@ def main():
     for slice in ohlcv:
         ta.Rolling(slice)
 
+        ta.VolumePriceTrend()
+        ta.VWAP()
+
         # Create an EMA on Volume, column 6
-        maIDX=6
+        maIDX=10
         ta.SMA(Volume,SlowLength)
 
         ta.Cross(Volume,maIDX)

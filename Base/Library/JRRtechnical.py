@@ -1309,6 +1309,168 @@ class TechnicalAnalysis:
         self.AddColumn(obv)
         return self.window
 
+    # Volume Price Trend (VPT) indicator
+
+    def VolumePriceTrend(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, VolIDX=5):
+        if len(self.window) < 2 or self.window[-2][0] is None:
+            self.AddColumn(0.0)   # Initialize VPT at 0 for the first row
+            return self.window
+
+        prev_row = self.GetRow(-2)
+        last_row = self.LastRow()
+
+        c1 = prev_row[CloseIDX]
+        c2 = last_row[CloseIDX]
+        v2 = last_row[VolIDX]
+
+        # Retrieve last VPT (already stored in column), if available
+        prev_vpt = self.window[-2][-1] if self.window[-2][-1] is not None else 0.0
+
+        vpt = prev_vpt
+
+        if c1 != 0:  # avoid division by zero
+            vpt = prev_vpt + v2 * ((c2 - c1) / c1)
+
+        self.AddColumn(vpt)
+        return self.window
+
+    # Volume Weighted Average Price (VWAP) indicator
+
+    def VWAP(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, VolIDX=5):
+        if len(self.window) < 2 or self.window[-1][0] is None:
+            # Add 3 columns: TP*V cumulative, Volume cumulative, VWAP
+            self.AddColumn(None)  # cum TP*V
+            self.AddColumn(None)  # cum Vol
+            self.AddColumn(None)  # VWAP
+            return self.window
+
+        if len(self.window)==1:
+            prev_cum_pv = 0.0
+            prev_cum_vol = 0.0
+        else:
+            prev_cum_pv = self.window[-2][-3] if self.window[-2][-3] is not None else 0.0
+            prev_cum_vol = self.window[-2][-2] if self.window[-2][-2] is not None else 0.0
+
+        last_row = self.LastRow()
+
+        h = last_row[HighIDX]
+        l = last_row[LowIDX]
+        c = last_row[CloseIDX]
+        v = last_row[VolIDX]
+
+        tp = (h + l + c) / 3.0   # Typical Price
+
+        cum_pv = prev_cum_pv + tp * v
+        cum_vol = prev_cum_vol + v
+
+        vwap = None
+        if cum_vol != 0:
+            vwap = cum_pv / cum_vol
+
+        # Add 3 transparent columns
+        self.AddColumn(cum_pv)
+        self.AddColumn(cum_vol)
+        self.AddColumn(vwap)
+
+        return self.window
+
+    # Vortex Indicator (VI) implementation
+    # Based on Etienne Botes and Douglas Siepman's formula
+
+    # Detects positive (VI+) and negative (VI-) trend movement using high, low,
+    # close values.
+
+    def Vortex(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, period=14):
+        """
+        Calculate the Vortex Indicator (VI) over a rolling window.
+
+        Parameters:
+            period (int): Period for the calculation (default = 14).
+            OpenIDX (int): Index of Open in the OHLCV row.
+            HighIDX (int): Index of High in the OHLCV row.
+            LowIDX (int): Index of Low in the OHLCV row.
+            CloseIDX (int): Index of Close in the OHLCV row.
+
+        Adds 3 columns per row:
+            - VI+ : Positive Vortex line (bullish strength).
+            - VI- : Negative Vortex line (bearish strength).
+            - TR  : True Range of the current bar (for traceability).
+
+        Formula:
+            VM+ = |H_t - L_{t-1}|
+            VM- = |L_t - H_{t-1}|
+            TR  = max(H_t - L_t, |H_t - C_{t-1}|, |L_t - C_{t-1}|)
+
+            VI+ = sum(VM+ over N) / sum(TR over N)
+            VI- = sum(VM- over N) / sum(TR over N)
+
+        Interpretation:
+            - VI+ rising above VI- suggests bullish trend continuation.
+            - VI- rising above VI+ suggests bearish trend continuation.
+        """
+
+        if len(self.window)<period or self.window[-2][0] is None:
+            self.AddColumn(None)  # VI+
+            self.AddColumn(None)  # VI-
+            self.AddColumn(None)  # TR
+            return self.window
+
+        prev_row = self.GetRow(-2)
+        last_row = self.LastRow()
+
+        h1, l1, c1 = prev_row[HighIDX], prev_row[LowIDX], prev_row[CloseIDX]
+        h2, l2, c2 = last_row[HighIDX], last_row[LowIDX], last_row[CloseIDX]
+
+        # True Range of the current bar
+        tr = max(h2 - l2, abs(h2 - c1), abs(l2 - c1))
+
+        # Initialize series for last N values
+        vm_plus_series = []
+        vm_minus_series = []
+        tr_series = []
+
+        count = 0
+        # Walk back N periods to compute rolling sums
+        for i in range(-period+1, 1):
+            if -i <= len(self.window):
+                row = self.GetRow(i)
+                if row is not None and row[0] is not None:
+                    prow=self.GetRow(i-1)
+                    ph, pl, pc = prow[HighIDX], prow[LowIDX], prow[CloseIDX]
+                    ch, cl, cc = row[HighIDX], row[LowIDX], row[CloseIDX]
+
+                    if None in [ch, cl, cc, ph, pl, pc]:
+                        continue
+
+                    # TR for this bar
+                    t = max(ch - cl, abs(ch - pc), abs(cl - pc))
+                    # Upward movement
+                    vp = abs(ch - pl)
+                    # Downward movement
+                    vm = abs(cl - ph)
+
+                    vm_plus_series.append(vp)
+                    vm_minus_series.append(vm)
+                    tr_series.append(t)
+                    count += 1
+
+        # Compute VI+ and VI- if enough data
+        if count < period-1:
+            vi_plus, vi_minus = None, None
+        else:
+            sum_vm_plus = sum(vm_plus_series)
+            sum_vm_minus = sum(vm_minus_series)
+            sum_tr = sum(tr_series)
+            vi_plus = sum_vm_plus / sum_tr if sum_tr != 0 else None
+            vi_minus = sum_vm_minus / sum_tr if sum_tr != 0 else None
+
+        # Add results as new columns
+        self.AddColumn(vi_plus)
+        self.AddColumn(vi_minus)
+        self.AddColumn(tr)
+
+        return self.window
+
     ## Future indicator additions (No particular order)
 
     ## Volume-based
@@ -1316,7 +1478,6 @@ class TechnicalAnalysis:
     # Chaikin Money Flow (CMF)
     # Accumulation/Distribution Line (A/D)
     # Money Flow Index (MFI)
-    # Volume Price Trend (VPT)
 
     ## Volatility / Band-based
 
@@ -1336,7 +1497,6 @@ class TechnicalAnalysis:
     ## Trend Strength / Direction
 
     # Aroon Indicator
-    # Vortex Indicator
 
     ## Other
 
