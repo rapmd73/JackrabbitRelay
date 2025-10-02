@@ -14,15 +14,11 @@ import json
 import datetime
 import time
 
-import plotly.express as px
-import plotly.graph_objects as go
-import plotly.subplots as ps
-
 import JackrabbitRelay as JRR
 import JRRtechnical as jrTA
 
 def main():
-    ta=jrTA.TechnicalAnalysis('oanda','CherryBlossom','EUR/USD','M1',5000)
+    ta=jrTA.TechnicalAnalysis('kraken','MAIN','BTC/USD','1m',5000)
     ohlcv=ta.GetOHLCV()
 
     Opening=1

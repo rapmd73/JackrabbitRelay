@@ -41,7 +41,7 @@ def main():
 
         bbU=7
         bbL=8
-        ta.BollingerBands(emaIDX,20,2)
+        ta.BollingerBands(emaIDX,20,7)
 
         ta.Display(-1)
 

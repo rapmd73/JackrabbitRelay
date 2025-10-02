@@ -30,17 +30,24 @@ class TechnicalAnalysis:
         self.precision=8
         self.relay = JRR.JackrabbitRelay(exchange=self.exchange,account=self.account)
 
+    # Conver timestamp to a readable date
+
+    def ts2date(self,timestamp):
+        try:
+            ts=float(timestamp)
+            dt=datetime.datetime.utcfromtimestamp(int(ts/1000))
+            return dt.strftime('%Y-%m-%d %H:%M:%S')
+        except Exception as err:
+            return None
+
     # Print the fancy numbers
 
     def Display(self,idx):
         if idx==-1 and len(self.window)<1:
             return
 
-        try:
-            epoch=float(self.window[idx][0])
-            dt=datetime.datetime.utcfromtimestamp(int(epoch/1000))
-            sdt=dt.strftime('%Y-%m-%d %H:%M:%S')
-        except Exception as err:
+        std=self.ts2date(self.window[idx][0])
+        if std is None:
             sdt=self.window[idx][0]
 
         out=f"{sdt} "

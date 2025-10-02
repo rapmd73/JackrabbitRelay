@@ -18,8 +18,10 @@ import JackrabbitRelay as JRR
 import JRRtechnical as jrTA
 
 def main():
-    ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',197)
-    ohlcv=ta.ReadOHLCV('ADAUSD.txt')
+#    ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',197)
+#    ohlcv=ta.ReadOHLCV('ADAUSD.txt')
+    ta=jrTA.TechnicalAnalysis('oanda','CherryBlossom','EUR/USD','M1',5000)
+    ohlcv=ta.GetOHLCV()
 
     Opening=1
     HighIDX=2
@@ -30,8 +32,23 @@ def main():
     for slice in ohlcv:
         ta.Rolling(slice)
 
-        ta.Resistance(HighIDX,14)
-        ta.Support(LowIDX,14)
+        rIDX=6
+        sIDX=7
+
+        ta.Resistance(HighIDX,50)
+        ta.Support(LowIDX,50)
+
+        # Create mid line.
+        # Close crosses over mid, open long, sells at resistance.
+        # Close crosses under mid, open short, sells at support.
+
+        lr=ta.LastRow()
+        h=lr[rIDX]
+        l=lr[sIDX]
+        if h and l:
+            ta.AddColumn((h+l)/2)
+        else:
+            ta.AddColumn(None)
 
         ta.Display(-1)
 
