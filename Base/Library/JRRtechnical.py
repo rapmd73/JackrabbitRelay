@@ -19,16 +19,19 @@ import time
 import JackrabbitRelay as JRR
 
 class TechnicalAnalysis:
-    def __init__(self, exchange, account, asset, timeframe, count=200,length=16,precision=8):
+    def __init__(self, exchange, account, asset, timeframe, count=200,length=16,precision=8,displog=True):
+        self.logname=f"{sys.argv[0]}.log"
+        self.displog=displog
         self.exchange = exchange
         self.account = account
         self.asset = asset
         self.tf = timeframe
         self.count = count+1 if count<5000 else 5000 # historical (count) + live candles
-        self.window = []
         self.length=16
         self.precision=8
+        self.Duplicate=False    # duplicate row received
         self.relay = JRR.JackrabbitRelay(exchange=self.exchange,account=self.account)
+        self.window = []
 
     # Conver timestamp to a readable date
 
@@ -40,14 +43,14 @@ class TechnicalAnalysis:
         except Exception as err:
             return None
 
-    # Print the fancy numbers
+    # Window to string
 
-    def Display(self,idx):
+    def Win2Text(self,idx):
         if idx==-1 and len(self.window)<1:
             return
 
-        std=self.ts2date(self.window[idx][0])
-        if std is None:
+        sdt=self.ts2date(self.window[idx][0])
+        if sdt is None:
             sdt=self.window[idx][0]
 
         out=f"{sdt} "
@@ -59,7 +62,18 @@ class TechnicalAnalysis:
             else:
                 dashes='-'*80
                 out+=f"{dashes[:self.length]:{self.length}} "
+        return out
+
+    # Print the fancy numbers
+
+    def Display(self,idx):
+        out=self.Win2Text(idx)
         print(out)
+        if self.displog:
+            out=self.Win2Text(-1)
+            fh=open(self.logname,'a+')
+            fh.write(f"{out}\n")
+            fh.close()
 
     # Return a row from the rolling window. Can be absolute or relative
 
@@ -84,6 +98,8 @@ class TechnicalAnalysis:
     # Rolling window
 
     def Rolling(self,slice=None):
+        self.Duplicate=False
+
         # If the window is None, initialize it with a list of `None` values of the specified size
         if self.window is None or self.window==[]:
             self.window=[[None]*6 for _ in range(self.count)]
@@ -91,10 +107,13 @@ class TechnicalAnalysis:
         # Append the new data slice to the window
         last=None
         if len(self.window)>0:
-            last=self.window[-1][0]
+            last=self.window[-1]
 
-        if slice is not None and (last is None or slice[0]>last):
-            self.window.append(slice)
+        if slice is not None:
+            if last is None or last[0] is None or (last is not None and slice[0]>last[0]):
+                self.window.append(slice)
+            else:
+                self.Duplicate=True
 
         # Ensure the window only contains the last 'size' elements
         if len(self.window)>self.count:
@@ -125,10 +144,11 @@ class TechnicalAnalysis:
 
         if live:
             # Replace the last candle with the first fetched slice
-            if self.window and len(self.window)>0:
-                self.window[-1] = list(ohlcv[0])
-            else:
-                self.Rolling(ohlcv[0])
+                if self.window and len(self.window)>0:
+                    if ohlcv[0][0]>self.window[-1][0]:
+                        self.window[-1] = list(ohlcv[0])
+                else:
+                    self.Rolling(ohlcv[0])
 
         # Add the new candle
 
@@ -178,6 +198,11 @@ class TechnicalAnalysis:
             ohlcv=None
 
         return ohlcv
+
+    # Get the ticker
+
+    def GetTicker(self):
+        return self.relay.GetTicker(symbol=self.asset)
 
     # Make an OHLCV record. No partial records generated.
 
@@ -1478,6 +1503,43 @@ class TechnicalAnalysis:
 
         return self.window
 
+    # Aroon Indicator
+    # Returns Aroon Up and Aroon Down as two new columns
+    # period: lookback length for high/low
+
+    # The Aroon indicator is primarily used to identify trends and trend
+    # strength in a market. The Aroon Up measures the time since the most
+    # recent high within a lookback period, while the Aroon Down measures the
+    # time since the most recent low. Values near 100 indicate a strong trend
+    # in that direction, and values near 0 indicate a weak trend or potential
+    # consolidation. A common approach is to look for crossovers: when Aroon Up
+    # crosses above Aroon Down, it signals a possible bullish trend, and when
+    # Aroon Down crosses above Aroon Up, it signals a potential bearish trend.
+    # Traders often combine Aroon with other indicators, such as moving
+    # averages or volume analysis, to confirm trends and avoid false signals.
+    # It is also useful to monitor divergences between price and the Aroon
+    # values to detect weakening momentum before a reversal occurs.
+
+    def Aroon(self, HighIDX=2, LowIDX=3, period=14):
+        if len(self.window) < period:
+            self.AddColumn(None)   # Aroon Up
+            self.AddColumn(None)   # Aroon Down
+            return self.window
+
+        highs = [row[HighIDX] for row in self.window[-period:]]
+        lows = [row[LowIDX] for row in self.window[-period:]]
+
+        highest_idx = highs.index(max(highs))
+        lowest_idx = lows.index(min(lows))
+
+        aroon_up = ((period - highest_idx - 1) / (period - 1)) * 100
+        aroon_down = ((period - lowest_idx - 1) / (period - 1)) * 100
+
+        self.AddColumn(aroon_up)
+        self.AddColumn(aroon_down)
+
+        return self.window
+
     ## Future indicator additions (No particular order)
 
     ## Volume-based
@@ -1500,10 +1562,6 @@ class TechnicalAnalysis:
     # CCI (Commodity Channel Index)
     # Ultimate Oscillator
     # Chaikin Oscillator
-
-    ## Trend Strength / Direction
-
-    # Aroon Indicator
 
     ## Other
 
