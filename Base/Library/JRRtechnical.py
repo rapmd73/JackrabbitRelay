@@ -19,9 +19,8 @@ import time
 import JackrabbitRelay as JRR
 
 class TechnicalAnalysis:
-    def __init__(self, exchange, account, asset, timeframe, count=200,length=16,precision=8,displog=True):
+    def __init__(self, exchange, account, asset, timeframe, count=200,length=16,precision=8):
         self.logname=f"{sys.argv[0]}.log"
-        self.displog=displog
         self.exchange = exchange
         self.account = account
         self.asset = asset
@@ -64,16 +63,18 @@ class TechnicalAnalysis:
                 out+=f"{dashes[:self.length]:{self.length}} "
         return out
 
+    # Log the window
+
+    def LogWindow(self,idx):
+        out=self.Win2Text(idx)
+        fh=open(self.logname,'a+')
+        fh.write(f"{out}\n")
+        fh.close()
+
     # Print the fancy numbers
 
     def Display(self,idx):
-        out=self.Win2Text(idx)
-        print(out)
-        if self.displog:
-            out=self.Win2Text(-1)
-            fh=open(self.logname,'a+')
-            fh.write(f"{out}\n")
-            fh.close()
+        print(self.Win2Text(idx))
 
     # Return a row from the rolling window. Can be absolute or relative
 
@@ -253,6 +254,43 @@ class TechnicalAnalysis:
     ##
     ## Technical Indicators
     ##
+
+    # CandleCounter - keeps track of an event for X candles after it occurs.
+    # This can be used to hold a signal for X candles, ie a crossing.
+
+    def CandleCounter(self, idx, target_value, reset_count):
+        # Require at least one row
+        if len(self.window) < 1:
+            self.AddColumn(None)
+            return self.window
+
+        last_row = self.LastRow()
+
+        # Safe access to the watched column
+        try:
+            current_value = last_row[idx]
+        except Exception:
+            self.AddColumn(None)
+            return self.window
+
+        # Determine previous counter (last column of previous row)
+        prev_count = 0
+        if len(self.window) > 1:
+            prev_row = self.window[-2]
+            if prev_row:
+                prev_count = prev_row[-1]
+            else:
+                prev_count = 0
+
+        # If the watched column equals the target, reset to reset_count
+        if current_value == target_value:
+            counter = int(reset_count)
+        else:
+            # Otherwise count down from the previous counter, floor at 0
+            counter = prev_count - 1 if prev_count > 0 else 0
+
+        self.AddColumn(counter)
+        return self.window
 
     # Calculate difference between two moving averages and where or not they
     # crossed over/user each other
@@ -1540,6 +1578,58 @@ class TechnicalAnalysis:
 
         return self.window
 
+    # Ichimoku Cloud signal function
+    def IchimokuCloud(self, tenkan_idx, kijun_idx, senkouA_idx, senkouB_idx, chikou_idx, close_idx=4):
+        # Not enough data yet
+        if len(self.window) < 2:
+            # Cross already adds two columns (diff, cross)
+            self.AddColumn(None)  # Cloud signal
+            self.AddColumn(None)  # Chikou signal
+            return self.window
+
+        last_row = self.LastRow()
+        if any(last_row[i] is None for i in [tenkan_idx, kijun_idx, senkouA_idx, senkouB_idx, chikou_idx, close_idx]):
+            self.AddColumn(None)  # Cloud signal
+            self.AddColumn(None)  # Chikou signal
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
+            return self.window
+
+        # 1. TK Cross using your Cross function (this appends 2 columns automatically)
+        self.Cross(tenkan_idx, kijun_idx)
+
+        # 2. Cloud signal (price vs cloud)
+        price = last_row[close_idx]
+        senkouA = last_row[senkouA_idx]
+        senkouB = last_row[senkouB_idx]
+
+        upper = max(senkouA, senkouB)
+        lower = min(senkouA, senkouB)
+
+        if price > upper:
+            cloud_signal = 1   # bullish
+        elif price < lower:
+            cloud_signal = -1  # bearish
+        else:
+            cloud_signal = 0   # neutral (inside the cloud)
+
+        self.AddColumn(cloud_signal)
+
+        # 3. Chikou confirmation (lagging span vs price)
+        chikou = last_row[chikou_idx]
+        if chikou > price:
+            chikou_signal = 1
+        elif chikou < price:
+            chikou_signal = -1
+        else:
+            chikou_signal = 0
+
+        self.AddColumn(chikou_signal)
+
+        return self.window
+
     ## Future indicator additions (No particular order)
 
     ## Volume-based
@@ -1554,8 +1644,6 @@ class TechnicalAnalysis:
     # Donchian Channels
 
     ## Trend / Moving Average Variants
-
-    # Ichimoku Cloud
 
     ## Oscillators
 
