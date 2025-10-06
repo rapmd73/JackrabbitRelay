@@ -19,15 +19,15 @@ import time
 import JackrabbitRelay as JRR
 
 class TechnicalAnalysis:
-    def __init__(self, exchange, account, asset, timeframe, count=200,length=16,precision=8):
-        self.logname=f"{sys.argv[0]}.log"
+    def __init__(self, exchange, account, asset, timeframe, count=5000,length=16,precision=8):
         self.exchange = exchange
         self.account = account
         self.asset = asset
         self.tf = timeframe
+        self.logname=f"{sys.argv[0]}.{self.exchange}.{self.account}.{self.asset.replace('/','')}.{self.tf}.log"
         self.count = count+1 if count<5000 else 5000 # historical (count) + live candles
-        self.length=16
-        self.precision=8
+        self.length=length
+        self.precision=precision
         self.Duplicate=False    # duplicate row received
         self.relay = JRR.JackrabbitRelay(exchange=self.exchange,account=self.account)
         self.window = []
@@ -111,6 +111,9 @@ class TechnicalAnalysis:
             last=self.window[-1]
 
         if slice is not None:
+            for i in range(len(slice)):
+                if type(slice[i]) is str:
+                    slice[i]=float(slice[i])
             if last is None or last[0] is None or (last is not None and slice[0]>last[0]):
                 self.window.append(slice)
             else:
@@ -1128,7 +1131,46 @@ class TechnicalAnalysis:
         self.AddColumn(wr)
         return self.window
 
-    # Find the current support level
+    # Calculate the volatility
+
+    def Volatility(self, CloseIDX=4, periods=14):
+        # Ensure there are enough data points
+        if len(self.window) < periods:
+            self.AddColumn(None)
+            return self.window
+
+        # Extract the last 'period' closing prices
+        close_prices = [row[CloseIDX] for row in self.window[-periods:] if row[CloseIDX] is not None]
+
+        # Require at least two valid prices
+        if len(close_prices) < periods:
+            self.AddColumn(None)
+            return self.window
+
+        # Calculate daily returns
+        returns = []
+        for i in range(1, len(close_prices)):
+            prev_close = close_prices[i - 1]
+            curr_close = close_prices[i]
+            if prev_close != 0:
+                daily_return = (curr_close - prev_close) / prev_close
+                returns.append(daily_return)
+
+        if len(returns) < 2:
+            self.AddColumn(None)
+            return self.window
+
+        # Calculate the standard deviation of returns
+        n = len(returns)
+        mean_return = sum(returns) / n
+        sum_squared_diff = sum((r - mean_return) ** 2 for r in returns)
+        volatility = (sum_squared_diff / (n - 1)) ** 0.5
+
+        self.AddColumn(volatility)
+
+        return self.window
+
+# Find the current support level
 
     def Support(self, low_idx=3, period=14):
         """
@@ -1631,6 +1673,8 @@ class TechnicalAnalysis:
         return self.window
 
     ## Future indicator additions (No particular order)
+
+    # Super Trend
 
     ## Volume-based
 
