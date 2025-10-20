@@ -65,11 +65,27 @@ class TechnicalAnalysis:
 
     # Log the window
 
-    def LogWindow(self,idx):
-        out=self.Win2Text(idx)
-        fh=open(self.logname,'a+')
-        fh.write(f"{out}\n")
-        fh.close()
+    def LogWindow(self,idx,end=0):
+        def WriteLog(out):
+            fh=open(self.logname,'a+')
+            fh.write(f"{out}\n")
+            fh.close()
+
+        if idx<0 and end==0:
+            WriteLog(self.Win2Text(idx))
+            return
+
+        if end>len(self.window) or end==-1:
+            end=len(self.window)
+
+        if end>0 and idx<0:
+            idx=0
+
+        # Only write out actual data
+
+        for i in range(idx,end):
+            if self.window[i][0]:
+                WriteLog(self.Win2Text(i))
 
     # Print the fancy numbers
 
@@ -247,7 +263,7 @@ class TechnicalAnalysis:
                 l = min(l, price)
                 c = price
 
-            time.sleep(1)  # Prevent hammering the relay
+            time.sleep(1)  # Prevent hammering Relay
 
         # Volume definition per your spec
         v=abs(c - o)*duration
@@ -1345,7 +1361,7 @@ class TechnicalAnalysis:
         self.AddColumn(momentum)
         return self.window
 
-    def RateOfChange(self, colIDX, period=10):
+    def RateOfChange(self, colIDX, period=10,absolute=False):
         """
         Calculate the Rate of Change (ROC) for a given column index over a specified period.
         ROC = ((current value - value N periods ago) / value N periods ago) * 100
@@ -1366,8 +1382,14 @@ class TechnicalAnalysis:
                 current_value = last_row[colIDX]
                 past_value = past_row[colIDX]
 
-                if current_value is not None and past_value not in (None, 0):
-                    roc = ((current_value - past_value) / past_value) * 100
+                if current_value is not None and past_value is not None:
+                    if past_value==0:
+                        roc=0
+                    else:
+                        if absolute:
+                            roc=(abs((current_value-past_value))/(current_value+past_value)) * 100
+                        else:
+                            roc=((current_value-past_value)/(current_value+past_value)) * 100
                 else:
                     roc = None
         else:

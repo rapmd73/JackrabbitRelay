@@ -27,7 +27,7 @@ else:
 
 markets=relay.Markets
 timeframes=relay.Timeframes
-print(timeframes)
+#print(timeframes)
 
 # relay -> Mimic
 # relay.Broker -> exchange Mimic is using

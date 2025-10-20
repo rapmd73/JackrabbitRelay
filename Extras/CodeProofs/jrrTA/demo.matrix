@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay Technical Analysis example
+
+# 2021-2025 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+# This program is designed to analyze cryptocurrency market data, specifically
+# focusing on Bitcoin trading against the US dollar. It serves as a technical
+# analysis tool that helps traders make informed decisions based on historical
+# price movements and trends. The program is written in Python, a popular
+# programming language known for its simplicity and versatility.
+
+# At the core of this program is a function called `main`, which orchestrates
+# the various tasks involved in the analysis. First, it establishes a connection
+# to a specific cryptocurrency exchange (in this case, Kraken) and retrieves
+# historical price data for Bitcoin over short intervals—specifically every
+# minute—up to 5,000 records. This data includes key information such as opening
+# prices, closing prices, highs, lows, and trading volumes.
+
+# Once the data is collected, the program processes it using several technical
+# indicators commonly used in trading strategies. These indicators include
+# Simple Moving Averages (SMAs), which help smooth out price fluctuations by
+# averaging prices over specified periods. The program calculates three
+# different SMAs based on closing prices: one that averages over 17 minutes,
+# another over 47 minutes, and a third over 197 minutes. Additionally, it
+# assesses crossovers between these moving averages and the current closing
+# price to identify potential buy or sell signals.
+
+# The results of these calculations are then displayed visually through graphs
+# or charts (though there’s an option to comment out certain lines if one wishes
+# not to display them). This visualization aids traders in understanding market
+# trends at a glance. Overall, this program encapsulates essential elements of
+# technical analysis within cryptocurrency trading by leveraging historical data
+# and mathematical indicators to guide decision-making processes for traders
+# looking to capitalize on market movements.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+
+import JackrabbitRelay as JRR
+import JRRtechnical as jrTA
+
+def main():
+    ta=jrTA.TechnicalAnalysis('kraken','MAIN','BTC/USD','1m',5000)
+    ohlcv=ta.GetOHLCV()
+
+    # This line MUST be commented out to graph the matrix
+    # print(f"Candles Loaded: {len(ohlcv)}")
+
+    Opening=1
+    HighIDX=2
+    LowIDX=3
+    Closing=4
+    Volume=5
+
+    sma1IDX=6
+    sma2IDX=7
+    sma3IDX=8
+
+    sma1X=9
+    sma2X=10
+
+    for slice in ohlcv:
+        # Build the rolling window
+
+        ta.Rolling(slice)
+
+        # 17/47:197
+
+        ta.SMA(Closing,17)  # sma1IDX=6
+        ta.SMA(Closing,47)  # 7
+        ta.SMA(Closing,197) # 8
+
+        # Determine if the fast line (17) crosses over/under the slow line (47).
+
+        # Logic: If the fast line crosses over the slow line, we could have a
+        # buy entry in the direction we want (long).
+
+        ta.Cross(sma1IDX,sma2IDX)   # 9
+
+        # Determine if the closing price crosses over/under the 197 period
+        # moving average (used as a market trend indicator).
+
+        # Logic: if the closing price crosses over the SMA(197), we could hace
+        # the start of an uptrend. if closing price is above the SMA(197), we
+        # are in an uptrend.
+
+        ta.Cross(Closing,sma3IDX)   # 10
+
+        # Test the 17/47 crosings
+
+        ta.SMA(sma1X,20)
+
+        # test the closing price/SMA(197) crossings
+
+        ta.SMA(sma2X,20)
+
+        # Display the last candle of the matrix
+
+        ta.Display(-1)
+
+if __name__=='__main__':
+    main()
+
+###
+### End demo
+###

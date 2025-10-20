@@ -32,16 +32,24 @@ def main():
     for slice in ohlcv:
         ta.Rolling(slice)
 
-        ta.VolumePriceTrend()
-        ta.VWAP()
+#        ta.VolumePriceTrend()
+#        ta.VWAP()
 
-        # Create an EMA on Volume, column 6
-        maIDX=10
+        maIDX=6
         ta.SMA(Volume,SlowLength)
 
-        ta.Cross(Volume,maIDX)
+#        vcoIDX=7
+#        ta.Cross(Volume,maIDX)
+
+        vrocIDX=7
+        ta.RateOfChange(Volume,1)
+
+#        vsdIDX=9
+#        ta.SMA(vrocIDX,14) # moving average of the delta
 
         # O>C red, C>O green.  PCT<0, is BELOW the MA, PCT>0, is ABOVE the MA
+
+        vpctIDX=8
 
         row=ta.LastRow()
         if row[maIDX] is not None:
@@ -49,6 +57,14 @@ def main():
             ta.AddColumn(pct)
         else:
             ta.AddColumn(None)
+
+        # Green candle (C>O) with volume 30% > avg, ROC > 30%, could be buy signals
+        if row[vpctIDX] is not None and row[vrocIDX] is not None \
+        and row[Closing]>row[Opening] \
+        and row[vpctIDX]>30 and row[vrocIDX]>30:
+            ta.AddColumn(1)
+        else:
+            ta.AddColumn(0)
 
         ta.Display(-1)
 
