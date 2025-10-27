@@ -11,6 +11,7 @@
 import sys
 sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
 import os
+import random
 import math
 import json
 import datetime
@@ -65,15 +66,18 @@ class TechnicalAnalysis:
 
     # Log the window
 
-    def LogWindow(self,idx,end=0):
+    def Log(self,idx,end=0,purge=False):
         def WriteLog(out):
             fh=open(self.logname,'a+')
             fh.write(f"{out}\n")
             fh.close()
 
         if idx<0 and end==0:
-            WriteLog(self.Win2Text(idx))
+            out=','.join(str(x) for x in self.window[idx])
+            WriteLog(out)
             return
+
+        # Log the entire wwindow
 
         if end>len(self.window) or end==-1:
             end=len(self.window)
@@ -81,16 +85,34 @@ class TechnicalAnalysis:
         if end>0 and idx<0:
             idx=0
 
+        # Purge the previous data
+
+        if purge:
+            try:
+                os.remove(self.logname)
+            except:
+                pass
+
         # Only write out actual data
 
         for i in range(idx,end):
             if self.window[i][0]:
-                WriteLog(self.Win2Text(i))
+                out=','.join(str(x) for x in self.window[i])
+                WriteLog(out)
 
     # Print the fancy numbers
 
     def Display(self,idx):
         print(self.Win2Text(idx))
+
+    # Return a row from the rolling window. Can be absolute or relative
+
+    def GetSize(self):
+        l=0
+        for i in range(0,len(self.window)):
+            if self.window[i][0]:
+                l+=1
+        return l
 
     # Return a row from the rolling window. Can be absolute or relative
 
@@ -112,6 +134,28 @@ class TechnicalAnalysis:
             self.window[-1].append(value) # Update the last slice with value
         return self.window
 
+    # Reload the matrix
+
+    def Load(self,fn=None,verbose=True):
+        filename=None
+
+        if fn and os.path.exists(fn):
+            filenane=fn
+        elif self.logname and os.path.exists(self.logname):
+            filename=self.logname
+
+        if filename:
+            if verbose:
+                print("Reloading matrix")
+
+            fh=open(self.logname,'r')
+            for line in fh.readlines():
+                slice=line.strip().split(',')
+                self.Rolling(slice)
+            fh.close()
+
+        return self.window
+
     # Rolling window
 
     def Rolling(self,slice=None):
@@ -129,7 +173,10 @@ class TechnicalAnalysis:
         if slice is not None:
             for i in range(len(slice)):
                 if type(slice[i]) is str:
-                    slice[i]=float(slice[i])
+                    if slice[i].lower()!="none":
+                        slice[i]=float(slice[i])
+                    else:
+                        slice[i]=None
             if last is None or last[0] is None or (last is not None and slice[0]>last[0]):
                 self.window.append(slice)
             else:
@@ -224,9 +271,44 @@ class TechnicalAnalysis:
     def GetTicker(self):
         return self.relay.GetTicker(symbol=self.asset)
 
+    def GetSyntheticTicker(self,previous_ticker,deviation=0.0005):
+        """
+        Generate a synthetic OANDA-style forex ticker.
+
+        Parameters:
+            previous_ticker (dict): Previous ticker with keys 'Bid', 'Ask', 'Spread'.
+            deviation (float): Maximum allowed deviation for price movement.
+
+        Returns:
+            dict: New ticker with keys 'Bid', 'Ask', 'Spread'.
+        """
+        # Extract previous values
+        prev_ask = float(previous_ticker.get('Ask', 1.0))
+        prev_spread = abs(previous_ticker.get('Spread', 0.0001))
+
+        # Random movement up or down within deviation
+        direction = random.choice([-1, 1])
+        change = random.uniform(0, deviation) * direction
+        new_ask = prev_ask + change
+
+        # Slight randomization of spread (within 10% of previous)
+        spread_change = random.uniform(-prev_spread * 0.1, prev_spread * 0.1)
+        new_spread = max(0.00001, prev_spread + spread_change)
+
+        # OANDA relationship: Bid = Ask - Spread
+        new_bid = new_ask - new_spread
+
+        ticker={}
+        ticker['DateTime']=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+        ticker['Ask']=round(new_ask,8)
+        ticker['Bid']=round(new_bid,8)
+        ticker['Spread']=round(new_spread,8)
+
+        return ticker
+
     # Make an OHLCV record. No partial records generated.
 
-    def MakeOHLCV(self,days=0,hours=0,minutes=0,seconds=60):
+    def MakeOHLCV(self,days=0,hours=0,minutes=0,seconds=60,synthetic=False):
         """
         Construct an OHLCV record for a given duration using Jackrabbit Relay ticker.
 
@@ -251,9 +333,16 @@ class TechnicalAnalysis:
 
         start_time = time.time()
         epoch = int(start_time)
+        previous_ticker=None
 
+        count=0
         while (time.time() - start_time) < duration:
-            ticker=self.relay.GetTicker(symbol=self.asset)
+            if synthetic and previous_ticker:
+                ticker=self.GetSyntheticTicker(previous_ticker)
+            else:
+                ticker=self.relay.GetTicker(symbol=self.asset)
+            if previous_ticker is None:
+                previous_ticker=ticker
             price=(float(ticker['Bid'])+float(ticker['Ask']))/2  # midpoint
 
             if o is None:
@@ -263,10 +352,11 @@ class TechnicalAnalysis:
                 l = min(l, price)
                 c = price
 
-            time.sleep(1)  # Prevent hammering Relay
+            time.sleep(0.1)  # Prevent hammering Relay
+            count+=1
 
         # Volume definition per your spec
-        v=abs(c - o)*duration
+        v=abs(c - o)*duration*count
 
         return [epoch, o, h, l, c, v]
 

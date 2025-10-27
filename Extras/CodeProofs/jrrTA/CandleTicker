@@ -21,13 +21,14 @@ def main():
     ohlcv=[]
 
     ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',197)
+#    ta=jrTA.TechnicalAnalysis('oanda','CherryBlossom','EUR/USD','M1',197)
 
     # Build my own candles. No live candles. A candle is returned only after it
     # is closed.
 
     c=0
     while c<10:
-        ohlcv=ta.MakeOHLCV(seconds=60)
+        ohlcv=ta.MakeOHLCV(seconds=60,synthetic=True)
         ta.Rolling(ohlcv)
         ta.Display(-1)
         c+=1
