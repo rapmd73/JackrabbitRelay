@@ -976,11 +976,11 @@ class TechnicalAnalysis:
         n = len(self.window)
 
         if n < period:
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
+            self.AddColumn(None)    # mean
+            self.AddColumn(None)    # variance
+            self.AddColumn(None)    # standard deviation
+            self.AddColumn(None)    # upper band
+            self.AddColumn(None)    # lower band
             return self.window
 
         series = [row[idx] for row in self.window[-period:] if len(row) > idx and row[idx] is not None]
