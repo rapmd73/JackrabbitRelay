@@ -73,11 +73,12 @@ for i in range(1,len(sys.argv)):
 print()
 
 # Trades/Month
-tpm=int(tt/len(day.keys()))
-atm=round(rs/tt,perc)
-apm=round(atm*tpm,perc)
+if len(day.keys())>0:
+    tpm=int(tt/len(day.keys()))
+    atm=round(rs/tt,perc)
+    apm=round(atm*tpm,perc)
 
-print(f"Total Profits/StopLosses/Trades: {round(rs,perc):.{perc}f}/{sl}/{tt}")
-print(f"Average/Trade:        {atm:.{perc}f}")
-print(f"Average Trades/Month: {tpm:.0f}")
-print(f"Average Profit/Month: {apm:.{perc}f}")
+    print(f"Total Profits/StopLosses/Trades: {round(rs,perc):.{perc}f}/{sl}/{tt}")
+    print(f"Average/Trade:        {atm:.{perc}f}")
+    print(f"Average Trades/Month: {tpm:.0f}")
+    print(f"Average Profit/Month: {apm:.{perc}f}")
