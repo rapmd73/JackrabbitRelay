@@ -396,7 +396,7 @@ class TechnicalAnalysis:
             counter = int(reset_count)
         else:
             # Otherwise count down from the previous counter, floor at 0
-            counter = prev_count - 1 if prev_count > 0 else 0
+            counter = prev_count - 1 if prev_count and prev_count > 0 else 0
 
         self.AddColumn(counter)
         return self.window
@@ -1006,6 +1006,66 @@ class TechnicalAnalysis:
         self.AddColumn(stddev)
         self.AddColumn(upper_band)
         self.AddColumn(lower_band)
+
+        return self.window
+
+    # Bollinger Bands %B
+
+    def BollingerBandsB(self, CloseIDX, UpperBandIDX, LowerBandIDX):
+        """
+        Calculate Bollinger Bands %B (Percent B).
+        %B = (Price - Lower Band) / (Upper Band - Lower Band)
+
+        This indicator quantifies a security's price relative to the upper and lower
+        Bollinger Bands. A value of 0.5 means the price is at the middle band, > 1 is
+        above the upper band, and < 0 is below the lower band.
+
+        Parameters:
+            CloseIDX (int): The column index for the closing price.
+            UpperBandIDX (int): The column index for the Upper Bollinger Band.
+            LowerBandIDX (int): The column index for the Lower Bollinger Band.
+
+        Appends to self.window[-1]:
+            %B value
+        """
+
+        # Ensure there is at least one row to work with
+        if not self.window:
+            self.AddColumn(None)
+            return self.window
+
+        last_row = self.LastRow()
+
+        # Check if all required column indices are valid for the last row
+        required_indices = [CloseIDX, UpperBandIDX, LowerBandIDX]
+        if len(last_row) <= max(required_indices):
+            self.AddColumn(None)
+            return self.window
+
+        # Extract values from the last row
+        close_price = last_row[CloseIDX]
+        upper_band = last_row[UpperBandIDX]
+        lower_band = last_row[LowerBandIDX]
+
+        # Check if any of the necessary values are None
+        if any(v is None for v in [close_price, upper_band, lower_band]):
+            self.AddColumn(None)
+            return self.window
+
+        # Calculate the denominator (the range between the bands)
+        band_range = upper_band - lower_band
+
+        # Avoid division by zero if the bands have converged to the same value
+        if band_range == 0:
+            # If range is 0, %B is undefined. Can be set to 0.5 if price is on the band.
+            # Appending None is safer to indicate an undefined state.
+            pctb = 0
+        else:
+            # Calculate %B using the formula
+            pctb = (close_price - lower_band) / band_range
+
+        # Add the calculated %B value as a new column to the last row
+        self.AddColumn(pctb)
 
         return self.window
 

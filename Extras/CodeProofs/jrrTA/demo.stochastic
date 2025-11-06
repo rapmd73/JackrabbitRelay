@@ -32,9 +32,11 @@ def main():
 
         kIDX=7
         dIDX=8
+        xIDX=10
 
         ta.Stochastic(HighIDX,LowIDX,Closing,14,3,3)
         ta.Cross(kIDX,dIDX)
+        ta.CandleCounter(xIDX,-1,10)
 
         ta.Display(-1)
 
