@@ -384,10 +384,11 @@ class TechnicalAnalysis:
 
         # Determine previous counter (last column of previous row)
         prev_count = 0
+        pIDX=len(last_row)   # current index in the matrix
         if len(self.window) > 1:
             prev_row = self.window[-2]
-            if prev_row:
-                prev_count = prev_row[-1]
+            if prev_row and len(prev_row)>=len(last_row):
+                prev_count = prev_row[pIDX]
             else:
                 prev_count = 0
 
