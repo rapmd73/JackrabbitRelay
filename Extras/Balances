@@ -1,78 +1,179 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Jackrabbit Relay
+# Jackrabbit Relay - Display Balances and Positions
 # 2021 Copyright © Robert APM Darin
 # All rights reserved unconditionally.
 
 import sys
 sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
-import os
-import json
 
 import JackrabbitRelay as JRR
 
 ###
-### Main code base. Place order on exchange
+### Main code base. Display balances and positions
 ###
 
-relay=JRR.JackrabbitRelay()
+relay = JRR.JackrabbitRelay()
 if relay.GetArgsLen() > 2:
-    exchangeName=relay.GetExchange()
-    account=relay.GetAccount()
+    exchangeName = relay.GetExchange()
+    account = relay.GetAccount()
 else:
     print("An exchange and an account must be provided.")
     sys.exit(1)
 
-markets=relay.Markets
+markets = relay.Markets
+framework = relay.GetFramework().lower()
 
-if relay.GetFramework()=='ccxt':
-    balances=relay.GetBalance()
-    if balances!=None:
-        coinList=balances['free']
-        for coin in coinList:
-            fre=float(balances['free'][coin])
-            tot=float(balances['total'][coin])
-            if fre>0.0 and tot>0.0:
-                print(f"{coin:20} {fre:24.8f} {tot:25.8f}")
+print(f"Framework: {framework}")
+print(f"Exchange: {exchangeName}")
+print(f"Account: {account}")
+print("-" * 80)
 
-        if 'Market' in relay.Active \
-        and relay.Active['Market'].lower()!='spot':
-            positions=relay.GetPositions()
-            if positions!=None:
+# CCAPI framework
+if framework == 'ccapi':
+    print("\n=== BALANCES (via CCAPI) ===")
+    
+    # Get balances via CCAPI WebSocket
+    balances = relay.GetBalance()
+    
+    if balances is not None and isinstance(balances, dict):
+        if 'free' in balances:
+            coinList = balances['free']
+            
+            print(f"{'Asset':<20} {'Free':<25} {'Total':<25}")
+            print("-" * 70)
+            
+            for coin in coinList:
+                fre = float(balances['free'].get(coin, 0))
+                tot = float(balances['total'].get(coin, 0))
+                
+                if fre > 0.0 or tot > 0.0:
+                    print(f"{coin:<20} {fre:<25.8f} {tot:<25.8f}")
+        else:
+            print("No balance data available")
+    else:
+        print("Failed to fetch balances")
+
+    if 'Market' in relay.Active and relay.Active['Market'].lower() != 'spot':
+        print("\n=== POSITIONS (via CCAPI) ===")
+        
+        positions = relay.GetPositions()
+        
+        if positions is not None and isinstance(positions, list):
+            if len(positions) > 0:
+                print(f"{'Symbol':<20} {'Contracts':<25} {'Side':<8} {'Entry Price':<15} {'Unrealized PnL':<15}")
+                print("-" * 90)
+                
                 for pos in positions:
-                    bal=float(pos['contracts'])
-                    if bal==None:
-                        bal=0.0
-                    if bal!=0.0 and 'symbol' in pos:
-                        val=float(pos['contractSize'])
-                        side=pos['side']
-                        if side==None:
-                            side='unkn'
-                        print(f"{pos['symbol']:20} {abs(bal):24.8f} {side:5} {val:24.8f}")
-elif relay.GetFramework()=='oanda':
-    balance=relay.GetBalance()
-    if balance!=None:
-        print(f"{'Balance':12} {balance:12.5f}")
-
-        positions=relay.GetPositions()
-        if positions!=None:
-            for pos in positions:
-                asset=pos['instrument'].replace('_','/')
-                bal=relay.GetPositions(symbol=asset)
-                margin=round(float(pos['marginUsed']),2)
-                if bal>=0:
-                    side='long'
-                else:
-                    side='short'
-                print(f"{asset:12} {abs(bal):12.5f} {side} {margin:6.2f}")
-elif relay.GetFramework()=='mimic':
-    balance=relay.GetBalance()
-    if balance!=None:
-        for coin in balance:
-            bal=float(balance[coin])
-            if bal<0:
-                side='short'
+                    bal = float(pos.get('contracts', 0))
+                    
+                    if bal != 0.0 and 'symbol' in pos:
+                        symbol = pos['symbol']
+                        side = pos.get('side', 'unknown')
+                        entry_price = float(pos.get('entryPrice', 0))
+                        unrealized_pnl = float(pos.get('unrealizedPnl', 0))
+                        
+                        print(f"{symbol:<20} {abs(bal):<25.8f} {side:<8} {entry_price:<15.8f} {unrealized_pnl:<15.2f}")
             else:
-                side='long'
-            print(f"{coin:7} {abs(bal):24.8f} {side}")
+                print("No open positions")
+        else:
+            print("Failed to fetch positions")
+
+elif framework == 'ccxt':
+    print("\n=== BALANCES (via CCXT) ===")
+    
+    balances = relay.GetBalance()
+    
+    if balances is not None:
+        coinList = balances['free']
+        
+        print(f"{'Asset':<20} {'Free':<25} {'Total':<25}")
+        print("-" * 70)
+        
+        for coin in coinList:
+            fre = float(balances['free'][coin])
+            tot = float(balances['total'][coin])
+            
+            if fre > 0.0 and tot > 0.0:
+                print(f"{coin:<20} {fre:<25.8f} {tot:<25.8f}")
+    
+    if 'Market' in relay.Active and relay.Active['Market'].lower() != 'spot':
+        print("\n=== POSITIONS (via CCXT) ===")
+        
+        positions = relay.GetPositions()
+        
+        if positions is not None:
+            print(f"{'Symbol':<20} {'Contracts':<25} {'Side':<8} {'Contract Size':<15}")
+            print("-" * 75)
+            
+            for pos in positions:
+                bal = float(pos['contracts'])
+                
+                if bal is None:
+                    bal = 0.0
+                
+                if bal != 0.0 and 'symbol' in pos:
+                    val = float(pos['contractSize'])
+                    side = pos['side']
+                    
+                    if side is None:
+                        side = 'unkn'
+                    
+                    print(f"{pos['symbol']:<20} {abs(bal):<25.8f} {side:<8} {val:<15.8f}")
+
+elif framework == 'oanda':
+    print("\n=== BALANCE (via Oanda) ===")
+    
+    balance = relay.GetBalance()
+    
+    if balance is not None:
+        print(f"{'Balance':<12} {balance:<12.5f}")
+    
+    print("\n=== POSITIONS (via Oanda) ===")
+    
+    positions = relay.GetPositions()
+    
+    if positions is not None:
+        print(f"{'Instrument':<12} {'Position':<12} {'Side':<8} {'Margin':<10}")
+        print("-" * 50)
+        
+        for pos in positions:
+            asset = pos['instrument'].replace('_', '/')
+            bal = relay.GetPositions(symbol=asset)
+            margin = round(float(pos['marginUsed']), 2)
+            
+            if bal >= 0:
+                side = 'long'
+            else:
+                side = 'short'
+            
+            print(f"{asset:<12} {abs(bal):<12.5f} {side:<8} {margin:<10.2f}")
+
+elif framework == 'mimic':
+    print("\n=== BALANCE (via Mimic) ===")
+    
+    balance = relay.GetBalance()
+    
+    if balance is not None:
+        print(f"{'Asset':<10} {'Balance':<25} {'Side':<8}")
+        print("-" * 50)
+        
+        for coin in balance:
+            bal = float(balance[coin])
+            
+            if bal < 0:
+                side = 'short'
+            else:
+                side = 'long'
+            
+            print(f"{coin:<10} {abs(bal):<25.8f} {side:<8}")
+
+# Unknown framework
+else:
+    print(f"Unknown framework: {framework}")
+    print("Supported frameworks: ccapi, ccxt, oanda, mimic")
+    sys.exit(1)
+
+print("\n" + "=" * 80)
+print("Done")
