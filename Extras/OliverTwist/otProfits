@@ -27,6 +27,7 @@ if len(sys.argv)>2:
 tt=0
 sl=0
 rs=0
+day={}
 for i in range(1,len(sys.argv)):
     if 'oanda' in sys.argv[i]:
         perc=4
@@ -36,7 +37,6 @@ for i in range(1,len(sys.argv)):
     lines=JRRsupport.ReadFile(sys.argv[i]).strip().split('\n')
 
     # Running Sum
-    day={}
     pnl=0
 
     for line in lines:
