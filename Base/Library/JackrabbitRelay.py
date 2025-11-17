@@ -20,6 +20,7 @@ import JRRccxt
 import JRRoanda
 import JRRmimic
 import JRRsupport
+import JRRccapi
 
 # This is the logging class
 #
@@ -203,6 +204,7 @@ class JackrabbitRelay:
         self.Framework=None
         if framework!=None:
             self.Framework=framework.lower()
+            print(framework.lower())
 
         # Whether or not to rotate keys after every API call. Does NOT apply to
         # OANDA.
@@ -710,8 +712,15 @@ class JackrabbitRelay:
 
         # Market data is loaded automatically. Pull it into the Relay object as
         # well.
-
-        if self.Framework=='ccxt':
+        if self.Framework.lower() == 'ccapi':
+            # CCAPI mode (execution) + Database (market data)
+            self.Broker = JRRccapi.ccapiCrypto(
+                self.Exchange,
+                self.Config,
+                self.Active,
+                Notify=True,
+            )
+        elif self.Framework=='ccxt':
             self.Broker=JRRccxt.ccxtCrypto(self.Exchange,self.Config,self.Active,DataDirectory=self.Directories['Data'])
         elif self.Framework=='oanda':
             self.Broker=JRRoanda.oanda(self.Exchange,self.Config,self.Active,DataDirectory=self.Directories['Data'])

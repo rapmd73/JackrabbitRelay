@@ -1,0 +1,3 @@
+*.pyc
+*.log
+Base/Library/dbcheck.py
