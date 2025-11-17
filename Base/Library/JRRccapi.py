@@ -1040,7 +1040,7 @@ class CCAPIEventHandler(ccapi.EventHandler):
 
             correlation_id = correlation_ids[0]
 
-            # Optional: small debug for balances
+            # Optional remove later: small debug for balances
             if correlation_id.startswith("balance_"):
                 try:
                     debug_payload = []
