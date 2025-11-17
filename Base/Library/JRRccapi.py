@@ -16,7 +16,6 @@ import JRRsupport
 
 # CCAPI Python bindings
 import ccapi
-import fast_mssql
 
 # Database reader classes (your existing code)
 from db_ohlcv_mssql import (
@@ -58,23 +57,10 @@ class ccapiCrypto:
         # Stable coins for conversion (from JRRccxt)
         self.StableCoinUSD = ['USDT', 'USDC', 'BUSD', 'UST', 'DAI', 'FRAX', 
                               'TUSD', 'USDP', 'GUSD', 'USD']
-        
+
         self.timeframes = {
-            '1s':  '1s',
             '1m':  '1m',
-            '3m':  '3m',
-            '5m':  '5m',
-            '15m': '15m',
-            '30m': '30m',
-            '1h':  '1h',
-            '2h':  '2h',
-            '4h':  '4h',
-            '6h':  '6h',
-            '8h':  '8h',
-            '12h': '12h',
-            '1d':  '1d',
         }
-        # ----------------------------------------------------------------------
 
         # Initialize database connection for market data
         self.db_config = self._init_db_config()
@@ -91,31 +77,31 @@ class ccapiCrypto:
             schema="dbo"
         )
         
-        # Initialize CCAPI session for execution (lazy)
+        # Initialize CCAPI session for execution
         self.ccapi_session = None
         self.ccapi_event_handler = None
         self.ccapi_running = False
         self.ccapi_thread = None
-
-        # Execution toggle (can also be driven by config)
-        self.execution_enabled = self.Active.get('Execution', True)
-
+        
         # Response queues for synchronous calls
         self.response_queues = {}
         self.subscription_active = {}
-
+        
         # Balance cache (updated via CCAPI subscription)
         self.balance_cache = {}
         self.balance_last_update = None
-
+        
         # Position cache (for futures)
         self.position_cache = {}
         self.position_last_update = None
-
+        
         # Markets cache
         self._markets_cache = {}
-
-        # Get markets from database (pure SQL)
+        
+        # Initialize CCAPI
+        self._init_ccapi()
+        
+        # Get markets from database
         self.Markets = self._GetMarkets()
         
         self.Log.Write(f"CCAPI Broker initialized for {self.Exchange}")
@@ -125,7 +111,7 @@ class ccapiCrypto:
             server="localhost",
             database="BTQ_MarketData",
             username="SA",
-            password="<supersecretpassword>",
+            password="q?}33YIToo:H%xue$Kr*",
         )
     
     def _init_ccapi(self):
@@ -167,20 +153,21 @@ class ccapiCrypto:
         # Subscribe to account updates (balance, positions, orders)
         time.sleep(1)  # Wait for session to start
         self._subscribe_account_updates()
-    
+
     def _ensure_ccapi(self):
         """
-        Lazily initialize CCAPI session only when execution/balance
-        functionality is actually needed.
+        Ensure CCAPI session exists.
+
+        Right now __init__ always calls _init_ccapi(), so this is mostly
+        a safety hook for GetBalance/GetPositions. If we ever disable
+        auto-init in __init__, this will lazily start the session.
         """
-        if self.ccapi_session is not None:
-            return
-
-        if not self.execution_enabled:
-            self.Log.Write("Execution disabled: CCAPI will not be initialized")
-            return
-
-        self._init_ccapi()
+        if self.ccapi_session is None:
+            # Only (re)initialize if not already created
+            try:
+                self._init_ccapi()
+            except Exception as e:
+                self.Log.Error("_ensure_ccapi", f"Failed to init CCAPI: {e}")
 
     def _get_api_credentials(self) -> Dict[str, str]:
         """Get API credentials for exchange"""
@@ -191,7 +178,7 @@ class ccapiCrypto:
             f"{exchange_upper}_API_SECRET": self.Active.get('SECRET', ''),
         }
         
-        # Some exchanges need passphrase
+        # Some exchanges require passphrase
         if 'Passphrase' in self.Active:
             credentials[f"{exchange_upper}_API_PASSPHRASE"] = self.Active['Passphrase']
         
@@ -203,8 +190,6 @@ class ccapiCrypto:
     def _run_ccapi_session(self):
         """Run CCAPI session (blocking call)"""
         try:
-            # This is non-blocking in CCAPI
-            # Events are delivered to event handler asynchronously
             while self.ccapi_running:
                 time.sleep(0.1)
         except Exception as e:
@@ -262,67 +247,62 @@ class ccapiCrypto:
     
     def _GetMarkets(self) -> Dict:
         """
-        Get markets from database (BTQ_MarketData)
-
-        Uses dbo.trades to discover (symbol, market_type) for this exchange.
+        Get markets from database
+        Returns dict of market info compatible with CCXT format
         """
         if self._markets_cache:
             return self._markets_cache
-
+        
         try:
             import fast_mssql
             conn_str = self.db_config.connection_string()
-
+            
+            # Query distinct symbols for this exchange
             sql = f"""
-            SELECT DISTINCT symbol, market_type
-            FROM dbo.trades
+            SELECT DISTINCT symbol
+            FROM dbo.orderbook_snapshots
             WHERE exchange = '{self._quote(self.Exchange)}'
             ORDER BY symbol;
             """
-
+            
             rows = fast_mssql.fetch_data_from_db(conn_str, sql)
-
-            markets: Dict[str, Dict] = {}
-
-            for symbol, market_type in rows:
+            
+            markets = {}
+            for (symbol,) in rows:
+                # Normalize symbol (BTC-USDT -> BTC/USDT)
                 normalized = symbol.replace('-', '/')
-                parts = normalized.split('/')
-                base = parts[0]
-                quote = parts[1] if len(parts) > 1 else 'USDT'
-
-                mtype = (market_type or '').lower()
-                is_spot = (mtype == 'spot')
-                is_future = (mtype == 'future')
-                is_swap = (mtype == 'swap')
-
+                base = normalized.split('/')[0]
+                quote = normalized.split('/')[1] if '/' in normalized else 'USDT'
+                
                 markets[normalized] = {
                     'id': symbol,
                     'symbol': normalized,
                     'base': base,
                     'quote': quote,
                     'active': True,
-                    'type': mtype or 'spot',
-                    'spot': is_spot,
-                    'future': is_future,
-                    'swap': is_swap,
+                    'type': self.Active.get('Market', 'spot'),
+                    'spot': True,
+                    'future': False,
+                    'swap': False,
                     'limits': {
                         'amount': {'min': 0.00001, 'max': None},
-                        'price':  {'min': 0.00001, 'max': None},
-                        'cost':   {'min': 10.0,    'max': None},
+                        'price': {'min': 0.00001, 'max': None},
+                        'cost': {'min': 10.0, 'max': None}
                     },
                     'precision': {
                         'amount': 8,
-                        'price': 8,
-                    },
+                        'price': 8
+                    }
                 }
-
+            
             self._markets_cache = markets
+            print(markets)
             return markets
-
+            
         except Exception as e:
             self.Log.Error("GetMarkets", str(e))
             return {}
-
+    
     def GetTicker(self, **kwargs) -> Dict:
         """
         Get latest ticker from database
@@ -437,64 +417,21 @@ class ccapiCrypto:
         except Exception as e:
             self.Log.Error("GetOHLCV", str(e))
             return []
-
-    def GetOrderBook(self, **kwargs) -> dict:
-        """Return latest orderbook snapshot from dbo.orderbook_snapshots."""
-        try:
-            symbol = kwargs.get("symbol", kwargs.get("pair"))
-            if not symbol:
-                return {"bids": [], "asks": []}
-
-            raw = symbol
-            s1 = raw.replace("/", "-")   # BTC/USDT -> BTC-USDT
-            s2 = raw.replace("/", "")    # BTC/USDT -> BTCUSDT
-
-            depth = int(kwargs.get("limit", kwargs.get("depth", 20)))
-
-            conn_str = self.db_config.connection_string()
-
-            sql = f"""
-            SELECT TOP (1) bids, asks
-            FROM dbo.orderbook_snapshots
-            WHERE exchange = '{self._quote(self.Exchange)}'
-            AND symbol IN ('{self._quote(raw)}', '{self._quote(s1)}', '{self._quote(s2)}')
-            AND market_type = 'spot'
-            ORDER BY timestamp DESC;
-            """
-
-            rows = fast_mssql.fetch_data_from_db(conn_str, sql)
-            if not rows:
-                self.Log.Error("GetOrderBook", f"No snapshot for {self.Exchange} {raw}")
-                return {"bids": [], "asks": []}
-
-            bids_str, asks_str = rows[0]
-            bids_raw = json.loads(bids_str) if bids_str else []
-            asks_raw = json.loads(asks_str) if asks_str else []
-
-            bids = [[float(p), float(q)] for p, q in bids_raw][:depth]
-            asks = [[float(p), float(q)] for p, q in asks_raw][:depth]
-
-            return {"bids": bids, "asks": asks}
-
-        except Exception as e:
-            self.Log.Error("GetOrderBook", str(e))
-            return {"bids": [], "asks": []}
-
+    
     # ============================================================================
     # EXECUTION METHODS (USE CCAPI WEBSOCKET)
     # ============================================================================
-    
     def GetBalance(self, **kwargs) -> float:
         """
         Get balance via CCAPI
         Uses cached balance from subscription updates
         """
         try:
-            # # 🔹 Only here we may start CCAPI
-            # self._ensure_ccapi()
-            # if self.ccapi_session is None:
-            #     self.Log.Error("GetBalance", "CCAPI not initialized (execution disabled)")
-            #     return 0.0 if kwargs.get('Base') else {}
+            # Lazily start CCAPI if needed
+            self._ensure_ccapi()
+            if self.ccapi_session is None:
+                self.Log.Error("GetBalance", "CCAPI not initialized (execution disabled)")
+                return 0.0 if kwargs.get('Base') else {}
 
             base = kwargs.get('Base')
             
@@ -508,10 +445,12 @@ class ccapiCrypto:
             # Otherwise fetch fresh balance
             correlation_id = f"balance_{int(time.time() * 1000)}"
             
+            # 👇 IMPORTANT: correlation_id must be passed into the Request
             request = ccapi.Request(
-                ccapi.Request.Operation.GET_ACCOUNT_BALANCES,
+                ccapi.Request.Operation_GET_ACCOUNT_BALANCES,  # in your build this may be Operation_GET_ACCOUNT_BALANCES
                 self.Exchange,
-                ""
+                "",
+                correlation_id,
             )
             
             # Send request and wait for response
@@ -532,23 +471,21 @@ class ccapiCrypto:
         except Exception as e:
             self.Log.Error("GetBalance", str(e))
             return 0.0 if kwargs.get('Base') else {}
-    
-    def GetPositions(self, **kwargs) -> float:
+
+    def GetPositions(self, **kwargs):
         """
-        Get positions via CCAPI (for futures)
-        Uses cached positions from subscription updates
+        Get positions via CCAPI (for futures / swaps).
+        Uses cached positions, otherwise sync GET_ACCOUNT_POSITIONS request.
         """
         try:
-            self._ensure_ccapi()
-            if self.ccapi_session is None:
-                self.Log.Error("GetPositions", "CCAPI not initialized (execution disabled)")
-                return 0.0 if kwargs.get('symbols') else []
-
             symbols = kwargs.get('symbols', [])
-            
-            # Use cache if recent
-            if (self.position_last_update and 
-                (datetime.now(timezone.utc) - self.position_last_update).total_seconds() < 5):
+
+            # Use cache if its fresh
+            if (
+                self.position_last_update is not None
+                and (datetime.now(timezone.utc) - self.position_last_update).total_seconds() < 5
+                and self.position_cache is not None
+            ):
                 if symbols:
                     symbol = symbols[0] if isinstance(symbols, list) else symbols
                     for pos in self.position_cache:
@@ -559,49 +496,56 @@ class ccapiCrypto:
                             return contracts
                     return 0.0
                 return self.position_cache
-            
+
+            # Ensure CCAPI is ready
+            self._ensure_ccapi()
+            if self.ccapi_session is None:
+                raise RuntimeError(
+                    "CCAPI session not initialized - execution disabled or misconfigured"
+                )
+
+            correlation_id = f"positions_{int(time.time() * 1000)}"
+
             # Fetch fresh positions
             correlation_id = f"positions_{int(time.time() * 1000)}"
-            
+
             request = ccapi.Request(
-                ccapi.Request.Operation.GET_ACCOUNT_POSITIONS,
+                ccapi.Request.Operation_GET_ACCOUNT_POSITIONS,  # or Operation_GET_ACCOUNT_POSITIONS in your build
                 self.Exchange,
-                ""
+                "",
+                correlation_id,
             )
-            
-            response = self._send_request_sync(request, correlation_id, timeout=10)
-            
-            if response:
-                positions = self._parse_position_response(response)
-                self.position_cache = positions
-                self.position_last_update = datetime.now(timezone.utc)
-                
-                if symbols:
-                    symbol = symbols[0] if isinstance(symbols, list) else symbols
-                    for pos in positions:
-                        if pos['symbol'] == symbol:
-                            contracts = pos['contracts']
-                            if pos['side'] == 'short':
-                                contracts = -contracts
-                            return contracts
-                    return 0.0
-                return positions
-            
-            return 0.0 if symbols else []
-            
+
+            response_event = self._send_request_sync(request, correlation_id, timeout=10)
+
+            if response_event is None:
+                raise RuntimeError(f"Timeout waiting for {correlation_id}")
+
+            positions = self._parse_position_response(response_event)
+            self.position_cache = positions
+            self.position_last_update = datetime.now(timezone.utc)
+
+            if symbols:
+                symbol = symbols[0] if isinstance(symbols, list) else symbols
+                for pos in positions:
+                    if pos['symbol'] == symbol:
+                        contracts = pos['contracts']
+                        if pos['side'] == 'short':
+                            contracts = -contracts
+                        return contracts
+                return 0.0
+            return positions
+
         except Exception as e:
             self.Log.Error("GetPositions", str(e))
             return 0.0 if kwargs.get('symbols') else []
-    
+
     def PlaceOrder(self, **kwargs) -> Dict:
         """
         Place order via CCAPI WebSocket
         This is the main execution method
         """
         try:
-            self._ensure_ccapi()
-            if self.ccapi_session is None:
-                raise Exception("CCAPI not initialized (execution disabled)")
             pair = kwargs.get('pair')
             order_type = kwargs.get('orderType', 'market').lower()
             action = kwargs.get('action', 'buy').lower()
@@ -615,7 +559,7 @@ class ccapiCrypto:
             correlation_id = f"order_{int(time.time() * 1000)}"
             
             request = ccapi.Request(
-                ccapi.Request.Operation.CREATE_ORDER,
+                ccapi.Request.Operation_CREATE_ORDER,
                 self.Exchange,
                 symbol,
                 correlation_id
@@ -661,10 +605,6 @@ class ccapiCrypto:
     def CancelOrder(self, **kwargs) -> bool:
         """Cancel order via CCAPI"""
         try:
-            self._ensure_ccapi()
-            if self.ccapi_session is None:
-                self.Log.Error("CancelOrder", "CCAPI not initialized (execution disabled)")
-                return False
             order_id = kwargs.get('order_id')
             symbol = kwargs.get('symbol', kwargs.get('pair', ''))
             
@@ -677,7 +617,7 @@ class ccapiCrypto:
             correlation_id = f"cancel_{int(time.time() * 1000)}"
             
             request = ccapi.Request(
-                ccapi.Request.Operation.CANCEL_ORDER,
+                ccapi.Request.Operation_CANCEL_ORDER,
                 self.Exchange,
                 symbol,
                 correlation_id
@@ -704,10 +644,6 @@ class ccapiCrypto:
     def GetOpenOrders(self, **kwargs) -> List[Dict]:
         """Get open orders via CCAPI"""
         try:
-            self._ensure_ccapi()
-            if self.ccapi_session is None:
-                self.Log.Error("GetOpenOrders", "CCAPI not initialized (execution disabled)")
-                return []
             symbol = kwargs.get('symbol', kwargs.get('pair', ''))
             
             if symbol:
@@ -716,7 +652,7 @@ class ccapiCrypto:
             correlation_id = f"open_orders_{int(time.time() * 1000)}"
             
             request = ccapi.Request(
-                ccapi.Request.Operation.GET_OPEN_ORDERS,
+                ccapi.Request.Operation_GET_OPEN_ORDERS,
                 self.Exchange,
                 symbol,
                 correlation_id
@@ -748,7 +684,6 @@ class ccapiCrypto:
         self.response_queues[correlation_id] = response_queue
         
         try:
-            # Send request
             self.ccapi_session.sendRequest(request)
             
             # Wait for response
@@ -764,37 +699,95 @@ class ccapiCrypto:
             return None
             
         finally:
-            # Cleanup
-            if correlation_id in self.response_queues:
-                del self.response_queues[correlation_id]
-    
-    def _parse_balance_response(self, event: ccapi.Event) -> Dict:
-        """Parse balance response from CCAPI event"""
+            del self.response_queues[correlation_id]
+
+    def _parse_balance_response(self, data) -> Dict:
+        """
+        Parse balance response.
+
+        `data` is usually a list[list[dict]] created in CCAPIEventHandler._handle_response:
+            [
+              [ {'ASSET': 'BTC', 'QUANTITY_AVAILABLE_FOR_TRADING': '0.00000192', ...}, ... ],
+              [ {...}, ... ]
+            ]
+
+        If someone accidentally passes a ccapi.Event, we convert it first.
+        """
         balance = {
             'free': {},
             'used': {},
-            'total': {}
+            'total': {},
         }
-        
+
         try:
-            for message in event.getMessageList():
-                for element in message.getElementList():
-                    name_value_map = element.getNameValueMap()
-                    
-                    asset = name_value_map.get('ASSET', name_value_map.get('CURRENCY', ''))
-                    available = float(name_value_map.get('AVAILABLE_BALANCE', 0))
-                    total_bal = float(name_value_map.get('TOTAL_BALANCE', available))
-                    
-                    if asset:
-                        balance['free'][asset] = available
-                        balance['total'][asset] = total_bal
-                        balance['used'][asset] = total_bal - available
-            
+            # If we accidentally get a raw Event, convert it here
+            if hasattr(data, "getMessageList"):
+                py_messages = []
+                for msg in data.getMessageList():
+                    elem_list = []
+                    for el in msg.getElementList():
+                        raw_map = el.getNameValueMap()
+                        elem_list.append({str(k): str(v) for k, v in raw_map.items()})
+                    py_messages.append(elem_list)
+                data = py_messages  # now a list[list[dict]]
+
+            # Now assume data = list[list[dict]]
+            for msg_elems in data:
+                for m in msg_elems:
+                    # 1) Asset / currency symbol
+                    asset = (
+                        m.get("ASSET") or
+                        m.get("asset") or
+                        m.get("CURRENCY") or
+                        m.get("currency") or
+                        m.get("symbol") or
+                        m.get("coin")
+                    )
+                    if not asset:
+                        continue
+
+                    # 2) Available / total quantities.
+                    #    For Binance / ccapi we see:
+                    #    - QUANTITY_AVAILABLE_FOR_TRADING
+                    #    - QUANTITY_TOTAL
+                    avail_s = (
+                        m.get("QUANTITY_AVAILABLE_FOR_TRADING")
+                        or m.get("AVAILABLE_BALANCE")
+                        or m.get("AVAILABLE")
+                        or m.get("available")
+                        or m.get("FREE")
+                        or m.get("free")
+                    )
+                    total_s = (
+                        m.get("QUANTITY_TOTAL")
+                        or m.get("TOTAL_BALANCE")
+                        or m.get("BALANCE")
+                        or m.get("balance")
+                        or avail_s
+                    )
+
+                    try:
+                        available = float(avail_s) if avail_s is not None else 0.0
+                    except Exception:
+                        available = 0.0
+
+                    try:
+                        total = float(total_s) if total_s is not None else available
+                    except Exception:
+                        total = available
+
+                    used = total - available
+
+                    asset_u = asset.upper()
+                    balance['free'][asset_u] = available
+                    balance['total'][asset_u] = total
+                    balance['used'][asset_u] = used
+
         except Exception as e:
-            self.Log.Error("Parse Balance", str(e))
-        
+            self.Log.Error("Parse Balance", f"{e}")
+
         return balance
-    
+
     def _parse_position_response(self, event: ccapi.Event) -> List[Dict]:
         """Parse positions response from CCAPI event"""
         positions = []
@@ -881,6 +874,7 @@ class ccapiCrypto:
     def _write_order_to_database(self, order: Dict):
         """Write executed order to database for audit trail"""
         try:
+            import fast_mssql
             conn_str = self.db_config.connection_string()
             
             sql = f"""
@@ -932,8 +926,6 @@ class ccapiCrypto:
                     self.Results = self._GetMarkets()
                 elif function == 'fetch_balance':
                     self.Results = self.GetBalance(**kwargs)
-                elif function == 'fetch_orderbook':
-                    self.Results = self.GetOrderBook()
                 elif function == 'fetch_positions':
                     self.Results = self.GetPositions(**kwargs)
                 elif function == 'fetch_ohlcv':
@@ -1012,147 +1004,184 @@ class CCAPIEventHandler(ccapi.EventHandler):
     Event handler for CCAPI events
     Processes responses and subscription data
     """
-    
+
     def __init__(self, broker):
         super().__init__()
         self.broker = broker
-    
+
     def processEvent(self, event: ccapi.Event, sessionPtr: ccapi.Session):
-        """Process incoming CCAPI events"""
         try:
-            event_type = event.getType()
+            et = event.getType()
+            self.broker.Log.Write(f"CCAPI event type: {et}")
 
-            if event_type == ccapi.Event.Type_RESPONSE:
-                self._handle_response(event)
-
-            elif event_type == ccapi.Event.Type_SUBSCRIPTION_DATA:
-                self._handle_subscription_data(event)
-
-            elif event_type == ccapi.Event.Type_SUBSCRIPTION_STATUS:
-                self._handle_subscription_status(event)
-
-            elif event_type == ccapi.Event.Type_AUTHORIZATION_STATUS:
-                self._handle_authorization_status(event)
+            # simplest & safest: just try all handlers;
+            # each decides if the event is relevant.
+            self._handle_response(event)
+            self._handle_subscription_data(event)
+            self._handle_subscription_status(event)
+            self._handle_authorization_status(event)
 
         except Exception as e:
             self.broker.Log.Error("CCAPI Event", f"CCAPI Event failed with: {e}")
-    
+
+        # REQUIRED: SWIG expects a bool
+        return True
+
     def _handle_response(self, event: ccapi.Event):
-        """Handle response events"""
+        """Handle response events: convert ccapi.Event -> pure Python and push to queue."""
         try:
-            # Get correlation ID
             messages = event.getMessageList()
             if not messages:
                 return
-            
+
             correlation_ids = messages[0].getCorrelationIdList()
             if not correlation_ids:
                 return
-            
+
             correlation_id = correlation_ids[0]
-            
-            # Put response in queue for synchronous waiting
-            if correlation_id in self.broker.response_queues:
-                self.broker.response_queues[correlation_id].append(event)
-            
+
+            # Optional: small debug for balances
+            if correlation_id.startswith("balance_"):
+                try:
+                    debug_payload = []
+                    for msg in messages:
+                        elems = []
+                        for el in msg.getElementList():
+                            raw_map = el.getNameValueMap()
+                            elems.append({str(k): str(v) for k, v in raw_map.items()})
+                        debug_payload.append({
+                            "type": str(msg.getType()),
+                            "corr": list(msg.getCorrelationIdList()),
+                            "elements": elems,
+                        })
+                    # Truncate to keep logs sane
+                    self.broker.Log.Write(
+                        "CCAPI BALANCE RAW: " + json.dumps(debug_payload)[:2000]
+                    )
+                except Exception as e:
+                    self.broker.Log.Error("Debug Balance", f"{e}")
+
+            # If nobody is waiting on this correlation ID, we are done here
+            if correlation_id not in self.broker.response_queues:
+                return
+
+            # CRITICAL PART:
+            # Convert the ccapi.Event into a pure-Python structure so we dont
+            # hold onto C++ objects after this callback returns.
+            #
+            # py_messages = [
+            #   [ {k: v, ...}, {k: v, ...}, ... ],  # message 0 elements
+            #   [ {k: v, ...}, ... ],                # message 1 elements
+            # ]
+            py_messages = []
+            for msg in messages:
+                elem_list = []
+                for el in msg.getElementList():
+                    raw_map = el.getNameValueMap()
+                    elem_list.append({str(k): str(v) for k, v in raw_map.items()})
+                py_messages.append(elem_list)
+
+            # Store pure Python in the queue
+            self.broker.response_queues[correlation_id].append(py_messages)
+
         except Exception as e:
             self.broker.Log.Error("Handle Response", str(e))
-    
+
     def _handle_subscription_data(self, event: ccapi.Event):
-        """Handle subscription data (balance updates, order updates, etc.)"""
+        """Handle subscription data (balances, orders, positions, etc.)."""
         try:
             for message in event.getMessageList():
-                message_type = message.getType()
-                
+                message_type_str = str(message.getType())
+
                 # Order updates
-                if "ORDER" in str(message_type):
+                if "ORDER" in message_type_str:
                     self._handle_order_update(message)
-                
+
                 # Balance updates
-                elif "BALANCE" in str(message_type):
+                elif "BALANCE" in message_type_str:
                     self._handle_balance_update(message)
-                
+
                 # Position updates
-                elif "POSITION" in str(message_type):
+                elif "POSITION" in message_type_str:
                     self._handle_position_update(message)
-            
+
         except Exception as e:
             self.broker.Log.Error("Handle Subscription Data", str(e))
-    
+
     def _handle_order_update(self, message: ccapi.Message):
-        """Handle real-time order updates"""
+        """Handle real-time order updates."""
         try:
             for element in message.getElementList():
                 name_value_map = element.getNameValueMap()
-                
+
                 order_id = name_value_map.get('ORDER_ID', '')
                 status = name_value_map.get('STATUS', '')
-                
+
                 self.broker.Log.Write(
                     f"Order Update: {order_id} - {status}"
                 )
-                
-                # Update database with new order status
-                # (implement as needed)
-            
+                # TODO :: update DB here
+
         except Exception as e:
             self.broker.Log.Error("Handle Order Update", str(e))
-    
+
     def _handle_balance_update(self, message: ccapi.Message):
-        """Handle real-time balance updates"""
+        """Handle real-time balance updates."""
         try:
+            from datetime import datetime, timezone
+
             for element in message.getElementList():
                 name_value_map = element.getNameValueMap()
-                
+
                 asset = name_value_map.get('ASSET', name_value_map.get('CURRENCY', ''))
                 available = float(name_value_map.get('AVAILABLE_BALANCE', 0))
-                
+
                 if asset:
                     if 'free' not in self.broker.balance_cache:
                         self.broker.balance_cache['free'] = {}
                     self.broker.balance_cache['free'][asset] = available
                     self.broker.balance_last_update = datetime.now(timezone.utc)
-            
+
         except Exception as e:
             self.broker.Log.Error("Handle Balance Update", str(e))
-    
+
     def _handle_position_update(self, message: ccapi.Message):
-        """Handle real-time position updates"""
+        """Handle real-time position updates (for futures)."""
         try:
-            # Similar to balance update
-            # Update position cache
+            # TODO :: Parse and update self.broker.position_cache here later
             pass
         except Exception as e:
             self.broker.Log.Error("Handle Position Update", str(e))
-    
+
     def _handle_subscription_status(self, event: ccapi.Event):
-        """Handle subscription status events"""
+        """Handle subscription status events."""
         try:
             for message in event.getMessageList():
-                message_type = message.getType()
+                message_type_str = str(message.getType())
                 correlation_ids = message.getCorrelationIdList()
 
-                if message_type == ccapi.Message.Type_SUBSCRIPTION_STARTED:
+                if message_type_str == "SUBSCRIPTION_STARTED":
                     if correlation_ids:
                         self.broker.subscription_active[correlation_ids[0]] = True
                     self.broker.Log.Write("CCAPI subscription started")
 
-                elif message_type == ccapi.Message.Type_SUBSCRIPTION_FAILURE:
+                elif message_type_str == "SUBSCRIPTION_FAILURE":
                     self.broker.Log.Error("CCAPI Subscription", "Subscription failed")
 
         except Exception as e:
             self.broker.Log.Error("Handle Subscription Status", str(e))
-    
+
     def _handle_authorization_status(self, event: ccapi.Event):
-        """Handle authorization status"""
+        """Handle authorization status events."""
         try:
             for message in event.getMessageList():
-                message_type = message.getType()
-                
-                if message_type == ccapi.Message.Type.AUTHORIZATION_SUCCESS:
+                message_type_str = str(message.getType())
+
+                if message_type_str == "AUTHORIZATION_SUCCESS":
                     self.broker.Log.Write("CCAPI authorization successful")
-                elif message_type == ccapi.Message.Type.AUTHORIZATION_FAILURE:
+
+                elif message_type_str == "AUTHORIZATION_FAILURE":
                     self.broker.Log.Error("CCAPI Authorization", "Authorization failed")
-            
+
         except Exception as e:
             self.broker.Log.Error("Handle Authorization", str(e))
