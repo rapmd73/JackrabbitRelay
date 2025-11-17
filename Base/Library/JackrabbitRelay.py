@@ -20,7 +20,7 @@ import JRRccxt
 import JRRoanda
 import JRRmimic
 import JRRsupport
-import JRRccapi
+#import JRRccapi
 
 # This is the logging class
 #
@@ -712,14 +712,9 @@ class JackrabbitRelay:
 
         # Market data is loaded automatically. Pull it into the Relay object as
         # well.
-        if self.Framework.lower() == 'ccapi':
+        if self.Framework.lower()=='ccapi':
             # CCAPI mode (execution) + Database (market data)
-            self.Broker = JRRccapi.ccapiCrypto(
-                self.Exchange,
-                self.Config,
-                self.Active,
-                Notify=True,
-            )
+            self.Broker=JRRccapi.ccapiCrypto(self.Exchange,self.Config,self.Active,Notify=True)
         elif self.Framework=='ccxt':
             self.Broker=JRRccxt.ccxtCrypto(self.Exchange,self.Config,self.Active,DataDirectory=self.Directories['Data'])
         elif self.Framework=='oanda':
