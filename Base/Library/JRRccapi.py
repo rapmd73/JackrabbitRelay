@@ -17,7 +17,7 @@ import JRRsupport
 # CCAPI Python bindings
 import ccapi
 
-# Database reader classes (your existing code)
+# Database reader classes
 from db_ohlcv_mssql import (
     MSSQLFeedConfig,
     ReadOnlyOHLCV,
@@ -66,15 +66,17 @@ class ccapiCrypto:
         self.db_config = self._init_db_config()
         self.ohlcv_reader = ReadOnlyOHLCV(
             config=self.db_config,
-            mode="global",
+            mode="per_pair",
             global_table="ohlcv",
-            schema="dbo"
+            schema="dbo",
+            table_pattern="{symbol}_klines"
         )
         self.trades_reader = ReadOnlyTradesAgg(
             config=self.db_config,
-            mode="global",
+            mode="per_pair",
             global_table="ohlcv",
-            schema="dbo"
+            schema="dbo",
+            table_pattern="{symbol}_klines"
         )
         
         # Initialize CCAPI session for execution
@@ -396,22 +398,48 @@ class ccapiCrypto:
                 end=end,
                 limit=limit
             )
-            
-            # Convert to CCXT format
+
+            def _to_datetime(ts_val):
+                # Already datetime?
+                if isinstance(ts_val, datetime):
+                    if ts_val.tzinfo is None:
+                        return ts_val.replace(tzinfo=timezone.utc)
+                    return ts_val
+
+                # Numeric (seconds or ms)
+                if isinstance(ts_val, (int, float)):
+                    # Heuristic: > 1e12 → milliseconds
+                    if ts_val > 1e12:
+                        return datetime.fromtimestamp(ts_val / 1000.0, tz=timezone.utc)
+                    return datetime.fromtimestamp(ts_val, tz=timezone.utc)
+
+                # String from SQL, e.g. '2025-11-16 23:29:00.000000'
+                if isinstance(ts_val, str):
+                    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
+                        try:
+                            return datetime.strptime(ts_val, fmt).replace(tzinfo=timezone.utc)
+                        except ValueError:
+                            pass
+                    # last resort – let fromisoformat try
+                    return datetime.fromisoformat(ts_val)
+
+                raise TypeError(f"Unsupported timestamp type: {type(ts_val)}")
+
+            # Convert to CCXT format [ms, o, h, l, c, v]
             ohlcv = []
             for row in rows:
-                ts = row['timestamp']
-                ts_ms = int(ts.timestamp() * 1000) if isinstance(ts, datetime) else int(ts)
-                
+                dt = _to_datetime(row["timestamp"])
+                ts_ms = int(dt.timestamp() * 1000)
+
                 ohlcv.append([
                     ts_ms,
-                    float(row['open']),
-                    float(row['high']),
-                    float(row['low']),
-                    float(row['close']),
-                    float(row['volume'])
+                    float(row["open"]),
+                    float(row["high"]),
+                    float(row["low"]),
+                    float(row["close"]),
+                    float(row["volume"]),
                 ])
-            
+
             return ohlcv
             
         except Exception as e:

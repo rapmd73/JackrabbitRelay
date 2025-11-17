@@ -62,13 +62,15 @@ for i in range(1,len(sys.argv)):
     sys.argv.remove(sys.argv[1])
 
 relay=JRR.JackrabbitRelay(exchange=exchangeName,account=account)
-
-chartDir=f"{relay.DataDirectory}/Charts/"
+DataDirectory='/home/JackrabbitRelay2/Data'
+chartDir=f"{DataDirectory}/Charts/"
 
 markets=relay.GetMarkets()
 
 if relay.Framework=='ccxt':
     TimeFrame='1d'
+if relay.Framework=='ccapi':
+    TimeFrame='1m'    
 elif relay.Framework=='oanda':
     TimeFrame='D'
 else:

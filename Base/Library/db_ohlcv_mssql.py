@@ -32,14 +32,12 @@ class MSSQLFeedConfig:
 
 class ReadOnlyOHLCV:
     """
-    Simple read-only OHLCV reader.
-
     mode="global":
-        Uses a single table (global_table) with columns:
+        Single table (global_table) with columns:
         (exchange, symbol, timeframe, timestamp, open, high, low, close, volume)
 
     mode="per_pair":
-        Uses one table per symbol, based on table_pattern, e.g. "{symbol}_klines".
+        One table per symbol, based on table_pattern, e.g. "{symbol}_klines".
     """
 
     def __init__(
@@ -73,10 +71,9 @@ class ReadOnlyOHLCV:
 
     @staticmethod
     def _ident(s: str) -> str:
-        import re
-        if not re.fullmatch(r"[A-Za-z0-9_]+", s):
-            raise ValueError(f"invalid identifier: {s}")
-        return s
+        # Quote as [name], escaping any closing bracket
+        s = s.replace("]", "]]")
+        return f"[{s}]"
 
     def _table_exists(self, schema: str, table: str) -> bool:
         q = (
@@ -89,44 +86,37 @@ class ReadOnlyOHLCV:
 
     def _table_name(self, exchange: str, symbol: str) -> str:
         """
-        Resolve the fully qualified table name for a given (exchange, symbol).
-
-        In per_pair mode we try:
-        1) table_pattern(symbol)           -> e.g. BTC-USDT_klines
-        2) table_pattern(sym_underscore)   -> e.g. BTC_USDT_klines
-        3) table_pattern(sym_compact)      -> e.g. BTCUSDT_klines
-
-        The first existing table wins. If none exist, we fall back to the
-        first candidate so the error message is at least deterministic.
+        In per_pair mode try, in order:
+          1) table_pattern(symbol)         -> DASHUSDT_klines
+          2) table_pattern(sym_underscore) -> DASHUSDT_klines (same here)
+          3) table_pattern(sym_compact)    -> DASHUSDT_klines
+        First existing table wins.
         """
         if self.mode == "global":
             return f"{self._ident(self.schema)}.{self._ident(self.global_table)}"
 
         ex = (exchange or "").lower()
 
-        # Build candidate symbol forms
-        sym_orig = symbol                   # "BTC-USDT"
-        sym_us   = self._sym_underscore(symbol)  # "BTC_USDT"
-        sym_cmp  = self._sym_compact(symbol)     # "BTCUSDT"
+        sym_orig = symbol
+        sym_us   = self._sym_underscore(symbol)
+        sym_cmp  = self._sym_compact(symbol)
 
-        cand_symbols = []
+        cand_symbols: list[str] = []
         for s in (sym_orig, sym_us, sym_cmp):
             if s not in cand_symbols:
                 cand_symbols.append(s)
 
-        # Turn symbols into table names using the pattern
         candidates: list[str] = []
         for s in cand_symbols:
             tbl = self.table_pattern.format(exchange=ex, symbol=s)
             if tbl not in candidates:
                 candidates.append(tbl)
 
-        # Try each candidate until one exists
         for tbl in candidates:
             if self._table_exists(self.schema, tbl):
                 return f"{self._ident(self.schema)}.{self._ident(tbl)}"
 
-        # Fallback: first candidate, even if it's wrong -> deterministic error
+        # deterministic failure if none exist
         return f"{self._ident(self.schema)}.{self._ident(candidates[0])}"
 
     def get_ohlcv(
@@ -140,7 +130,7 @@ class ReadOnlyOHLCV:
         strict_gt: bool = False,
     ) -> List[dict]:
         """
-        Return a list of dicts with keys:
+        Return a list of dicts:
         [timestamp, open, high, low, close, volume]
         """
         if end is None:
@@ -150,13 +140,14 @@ class ReadOnlyOHLCV:
         comp = ">" if strict_gt else ">="
         top_clause = f"TOP {int(limit)} " if limit else ""
 
+        # NOTE: no .%f here; pure second precision to keep SQL literal simple
         start_str = start.strftime("%Y-%m-%d %H:%M:%S")
-        end_str = end.strftime("%Y-%m-%d %H:%M:%S")
+        end_str   = end.strftime("%Y-%m-%d %H:%M:%S")
 
         if self.mode == "global":
             ex = self._qv(exchange)
             sym = self._qv(symbol)
-            tf = self._qv(timeframe)
+            tf  = self._qv(timeframe)
             query = (
                 f"SELECT {top_clause}"
                 f"timestamp, [open], high, low, [close], volume "
@@ -175,6 +166,9 @@ class ReadOnlyOHLCV:
                 f"AND timestamp {comp} '{start_str}' AND timestamp < '{end_str}' "
                 f"ORDER BY timestamp ASC;"
             )
+
+        # Uncomment for one-shot debugging if something still explodes
+        print("DEBUG OHLCV SQL:", query)
 
         rows = fast_mssql.fetch_data_from_db(self._conn_str, query)
         cols = ["timestamp", "open", "high", "low", "close", "volume"]
