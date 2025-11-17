@@ -13,7 +13,7 @@ class MSSQLFeedConfig:
     server: str = "localhost"
     database: str = "BTQ_MarketData"
     username: str = "SA"
-    password: str = "<supersecretpassword>"
+    password: str = "q?}33YIToo:H%xue$Kr*"
     driver: str = "{ODBC Driver 18 for SQL Server}"
     trust_server_certificate: bool = True
 

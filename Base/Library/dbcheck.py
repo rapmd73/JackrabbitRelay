@@ -7,7 +7,7 @@ CONN_STR = (
     "SERVER=localhost;"
     "DATABASE=BTQ_MarketData;"
     "UID=SA;"
-    "PWD=<supersecretpassword>;"
+    "PWD=q?}33YIToo:H%xue$Kr*;"
     "TrustServerCertificate=yes;"
 )
 
