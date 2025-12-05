@@ -204,7 +204,6 @@ class JackrabbitRelay:
         self.Framework=None
         if framework!=None:
             self.Framework=framework.lower()
-            print(framework.lower())
 
         # Whether or not to rotate keys after every API call. Does NOT apply to
         # OANDA.

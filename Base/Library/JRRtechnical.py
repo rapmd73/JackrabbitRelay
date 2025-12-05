@@ -31,6 +31,8 @@ class TechnicalAnalysis:
         self.precision=precision
         self.Duplicate=False    # duplicate row received
         self.relay = JRR.JackrabbitRelay(exchange=self.exchange,account=self.account)
+        if self.tf=='MAX':
+            self.tf=self.relay.Timeframes[-1]
         self.window = []
 
     # Conver timestamp to a readable date
