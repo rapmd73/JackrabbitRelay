@@ -1339,7 +1339,64 @@ class TechnicalAnalysis:
 
         return self.window
 
-# Find the current support level
+    # Calculate the Avellaneda Stoikov volatility based on the OHLCV data versus
+    # bid/ask ticker.
+
+    def ASVolatility(self, CloseIDX=4, periods=14):
+        # Not enough data
+        if len(self.window) < periods:
+            self.AddColumn(None)   # log return
+            self.AddColumn(None)   # mean
+            self.AddColumn(None)   # variance
+            self.AddColumn(None)   # sigma
+            return self.window
+
+        # Extract last-period closes
+        closes = [row[CloseIDX] for row in self.window[-periods:] if row[CloseIDX] is not None]
+
+        # Require full period of valid closes
+        if len(closes) < periods:
+            self.AddColumn(None)   # log return
+            self.AddColumn(None)   # mean
+            self.AddColumn(None)   # variance
+            self.AddColumn(None)   # sigma
+            return self.window
+
+        # Compute log returns
+        log_returns = []
+        for i in range(1, len(closes)):
+            c1 = closes[i - 1]
+            c2 = closes[i]
+            if c1 != 0:
+                lr = math.log(c2 / c1)
+                log_returns.append(lr)
+
+        # Store last log return (intermediate)
+        self.AddColumn(log_returns[-1] if log_returns else None)
+
+        if len(log_returns) < 2:
+            self.AddColumn(None)   # mean
+            self.AddColumn(None)   # variance
+            self.AddColumn(None)   # sigma
+            return self.window
+
+        # Mean of log returns
+        n = len(log_returns)
+        mean_r = sum(log_returns) / n
+        self.AddColumn(mean_r)
+
+        # Compute variance
+        var_sum = sum((r - mean_r) ** 2 for r in log_returns)
+        variance = var_sum / (n - 1)
+        self.AddColumn(variance)
+
+        # Sigma
+        sigma = variance ** 0.5
+        self.AddColumn(sigma)
+
+        return self.window
+
+    # Find the current support level
 
     def Support(self, low_idx=3, period=14):
         """

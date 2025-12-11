@@ -18,8 +18,7 @@ import JackrabbitRelay as JRR
 import JRRtechnical as jrTA
 
 def main():
-    ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',197)
-    # ohlcv=ta.ReadOHLCV('ADAUSD.txt')
+    ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',5000)
     ohlcv=ta.GetOHLCV()
 
     SlowLength=50
@@ -34,6 +33,7 @@ def main():
         ta.Rolling(slice)
 
         ta.Volatility()
+        ta.ASVolatility()
 
         ta.Display(-1)
 
