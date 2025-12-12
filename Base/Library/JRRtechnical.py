@@ -1396,6 +1396,67 @@ class TechnicalAnalysis:
 
         return self.window
 
+    # Calculate the Black Scholes volatility
+
+    def BSVolatility(self, CloseIDX=4, periods=14):
+        # Not enough rows
+        if len(self.window) < periods:
+            self.AddColumn(None)   # last return
+            self.AddColumn(None)   # mean
+            self.AddColumn(None)   # variance
+            self.AddColumn(None)   # sigma
+            return self.window
+
+        # Extract recent closes
+        closes = [row[CloseIDX] for row in self.window[-periods:] if row[CloseIDX] is not None]
+
+        # Require full period
+        if len(closes) < periods:
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
+            return self.window
+
+        # Compute simple returns
+        returns = []
+        for i in range(1, len(closes)):
+            p1 = closes[i - 1]
+            p2 = closes[i]
+            if p1 != 0:
+                r = (p2 - p1) / p1
+                returns.append(r)
+
+        # Store last return
+        self.AddColumn(returns[-1] if returns else None)
+
+        # Need at least two
+        if len(returns) < 2:
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
+            return self.window
+
+        # Mean return
+        n = len(returns)
+        mean_r = sum(returns) / n
+        self.AddColumn(mean_r)
+
+        # Variance
+        var_sum = 0.0
+        for r in returns:
+            diff = r - mean_r
+            var_sum += diff * diff
+
+        variance = var_sum / (n - 1)
+        self.AddColumn(variance)
+
+        # Historical sigma
+        sigma = variance ** 0.5
+        self.AddColumn(sigma)
+
+        return self.window
+
     # Find the current support level
 
     def Support(self, low_idx=3, period=14):

@@ -32,10 +32,11 @@ def main():
     for slice in ohlcv:
         ta.Rolling(slice)
 
-        ta.Volatility()
-        ta.ASVolatility()
+        ta.Volatility()     # 1 column
+        ta.ASVolatility()   # 4 columns, volatility in the 4 column
+        ta.BSVolatility()   # 4 columns, volatility in the 4 column
 
-        ta.Display(-1)
+        ta.Log(-1)
 
 if __name__=='__main__':
     main()
