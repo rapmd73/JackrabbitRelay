@@ -21,6 +21,7 @@ import JackrabbitRelay as JRR
 
 class TechnicalAnalysis:
     def __init__(self, exchange, account, asset, timeframe, count=5000,length=16,precision=8):
+        self.Version='0.0.0.0.100'
         self.exchange = exchange
         self.account = account
         self.asset = asset
@@ -33,6 +34,8 @@ class TechnicalAnalysis:
         self.relay = JRR.JackrabbitRelay(exchange=self.exchange,account=self.account)
         if self.tf=='MAX':
             self.tf=self.relay.Timeframes[-1]
+        elif self.tf=='MIN':
+            self.tf=self.relay.Timeframes[0]
         self.window = []
 
     # Conver timestamp to a readable date
@@ -1300,9 +1303,9 @@ class TechnicalAnalysis:
         self.AddColumn(wr)
         return self.window
 
-    # Calculate the volatility
+    # Calculate the volatility, stand interpretation
 
-    def Volatility(self, CloseIDX=4, periods=14):
+    def Volatility(self, CloseIDX=4, periods=19):
         # Ensure there are enough data points
         if len(self.window) < periods:
             self.AddColumn(None)
@@ -1339,10 +1342,66 @@ class TechnicalAnalysis:
 
         return self.window
 
+    # MY custom verion of volatility
+
+    # This function is intentionally not a statistical volatility estimator but a
+    # grid spacing control derived from return dispersion, where the standard
+    # deviation of simple returns is converted into an absolute price distance by
+    # multiplying by the current price and then deliberately damped by dividing by
+    # the lookback period. In unstable markets, increased return variance causes
+    # RDVolatility() to grow, which widens the distance between successive grid
+    # levels and automatically slows inventory accumulation, while sustained
+    # instability does not cause unbounded expansion because the division by
+    # periods suppresses time based amplification. Direction is irrelevant in this
+    # architecture because each new order is placed relative to the last filled
+    # position rather than a fixed anchor, so price drift is absorbed sequentially
+    # instead of predicted or opposed. This makes the RDVolatility function as a
+    # bounded volatility aware throttle that controls how aggressively the grid
+    # adds exposure under dispersion, rather than as a measure of uncertainty or
+    # forecasted movement. The result is a spacing mechanism that widens during
+    # volatility shocks, stabilizes during prolonged regimes, and remains effective
+    # in slow carry driven markets as well as unstable mean reverting conditions,
+    # which is why it is suitable for long running live grid systems even though it
+    # should not be interpreted or reused as conventional volatility.
+
+    # periods of 13 for Forex, 19 for crypto work best.
+
+    def RDVolatility(self, CloseIDX=4, periods=19):
+        # Ensure there are enough data points
+        if len(self.window) < periods:
+            self.AddColumn(None)
+            return self.window
+
+        # Extract the last 'period' closing prices
+        close_prices = [row[CloseIDX] for row in self.window[-periods:] if row[CloseIDX] is not None]
+
+        # Require at least two valid prices
+        if len(close_prices) < periods:
+            self.AddColumn(None)
+            return self.window
+
+        # Calculate returns
+
+        returns=[]
+        for i in range(1,len(close_prices)):
+            daily_return=(close_prices[i]-close_prices[i-1])/close_prices[i-1]
+            returns.append(daily_return)
+
+        # Calculate the standard deviation of returns as volatility
+
+        n=len(returns)
+        mean_return=sum(returns)/n
+        sum_squared_diff=sum((r-mean_return)**2 for r in returns)
+        volatility=(sum_squared_diff/(n-1))**0.5
+
+        self.AddColumn((volatility*close_prices[-1])/periods)
+
+        return self.window
+
     # Calculate the Avellaneda Stoikov volatility based on the OHLCV data versus
     # bid/ask ticker.
 
-    def ASVolatility(self, CloseIDX=4, periods=14):
+    def ASVolatility(self, CloseIDX=4, periods=19):
         # Not enough data
         if len(self.window) < periods:
             self.AddColumn(None)   # log return
@@ -1398,7 +1457,7 @@ class TechnicalAnalysis:
 
     # Calculate the Black Scholes volatility
 
-    def BSVolatility(self, CloseIDX=4, periods=14):
+    def BSVolatility(self, CloseIDX=4, periods=19):
         # Not enough rows
         if len(self.window) < periods:
             self.AddColumn(None)   # last return

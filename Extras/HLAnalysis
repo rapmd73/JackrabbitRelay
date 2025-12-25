@@ -1,0 +1,241 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay - Analyze Market
+# 2021 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+# This program calculate the starting and ending units based up the levels and steps. It produces a report identical to
+# the spreadsheet I featured several times.
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+sys.path.append('/home/JackrabbitAI/Library')
+import os
+import json
+import datetime
+import time
+
+from discord_webhook import DiscordWebhook
+
+import JRRsupport
+import JackrabbitRelay as JRR
+import FileFunctions as FF
+
+interceptor=JRRsupport.SignalInterceptor()
+
+DiscordWH="https://discord.com/api/webhooks/1346151456079613963/PbzZpQ4n19xULWMoLFnJqT9TJjBlfuWeYId6v_Az7aKEMkYDfmBbijP99UNUS1qa7tjo"
+
+def WriteLog(text,title):
+    time=(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+
+    s=f'{time} {text}\n'
+    FF.AppendFile(f'/home/Newshound/{title}.log',s)
+
+def Help(args,argslen):
+    print("An exchange and an account must be provided.")
+    sys.exit(1)
+
+def ProcessDay(day,mList):
+    dList=[]
+    fgs=[]
+    for i in mList:
+        dts=i.split(' ',2)
+        dt=datetime.datetime.strptime(dts[0]+' '+dts[1], "%Y-%m-%d %H:%M:%S.%f")
+
+        f,g,s=i.replace('%','').split(' ')[2].split(':')[1].split('/')
+
+        fgs.append([dt,f,g,s])
+
+    # Sort by date/time
+    fgs.sort(key=lambda x: x[0])
+
+    eTime=datetime.datetime.now()
+    sTime=eTime-datetime.timedelta(days=day)
+    f=[]    # Fear
+    g=[]    # Greed
+    s=[]    # Strength
+
+    for i in fgs:
+        if i[0]>=sTime:
+            f.append(float(i[1]))
+            g.append(float(i[2]))
+            s.append(float(i[3]))
+            if f[-1]>g[-1]:
+                s[-1]*=-1
+
+    tf=(sum(f)/len(f))
+    tg=(sum(g)/len(g))
+    ts=(sum(s)/len(s))
+
+    out=f"{day}:{tf:.2f}%/{tg:.2f}%/{abs(ts):.2f}% "
+    text=f"{day}-Day: Fear {tf:.2f}%, Greed {tg:.2f}%, Strength: {abs(ts):.2f}%\n"
+
+    return out,text
+
+# Get OHLCV and make a memory reference for it
+
+def GetChildOHLCV(*args,**kwargs):
+    try:
+        relay=JRR.JackrabbitRelay(exchange=args[0],account=args[1],asset=args[2])
+        try:
+            ohlcv=relay.GetOHLCV(symbol=args[2],timeframe=args[3],limit=5000)
+        except:
+            return
+
+        if len(ohlcv)<2:
+            return
+
+        hh=float("-inf")
+        ll=float("inf")
+        for i in ohlcv:
+            hh=max(hh,i[2])
+            ll=min(ll,i[3])
+        c=ohlcv[-1][4]
+
+        # extract and store only what I need
+        data={ "high":hh,"low":ll,"close":c }
+
+        id=f"{args[0]}.{args[1]}.{args[2]}"
+        mid=f"{id}.memory"
+
+        mlock=JRRsupport.Locker(id,ID=id,Timeout=10)
+        mdata=JRRsupport.Locker(mid,ID=mid,Timeout=10)
+
+        mlock.Lock()
+        md=json.dumps(data).replace('"','\\"') # MUST be string
+        mdata.Put(86400,md)
+        mlock.Unlock()
+    except Exception as e:
+        print(e)
+        pass
+
+def closeness_to_high_low(h, l, c):
+    # total range
+    r = h - l
+    if r == 0:
+        raise ValueError("High and low cannot be equal")
+
+    # distances
+    dist_to_h = h - c
+    dist_to_l = c - l
+
+    # percentages
+    pct_to_h = (dist_to_h / r) * 100
+    pct_to_l = (dist_to_l / r) * 100
+
+    return pct_to_h, pct_to_l
+
+###
+### Main Driver
+###
+
+def main():
+    days=[3,7,30]
+
+    sd=not (len(sys.argv)>3)
+    relay=JRR.JackrabbitRelay(Usage=Help)
+
+    exchangeName=relay.GetExchange()
+    account=relay.GetAccount()
+
+    if relay.GetFramework()=='mimic' or relay.GetFramework()=='ccxt':
+        title='CMSA'    # Crypto Market Sentinment Analysis
+        percision=8
+    elif relay.GetFramework()=='oanda':
+        title='FMSA'    # Forex Market Sentinment Analysis
+        percision=5 # abs(int(relay.Markets[asset]['pipLocation']))
+    else:
+        print(f"Unrecognized framework: {relay.GetFramework()}")
+        sys.exit(1)
+
+    # Already loaded from login
+
+    markets=relay.Markets
+
+    # Get additional command line setting
+
+    srch='ALL'
+    if relay.GetArgsLen() > 3:
+        srch=relay.GetArgs(3).upper()
+
+    tplus=0
+    tminus=0
+    total=0
+    tpct=0
+    tpList=[]
+
+    # Begin listing this exchange/broker
+
+    for asset in relay.Markets:
+        # Skip non active assets
+        tf=relay.Timeframes[-1] # 'D'
+        if relay.Framework=='ccxt' or relay.Framework=='mimic':
+            #tf=relay.Timeframes[-1] # '1d'
+            if asset[0]=='.' or asset.find(".d")>-1 or asset.find(" ")>-1:
+                continue
+            if 'active' in relay.Markets[asset]:
+                if relay.Markets[asset]['active']==False:
+                    continue
+
+        if srch!=None and srch.upper()!='ALL':
+            if asset.find(srch)<0:
+                continue
+
+        # Get OLHCV data
+        interceptor.StartProcess(GetChildOHLCV,args=[exchangeName,account,asset,tf])
+
+        # Control the number of children
+        while interceptor.GetChildren()>(os.cpu_count()):
+            if interceptor.GetChildren()==0:
+                break
+            time.sleep(1)
+
+    # Wait for all children to complete
+    while True:
+        if interceptor.GetChildren()==0:
+            break
+        time.sleep(1)
+
+    # Pull the completed memory records
+    for asset in relay.Markets:
+        if srch!=None and srch.upper()!='ALL':
+            if asset.find(srch)<0:
+                continue
+
+        id=f"{exchangeName}.{account}.{asset}"
+        mid=f"{id}.memory"
+
+        mlock=JRRsupport.Locker(id,ID=id,Timeout=10)
+        mdata=JRRsupport.Locker(mid,ID=mid,Timeout=10)
+
+        mlock.Lock()
+        data=json.loads(mdata.Get())
+        mdata.Erase()
+        mlock.Unlock()
+
+        try:
+            ohlcv=json.loads(data['DataStore'].replace('\\"','"'))
+        except:
+            continue
+
+        try:
+            h=ohlcv['high']
+            l=ohlcv['low']
+            c=ohlcv['close']
+        except:
+            continue
+
+        ph, pl = closeness_to_high_low(h, l, c)
+
+        print(f"{asset[:30]:30} {ph:6.2f}% {pl:6.2f}%")
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Terminated")
+
+###
+### End Program
+###
