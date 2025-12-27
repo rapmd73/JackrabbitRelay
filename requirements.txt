@@ -6,3 +6,4 @@ oandapyV20
 plotly
 matplotlib
 kaleido
+fonttools>=4.61.0 # not directly required, pinned by Snyk to avoid a vulnerability
