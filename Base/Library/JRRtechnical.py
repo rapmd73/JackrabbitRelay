@@ -2024,6 +2024,311 @@ class TechnicalAnalysis:
 
         return self.window
 
+    ## Gann section
+
+    # How to use these in a Strategy
+
+    # Gann Fan: Tells you the strength of the trend (is it above the 1x1 line?).
+    #
+    # Gann HiLo Activator: Tells you the entry/exit trigger. Buy when Trend
+    # flips to 1. Sell when it flips to -1.
+    #
+    # Square of 9: Tells you the Take Profit. If you buy at
+    #   $100 and the Next Resistance column says $108, that is your geometric
+    #   exit target.
+
+    # Gann Fan
+    #   Long Strategy: Anchor to Low. Lines slope Up. Price staying above
+    #   1x1 is bullish.
+    #   Short Strategy: Anchor to High. Lines slope Down. Price staying
+    #   below 1x1 is bearish.
+    #
+    # Gann HiLo
+    #   Long Strategy: Automatic. If Price > SMA(High), the Activator line
+    #   is Support.
+    #   Short Strategy: Automatic. If Price < SMA(Low), the Activator line
+    #   is Resistance.
+    #
+    # Square of 9
+    #   Long Strategy: Anchor to Low. Calculate targets by adding to the
+    #   square root.
+    #   Short Strategy: Anchor to High. Calculate targets by subtracting
+    #   from the square root.
+
+    # WD Gann Fan Indicator
+    # Turns the geometric drawing tool into a numerical indicator.
+    #
+    # This implementation automatically finds the anchor point (Lowest Low
+    # for Long, Highest High for Short) within the lookback period.
+    #
+    # Columns added to the window:
+    # 1. Anchor Price: The price point used as the origin (0,0) of the fan.
+    # 2. Time Delta: The number of bars (x-axis) since the anchor occurred.
+    # 3. 2x1 Angle: The fast/aggressive trend line (2 units price per 1
+    #               unit time).
+    # 4. 1x1 Angle: The "Balance" line (1 unit price per 1 unit time).
+    # 5. 1x2 Angle: The slow/support trend line (1 unit price per 2 units time).
+    #
+    # Parameters:
+    # scale: The "Price Units per Bar". CRITICAL. If None, it auto-calculates
+    #        based on the average range of the lookback period (Scale =
+    #        Range / Time). For manual tuning: Crypto (~10-100), Forex
+    #        (~0.0001).
+    # direction: 'long' (anchors to Lows, projects up) or 'short' (anchors
+    #             to Highs, projects down).
+
+    def GannFan(self, HighIDX=2, LowIDX=3, lookback=50, scale=None, direction='long'):
+        # Ensure enough history exists
+        if len(self.window) < lookback:
+            self.AddColumn(None) # Anchor Price
+            self.AddColumn(None) # Time Delta
+            self.AddColumn(None) # 2x1
+            self.AddColumn(None) # 1x1
+            self.AddColumn(None) # 1x2
+            return self.window
+
+        # Extract the relevant slice for analysis
+        # We need to find the anchor within the lookback window
+        window_slice = self.window[-lookback:]
+
+        # 1. FIND THE ANCHOR
+        anchor_price = None
+        time_delta = 0
+
+        if direction.lower() == 'short':
+            # Find Highest High
+            highs = [row[HighIDX] for row in window_slice if row[HighIDX] is not None]
+            if not highs:
+                for _ in range(5): self.AddColumn(None)
+                return self.window
+
+            anchor_price = max(highs)
+
+            # Find the relative index of that high (0 is the oldest in
+            # slice, -1 is current) We reverse list to find the *most
+            # recent* occurrence if there are duplicates relative_idx from
+            # the end
+
+            rev_highs = highs[::-1]
+            idx_from_end = rev_highs.index(anchor_price)
+            time_delta = idx_from_end # 0 means the anchor is the current bar
+        else:
+            # Default 'long': Find Lowest Low
+            lows = [row[LowIDX] for row in window_slice if row[LowIDX] is not None]
+            if not lows:
+                for _ in range(5): self.AddColumn(None)
+                return self.window
+
+            anchor_price = min(lows)
+            rev_lows = lows[::-1]
+            idx_from_end = rev_lows.index(anchor_price)
+            time_delta = idx_from_end
+
+        # 2. DETERMINE SCALE (The Geometric Aspect) If scale is not
+        # provided, we auto-fit it to the box size to ensure 45-degree
+        # visually represents the trend of the lookback period.
+
+        calc_scale = scale
+        if calc_scale is None or calc_scale == 'auto':
+
+            # Simple heuristic: Average Range / Lookback
+            # This prevents the fan from being vertical or flat on untuned assets
+            range_max = float("-inf")
+            range_min = float("inf")
+            for row in window_slice:
+                 if row[HighIDX] is not None: range_max = max(range_max, row[HighIDX])
+                 if row[LowIDX] is not None: range_min = min(range_min, row[LowIDX])
+
+            if range_max > range_min:
+                calc_scale = (range_max - range_min) / lookback
+            else:
+                calc_scale = 1.0
+
+        # 3. CALCULATE GANN ANGLES (y = mx + b)
+        # For 'long', lines go UP (+). For 'short', lines go DOWN (-).
+
+        factor = 1 if direction.lower() == 'long' else -1
+
+        # 1x1 is the balance line
+        gann_1x1 = anchor_price + (factor * calc_scale * time_delta)
+
+        # 2x1 is the fast line (Steeper)
+        # Price moves 2 units for every 1 unit of time
+        gann_2x1 = anchor_price + (factor * (calc_scale * 2) * time_delta)
+
+        # 1x2 is the slow line (Flatter)
+        # Price moves 0.5 units for every 1 unit of time
+        gann_1x2 = anchor_price + (factor * (calc_scale * 0.5) * time_delta)
+
+        # 4. APPEND COLUMNS (Transparency)
+        self.AddColumn(anchor_price)
+        self.AddColumn(time_delta)
+        self.AddColumn(gann_2x1)
+        self.AddColumn(gann_1x1)
+        self.AddColumn(gann_1x2)
+
+        return self.window
+
+    # Gann High-Low Activator (GHLA)
+    # A trend-following indicator that acts as a trailing stop/reversal signal.
+
+    def GannHiLoActivator(self, HighIDX=2, LowIDX=3, CloseIDX=4, period=3):
+        # Need enough history for the MA
+        if len(self.window) < period + 1:
+            self.AddColumn(None) # SMA High
+            self.AddColumn(None) # SMA Low
+            self.AddColumn(None) # Trend
+            self.AddColumn(None) # Activator Line
+            return self.window
+
+        # 1. Calculate Simple Moving Averages of Highs and Lows
+        highs = [row[HighIDX] for row in self.window[-period:] if row[HighIDX] is not None]
+        lows = [row[LowIDX] for row in self.window[-period:] if row[LowIDX] is not None]
+
+        if len(highs) < period or len(lows) < period:
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
+            return self.window
+
+        sma_high = sum(highs) / period
+        sma_low = sum(lows) / period
+
+        # 2. Determine Trend based on previous state
+        # Get previous row
+        prev_row = self.window[-2]
+        curr_row = self.window[-1]
+        close = curr_row[CloseIDX]
+
+        # We need to find the previous trend state. 
+        # Since this adds 4 columns, we look back 4 columns in the previous row.
+        # If it's the first run, default to trend based on current close vs SMA.
+        prev_trend_idx = len(prev_row) - 2 # Trend is the 3rd column added
+
+        if len(prev_row) > prev_trend_idx and prev_row[prev_trend_idx] is not None:
+            trend = prev_row[prev_trend_idx]
+        else:
+            # Initialize: If close > SMA_High, Bullish (1), else Bearish (-1)
+            trend = 1 if close > sma_high else -1
+
+        # 3. Update Trend Logic
+        # If we were Bullish (1) and Close breaks below SMA_Low -> Flip to Bearish
+        if trend == 1:
+            if close < sma_low:
+                trend = -1
+        # If we were Bearish (-1) and Close breaks above SMA_High -> Flip to Bullish
+        else:
+            if close > sma_high:
+                trend = 1
+
+        # 4. Determine the Activator Value (The line to plot)
+        # If Bullish, the stop is the Low MA. If Bearish, the stop is the High MA.
+        activator = sma_low if trend == 1 else sma_high
+
+        # 5. Append Columns
+        self.AddColumn(sma_high)
+        self.AddColumn(sma_low)
+        self.AddColumn(trend)
+        self.AddColumn(activator)
+
+        return self.window
+
+    # Gann Square of 9 (Bidirectional)
+    # Calculates dynamic support/resistance levels.
+    #
+    # Parameters:
+    # direction: 'long' (Anchors to Low, targets Higher) 
+    #            'short' (Anchors to High, targets Lower)
+
+    def GannSquareOfNine(self, HighIDX=2, LowIDX=3, CloseIDX=4, lookback=100, direction='long'):
+        if len(self.window) < lookback:
+            self.AddColumn(None) # Anchor
+            self.AddColumn(None) # Degrees
+            self.AddColumn(None) # Next Level (Target)
+            self.AddColumn(None) # Major Level (Trailing Stop)
+            return self.window
+
+        current_price = self.window[-1][CloseIDX]
+        if current_price is None:
+            for _ in range(4): self.AddColumn(None)
+            return self.window
+
+        # 1. FIND ANCHOR and DEFINE MATH
+        if direction.lower() == 'short':
+            # Find Highest High
+            slice_vals = [row[HighIDX] for row in self.window[-lookback:] if row[HighIDX] is not None]
+            if not slice_vals:
+                for _ in range(4): self.AddColumn(None); return self.window
+
+            anchor = max(slice_vals)
+
+            # Math: Shorting means Price < Anchor.
+            # We measure how much we have fallen (Contracting spiral).
+            # Diff is positive representing distance traveled downwards.
+            sqrt_anchor = math.sqrt(anchor)
+            sqrt_price = math.sqrt(current_price)
+            diff = sqrt_anchor - sqrt_price
+
+            # Logic: We are subtracting from the Anchor's root
+            math_op = -1
+        else:
+            # Default Long: Find Lowest Low
+            slice_vals = [row[LowIDX] for row in self.window[-lookback:] if row[LowIDX] is not None]
+            if not slice_vals:
+                self.AddColumn(None)
+                self.AddColumn(None)
+                self.AddColumn(None)
+                self.AddColumn(None)
+                return self.window
+
+            anchor = min(slice_vals)
+
+            # Math: Long means Price > Anchor
+            sqrt_anchor = math.sqrt(anchor)
+            sqrt_price = math.sqrt(current_price)
+            diff = sqrt_price - sqrt_anchor
+
+            # Logic: We are adding to the Anchor's root
+            math_op = 1
+
+        # 2. CALCULATE DEGREES
+        # 1.0 diff in Sqrt = 180 degrees
+        degrees_rotation = diff * 180.0
+
+        # 3. CALCULATE LEVELS
+        # Note: If diff is negative (Price broke below anchor for Long, or
+        # above anchor for Short), the math still holds but indicates
+        # trend failure.
+
+        # TARGET (Next 90 degrees)
+        # We look for the next 0.5 increment
+        turns = math.floor(diff / 0.5)
+        next_step_factor = (turns + 1) * 0.5
+
+        # Calculate Target Price
+        # Long: (SqrtAnchor + Factor)^2
+        # Short: (SqrtAnchor - Factor)^2
+        val_next = sqrt_anchor + (math_op * next_step_factor)
+        # Prevent math domain error (negative numbers) for shorts going to 0
+        if val_next < 0: val_next = 0
+        next_target = val_next ** 2
+
+        # TRAILING STOP (Major 180 degrees)
+        # We look for the completed 1.0 increment
+        support_step_factor = math.floor(diff / 1.0) * 1.0
+        val_support = sqrt_anchor + (math_op * support_step_factor)
+        if val_support < 0: val_support = 0
+        major_level = val_support ** 2
+
+        # 4. APPEND
+        self.AddColumn(anchor)
+        self.AddColumn(degrees_rotation)
+        self.AddColumn(next_target)
+        self.AddColumn(major_level)
+
+        return self.window
+
     ## Future indicator additions (No particular order)
 
     # Super Trend
