@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay Technical Analysis example
+
+# 2021-2025 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+import os
+import math
+import json
+import datetime
+import time
+
+import JackrabbitRelay as JRR
+import JRRtechnical as jrTA
+
+def main():
+#    ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',5000)
+    ta=jrTA.TechnicalAnalysis('oanda','CherryBlossom','GBP/AUD','M1',5000)
+    ohlcv=ta.GetOHLCV()
+
+    Period=14
+
+    Opening=1
+    HighIDX=2
+    LowIDX=3
+    Closing=4
+    Volume=5
+
+    for slice in ohlcv:
+        ta.Rolling(slice)
+
+        # Col 9 is the S/R line
+        ta.GannHiLoActivator(period=197)
+
+        # Price>1x1 line, col 13 here
+        ta.GannFan(direction='long')
+
+        # 16, target price, 17 trailing stop
+        ta.GannSquareOfNine(period=197,direction='long')
+
+        ta.Log(-1)
+
+if __name__=='__main__':
+    main()
+
+###
+### End demo
+###

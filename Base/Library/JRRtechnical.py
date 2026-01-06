@@ -2201,17 +2201,22 @@ class TechnicalAnalysis:
         curr_row = self.window[-1]
         close = curr_row[CloseIDX]
 
-        # We need to find the previous trend state. 
+        # We need to find the previous trend state.
         # Since this adds 4 columns, we look back 4 columns in the previous row.
         # If it's the first run, default to trend based on current close vs SMA.
         prev_trend_idx = len(prev_row) - 2 # Trend is the 3rd column added
 
-        if len(prev_row) > prev_trend_idx and prev_row[prev_trend_idx] is not None:
-            trend = prev_row[prev_trend_idx]
-        else:
-            # Initialize: If close > SMA_High, Bullish (1), else Bearish (-1)
-            trend = 1 if close > sma_high else -1
+#        if len(prev_row) > prev_trend_idx and prev_row[prev_trend_idx] is not None:
+#            trend = prev_row[prev_trend_idx]
+#        else:
+        # Initialize: If close > SMA_High, Bullish (1), else Bearish (-1)
+        trend=0
+        if close>sma_high:
+            trend=1
+        if close<sma_low:
+            trend=-1
 
+        """
         # 3. Update Trend Logic
         # If we were Bullish (1) and Close breaks below SMA_Low -> Flip to Bearish
         if trend == 1:
@@ -2221,7 +2226,7 @@ class TechnicalAnalysis:
         else:
             if close > sma_high:
                 trend = 1
-
+        """
         # 4. Determine the Activator Value (The line to plot)
         # If Bullish, the stop is the Low MA. If Bearish, the stop is the High MA.
         activator = sma_low if trend == 1 else sma_high
@@ -2241,8 +2246,8 @@ class TechnicalAnalysis:
     # direction: 'long' (Anchors to Low, targets Higher) 
     #            'short' (Anchors to High, targets Lower)
 
-    def GannSquareOfNine(self, HighIDX=2, LowIDX=3, CloseIDX=4, lookback=100, direction='long'):
-        if len(self.window) < lookback:
+    def GannSquareOfNine(self, HighIDX=2, LowIDX=3, CloseIDX=4, period=100, direction='long'):
+        if len(self.window) < period:
             self.AddColumn(None) # Anchor
             self.AddColumn(None) # Degrees
             self.AddColumn(None) # Next Level (Target)
@@ -2251,15 +2256,22 @@ class TechnicalAnalysis:
 
         current_price = self.window[-1][CloseIDX]
         if current_price is None:
-            for _ in range(4): self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
+            self.AddColumn(None)
             return self.window
 
         # 1. FIND ANCHOR and DEFINE MATH
         if direction.lower() == 'short':
             # Find Highest High
-            slice_vals = [row[HighIDX] for row in self.window[-lookback:] if row[HighIDX] is not None]
+            slice_vals = [row[HighIDX] for row in self.window[-period:] if row[HighIDX] is not None]
             if not slice_vals:
-                for _ in range(4): self.AddColumn(None); return self.window
+                self.AddColumn(None)
+                self.AddColumn(None)
+                self.AddColumn(None)
+                self.AddColumn(None)
+                return self.window
 
             anchor = max(slice_vals)
 
@@ -2274,7 +2286,7 @@ class TechnicalAnalysis:
             math_op = -1
         else:
             # Default Long: Find Lowest Low
-            slice_vals = [row[LowIDX] for row in self.window[-lookback:] if row[LowIDX] is not None]
+            slice_vals = [row[LowIDX] for row in self.window[-period:] if row[LowIDX] is not None]
             if not slice_vals:
                 self.AddColumn(None)
                 self.AddColumn(None)
