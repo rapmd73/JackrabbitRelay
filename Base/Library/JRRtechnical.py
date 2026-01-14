@@ -17,17 +17,21 @@ import json
 import datetime
 import time
 
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.subplots as ps
+
 import JackrabbitRelay as JRR
 
 class TechnicalAnalysis:
     def __init__(self, exchange, account, asset, timeframe, count=5000,length=16,precision=8):
-        self.Version='0.0.0.0.100'
+        self.Version='0.0.0.0.200'
         self.exchange = exchange
         self.account = account
         self.asset = asset
         self.tf = timeframe
         self.logname=f"{sys.argv[0]}.{self.exchange}.{self.account}.{self.asset.replace('/','')}.{self.tf}.log"
-        self.count = count+1 if count<5000 else 5000 # historical (count) + live candles
+        self.count = count+1
         self.length=length
         self.precision=precision
         self.Duplicate=False    # duplicate row received
@@ -138,6 +142,159 @@ class TechnicalAnalysis:
         if self.window and len(self.window)>0:
             self.window[-1].append(value) # Update the last slice with value
         return self.window
+
+    # Save an image of the chart from index.
+
+    def SaveChartImage(self, counter, length, store, visible, title=None,trades=[]):
+        """
+        Builds a frame for a 'market in motion' animation using forced HH/LL scaling.
+
+        Parameters:
+            counter (int): The current candle index (the right-most point).
+            length (int): How many candles to display in the window.
+            store (str): Directory to save the frame.
+            visible (list): Boolean list indicating which columns to plot.
+            trades (list): Open trades
+        """
+        # Ensure storage directory exists
+        if not os.path.exists(store):
+            os.makedirs(store, exist_ok=True)
+
+        # Numerical sequence padding (e.g., 000001.png) for video compilation
+        ChartName = f"{store}/{counter:012d}.png"
+
+        # Determine sliding window bounds
+        end = counter + 1
+        start = end - length
+        if start < 0: start = 0
+
+        ohlcv = self.window[start:end]
+        if not ohlcv or ohlcv[0][0] is None:
+            return
+
+        # Prepare Plotly data
+        dt = []
+        # Create a list of lists for each column in the matrix
+        pcol = [[] for _ in range(len(self.window[0]))]
+
+        for slice in ohlcv:
+            if slice[0] is None:
+                continue
+
+            # Format X-axis timestamp
+            dstr = datetime.datetime.fromtimestamp(int(slice[0]/1000), datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')
+            dt.append(dstr)
+
+            for i in range(1, len(slice)):
+                pcol[i].append(slice[i])
+
+        # Build the Figure
+        fig1 = ps.make_subplots(specs=[[{"secondary_y": False}]])
+
+        # 1. Add Candlesticks (Indices 1-4: O, H, L, C)
+        fig1.add_trace(go.Candlestick(
+            x=dt,
+            open=pcol[1],
+            high=pcol[2],
+            low=pcol[3],
+            close=pcol[4],
+            increasing_line_color='#26a69a',
+            decreasing_line_color='#ef5350',
+            name="Price" ), secondary_y=False)
+
+        # 2. Plot extra visible columns (Indicators/Signals)
+        # Skip OHLC (1-4) and HH/LL (5, 7) unless specifically desired in visible
+        for i in range(5, len(visible)):
+            if i < len(pcol) and visible[i]:
+                fig1.add_trace(go.Scatter(
+                    x=dt,
+                    y=pcol[i],
+                    mode='lines',
+                    line=dict(width=1.5),
+                    name=f"Col {i}" ), secondary_y=False)
+
+        # 3. Open Trades (Plotted as independent horizontal lines)
+        # We use a dashed blue line for trades to distinguish from indicators
+        for idx, entry_price in enumerate(trades):
+            if entry_price is not None:
+                fig1.add_trace(go.Scatter(
+                    x=dt,
+                    y=[abs(entry_price)] * len(dt), # Repeats price for every x-point
+                    mode='lines',
+                    line=dict(color='rgba(0, 120, 255, 0.8)', width=2, dash='dash'),
+                    name=f"Trade {idx+1}: {abs(entry_price)}" ), secondary_y=False)
+
+        # 4. Final Layout for Motion
+        Title = title if title else f"Market Motion | Frame {counter}"
+
+        fig1.update_layout(
+            title={"text": Title, "x": 0.5, "xanchor": "center"},
+            template='plotly_white',
+            showlegend=True,
+            xaxis_rangeslider_visible=False,
+            # Use 'category' to prevent weekend/gap jumps in the animation
+            xaxis=dict(type='category', nticks=10),
+            margin=dict(l=50, r=50, t=80, b=50),
+            width=1920,
+            height=1080 )
+
+        # Save the frame
+        fig1.write_image(ChartName)
+
+    """
+    def SaveChartImage(self,counter,length,store,visible,title=None):
+        ChartName=f"{store}/{counter}.png"
+
+        if not title:
+            Title="Chart (index: {counter}/{len(self.window)}"
+        else:
+            Title=title
+
+        pcol=[]         # Column to plot
+
+        start=counter-length
+        if start<0:
+            start=0
+        end=counter
+        if end>len(self.window):
+            end=len(self.window)
+
+        ohlcv=self.window[start:end]
+
+        dt=[]           # DateTime/Epoch/TimeStamp
+        for slice in ohlcv:
+            if slice[0] is None:
+                continue
+            dstr=datetime.datetime.fromtimestamp(int(slice[0]/1000),datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')
+            dt.append(dstr)
+        pcol.append(dt)
+
+        for i in range(1,len(visible)):
+            # Plot only the desired (visible) columns
+            if visible[i]:
+                pc=[]
+                for slice in ohlcv:
+                    if slice[0] is None:
+                        continue
+                    pc.append(slice[i])
+                pcol.append(pc)
+
+        # Build the chart
+        fig1=ps.make_subplots(specs=[[{"secondary_y":False}]])
+
+        # Build the candlesticks
+        fig1.add_trace(go.Candlestick(x=pcol[0],open=pcol[1],high=pcol[2],low=pcol[3],close=pcol[4],increasing_line_color='#a0ffff',decreasing_line_color= '#ffa0ff',name="Candlesticks"),secondary_y=False)
+
+        #Plot the rest of the visible columns
+        for i in range(5,len(pcol)):
+            fig1.add_trace(go.Scatter(x=pcol[0],y=pcol[i],mode='lines',name=f"Column {i}"),secondary_y=False)
+
+        fig1.update_yaxes(title_text='Price',secondary_y=False)
+        fig1.update_layout(title={"text":Title,"x":0.5,"xanchor":"center","yanchor":"top"},template='plotly_white',showlegend=True)
+        fig1.update(layout_xaxis_rangeslider_visible=False)
+
+        fig1.write_image(ChartName,width=1920,height=1024)
+    """
 
     # Reload the matrix
 
@@ -263,7 +420,8 @@ class TechnicalAnalysis:
 
     def GetOHLCV(self):
         try:
-            ohlcv=self.relay.GetOHLCV(symbol=self.asset,timeframe=self.tf, limit=self.count)
+            count = self.count+1 if self.count<5000 else 5000
+            ohlcv=self.relay.GetOHLCV(symbol=self.asset,timeframe=self.tf, limit=count)
         except Exception as err:
             print(err)
             # Return a blank padded window if fetch fails
