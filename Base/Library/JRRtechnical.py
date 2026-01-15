@@ -11,17 +11,24 @@
 import sys
 sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
 import os
+import gc
 import random
 import math
 import json
 import datetime
 import time
 
-import plotly.express as px
-import plotly.graph_objects as go
-import plotly.subplots as ps
+#import plotly.express as px
+#import plotly.graph_objects as go
+#import plotly.subplots as ps
+#from kaleido.scopes.plotly import PlotlyScope
+
+import matplotlib.pyplot as plt
+import matplotlib
 
 import JackrabbitRelay as JRR
+
+matplotlib.use('Agg')
 
 class TechnicalAnalysis:
     def __init__(self, exchange, account, asset, timeframe, count=5000,length=16,precision=8):
@@ -41,6 +48,8 @@ class TechnicalAnalysis:
         elif self.tf=='MIN':
             self.tf=self.relay.Timeframes[0]
         self.window = []
+#        self.scope = PlotlyScope()
+        self.fig,self.ax=plt.subplots(figsize=(19.2, 10.8), dpi=100) # 1920x1080
 
     # Conver timestamp to a readable date
 
@@ -137,7 +146,6 @@ class TechnicalAnalysis:
         return self.GetRow(-1)
 
     # Add a column to the rolling windows
-
     def AddColumn(self,value):
         if self.window and len(self.window)>0:
             self.window[-1].append(value) # Update the last slice with value
@@ -145,17 +153,128 @@ class TechnicalAnalysis:
 
     # Save an image of the chart from index.
 
-    def SaveChartImage(self, counter, length, store, visible, title=None,trades=[]):
+    def SaveChartImage(self, counter, length, store, visible, title=None, trades=[]):
         """
-        Builds a frame for a 'market in motion' animation using forced HH/LL scaling.
+        Matplotlib implementation that replicates the Plotly aesthetic.
+        """
+        ChartName = f"{store}/{counter:012d}.png"
+        if not os.path.exists(ChartName):
+            os.makedirs(store, exist_ok=True)
 
-        Parameters:
-            counter (int): The current candle index (the right-most point).
-            length (int): How many candles to display in the window.
-            store (str): Directory to save the frame.
-            visible (list): Boolean list indicating which columns to plot.
-            trades (list): Open trades
-        """
+        # 2. Window Slicing
+        end = counter + 1
+        start = max(0, end - length)
+        ohlcv = self.window[start:end]
+        if not ohlcv or ohlcv[0][0] is None:
+            return
+
+        # 3. Reset and Style the Axis (The Plotly 'White' Look)
+        self.ax.clear()
+        self.ax.xaxis.set_visible(True)
+        self.ax.yaxis.set_visible(True)
+
+        self.ax.set_facecolor('white')
+        self.fig.subplots_adjust(bottom=0.12, top=0.92, left=0.06, right=0.95)
+        self.ax.grid(True, color='#E5E5E5', linestyle='-', linewidth=0.5, zorder=0)
+
+        # Show a neat box around the chart (similar to TV)
+        self.ax.spines['top'].set_color('#888888')
+        self.ax.spines['right'].set_color('#888888')
+        self.ax.spines['left'].set_color('#888888')
+        self.ax.spines['bottom'].set_color('#888888')
+
+        # 4. Draw Candlesticks (Optimized using vlines)
+        # Plotly Standard Colors
+        up_color = '#26a69a'
+        down_color = '#ef5350'
+
+        dt = []
+        indices = range(len(ohlcv))
+        for i, row in enumerate(ohlcv):
+            # Format X-axis timestamp
+            dstr = datetime.datetime.fromtimestamp(int(row[0]/1000), datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')
+            dt.append(dstr)
+            # Build candles
+            o, h, l, c = row[1], row[2], row[3], row[4]
+            color = up_color if c > o else down_color
+
+            # Wick
+            self.ax.vlines(i, l, h, color=color, linewidth=1.5, zorder=1)
+            # Body (Thick vline is 10x faster than drawing rectangles)
+            self.ax.vlines(i, o, c, color=color, linewidth=8, zorder=1)
+
+        # 5. Draw Indicators
+        for i in range(5, len(visible)):
+            if i < len(ohlcv[-1]) and visible[i]:
+                # Extract indicator column for the current slice
+                data = [r[i] for r in ohlcv]
+                self.ax.plot(indices, data, linewidth=1, label=f"Col {i}", zorder=2)
+
+        # 6. Open Trades (Dashed Blue Lines)
+        for idx, entry_price in enumerate(trades):
+            if entry_price is not None:
+                label_str = f"Trade {idx+1}: {abs(entry_price):.{self.precision}f}"
+
+                self.ax.axhline(y=abs(entry_price), color='#0078FF',
+                                linestyle='-', linewidth=0.5, alpha=0.7,
+                                label=label_str, zorder=3)
+
+        # Force the axis line and labels to be visible
+        self.ax.spines['bottom'].set_visible(True)
+        self.ax.spines['bottom'].set_color('#333333')
+
+        # Pick indices for labels (e.g., 8 labels)
+        num_visible = len(dt)
+        nticks = 8
+        if num_visible >= 2:
+            tick_indices = [int(i * (num_visible - 1) / (nticks - 1)) for i in range(nticks)]
+            tick_labels = [dt[i] for i in tick_indices]
+
+            self.ax.set_xticks(tick_indices)
+            self.ax.set_xticklabels(tick_labels, fontsize=10, color='black', rotation=0, visible=True)
+
+            # Explicitly enable tick marks and labels
+            self.ax.tick_params(axis='x', which='both', bottom=True, labelbottom=True, labelcolor='black', labelsize=10, length=5)
+
+        # Ensure the x-axis limits are strictly pinned to the window size
+        self.ax.set_xlim(-0.5, num_visible - 0.5)
+
+        # 8. Title and Formatting
+        title_str = title if title else f"Market Motion | Frame {counter}"
+        self.ax.set_title(title_str, fontsize=16, color='#333333', pad=20, fontweight='bold')
+
+        # 9. Draw the Legend
+        handles, labels = self.ax.get_legend_handles_labels()
+        if labels:
+            # Replicating Plotly's clean, floating legend
+            self.ax.legend(
+                loc='upper left',
+                fontsize=9,
+                frameon=True,
+                facecolor='white',
+                edgecolor='#E5E5E5',
+                shadow=False,
+                framealpha=0.9
+            )
+
+        # Fast Save
+        # 'canvas.print_png' is the lowest-level, fastest way to save
+        self.fig.tight_layout(pad=3.0)
+        self.fig.subplots_adjust(bottom=0.25, left=0.10, right=0.95, top=0.90)
+        self.fig.savefig(ChartName, format='png', metadata={'Software': 'JackrabbitRelay'})
+
+    """
+    def SaveChartImage(self, counter, length, store, visible, title=None,trades=[]):
+#        " " "
+#        Builds a frame for a 'market in motion' animation using forced HH/LL scaling.
+#
+#        Parameters:
+#            counter (int): The current candle index (the right-most point).
+#            length (int): How many candles to display in the window.
+#            store (str): Directory to save the frame.
+#            visible (list): Boolean list indicating which columns to plot.
+#            trades (list): Open trades
+#        " " "
         # Ensure storage directory exists
         if not os.path.exists(store):
             os.makedirs(store, exist_ok=True)
@@ -175,7 +294,7 @@ class TechnicalAnalysis:
         # Prepare Plotly data
         dt = []
         # Create a list of lists for each column in the matrix
-        pcol = [[] for _ in range(len(self.window[0]))]
+        pcol = [[] for _ in range(len(self.window[-1]))]
 
         for slice in ohlcv:
             if slice[0] is None:
@@ -239,61 +358,15 @@ class TechnicalAnalysis:
             height=1080 )
 
         # Save the frame
-        fig1.write_image(ChartName)
+        #fig1.write_image(ChartName)
+        img_bytes = scope.transform(fig1, format="png") 
+        with open(ChartName,"wb") as f:
+            f.write(img_bytes)
 
-    """
-    def SaveChartImage(self,counter,length,store,visible,title=None):
-        ChartName=f"{store}/{counter}.png"
-
-        if not title:
-            Title="Chart (index: {counter}/{len(self.window)}"
-        else:
-            Title=title
-
-        pcol=[]         # Column to plot
-
-        start=counter-length
-        if start<0:
-            start=0
-        end=counter
-        if end>len(self.window):
-            end=len(self.window)
-
-        ohlcv=self.window[start:end]
-
-        dt=[]           # DateTime/Epoch/TimeStamp
-        for slice in ohlcv:
-            if slice[0] is None:
-                continue
-            dstr=datetime.datetime.fromtimestamp(int(slice[0]/1000),datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')
-            dt.append(dstr)
-        pcol.append(dt)
-
-        for i in range(1,len(visible)):
-            # Plot only the desired (visible) columns
-            if visible[i]:
-                pc=[]
-                for slice in ohlcv:
-                    if slice[0] is None:
-                        continue
-                    pc.append(slice[i])
-                pcol.append(pc)
-
-        # Build the chart
-        fig1=ps.make_subplots(specs=[[{"secondary_y":False}]])
-
-        # Build the candlesticks
-        fig1.add_trace(go.Candlestick(x=pcol[0],open=pcol[1],high=pcol[2],low=pcol[3],close=pcol[4],increasing_line_color='#a0ffff',decreasing_line_color= '#ffa0ff',name="Candlesticks"),secondary_y=False)
-
-        #Plot the rest of the visible columns
-        for i in range(5,len(pcol)):
-            fig1.add_trace(go.Scatter(x=pcol[0],y=pcol[i],mode='lines',name=f"Column {i}"),secondary_y=False)
-
-        fig1.update_yaxes(title_text='Price',secondary_y=False)
-        fig1.update_layout(title={"text":Title,"x":0.5,"xanchor":"center","yanchor":"top"},template='plotly_white',showlegend=True)
-        fig1.update(layout_xaxis_rangeslider_visible=False)
-
-        fig1.write_image(ChartName,width=1920,height=1024)
+        del fig1
+        fig1=None
+        self.scope._shutdown_kaleido()
+        gc.collect()
     """
 
     # Reload the matrix
