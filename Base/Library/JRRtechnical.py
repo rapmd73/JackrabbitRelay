@@ -18,13 +18,11 @@ import json
 import datetime
 import time
 
-#import plotly.express as px
-#import plotly.graph_objects as go
-#import plotly.subplots as ps
-#from kaleido.scopes.plotly import PlotlyScope
-
-import matplotlib.pyplot as plt
 import matplotlib
+import matplotlib.pyplot as plt
+plt.rcParams['animation.ffmpeg_path']='/usr/bin/ffmpeg'
+import matplotlib.animation as animation
+import matplotlib.ticker as mticker
 
 import JackrabbitRelay as JRR
 
@@ -48,8 +46,8 @@ class TechnicalAnalysis:
         elif self.tf=='MIN':
             self.tf=self.relay.Timeframes[0]
         self.window = []
-#        self.scope = PlotlyScope()
         self.fig,self.ax=plt.subplots(figsize=(19.2, 10.8), dpi=100) # 1920x1080
+        self.ImageNumber=0
 
     # Conver timestamp to a readable date
 
@@ -153,16 +151,15 @@ class TechnicalAnalysis:
 
     # Save an image of the chart from index.
 
-    def SaveChartImage(self, counter, length, store, visible, title=None, trades=[]):
-        """
-        Matplotlib implementation that replicates the Plotly aesthetic.
-        """
-        ChartName = f"{store}/{counter:012d}.png"
-        if not os.path.exists(ChartName):
-            os.makedirs(store, exist_ok=True)
+    def SaveChart(self, length=0, store=None, visible=[], title=None, trades=[], writer=None):
+        ChartName=None
+        if store is not None:
+            ChartName = f"{store}/{self.ImageNumber:012d}.png"
+            if not os.path.exists(ChartName):
+                os.makedirs(store, exist_ok=True)
 
         # 2. Window Slicing
-        end = counter + 1
+        end = len(self.window)
         start = max(0, end - length)
         ohlcv = self.window[start:end]
         if not ohlcv or ohlcv[0][0] is None:
@@ -182,6 +179,8 @@ class TechnicalAnalysis:
         self.ax.spines['right'].set_color('#888888')
         self.ax.spines['left'].set_color('#888888')
         self.ax.spines['bottom'].set_color('#888888')
+        self.ax.yaxis.set_major_formatter(mticker.FormatStrFormatter('%.5f'))
+        self.ax.yaxis.set_major_locator(mticker.MaxNLocator(nbins=20))
 
         # 4. Draw Candlesticks (Optimized using vlines)
         # Plotly Standard Colors
@@ -201,46 +200,49 @@ class TechnicalAnalysis:
             # Wick
             self.ax.vlines(i, l, h, color=color, linewidth=1.5, zorder=1)
             # Body (Thick vline is 10x faster than drawing rectangles)
-            self.ax.vlines(i, o, c, color=color, linewidth=8, zorder=1)
+            self.ax.vlines(i, o, c, color=color, linewidth=8, zorder=2)
 
         # 5. Draw Indicators
+        self.ax.tick_params(axis='y', which="both", labelsize=10, color='#333333',left=True,labelleft=True,right=True,labelright=True)
         for i in range(5, len(visible)):
             if i < len(ohlcv[-1]) and visible[i]:
                 # Extract indicator column for the current slice
                 data = [r[i] for r in ohlcv]
-                self.ax.plot(indices, data, linewidth=1, label=f"Col {i}", zorder=2)
+                self.ax.plot(indices, data, linewidth=1, label=f"Col {i}", zorder=3)
 
-        # 6. Open Trades (Dashed Blue Lines)
+        # 6. Open Trades (Blue Lines)
+        total_trades = len(trades)
         for idx, entry_price in enumerate(trades):
             if entry_price is not None:
-                label_str = f"Trade {idx+1}: {abs(entry_price):.{self.precision}f}"
+                if idx>=total_trades-10:
+                    label_str=f"Trade {idx+1}: {abs(entry_price):.{self.precision}f}"
+                else:
+                    label_str=f"_Trade {idx+1}: {abs(entry_price):.{self.precision}f}"
 
                 self.ax.axhline(y=abs(entry_price), color='#0078FF',
                                 linestyle='-', linewidth=0.5, alpha=0.7,
-                                label=label_str, zorder=3)
+                                label=label_str, zorder=4)
 
-        # Force the axis line and labels to be visible
+        # 7. Force the axis line and labels to be visible
+        self.ax.spines['top'].set_visible(False)
         self.ax.spines['bottom'].set_visible(True)
-        self.ax.spines['bottom'].set_color('#333333')
+        self.ax.tick_params(axis='x', which='both', bottom=True, labelbottom=True, top=True, labeltop=True, labelcolor='black', labelsize=10, length=5)
 
-        # Pick indices for labels (e.g., 8 labels)
+        # Pick indices for X labels (e.g., 8 labels)
         num_visible = len(dt)
         nticks = 8
         if num_visible >= 2:
-            tick_indices = [int(i * (num_visible - 1) / (nticks - 1)) for i in range(nticks)]
-            tick_labels = [dt[i] for i in tick_indices]
+            tick_indices=[int(i * (num_visible-1) / (nticks-1)) for i in range(nticks)]
+            tick_labels=[dt[i] for i in tick_indices]
 
             self.ax.set_xticks(tick_indices)
             self.ax.set_xticklabels(tick_labels, fontsize=10, color='black', rotation=0, visible=True)
-
-            # Explicitly enable tick marks and labels
-            self.ax.tick_params(axis='x', which='both', bottom=True, labelbottom=True, labelcolor='black', labelsize=10, length=5)
 
         # Ensure the x-axis limits are strictly pinned to the window size
         self.ax.set_xlim(-0.5, num_visible - 0.5)
 
         # 8. Title and Formatting
-        title_str = title if title else f"Market Motion | Frame {counter}"
+        title_str = title if title else f"Market Motion | Frame {self.ImageNumber}"
         self.ax.set_title(title_str, fontsize=16, color='#333333', pad=20, fontweight='bold')
 
         # 9. Draw the Legend
@@ -260,114 +262,21 @@ class TechnicalAnalysis:
         # Fast Save
         # 'canvas.print_png' is the lowest-level, fastest way to save
         self.fig.tight_layout(pad=3.0)
-        self.fig.subplots_adjust(bottom=0.25, left=0.10, right=0.95, top=0.90)
-        self.fig.savefig(ChartName, format='png', metadata={'Software': 'JackrabbitRelay'})
+        self.fig.subplots_adjust(bottom=0.10, left=0.10, right=0.90, top=0.95)
 
-    """
-    def SaveChartImage(self, counter, length, store, visible, title=None,trades=[]):
-#        " " "
-#        Builds a frame for a 'market in motion' animation using forced HH/LL scaling.
-#
-#        Parameters:
-#            counter (int): The current candle index (the right-most point).
-#            length (int): How many candles to display in the window.
-#            store (str): Directory to save the frame.
-#            visible (list): Boolean list indicating which columns to plot.
-#            trades (list): Open trades
-#        " " "
-        # Ensure storage directory exists
-        if not os.path.exists(store):
-            os.makedirs(store, exist_ok=True)
+        # Save the image.
+        if ChartName is not None:
+            self.fig.savefig(ChartName, format='png', metadata={'Software': 'JackrabbitRelay'})
+            self.ImageNumber+=1
 
-        # Numerical sequence padding (e.g., 000001.png) for video compilation
-        ChartName = f"{store}/{counter:012d}.png"
+        # Save the MP4 frame
+        if writer is not None:
+            self.fig.canvas.draw()
+            writer.grab_frame()
 
-        # Determine sliding window bounds
-        end = counter + 1
-        start = end - length
-        if start < 0: start = 0
-
-        ohlcv = self.window[start:end]
-        if not ohlcv or ohlcv[0][0] is None:
-            return
-
-        # Prepare Plotly data
-        dt = []
-        # Create a list of lists for each column in the matrix
-        pcol = [[] for _ in range(len(self.window[-1]))]
-
-        for slice in ohlcv:
-            if slice[0] is None:
-                continue
-
-            # Format X-axis timestamp
-            dstr = datetime.datetime.fromtimestamp(int(slice[0]/1000), datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')
-            dt.append(dstr)
-
-            for i in range(1, len(slice)):
-                pcol[i].append(slice[i])
-
-        # Build the Figure
-        fig1 = ps.make_subplots(specs=[[{"secondary_y": False}]])
-
-        # 1. Add Candlesticks (Indices 1-4: O, H, L, C)
-        fig1.add_trace(go.Candlestick(
-            x=dt,
-            open=pcol[1],
-            high=pcol[2],
-            low=pcol[3],
-            close=pcol[4],
-            increasing_line_color='#26a69a',
-            decreasing_line_color='#ef5350',
-            name="Price" ), secondary_y=False)
-
-        # 2. Plot extra visible columns (Indicators/Signals)
-        # Skip OHLC (1-4) and HH/LL (5, 7) unless specifically desired in visible
-        for i in range(5, len(visible)):
-            if i < len(pcol) and visible[i]:
-                fig1.add_trace(go.Scatter(
-                    x=dt,
-                    y=pcol[i],
-                    mode='lines',
-                    line=dict(width=1.5),
-                    name=f"Col {i}" ), secondary_y=False)
-
-        # 3. Open Trades (Plotted as independent horizontal lines)
-        # We use a dashed blue line for trades to distinguish from indicators
-        for idx, entry_price in enumerate(trades):
-            if entry_price is not None:
-                fig1.add_trace(go.Scatter(
-                    x=dt,
-                    y=[abs(entry_price)] * len(dt), # Repeats price for every x-point
-                    mode='lines',
-                    line=dict(color='rgba(0, 120, 255, 0.8)', width=2, dash='dash'),
-                    name=f"Trade {idx+1}: {abs(entry_price)}" ), secondary_y=False)
-
-        # 4. Final Layout for Motion
-        Title = title if title else f"Market Motion | Frame {counter}"
-
-        fig1.update_layout(
-            title={"text": Title, "x": 0.5, "xanchor": "center"},
-            template='plotly_white',
-            showlegend=True,
-            xaxis_rangeslider_visible=False,
-            # Use 'category' to prevent weekend/gap jumps in the animation
-            xaxis=dict(type='category', nticks=10),
-            margin=dict(l=50, r=50, t=80, b=50),
-            width=1920,
-            height=1080 )
-
-        # Save the frame
-        #fig1.write_image(ChartName)
-        img_bytes = scope.transform(fig1, format="png") 
-        with open(ChartName,"wb") as f:
-            f.write(img_bytes)
-
-        del fig1
-        fig1=None
-        self.scope._shutdown_kaleido()
-        gc.collect()
-    """
+        # Clean the house
+        if (self.ImageNumber%723)==0:
+            gc.collect()
 
     # Reload the matrix
 
