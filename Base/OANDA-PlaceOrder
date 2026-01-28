@@ -90,10 +90,10 @@ def LowestLotSize(relay,asset,units,step):
 
     usedSize=[]
     for trade in openTrades:
-        t=abs(int(trade['currentUnits']))
+        t=abs(float(trade['currentUnits']))
         if t not in usedSize:
             usedSize.append(t)
-        t=abs(int(trade['initialUnits']))
+        t=abs(float(trade['initialUnits']))
         if t not in usedSize:
             usedSize.append(t)
     usedSize=sorted(usedSize)
@@ -119,7 +119,7 @@ def HighestLotSize(relay,asset,units,step):
     highestSize=abs(units)
 
     for trade in openTrades:
-        cunits=abs(int(trade['currentUnits']))
+        cunits=abs(float(trade['currentUnits']))
         if highestSize<=cunits:
             highestSize=cunits+step
 
@@ -136,7 +136,7 @@ def GetTicket(relay,asset,tid,amount):
 
     for trade in openTrades:
         if trade['id']==tid:
-            return int(trade['currentUnits'])
+            return float(trade['currentUnits'])
 
     return amount
 
@@ -280,12 +280,12 @@ def main():
     else:
         if '%%' in relay.Order['Units'] or '%m' in relay.Order['Units']:
             price=(ticker['Ask']+ticker['Bid'])/2
-            amount=int(GetPCTamount(relay,price,margin=True))
+            amount=float(GetPCTamount(relay,price,margin=True))
         elif '%' in relay.Order['Units'] or '%b' in relay.Order['Units']:
             price=(ticker['Ask']+ticker['Bid'])/2
-            amount=int(GetPCTamount(relay,price))
+            amount=float(GetPCTamount(relay,price))
         else:
-            amount=int(relay.Order['Units'].split('.')[0])
+            amount=float(relay.Order['Units'])
 
         # Make sure minimum is enforced. Negative is for short.
 
@@ -367,7 +367,7 @@ def main():
     # Check and manage FIFO rule
     if 'EnforceFIFO' in relay.Active or 'EnforceFIFO' in relay.Order:
         if 'Step' in relay.Order:
-            step=int(relay.Order['Step'])
+            step=float(relay.Order['Step'])
         else:
             step=1
 

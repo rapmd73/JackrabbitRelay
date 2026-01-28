@@ -186,10 +186,10 @@ class oanda:
                 if symbol==asset:
                     self.SetPipValue(symbol)
                     if 'averagePrice' in pos['long']:
-                        units=int(pos['long']['units'])
+                        units=float(pos['long']['units'])
                         position=float(pos['long']['averagePrice'])*units
                     else: # shorts already negative
-                        units=int(pos['short']['units'])
+                        units=float(pos['short']['units'])
                         position=(float(pos['short']['averagePrice']))*units
                     # Access the Results to get units
                     self.Results['Units']=units
@@ -371,11 +371,11 @@ class oanda:
             if ticket==None:
                 if 'ALL' not in str(amount).upper():
                     # amount is STR, need int for abs()
-                    amount=int(amount)
+                    amount=float(amount)
                     if amount>=0:
-                        params['longUnits']=str(int(abs(amount)))
+                        params['longUnits']=str(float(abs(amount)))
                     else:
-                        params['shortUnits']=str(int(abs(amount)))
+                        params['shortUnits']=str(float(abs(amount)))
                 else:
                     if '-' in str(amount):
                         params['shortUnits']="ALL"
@@ -408,9 +408,9 @@ class oanda:
             else:
                 if 'ALL' not in str(amount).upper():
                     # amount is STR, need float for abs()
-                    amount=int(amount)
+                    amount=float(amount)
                     if float(amount)>=0:
-                        params['units']=str(math.floor(abs(amount)))
+                        params['units']=str(abs(amount))
                 else:
                     if '-' in str(amount):
                         params['shortUnits']="ALL"
