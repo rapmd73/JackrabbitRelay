@@ -30,7 +30,7 @@ matplotlib.use('Agg')
 
 class TechnicalAnalysis:
     def __init__(self, exchange, account, asset, timeframe, count=5000,length=16,precision=8):
-        self.Version='0.0.0.0.200'
+        self.Version='0.0.0.0.1100'
         self.exchange = exchange
         self.account = account
         self.asset = asset
@@ -151,7 +151,7 @@ class TechnicalAnalysis:
 
     # Save an image of the chart from index.
 
-    def SaveChart(self, length=0, store=None, visible=[], title=None, trades=[], writer=None):
+    def SaveChart(self, length=0, store=None, visible=[], title=None, subtitle=None, trades=[], labels=[], writer=None):
         ChartName=None
         if store is not None:
             ChartName = f"{store}/{self.ImageNumber:012d}.png"
@@ -171,7 +171,7 @@ class TechnicalAnalysis:
         self.ax.yaxis.set_visible(True)
 
         self.ax.set_facecolor('white')
-        self.fig.subplots_adjust(bottom=0.12, top=0.92, left=0.06, right=0.95)
+        self.fig.subplots_adjust(bottom=0.12, top=0.90, left=0.10, right=0.95)
         self.ax.grid(True, color='#E5E5E5', linestyle='-', linewidth=0.5, zorder=0)
 
         # Show a neat box around the chart (similar to TV)
@@ -208,7 +208,11 @@ class TechnicalAnalysis:
             if i < len(ohlcv[-1]) and visible[i]:
                 # Extract indicator column for the current slice
                 data = [r[i] for r in ohlcv]
-                self.ax.plot(indices, data, linewidth=1, label=f"Col {i}", zorder=3)
+                if labels!=[] and i<len(labels) and labels[i] is not None:
+                    labelstr=f"{labels[i]}({i})"
+                else:
+                    labelstr=f"Col {i}"
+                self.ax.plot(indices, data, linewidth=1, label=labelstr, zorder=3)
 
         # 6. Open Trades (Blue Lines)
         total_trades = len(trades)
@@ -245,6 +249,11 @@ class TechnicalAnalysis:
         title_str = title if title else f"Market Motion | Frame {self.ImageNumber}"
         self.ax.set_title(title_str, fontsize=16, color='#333333', pad=20, fontweight='bold')
 
+        if subtitle:
+            # (0.5, 1.03) means centered horizontally (0.5) and 3% above the top of the
+            # chart box (1.03)
+            self.ax.text(0.5, 1.03, subtitle, transform=self.ax.transAxes, ha='center', va='bottom', fontsize=11, color='#666666', fontweight='normal')
+
         # 9. Draw the Legend
         handles, labels = self.ax.get_legend_handles_labels()
         if labels:
@@ -262,17 +271,18 @@ class TechnicalAnalysis:
         # Fast Save
         # 'canvas.print_png' is the lowest-level, fastest way to save
         self.fig.tight_layout(pad=3.0)
-        self.fig.subplots_adjust(bottom=0.10, left=0.10, right=0.90, top=0.95)
+        self.fig.subplots_adjust(bottom=0.10, left=0.10, right=0.90, top=0.90)
 
         # Save the image.
         if ChartName is not None:
             self.fig.savefig(ChartName, format='png', metadata={'Software': 'JackrabbitRelay'})
-            self.ImageNumber+=1
 
         # Save the MP4 frame
         if writer is not None:
             self.fig.canvas.draw()
             writer.grab_frame()
+
+        self.ImageNumber+=1
 
         # Clean the house
         if (self.ImageNumber%723)==0:

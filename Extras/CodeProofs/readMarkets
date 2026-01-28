@@ -39,6 +39,7 @@ if relay.GetFramework()=='oanda':
     for cur in markets:
         asset=markets[cur]['displayName']
         print(f'{asset:12}')
+        print(markets[cur])
 elif relay.GetFramework()=='ccxt':
     for cur in markets:
         asset=markets[cur]['symbol']
