@@ -453,8 +453,8 @@ class oanda:
         self.SetPipValue(symbol)
 
         minimum=1
-        if 'minimumTradeSize' in self.Markets[asset.replace('_','/')]:
-            minimum=float(self.Markets[asset.replace('_','/')]['minimumTradeSize'])
+        if 'minimumTradeSize' in self.Markets[symbol.replace('_','/')]:
+            minimum=float(self.Markets[symbol.replace('_','/')]['minimumTradeSize'])
         mincost=self.GetTicker(symbol=symbol)['Ask']
         return minimum,mincost
 

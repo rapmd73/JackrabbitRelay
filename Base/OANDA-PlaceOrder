@@ -378,7 +378,10 @@ def main():
 
     # amount is a number, calculate total, otherwise amount will=ALL, use balance.
 
-    if type(amount) is int:
+    if 'tradeUnitsPrecision' in relay.Markets[relay.Asset]:
+        amount=round(amount,relay.Markets[relay.Asset]['tradeUnitsPrecision'])
+
+    if type(amount) is float:
         total=abs(round(amount*price,5))
     else:
         total=abs(pBalance)
@@ -386,10 +389,10 @@ def main():
     # Figure out trade direction
 
     if (type(amount) is str and amount.upper()=='ALL' and pBalance>=0) \
-    or (type(amount) is int and amount>=0):
+    or (type(amount) is float and amount>=0):
         dir='Long'
     elif (type(amount) is str and amount.upper()=='ALL' and pBalance<0) \
-    or (type(amount) is int and amount<0):
+    or (type(amount) is float and amount<0):
         dir='Short'
 
     # Logging notification
@@ -399,7 +402,7 @@ def main():
     relay.JRLog.Write(f"|- Action: {relay.Order['Action']}")
     if 'Ticket' in relay.Order:
         relay.JRLog.Write(f"|- Ticket: {relay.Order['Ticket']}")
-    if type(amount) is int:
+    if type(amount) is float:
         relay.JRLog.Write(f"|- Units: {abs(amount):.8f} {dir}")
     else:
         relay.JRLog.Write(f"|- Units: {amount} {dir}")
@@ -408,7 +411,7 @@ def main():
 
     # Place the order
 
-    if (type(amount) is int and amount!=0) \
+    if (type(amount) is float and amount!=0) \
     or (type(amount) is str and amount.upper()=='ALL'):
         lNote=None
         if 'LedgerNote' in relay.Order:
