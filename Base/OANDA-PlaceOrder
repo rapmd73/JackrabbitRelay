@@ -378,8 +378,8 @@ def main():
 
     # amount is a number, calculate total, otherwise amount will=ALL, use balance.
 
-    if 'tradeUnitsPrecision' in relay.Markets[relay.Asset]:
-        amount=round(amount,relay.Markets[relay.Asset]['tradeUnitsPrecision'])
+    if type(amount) is float and 'tradeUnitsPrecision' in relay.Markets[relay.Asset]:
+        amount=round(amount,float(relay.Markets[relay.Asset]['tradeUnitsPrecision']))
 
     if type(amount) is float:
         total=abs(round(amount*price,5))
