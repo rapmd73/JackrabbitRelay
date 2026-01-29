@@ -326,9 +326,9 @@ def main():
     relay.JRLog.Write(f"Previous Balance: {abs(pBalance):.8f} {base}")
 
     # If the amount is less then the minimum and action is to close. Sell opens
-    # a short position.
+    # a short position. Minimum could be a fractional amount.
 
-    if abs(pBalance)<mincost and relay.Order['Action'].lower()=='close':
+    if abs(pBalance)<(mincost*minimum) and relay.Order['Action'].lower()=='close':
         relay.JRLog.Error(relay.Exchange, "not enough to sell/close position")
 
     # Check if we close on sell
@@ -354,11 +354,11 @@ def main():
         if pBalance>0:    # Long Position
             relay.Order['Action']='sell'
             relay.JRLog.Write(f"Forcing direction to {relay.Order['Action']}")
-            amount=units  #int(pBalance/price)
+            amount=units
         elif pBalance<0:  # Short Position
             relay.Order['Action']='buy'
             relay.JRLog.Write(f"Forcing direction to {relay.Order['Action']}")
-            amount=units #int(pBalance/price)
+            amount=units
     elif relay.Order['Action'].lower()=='sell' \
      and ((amount<0 and amount<units) or (amount>0 and amount>units)):
         # Make ure units is in range of what we actually hold
