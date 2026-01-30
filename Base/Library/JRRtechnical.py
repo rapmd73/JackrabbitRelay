@@ -30,7 +30,7 @@ matplotlib.use('Agg')
 
 class TechnicalAnalysis:
     def __init__(self, exchange, account, asset, timeframe, count=5000,length=16,precision=8):
-        self.Version='0.0.0.0.1107'
+        self.Version='0.0.0.0.1110'
         self.exchange = exchange
         self.account = account
         self.asset = asset
