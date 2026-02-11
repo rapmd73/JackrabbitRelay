@@ -604,6 +604,68 @@ class TechnicalAnalysis:
 
         return self.window
 
+    # Rule 37
+
+    # Imagine a smooth, winding road going up and down a series of hills. Most
+    # people focus on the individual footsteps of a hiker on that road, which
+    # are messy, jagged, and jump all over the place. Rule 37 ignores those
+    # erratic footsteps and looks only at the actual curve of the road itself.
+    # It asks a single, simple question: "In this exact moment, is the road
+    # tilting upward toward the sky or downward toward the valley?" By focusing
+    # on the shape of the path rather than the noise of the hiker, you get a
+    # much clearer and calmer picture of where the journey is truly heading.
+
+    # To keep things organized, Rule 37 uses two specific numbers to describe
+    # the direction of this road: Seven and Three. Think of Seven as the
+    # "Ladder." Whenever the road is tilting up, even by a tiny amount, the
+    # system labels it as a Seven. Think of Three as the "Slide." Whenever the
+    # road begins to tilt down, the system labels it as a Three. These numbers
+    # don't represent the price or the value of what you are trading; they
+    # simply act as a directional compass telling you if the current momentum
+    # is pushing you uphill or pulling you downhill.
+
+    # The real power of Rule 37 happens at the "Flip," which is the exact
+    # moment the road changes its mind. If you have been sliding down in a
+    # state of Three and the road suddenly levels out and starts to point back
+    # up into a state of Seven, you have found the bottom of a "Valley." Rule
+    # 37 recognizes this instant change and triggers a signal. This is a
+    # crucial moment because it mathematically identifies that the downward
+    # momentum has died and a new upward climb has just begun. It allows you to
+    # catch the very first inch of that new direction.
+
+    # Conversely, if you have been climbing a long hill in a state of Seven and
+    # the road reaches a crest and starts to tilt back down into a state of
+    # Three, you have found the "Peak." In a standard market, this is the
+    # warning to get out before the slide begins. In a "Short" market, where
+    # you profit as things fall, this peak is your perfect entry point. While
+    # most other trading tools wait for two different lines to cross over each
+    # other like a slow-moving "X," Rule 37 is much faster. It doesn't wait for
+    # a crossover; it simply watches for the bend in the curve, allowing you to
+    # catch the turn before the rest of the market even realizes the hill has
+    # ended.
+
+    def Rule37(self, MA_IDX):
+        if len(self.window)<3:
+            self.AddColumn(5)
+            return self.window
+        if len(self.window[-1])<=MA_IDX or len(self.window[-2])<=MA_IDX or len(self.window[-3])<=MA_IDX:
+            self.AddColumn(5)
+            return self.window
+        if not self.window[-1][MA_IDX] or not self.window[-2][MA_IDX] or not self.window[-3][MA_IDX]:
+            self.AddColumn(5)
+            return self.window
+
+        # 1. Get States (r37 = SMA(-1) > SMA(-2) ? 7 : 3)
+        s1 = 7 if self.window[-1][MA_IDX] > self.window[-2][MA_IDX] else 3
+        s2 = 7 if self.window[-2][MA_IDX] > self.window[-3][MA_IDX] else 3
+
+        # 2. Detect Flip (7->3 is a Peak/Short, 3->7 is a Valley/Long)
+        # Short Entry (7) if it just peaked; Long Entry (3) if it just bottomed; else 5.
+        res = 7 if s2 > s1 else (3 if s1 > s2 else 5)
+
+        self.AddColumn(res)
+        return self.window
+
     # Calculate a simple moving average
 
     def SMA(self,idx,period=17):
