@@ -648,22 +648,15 @@ class TechnicalAnalysis:
         if len(self.window)<3:
             self.AddColumn(5)
             return self.window
-        if len(self.window[-1])<=MA_IDX or len(self.window[-2])<=MA_IDX or len(self.window[-3])<=MA_IDX:
+        if len(self.window[-1])<MA_IDX or len(self.window[-2])<MA_IDX:
             self.AddColumn(5)
             return self.window
-        if not self.window[-1][MA_IDX] or not self.window[-2][MA_IDX] or not self.window[-3][MA_IDX]:
+        if self.window[-1][MA_IDX] is None or self.window[-2][MA_IDX] is None:
             self.AddColumn(5)
             return self.window
 
-        # 1. Get States (r37 = SMA(-1) > SMA(-2) ? 7 : 3)
-        s1 = 7 if self.window[-1][MA_IDX] > self.window[-2][MA_IDX] else 3
-        s2 = 7 if self.window[-2][MA_IDX] > self.window[-3][MA_IDX] else 3
-
-        # 2. Detect Flip (7->3 is a Peak/Short, 3->7 is a Valley/Long)
-        # Short Entry (7) if it just peaked; Long Entry (3) if it just bottomed; else 5.
-        res = 7 if s2 > s1 else (3 if s1 > s2 else 5)
-
-        self.AddColumn(res)
+        s1 = 7 if self.window[-1][MA_IDX] >= self.window[-2][MA_IDX] else 3
+        self.AddColumn(s1)
         return self.window
 
     # Calculate a simple moving average
@@ -1805,7 +1798,7 @@ class TechnicalAnalysis:
         n = len(self.window)
 
         # Ensure enough data to compute
-        if n < 2 or self.window[-2][HighIDX] is None or self.window[-2][LowIDX] is None:
+        if n < 2 or self.window[-1][HighIDX] is None or self.window[-1][LowIDX] is None or self.window[-2][HighIDX] is None or self.window[-2][LowIDX] is None:
             self.AddColumn(None)  # SAR
             self.AddColumn(None)  # Trend
             self.AddColumn(None)  # EP
@@ -1815,13 +1808,14 @@ class TechnicalAnalysis:
         prev_row = self.window[-2]
         curr_row = self.window[-1]
 
-        sarIDX=len(prev_row)-4
+        # Use current row to guarentee placement in matrix.
+        sarIDX=len(curr_row)
 
         # Read previous SAR, trend, EP, AF if they exist
-        prev_sar = prev_row[sarIDX] if prev_row[sarIDX] is not None else prev_row[LowIDX]  # initial guess
-        prev_trend = prev_row[sarIDX+1] if len(prev_row) > sarIDX+1 and prev_row[sarIDX+1] is not None else 1               # assume uptrend
-        prev_ep = prev_row[sarIDX+2] if len(prev_row) > sarIDX+2 and prev_row[sarIDX+2] is not None else prev_row[HighIDX]
-        prev_af = prev_row[sarIDX+3] if len(prev_row) > sarIDX+3 and prev_row[sarIDX+3] is not None else startAF
+        prev_sar=prev_row[sarIDX] if prev_row[sarIDX] is not None else prev_row[LowIDX]  # initial guess
+        prev_trend=prev_row[sarIDX+1] if prev_row[sarIDX+1] is not None else 1               # assume uptrend
+        prev_ep=prev_row[sarIDX+2] if prev_row[sarIDX+2] is not None else prev_row[HighIDX]
+        prev_af=prev_row[sarIDX+3] if prev_row[sarIDX+3] is not None else startAF
 
         # Determine current trend
         trend = prev_trend
