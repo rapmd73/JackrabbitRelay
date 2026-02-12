@@ -90,14 +90,7 @@ for pair in sorted(Wallet.keys()):
         p=float(data['Price'])
         f=float(data['Fee'])
 
-        if balance==0:
-            balance=qw+f+(abs(bw)*p)
-
-#        pnl=(qw+(abs(bw)*p))-f-balance
-        if act=='B':
-            balance-=(abs(a)*p)+f
-        else:
-            balance+=(abs(a)*p)-f
+        balance=qw+f+(abs(bw)*p)
 
         str=f"  {dt} {act} {bw:14.8f} {qw:14.8f} {a:14.8f} {p:.8f} {f:.8f} {balance:.8f}"
         print(str)
