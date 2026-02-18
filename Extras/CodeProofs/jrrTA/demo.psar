@@ -48,7 +48,7 @@ def main():
         ta.Rolling(slice)
         ta.PSAR(startAF=0.01, stepAF=0.01, maxAF=0.2)
 
-#        ta.Display(-1)
+        ta.Display(-1)
 
 if __name__=='__main__':
     main()
