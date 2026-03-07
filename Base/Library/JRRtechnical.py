@@ -331,6 +331,7 @@ class TechnicalAnalysis:
                         slice[i]=float(slice[i])
                     else:
                         slice[i]=None
+
             if last is None or last[0] is None or (last is not None and slice[0]>last[0]):
                 self.window.append(slice)
             else:

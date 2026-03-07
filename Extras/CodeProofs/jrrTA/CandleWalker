@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# Jackrabbit Relay Technical Analysis example to verify the matrix
+# is stable.
+
+# 2021-2026 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import json
+import datetime
+import time
+
+import JackrabbitRelay as JRR
+import JRRtechnical as jrTA
+
+###
+### Main
+###
+
+def main():
+    if len(sys.argv) > 4:
+        exchangeName=sys.argv[1]
+        account=sys.argv[2]
+        asset=sys.argv[3]
+        tf=sys.argv[4]
+    else:
+        print("Strategy file, An exchange, (sub)account, an asset, time frame")
+        sys.exit(1)
+
+    # Get working timeframe
+
+    ta=jrTA.TechnicalAnalysis(exchangeName,account,asset,tf,5000)
+
+    # Verify the OHLCV text file
+    fn=asset.replace('/','')
+    if not os.path.exists(f"{fn}.txt"):
+        print(f"Candle file {fn}.txt missing")
+        sys.exit(1)
+
+    # Walk the OHLCV dataset searching for duplicates.
+    dc=0
+    for data in fh.readlines():
+        slice=data.split(',')
+        slice[0]=int(slice[0])
+        for i in range(1,len(slice)):
+            slice[i]=float(slice[i])
+
+        ta.Rolling(slice)
+        if ta.Duplicate:
+            dc+=1
+            continue
+    fh.close()
+
+    print(f"Duplicates: {dc}")
+
+
+###
+### Program start
+###
+
+if __name__=='__main__':
+    main()
+
+###
+### End demo
+###
