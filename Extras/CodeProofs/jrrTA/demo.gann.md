@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program loads historical market data for a specified currency pair from a technical analysis module and processes each data point in order, running several named analysis routines for each point to update and log technical indicators related to price levels, trend lines, targets, and stops.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by adjusting the module search path to include a specific local directory and imports several standard libraries (os, math, json, datetime, time) followed by two local modules: JackrabbitRelay (as JRR) and JRRtechnical (as jrTA). The main execution is guarded by the usual if __name__ == '__main__' check, which calls the main() function when the script is run directly.
 

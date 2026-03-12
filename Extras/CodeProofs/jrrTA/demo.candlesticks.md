@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads four pieces of input (an exchange name, an account identifier, an asset name, and a time frame) and then processes historical market data for that asset on the specified exchange and account. It steps through the historical price data one record at a time, runs a single specific pattern-detection routine on each record, and prints a summary or display output for each record.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 When run, the script first checks command-line arguments. If at least four arguments are provided after the program name, it assigns them in order to exchangeName, account, asset, and tf; otherwise it prints an error message and exits with a nonzero status. After argument parsing it constructs a TechnicalAnalysis object from the imported module JRRtechnical (bound locally as jrTA) by calling jrTA.TechnicalAnalysis(exchangeName, account, asset, tf, 5000). The fifth parameter passed to the constructor is the integer 5000.
 

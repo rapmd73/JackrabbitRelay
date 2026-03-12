@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program looks through the list of programs that were started by the system's initial process and forcefully stops any that were launched with a specific Python multiprocessing startup command, printing the identifier of each program it stops.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by importing necessary modules and adding a fixed filesystem path to the module search path. It then imports the psutil library and obtains a Process object for process ID 1 (the system init process). It retrieves the immediate child processes of PID 1 by calling init.children() and iterates over each child process object.
 

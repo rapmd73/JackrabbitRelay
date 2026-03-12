@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program repeatedly runs in an endless loop, toggling a special "critical" state, printing status and two counters, and pausing for short intervals. On each cycle it marks a critical period, shows whether an external signal has been triggered, increases and prints counters, calls a routine that allows a clean exit if needed, and alternates between two kinds of sleep pauses labeled "Critical Sleep" and "Non-critical Sleep."
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script is a Python 3 program that begins by extending the module search path with a specific directory (/home/GitHub/JackrabbitRelay/Base/Library) and then imports a module named JRRsupport. From that module it constructs an instance of SignalInterceptor by calling JRRsupport.SignalInterceptor() and assigning it to the variable interceptor.
 

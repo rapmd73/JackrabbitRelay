@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program analyzes historical price data for a chosen market instrument and reports summary information about how that market has moved over time. It determines the highest and lowest observed prices, how frequently price candles fall above or below central measures, the largest and average monthly movements, the time span covered by the data, and an overall average spread across several timeframes, then prints those results.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The program begins by importing modules and a custom JackrabbitRelay library, then constructs a JackrabbitRelay object named relay. It requires at least three command-line arguments (exchange, account, asset); if they are present it retrieves those values from the relay object, otherwise it prints an error and exits.
 

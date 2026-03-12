@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program checks a historical price data file for repeated records and reports how many duplicate entries it finds after feeding each record into a technical-analysis component. It requires command-line inputs specifying an exchange, account, asset, and time frame; it looks for a text file named after the asset, reads its lines, processes each line through a technical-analysis object, counts any records the object flags as duplicates, and prints the duplicate count.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by extending the Python module search path and importing several standard modules (sys, os, json, datetime, time) plus two application-specific modules: JackrabbitRelay (aliased JRR) and JRRtechnical (aliased jrTA). It defines a main() function that first checks command-line arguments: if more than four arguments are provided, it assigns the first four to variables exchangeName, account, asset, and tf; otherwise it prints a brief usage message and exits with status 1.
 

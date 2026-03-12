@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads command-like inputs to identify a market, account and asset, then looks up the current market price and uses the provided numeric values to calculate and display a proposed trade's size and price targets, including the per-pip cost, take-profit and stop-loss price levels, and a position size based on a fixed budget percentage.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by modifying Python's import path and importing several modules (os, json, time, random) plus two local modules: JRRsupport and JackrabbitRelay (aliased as JRR). It then constructs an instance of JRR.JackrabbitRelay and queries that object for argument-related values. Specifically, it calls relay.GetArgsLen() and, if that length is greater than 3, retrieves exchangeName via relay.GetExchange(), account via relay.GetAccount(), asset via relay.GetAsset(), and three argument values via relay.GetArgs(4), relay.GetArgs(5), and relay.GetArgs(6). The three GetArgs results are converted to floats and assigned to amount, tp, and sl. If GetArgsLen() is not greater than 3, the program prints an error message and exits with status 1.
 

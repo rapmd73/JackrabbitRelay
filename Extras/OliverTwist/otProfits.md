@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads one or more log files and prints a summary of daily monetary results found in those files, followed by overall counts and averages for the period covered. For each input file it lists each date found in the file along with a label derived from the filename and the total amount for that date, then it prints totals such as the number of profit/loss lines, number of losses, average per trade, average trades per month, and average profit per month.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The program begins by ensuring at least one command‑line argument (a log filename) is provided; if none are supplied it prints an error message and exits. It sets a flag named summary to True when more than one filename is passed, although that flag is not used further in the code. It initializes counters: tt (total trades/lines containing profit or loss) to 0, sl (stop‑loss or loss count) to 0, rs (running sum of profit/loss amounts) to 0, and day (a dictionary mapping date strings to aggregated amounts) to empty.
 

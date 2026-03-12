@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program builds a list of items, each with a unique random identifier and a counter value, sometimes adds a random word or a short letter code to some items, and then prints every item in the list. The number of items created can be given as a command-line argument (defaulting to 10).
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The program begins by importing modules and a support module called JRRsupport. It reads the contents of a file named "wordlist" (via JRRsupport.ReadFile) and splits that content into a list of words stored in the global variable `words`.
 

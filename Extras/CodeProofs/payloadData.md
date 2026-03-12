@@ -1,9 +1,8 @@
-```markdown
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program represents a single data record containing many labeled pieces of information about a trading setup: it names an exchange and account type, identifies an asset and market action, gives timing and pricing details, lists strategy-related notes and tags, and includes various numeric metrics and comments. Together the entries describe a snapshot of parameters and metadata for a trading recipe or configuration.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The provided code is a single literal dictionary (or object) made up of string keys mapped to various string values. Each key is a label such as "Identity", "Exchange", "Market", "Action", "Asset", "Price", "Time", and several "Comment" fields; their corresponding values are textual data that encode configuration, metadata, or numeric values as strings. There are also keys representing metrics or counters (for example "AvgProfit", "LProfit", "TCycles", "CBuys", "MBCycle", "TBuys") whose values are supplied as strings that look like numbers.
 
@@ -23,4 +22,3 @@ Key-by-key behavior as expressed by the data:
 - "Link" is a URL string pointing to a TradingView chart.
 
 Structurally, the code defines a single literal mapping; there are no functions, control flow constructs, or operations performed on the data within the provided snippet. The data is self-contained: any consumer of this literal would receive these exact key/value pairs. All values are strings (including those that represent numbers, percentages, booleans, or timestamps), so any program reading this object would need to parse or interpret those strings to treat them as other types. The record mixes metadata (comments, link), configuration flags (RemapSymbol), market context (Exchange, Market, Account, Asset), operational parameters (Action, Price, Time, USD, PSize), strategy descriptors (Recipe), and performance/cycle metrics (AvgProfit, LProfit, TCycles, CBuys, MBCycle, TBuys).
-```

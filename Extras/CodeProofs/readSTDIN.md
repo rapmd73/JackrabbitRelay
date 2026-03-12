@@ -1,9 +1,8 @@
-```markdown
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads input provided to it, hands that input to a component called "Jackrabbit Relay", and then prints out a formatted snapshot of an order and several pieces of exchange-related information retrieved from that component so a reader can see the order details and the current exchange selections.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script is a Python 3 program that begins by adding a specific directory ('/home/GitHub/JackrabbitRelay/Base/Library') to the module search path so that modules in that directory can be imported. It then imports the standard os and json modules, followed by importing a module named JackrabbitRelay under the alias JRR.
 
@@ -22,4 +21,3 @@ Next, the script prints seven lines that each show a label and a corresponding p
 - "Last    " followed by the result of calling relay.GetExchangeLast() (a method call).
 
 Each print statement uses Python's default string conversion for the printed values and inserts a single space between the label and the value as specified in the code. The program thus outputs the order JSON and a sequence of labeled exchange-related values and method results from the JackrabbitRelay instance, reflecting the state and exchange-selection behavior exposed by that object.
-```

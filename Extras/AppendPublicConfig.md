@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program goes through a collection of cryptocurrency trading platforms, tries to connect to each one using publicly available data, and for each platform that isn't already recorded as having public access in a configuration file, it gathers some basic market information and appends a short public-access entry to that platform's configuration file.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by ensuring it has a command-line argument for a port number; if no port is provided it prints an error message and exits. It then constructs an integer port value from the first argument and defines a path string cdir that points to a configuration directory.
 

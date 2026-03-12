@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads a transaction history for a named account, counts how many times a specific asset was bought and sold on each date, and produces a daily activity chart for that asset and account, saving the chart either as an image or as an HTML file.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script expects three command-line arguments: an output type indicator (either "I" or "H", case-insensitive), an account name, and an asset identifier. It enforces that the first argument is present and equals "i" or "h" after lowercasing; otherwise it prints an error message and exits. It sets fixed filesystem paths for chart output and for Mimic account data, and it sets the variable exchange to the literal string "mimic".
 

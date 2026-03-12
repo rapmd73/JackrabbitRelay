@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads a set of historical price and volume records for the ADA/USD market, processes each record in order, calculates two moving averages and a momentum indicator from those averages, detects when that momentum indicator crosses its signal line, and prints the most recent processed record after each new input is handled.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script is a Python 3 program that imports several standard modules and two project-specific modules: JackrabbitRelay (as JRR) and JRRtechnical (as jrTA). It appends a directory to sys.path before importing to make those project modules importable. The main routine constructs an instance of jrTA.TechnicalAnalysis with the arguments 'kraken', 'MAIN', 'ADA/USD', '1m', and 197; this instance is stored in the local variable ta.
 

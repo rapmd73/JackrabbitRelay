@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads a specific text log file and, for each trade-related line in that file, looks up details about the original order and prints human-readable summaries showing when the position was opened, when it was closed or reduced, the direction (long/short), the amounts, prices, profit/loss values, and account balances.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 - Startup and imports: The script runs as a Python 3 program, appends a hard-coded library path to sys.path, and imports standard modules (os, time, datetime, json) plus two project modules: JRRsupport and JackrabbitRelay (imported as JRR). It constructs a Log object via JRR.JackrabbitLog() and a SignalInterceptor via JRRsupport.SignalInterceptor(Log=Log).
 

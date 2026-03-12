@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads text sent to it, removes line breaks and spaces, and then forwards the cleaned text as a plain message to a fixed web address; it also prints a small HTTP header indicating a text/html response.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by importing the sys and requests modules and defining a global string variable named Webhook containing a fixed URL. It defines a function pFilter(s) that takes a string s and returns a new string with certain whitespace characters removed. Inside pFilter, it first applies chained replace calls to remove newline (`\n`), tab (`\t`), and carriage return (`\r`) characters, assigning the result to d. It then iterates over the characters in the literal string '\t\r\n \u00A0' and removes each occurrence of those characters from d by calling d.replace(c, '') for each c. The function returns the final string d.
 

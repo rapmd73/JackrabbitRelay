@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program retrieves recent Bitcoin price and volume data from a cryptocurrency exchange, computes several moving averages and crossover indicators on that data in a rolling fashion, and displays the most recent processed data point repeatedly as it steps through the historical records.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The program begins by importing modules and appending a specific library path to sys.path so that two custom modules, JackrabbitRelay (aliased JRR) and JRRtechnical (aliased jrTA), can be imported. The main() function constructs an instance of jrTA.TechnicalAnalysis with arguments specifying the Kraken exchange, a label "MAIN", the trading pair "BTC/USD", a 1-minute timeframe, and a request for 5000 records. It calls ta.GetOHLCV() to retrieve the OHLCV (open, high, low, close, volume) matrix into the variable ohlcv.
 

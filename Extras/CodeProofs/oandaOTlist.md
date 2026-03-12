@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads a stored list of currently tracked orders, selects those that match a specified market, account, and asset, then checks current market prices to report whether each tracked order would be in profit or show an unrealized loss; it also finds which tracked order has the highest and lowest recorded price and prints those along with elapsed time measurements for the checks.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by importing modules, adding a specific path to sys.path, and defining filesystem paths including a data directory and a file called OliverTwist.Storehouse. It creates a locker object named OliverTwistLock using JRRsupport.Locker to coordinate access to the storehouse file.
 

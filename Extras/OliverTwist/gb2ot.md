@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads a specific trading log file, extracts information about buy and sell events, matches each opening trade with its closing event, computes how long each trade was open and whether it made or lost money, and then prints one summary line per matched trade showing the closing time, the two trade IDs, whether the trade was profitable or a loss, the traded quantity, entry and exit prices, the absolute profit or loss amount, and the trade duration.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by importing modules and appending a hard-coded library path to Python's import search path, then imports two project-specific modules: JRRsupport and JackrabbitRelay as JRR. It constructs a logging object (Log) via JRR.JackrabbitLog() and a signal interceptor via JRRsupport.SignalInterceptor(Log=Log). These objects are created at startup but are not otherwise used in output beyond being instantiated.
 

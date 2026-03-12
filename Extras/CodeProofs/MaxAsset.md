@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads stored asset records for a specified trading exchange and account, calculates how many days remain until each asset record expires, and prints each asset name alongside the remaining time in days for those assets that have not yet expired.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by adding a specific directory to Python's module search path and importing required modules: os, time, json, plus two project-specific modules JRRsupport and JackrabbitRelay. It creates an instance of JackrabbitRelay from the JackrabbitRelay module and checks the argument count via relay.GetArgsLen(). If fewer than three arguments are present, it prints an error message and exits with status 1.
 

@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program retrieves a sequence of recent Bitcoin-to-USD trading data from a market source, processes each incoming data point in order to maintain a running dataset, computes a series of moving-average indicators on the price values using a fixed period, and prints the most recently updated row of data after each new datapoint is processed.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by extending the Python module search path to include a specific local library directory, then imports several standard modules and two project-specific modules aliased as JRR and jrTA. Execution enters the main() function when the script is run as a program.
 

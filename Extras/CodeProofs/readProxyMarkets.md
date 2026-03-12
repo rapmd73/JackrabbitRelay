@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program connects to a configured service and, when given the right command-line inputs, retrieves a list of markets from that service and prints out each market's information line by line; if the required inputs are missing, it prints a brief error message and stops.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script is a Python 3 program that begins by extending the module search path to include '/home/GitHub/JackrabbitRelay/Base/Library' and then imports standard modules (os, json, time) plus a module named JackrabbitProxy under the alias JRP. It creates an instance of JRP.JackrabbitProxy and assigns it to the variable proxy.
 

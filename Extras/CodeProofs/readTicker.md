@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program repeatedly looks up the latest market price information for a specified asset on a chosen exchange account and prints a timestamped line showing the asset's asking price, the spread, and the bidding price; it requires the exchange name, account, and asset to be provided when it runs, otherwise it stops and reports that those inputs are missing.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script starts by extending the Python import path with a hard-coded directory and then imports a module named JackrabbitRelay (aliased as JRR). It constructs an instance of JRR.JackrabbitRelay and uses that instance to read command-line related values. Specifically, it checks the value returned by relay.GetArgsLen(); if that value is greater than 3 it retrieves three items from the relay instance: exchangeName (via relay.GetExchange()), account (via relay.GetAccount()), and asset (via relay.GetAsset()). If GetArgsLen() is not greater than 3 the script prints the message "An exchange, (sub)account, and an asset must be provided." and exits with status code 1.
 

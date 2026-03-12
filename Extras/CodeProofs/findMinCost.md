@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program uses a prebuilt trading helper to look up a specific market on a chosen exchange and account, then displays the market's numeric precision and the minimum trade amount and minimum cost required for that asset. If the required exchange, account, and asset are not provided as inputs, it prints an error message and stops.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by adjusting the Python module search path to include a specific local Library directory and imports an external module named JackrabbitRelay under the alias JRR. It constructs an instance of the JackrabbitRelay class by calling JRR.JackrabbitRelay(), assigning it to the variable relay.
 

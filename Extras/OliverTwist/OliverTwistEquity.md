@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads a specific log file, extracts profit and loss events with timestamps, accumulates those amounts over time to form an equity value, and then creates a time-series chart of that equity curve saved either as an image or as an HTML file in a charts directory.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script expects at least two command-line arguments: an output type indicator and a path/filename for an "Oliver Twist" log file. The first argument is treated case-insensitively and must be either "I" (image) or "H" (HTML). If the first argument is invalid or missing, the program prints an error and exits. The second argument is parsed by splitting on periods to extract tokens that the program uses as identifiers: exchange (token index 1), account (token index 2), and pair (token index 3). Those tokens are used to construct the output filename.
 

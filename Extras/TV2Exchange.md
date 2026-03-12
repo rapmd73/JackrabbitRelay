@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads information about available trading markets for a specified exchange and account, converts those market names into a different naming style used by another service, and writes a mapping of the converted names to the original market names into a file. After saving the file it prints a short confirmation message naming the exchange and account.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 - Startup and setup: The script runs under Python 3, modifies the module search path to include '/home/JackrabbitRelay2/Base/Library', imports json, and imports a module named JackrabbitRelay as JRR. It defines a Help function that prints a usage message and exits with status 1. It then constructs an instance of JRR.JackrabbitRelay, passing the Help function via the Usage parameter.
 

@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program creates a set of folders under a specific user directory, moves into a project examples folder, prints a short status message, and copies two files into the created directory so they are available for use there.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script is a Bash shell script that performs a sequence of filesystem operations.
 

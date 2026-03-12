@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program updates a stored wallet file for a named user by setting a specific currency balance to a provided numeric amount and then reports the change; it requires three command-line inputs: the wallet name, the currency code, and the new amount.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The program expects to be run with three command-line arguments. If fewer than three arguments are provided, it prints an error message "A Mimic account, a currency and a value are required." and exits with status 1.
 

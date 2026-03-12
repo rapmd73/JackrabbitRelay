@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program generates up to a set number of short tasks, gives each task a random identifier, runs an external helper program for each task twice to produce two separate pieces of information, stores those pieces of information alongside each task, and then prints the full list of tasks with their associated data.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by importing standard modules and a local support module named JRRsupport. It reads a file called "wordlist" through JRRsupport.ReadFile and splits its contents into a list named words. It also constructs a path to an external executable (pipeWriter) that the program will invoke repeatedly. A global locker object gLock is created by calling JRRsupport.Locker('pipeReader'), and a doubly linked list pList is created later using JRRsupport.DList with a provided compare function.
 

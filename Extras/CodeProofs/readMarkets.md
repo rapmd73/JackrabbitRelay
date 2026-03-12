@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program initializes a trading relay object, checks for command-line information about which exchange and account to use, and then lists available market assets for that exchange by printing each asset's name or symbol depending on the exchange type.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by preparing the Python environment: it appends a specific directory (/home/GitHub/JackrabbitRelay/Base/Library) to the module search path and imports the operating system module and a module named JackrabbitRelay under the alias JRR. It then constructs an instance of JRR.JackrabbitRelay and assigns it to the variable relay.
 

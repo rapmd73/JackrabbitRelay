@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads a series of historical price and volume records for the ADA/USD market, processes each record in order, applies a set of technical-analysis operations to each new record, and prints a display line for every step. It uses a technical-analysis helper object to maintain running calculations as it moves through the data.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script is a Python program that builds and runs a simple processing loop around a technical-analysis helper class. It first extends the module search path with a hard-coded directory and imports a pair of modules: one named `JackrabbitRelay` (aliased as JRR) and another named `JRRtechnical` (aliased as jrTA). The program's main work is performed inside the `main()` function, which is executed when the script is run as the main module.
 

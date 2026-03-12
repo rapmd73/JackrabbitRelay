@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads a sequence of market data records for the ADA/USD trading pair, performs a set of simple rolling calculations on each incoming record (including a 50-period average of volume, a one-period rate of change of volume, and a derived percentage comparing current volume to that average), and for each record it displays the latest computed row and a binary flag that marks records meeting a specific set of conditions (a rising price candle and both the volume-percent and volume-rate-of-change exceeding 30). The program processes all records in the provided data file and prints output for each processed record.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by importing modules and appending a specific path to sys.path so it can import two custom modules: JackrabbitRelay (aliased JRR) and JRRtechnical (aliased jrTA). The main function constructs an instance of jrTA.TechnicalAnalysis with parameters ('kraken','MAIN','ADA/USD','1m',197). It then reads OHLCV data from the file "ADAUSD.txt" via ta.ReadOHLCV(), storing the returned sequence in the variable ohlcv.
 

@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This small program reads all text provided to it, optionally collapses blank-line separations into single spaces and replaces line breaks with spaces when a command-line argument is given, and then outputs the resulting text unchanged in all other respects.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by importing the sys and os modules, though only sys is actually used later. It initializes a boolean flag named nl2sp to False. It then checks the length of the list of command-line arguments (sys.argv). If there is more than one element in sys.argv (meaning at least one argument was supplied on the command line besides the script name), nl2sp is set to True.
 

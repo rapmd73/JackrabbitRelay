@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads historical market price data for a currency pair from a technical analysis helper, processes each new data entry in sequence, computes short-term resistance and support values, computes a midline between those resistance and support values when both exist, and displays the results for each processed row.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script is a Python program that imports a custom technical analysis module (JRRtechnical) and uses it to obtain and process OHLCV (open, high, low, close, volume) data for a currency instrument. It sets up the Python path to include a specific library directory, imports standard libraries (os, math, json, datetime, time) as well as two project modules (JackrabbitRelay as JRR and JRRtechnical as jrTA), then defines and runs a main() function when executed as a script.
 

@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program retrieves a set of financial price records for a specific currency pair and timeframe, processes those records one at a time to maintain a moving window, computes two successive simple moving averages over a short period for the closing prices, and prints or displays the current processed record after each update.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by adjusting the module search path and importing standard libraries (os, math, json, datetime, time) and Plotly plotting modules. It then imports two project-specific modules: JackrabbitRelay as JRR and JRRtechnical as jrTA. The main work happens inside the main() function.
 

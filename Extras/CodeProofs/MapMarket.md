@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program initializes a connector to a system called "Jackrabbit Relay", requires that the user provide an exchange and an account, then retrieves and prints a list of market entries associated with that relay so the user can see the market information available.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by setting up the Python environment and modifying sys.path to include a specific directory: /home/JackrabbitRelay2/Base/Library. It then imports standard modules sys, os, and json, and imports a module named JackrabbitRelay under the alias JRR.
 

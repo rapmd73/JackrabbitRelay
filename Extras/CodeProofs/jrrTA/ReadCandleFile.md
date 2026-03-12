@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program loads a set of historical market price entries for the ADA/USD trading pair, feeds them into a technical analysis component to build an internal window of recent candles, and then prints how many candles were read followed by a printed representation of the last ten items in that internal window.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script is a Python3 executable that modifies the module search path to include /home/GitHub/JackrabbitRelay/Base/Library, then imports several standard libraries (os, math, json, datetime, time) and two project-specific modules: JackrabbitRelay (as JRR) and JRRtechnical (as jrTA). It defines a main() function and calls it when run as a script.
 

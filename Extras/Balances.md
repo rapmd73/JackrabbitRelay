@@ -1,10 +1,10 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program connects to a trading service and prints out the current account information, including which trading framework and exchange are being used, followed by a listing of available funds and any open trading positions in a human-readable table format; the exact balance and position output depends on which backend framework the program detects.
 
 ---
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by importing a custom module named JackrabbitRelay and creating an instance of JackrabbitRelay called relay. It then checks the number of command-line arguments (via relay.GetArgsLen()). If there are more than two arguments, it retrieves the exchange name and account by calling relay.GetExchange() and relay.GetAccount(); if not, it prints an error message and exits with status 1.
 

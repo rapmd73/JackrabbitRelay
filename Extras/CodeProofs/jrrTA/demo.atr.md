@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads a sequence of historical price records for the ADA/USD market from a text file, processes each record in order, computes an average measure of recent price range (the Average True Range) for each record, and prints a summary display for each step as it processes the data.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script is a Python 3 program that sets up a path to a local library directory, imports several standard modules (os, math, json, datetime, time) and two project-specific modules: JackrabbitRelay (as JRR) and JRRtechnical (as jrTA). It defines a main() function and runs it when executed as the main module.
 

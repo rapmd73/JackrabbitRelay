@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads a sequence of time-stamped price and volume records for a cryptocurrency pair, processes those records one at a time to compute trend strength and a simple directional comparison, and prints a rolling line of output for each record that includes the input fields plus the calculated indicators and a short crossing signal.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script sets up a technical-analysis processing pipeline by importing a local module JRRtechnical as jrTA and creating an instance of jrTA.TechnicalAnalysis with parameters 'kraken', 'MAIN', 'ADA/USD', '1m', and 197. It then reads OHLCV data from the file 'ADAUSD.txt' via ta.ReadOHLCV, storing the returned list (or iterable) in ohlcv.
 

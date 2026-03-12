@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads a saved list of cryptocurrency price data for the ADA/USD pair, processes each row one at a time through a technical analysis component, computes a momentum indicator for each row, and displays the most recent analysis output repeatedly until all data rows have been handled.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script is a Python 3 program that imports modules from the file system and two project-specific modules named JackrabbitRelay (aliased JRR) and JRRtechnical (aliased jrTA). In its main function it constructs an instance of the TechnicalAnalysis class from jrTA by calling jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',197). The constructor receives five arguments: the exchange identifier 'kraken', a label 'MAIN', the trading pair 'ADA/USD', the timeframe '1m', and the numeric value 197. The created object is assigned to the variable ta.
 

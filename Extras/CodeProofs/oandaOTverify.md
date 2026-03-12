@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program compares the set of currently open trades from a trading system with a stored list of tracked orders, and for any open trade that is not already recorded it creates a new "conditional" record in a local store so that the trade will be tracked going forward; it also prints a short summary line for each newly recorded trade.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 - Initialization and imports
   - The script runs under Python 3, modifies sys.path to include a specific library directory, and imports os, json, datetime plus two project modules: JRRsupport and JackrabbitRelay (aliased JRR).

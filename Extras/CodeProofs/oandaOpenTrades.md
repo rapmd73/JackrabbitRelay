@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program connects to a trading relay, checks that an exchange, account, and asset were provided as inputs, retrieves the set of currently open trades for the specified asset, and then prints a line for each open trade showing when it opened, the trade identifier, whether it is long or short, the number of units, the entry price, the unrealized profit or loss, and the financing amount. After listing all open trades it prints the summed unrealized profit/loss plus financing and the count of open trades.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by importing standard modules (sys, os, json, datetime) and then imports a module named JackrabbitRelay under the alias JRR. It appends a specific path ('/home/GitHub/JackrabbitRelay/Base/Library') to sys.path before the import, so the JackrabbitRelay module is loaded from that search path. An instance of JRR.JackrabbitRelay is created and assigned to the variable relay.
 

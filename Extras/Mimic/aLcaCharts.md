@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads a named history file for a trading wallet, groups the recorded trades by asset, and for each asset produces a set of six charts (balances, transaction amounts, prices, fees, and action counts) saved as a PNG image file in a charts folder.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 - Startup and configuration: the script adjusts the Python path to include /home/JackrabbitRelay2/Base/Library, imports standard modules (os, time, json), pandas, and matplotlib, and imports a custom module JRRsupport. It defines two directory path variables: chartDir for saved chart images and MimicData for locating account history files.
 

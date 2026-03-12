@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads transaction history for a named account from a storage area, groups the transactions by each asset pair, and then walks through each group's transactions to compute and print summary numbers - how many buy and sell actions occurred, the net count (buys minus sells), the maximum simultaneous position reached, the total fees paid for that asset, and a running balance value; finally it prints totals across all asset pairs.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script expects at least one command-line argument: an account name. It constructs a file path by appending the account name with a ".history" extension to a fixed MimicData directory. If the file does not exist it prints an error and exits. It reads the file contents via JRRsupport.ReadFile, strips leading/trailing whitespace and splits into lines.
 

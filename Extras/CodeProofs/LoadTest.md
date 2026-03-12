@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 The program repeatedly starts short-lived worker processes that sleep for a random number of seconds, while printing simple messages about the parent and child process identifiers and pausing as needed to keep the number of active workers from growing too large.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 At startup the script adjusts Python's module search path to include a specific directory and imports a support module named JRRsupport along with standard modules sys, os, time, and random. It constructs a SignalInterceptor object from JRRsupport and assigns it to the global name interceptor; the object is created with its IsMain parameter set to True when the script is executed as the main program, and set to False when the module is imported.
 

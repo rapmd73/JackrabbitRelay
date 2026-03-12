@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads command-like inputs to identify an exchange, an account, an asset, and a timeframe (plus an optional count), then retrieves recent price/time data for that asset and prints each data row as a comma-separated line of numeric values formatted to five decimal places. If the required inputs are not supplied, it prints an error message and exits.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script begins by adjusting Python's module search path to include a specific library directory and then imports a module named JackrabbitRelay (aliased as JRR). It constructs an instance of JRR.JackrabbitRelay and uses methods on that instance to query incoming arguments and to retrieve market and price data.
 

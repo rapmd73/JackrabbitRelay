@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 The program scans a list of available cryptocurrency exchanges, tries to contact each exchange's public interface to confirm it can retrieve market data, and builds or updates a local configuration file by adding entries for exchanges that respond, so a local service can later use those exchanges for data or notifications.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script expects a command-line argument and treats the first argument as a port number. It converts that argument to an integer and uses it later when composing webhook URLs that point to the local machine with the provided port. If no argument is provided, the script prints an error message ("Port number must be given to local Jackrabbit Relay server") and exits with status 1.
 

@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program connects to a data service for a specific cryptocurrency market and repeatedly processes incoming price data to compute and display several volatility measures; it steps through stored market snapshots one by one, updates internal calculations for each snapshot, and prints the most recent results as it goes.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script starts by extending Python's import path with a hard-coded directory and imports several standard modules (os, math, json, datetime, time) along with two custom modules: JackrabbitRelay (aliased JRR) and JRRtechnical (aliased jrTA). The main entry point constructs an instance of a TechnicalAnalysis class from the jrTA module with arguments: exchange 'kraken', label 'MAIN', market 'ADA/USD', timeframe '1m', and a lookback or limit value 5000. That instance is assigned to the local variable ta.
 

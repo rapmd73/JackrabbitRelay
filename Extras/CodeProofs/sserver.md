@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program listens for incoming network connections on a fixed port and accepts short text messages from clients; for each message it receives that ends with a newline it replies with a short text response that reports the number of bytes received and echoes the message, then closes the connection.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The program creates a TCP server socket bound to port 37773, sets it to non-blocking mode, and begins listening with a backlog of 1024. It uses select.select in a loop to multiplex activity between the listening socket and connected client sockets. Three main data structures track state: inputs (a list of sockets monitored for readability, initially containing only the listening socket), dataStore (a mapping from client sockets to accumulated received text), and queue (a mapping from client sockets to prepared response strings to be sent).
 

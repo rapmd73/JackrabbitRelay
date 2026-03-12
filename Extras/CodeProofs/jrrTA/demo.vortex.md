@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program loads historical currency price data, processes it step by step through a set of technical-analysis routines, and prints or otherwise displays analysis results for each new data point as it iterates through the dataset.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script is a Python program that imports several standard libraries and Plotly modules, then imports two local modules: `JackrabbitRelay` (as JRR) and `JRRtechnical` (as jrTA). It appends a specific directory to `sys.path` so that those local modules can be imported. The program defines a single `main()` function and runs it when executed as a script.
 

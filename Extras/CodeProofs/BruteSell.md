@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program continuously watches a set of active financial trades for a chosen account and asset, and when a trade reaches certain price or profit conditions it automatically sends a sell order to close that trade, then records a short log entry describing whether closing the trade resulted in a profit or a loss and how long the trade was open.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The program initializes a JackrabbitRelay object and requires three command-line arguments to identify an exchange, an account, and an asset; if those are not provided it prints an error and exits. It determines the tick size ("onePip") for the chosen asset from relay.Markets and sets a target offset tp equal to ten pips.
 

@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program holds a large collection of timestamped messages about trading signals and presents them as a set of labeled entries: each entry has an expiration time and a payload that records when the signal was generated, which trading recipe or indicators were used, whether the signal is a buy or sell, which exchange/account/market/asset it refers to, a price, profit metrics, cycle and buy counts, percentage size, and a link to a chart.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 - Data structure and top-level layout
   - The code is a single dictionary (map) where each key is a string label composed from indicator names, the exchange, the asset symbol, and a numeric suffix (for example "#RSI#Stochastic#DCAbinanceXRPUSDT611").

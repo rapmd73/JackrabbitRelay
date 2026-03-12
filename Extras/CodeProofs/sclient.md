@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program creates an object that contacts a network service to ask for exclusive access to a named resource and to release that access later; it can also send simple messages to the same service and print the responses. The program then instantiates this object for a resource named "LockerTest" and repeatedly sends randomly generated short messages to the service, printing whatever reply it receives.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 Top-level behavior
 - The script defines a Locker class that manages communication with a remote "locker" service over a TCP socket. After the class definition, the script creates one Locker instance with filename "LockerTest" and then runs a loop 100 times where it generates a random identifier string and sends it to the remote service using the Talker method, printing the returned response each iteration.

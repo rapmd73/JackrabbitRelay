@@ -1,8 +1,8 @@
-## Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program connects to a service called Jackrabbit Relay and retrieves recent market information for a specified asset on a chosen exchange and account, then prints the current market quote and a short list of recent daily price records, followed by how long the retrieval took.
 
-## Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script starts by setting up Python 3 environment details and imports required modules: sys, os, json, time, and a module named JackrabbitProxy as JRP from a path appended to sys.path. It instantiates an object named proxy from JRP.JackrabbitProxy().
 

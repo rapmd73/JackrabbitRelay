@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads a trading log and any currently open orders, then produces a visual chart of recent market price candles together with lines showing open orders and completed trade entries and exits; it saves that chart as either an image or an HTML file depending on the user's choice.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 - Startup and configuration:
   - The script imports modules and extends sys.path to include a specific library directory. It creates a logging object and a signal interceptor using objects from imported modules JRR and JRRsupport. It defines fixed directory paths for data, charts, and a subdirectory named OliverTwist where open-order storehouse files live. A Locker object named OliverTwistLock is created for synchronized access to that storehouse.

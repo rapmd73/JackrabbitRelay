@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program looks through a stored list of open trade orders, picks out those that belong to a specific trading exchange, account, and asset provided when the program runs, and then reports which matching order has the highest price and which has the lowest price, along with how long the program took to perform the read and the comparison operations.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script starts by importing modules and appending a custom library path. It defines file-system paths: DataDirectory, chartDir, and Storehouse, and creates a locker object OliverTwistLock via JRRsupport.Locker('OliverTwist') (the locker object is created but its lock/unlock calls are commented out where reading occurs).
 

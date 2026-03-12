@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program reads all incoming text from standard input, reports how long that read took and how many lines were read, clears a timed storage structure, reports how long the clearing took, then processes each input line by interpreting it as structured data, building a unique identifier from several fields in that data, and inserting or updating an entry in the timed storage for each line while timing and reporting the total processing duration.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 - The script starts by importing modules and adding a specific path ('/home/GitHub/JackrabbitRelay/Base/Library') to the module search path so a local module named JRRsupport can be imported. It also imports sys, os, json, and time.
 

@@ -1,8 +1,8 @@
-Section 1 - Non-Technical Description
+# Section 1 - Non-Technical Description
 
 This program retrieves a list of currently open trading orders from a specified trading account on a chosen exchange or platform, formats each open order into a standardized record that includes order details and the original response, and prints each formatted record as a JSON string.
 
-Section 2 - Technical Analysis
+# Section 2 - Technical Analysis
 
 The script starts by extending Python's import path with a fixed directory and then imports a module named JackrabbitRelay as JRR. It creates an instance of JRR.JackrabbitRelay and uses that instance (referred to as relay) to obtain command-line-associated parameters. The script checks the number of arguments via relay.GetArgsLen(); if that value is greater than 3 it obtains three values from the relay instance: exchangeName (relay.GetExchange()), account (relay.GetAccount()), and asset (relay.GetAsset()). If the argument count check fails, the script prints an error message and exits with status 1.
 
