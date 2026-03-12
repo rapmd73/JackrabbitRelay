@@ -1,0 +1,15 @@
+## Section 1 - Non-Technical Description
+
+This program reads a series of historical price and volume records for the ADA/USD market, processes each record in order, applies a set of technical-analysis operations to each new record, and prints a display line for every step. It uses a technical-analysis helper object to maintain running calculations as it moves through the data.
+
+## Section 2 - Technical Analysis
+
+The script is a Python program that builds and runs a simple processing loop around a technical-analysis helper class. It first extends the module search path with a hard-coded directory and imports a pair of modules: one named `JackrabbitRelay` (aliased as JRR) and another named `JRRtechnical` (aliased as jrTA). The program's main work is performed inside the `main()` function, which is executed when the script is run as the main module.
+
+Inside `main()`, an instance of `jrTA.TechnicalAnalysis` is created with the parameters 'kraken', 'MAIN', 'ADA/USD', '1m', and 197. Immediately after, the instance method `ReadOHLCV` is called with the filename 'ADAUSD.txt', and its return value is assigned to `ohlcv`. This implies the program obtains a sequence of OHLCV records (open, high, low, close, volume, etc.) from that file.
+
+Several integer variables are set to label positions within each OHLCV record: `Opening = 1`, `HighIDX = 2`, `LowIDX = 3`, `Closing = 4`, and `Volume = 5`. A `SlowLength` variable is set to 197, and these index constants are used to indicate which element of each record corresponds to which price or volume field.
+
+The program then iterates over each element (named `slice`) in the `ohlcv` sequence. For each `slice`, it calls `ta.Rolling(slice)`, which feeds the new record into the `TechnicalAnalysis` instance; this is how the helper object keeps its internal state up to date as it processes the series. After updating state, the program prepares to compute an exponential moving average (EMA): it sets `emaIDX = 6` to designate where the EMA value will be stored or referenced. It then calls `ta.EMA(Closing, SlowLength)`, telling the helper to compute an EMA based on the close field with the configured length of 197 periods. Immediately after computing the EMA, it calls `ta.Rule37(emaIDX)`, invoking a rule or test that references the EMA at index 6. The script's inline comment also indicates an intention to create Bollinger Bands using a previous EMA, with upper and lower boundaries at columns 7 and 8, but there is no explicit call in the shown code that creates those band columns.
+
+For each processed `slice`, the program calls `ta.Display(-1)`. This method call causes the technical-analysis object to output or print a display line for the current step; the argument -1 likely selects the most recent row or a display mode. The loop continues until every record in `ohlcv` has been processed. When run as a script, `main()` is invoked; otherwise, the module defines no other runnable behaviors. The script includes module-level metadata comments and ends after finishing the loop and display calls.

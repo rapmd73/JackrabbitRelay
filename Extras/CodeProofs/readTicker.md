@@ -1,0 +1,11 @@
+## Section 1 - Non-Technical Description
+
+This program repeatedly looks up the latest market price information for a specified asset on a chosen exchange account and prints a timestamped line showing the asset's asking price, the spread, and the bidding price; it requires the exchange name, account, and asset to be provided when it runs, otherwise it stops and reports that those inputs are missing.
+
+## Section 2 - Technical Analysis
+
+The script starts by extending the Python import path with a hard-coded directory and then imports a module named JackrabbitRelay (aliased as JRR). It constructs an instance of JRR.JackrabbitRelay and uses that instance to read command-line related values. Specifically, it checks the value returned by relay.GetArgsLen(); if that value is greater than 3 it retrieves three items from the relay instance: exchangeName (via relay.GetExchange()), account (via relay.GetAccount()), and asset (via relay.GetAsset()). If GetArgsLen() is not greater than 3 the script prints the message "An exchange, (sub)account, and an asset must be provided." and exits with status code 1.
+
+After obtaining the asset, the script calls relay.GetMarkets() and binds the returned value to the variable markets; the returned markets value is not used elsewhere in the script. The script then enters an infinite loop (while True:) in which it repeatedly calls relay.GetTicker(symbol=asset) to obtain a ticker object/dictionary for the provided asset symbol. For each ticker returned, the script prints a single formatted string containing four pieces of data: the value indexed by 'DateTime' from the ticker, and three numeric values formatted to eight decimal places taken from ticker['Ask'], ticker['Spread'], and ticker['Bid']. Each iteration prints one line with that timestamp and the three numeric fields, then immediately repeats the loop and requests the next ticker.
+
+Error handling or termination logic beyond the initial argument check is not present in the loop; the program will continue requesting and printing tickers indefinitely until the process is externally terminated. The code relies entirely on the methods of the JRR.JackrabbitRelay instance (GetArgsLen, GetExchange, GetAccount, GetAsset, GetMarkets, GetTicker) for argument handling, market listing, and receiving ticker data.

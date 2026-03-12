@@ -1,0 +1,19 @@
+## Section 1 - Non-Technical Description
+
+This program retrieves recent Bitcoin price and volume data from a cryptocurrency exchange, computes several moving averages and crossover indicators on that data in a rolling fashion, and displays the most recent processed data point repeatedly as it steps through the historical records.
+
+## Section 2 - Technical Analysis
+
+The program begins by importing modules and appending a specific library path to sys.path so that two custom modules, JackrabbitRelay (aliased JRR) and JRRtechnical (aliased jrTA), can be imported. The main() function constructs an instance of jrTA.TechnicalAnalysis with arguments specifying the Kraken exchange, a label "MAIN", the trading pair "BTC/USD", a 1-minute timeframe, and a request for 5000 records. It calls ta.GetOHLCV() to retrieve the OHLCV (open, high, low, close, volume) matrix into the variable ohlcv.
+
+A set of integer constants are assigned to named variables: Opening=1, HighIDX=2, LowIDX=3, Closing=4, Volume=5, and indices for computed series sma1IDX=6, sma2IDX=7, sma3IDX=8, plus sma1X=9 and sma2X=10. These integers are used as column indexes when the TechnicalAnalysis instance stores or references data series inside its internal matrix.
+
+The program iterates over each element (named slice) in the ohlcv list. For each slice it calls ta.Rolling(slice), which feeds the current candle/row into the TechnicalAnalysis instance and updates its internal rolling matrix or state. After rolling in the current slice, the program calls ta.SMA(Closing,17), ta.SMA(Closing,47), and ta.SMA(Closing,197) in sequence. Each of these calls computes a Simple Moving Average of the closing price over the specified period and stores the result at the corresponding internal column indices (sma1IDX, sma2IDX, sma3IDX as documented by comments).
+
+Next, ta.Cross(sma1IDX,sma2IDX) is invoked to evaluate a crossing event between the 17-period SMA and the 47-period SMA; the function checks whether the faster SMA crosses over or under the slower SMA and records that crossing state into the matrix column indicated by the call (the comments indicate this call corresponds to index 9). Then ta.Cross(Closing,sma3IDX) checks whether the current closing price crosses the 197-period SMA (the comments indicate index 10 for this crossing result), allowing the program to capture whether price has moved relative to the longer-term trend SMA.
+
+After computing moving averages and crossings, the code calls ta.SMA(sma1X,20) and ta.SMA(sma2X,20). These calls compute 20-period SMAs of the previously stored series located at indices sma1X (9) and sma2X (10). In other words, the program smooths the crossing or other series that were placed into those columns by earlier Cross calls by calculating moving averages of those columns.
+
+Finally, for each iteration of the loop the program calls ta.Display(-1). This method displays the last row (index -1) of the TechnicalAnalysis internal matrix - effectively showing the most recently updated candle row along with its computed indicators - after each slice is processed. The loop continues until every candle from ohlcv has been rolled through, with the repeated display of the updated last candle after each rolling step.
+
+When the script is executed directly (if __name__ == '__main__'), it calls main() to perform the entire sequence described above. The program prints nothing explicitly in the shown code aside from whatever ta.Display outputs; there is a commented-out print statement that, if left commented, does not execute. The observable runtime behavior is: load up to 5000 one-minute BTC/USD candles from Kraken into a rolling analyzer, compute three SMAs (17, 47, 197), compute crossings between 17/47 and close/197, compute 20-period SMAs of the crossing result columns, and repeatedly display the final processed row after each incoming candle.

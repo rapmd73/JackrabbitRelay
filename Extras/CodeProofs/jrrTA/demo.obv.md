@@ -1,0 +1,13 @@
+# Section 1 - Non-Technical Description
+
+This program reads a set of historical trading data for the ADA/USD market, processes each line of that data in sequence to update a technical analysis engine, computes an on-balance volume indicator for each data point, and displays the current analysis after each update.
+
+# Section 2 - Technical Analysis
+
+The script is a Python program that sets up and runs a simple loop feeding historical market data into a technical analysis component. It first adjusts the Python import path to include a specific directory, then imports several standard libraries (sys, os, math, json, datetime, time) and two project-specific modules: JackrabbitRelay (as JRR) and JRRtechnical (as jrTA). The main function instantiates a TechnicalAnalysis object from jrTA with four constructor arguments: the exchange string 'kraken', a label 'MAIN', the trading pair 'ADA/USD', a timeframe '1m', and a numeric parameter 197. This object is stored in the variable ta.
+
+Next, the program calls ta.ReadOHLCV('ADAUSD.txt'), which returns a collection assigned to ohlcv. The script defines five integer variables that represent positions or indices used when accessing fields in an OHLCV record: Opening = 1, HighIDX = 2, LowIDX = 3, Closing = 4, and Volume = 5. These numeric constants are then used as arguments in subsequent method calls.
+
+The program iterates over each element in the ohlcv collection with a for loop. For each element (named slice in the loop), it first calls ta.Rolling(slice), passing the current record to update whatever internal rolling/window state the TechnicalAnalysis object maintains. It then calls ta.OBV(Closing,Volume), passing the two integer constants 4 and 5; this invokes the object's On-Balance Volume calculation using those indices to reference the closing price and volume fields within the current internal data context. After updating OBV, the script calls ta.Display(-1), asking the TechnicalAnalysis object to present or output its current state; the argument -1 likely selects the most recent record for display.
+
+Finally, the module includes the usual if __name__ == '__main__' guard to call main() when the script is executed directly. The script does not perform any other file I/O beyond calling ReadOHLCV on the given filename, nor does it show any direct printing or logging itself; all input parsing and output presentation are delegated to methods of the TechnicalAnalysis instance (ta). The loop processes every record in the ohlcv dataset in order, updating rolling state, computing OBV, and displaying the latest analysis for each record.
