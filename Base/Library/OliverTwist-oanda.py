@@ -696,8 +696,8 @@ def OrderProcessor(osh):
             for order in list(OrphanList.keys()):
                 if Orphan['Class'].lower()!='orphan':
                     continue
-                foumd=False
-                Orphan=Orphanlist[order]
+                found=False
+                Orphan=OrphanList[order]
                 id=Orphan['ID']
                 cid=Orphan['cID']
                 for cur in openOrders:
