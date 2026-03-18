@@ -16,6 +16,13 @@ import random
 import socket
 import json
 
+JRDLM=False
+if os.path.exists('/home/JackrabbitDLM/DLMLocker.py'):
+    sys.path.append('/home/JackrabbitDLM')
+    import DLMLocker as DLM
+    print("Using JackrabbitDLM")
+    JRDLM=True
+
 # Get the starting nice value to measure and control OS load.
 
 MasterNice=os.getpriority(os.PRIO_PROCESS,0)
@@ -379,6 +386,16 @@ class Locker:
 
     def Erase(self):
         return self.RetryData("Erase",0,None)
+
+# If the newer DLM is available, override the local Locker class.
+if JRDLM:
+    class NewLocker(DLM.Locker):
+        def __init__(self, filename, Retry=7, Timeout=300, Log=None, ID=None, **kwargs):
+            # Map the old internal signature to the new DLM signature
+            # Note: We ignore 'Log' as the new DLM handles its own output/stats
+            super().__init__(filename, Retry=Retry, Timeout=Timeout, ID=ID, **kwargs)
+
+    Locker = NewLocker
 
 ###
 ### General purpose functions
