@@ -2548,6 +2548,148 @@ class TechnicalAnalysis:
 
         return self.window
 
+    ## Experimental
+
+    # Hidden Markov Model: Regime Probability
+    # Modeled from AlgoPoint HMM Regime logic.
+    # Returns 9 columns:
+    # [ObsMom, ObsVol, LikeBull, LikeBear, LikeChop, ProbBull, ProbBear, ProbChop, DomState]
+
+    def HiddenMarkov(self, length=20, p_stay_bull=0.80, p_stay_bear=0.80, p_stay_chop=0.60, CloseIDX=4, HighIDX=2, LowIDX=3):
+        """
+        Calculates market regime probabilities using a Hidden Markov Model.
+
+        DomState: 1 = Bullish, -1 = Bearish, 0 = Chop
+        """
+        # 1. Warmup: We need enough history for ROC, EMA, and StDev of those values
+        warmup = length * 2
+        if len(self.window) < warmup:
+            for _ in range(9): self.AddColumn(None)
+            return self.window
+
+        # --- STEP 1: CALCULATE EMISSIONS (Observables) ---
+        # Momentum Observable (Z-Score of Smoothed ROC)
+        # mom_raw = ta.roc(close, 1)
+        # obs_mom = (ema(mom_raw) - sma(ema(mom_raw))) / stdev(ema(mom_raw))
+
+        def get_series_roc(idx, lookback):
+            vals = []
+            for i in range(-lookback, 0):
+                c_now = self.window[i][idx]
+                c_prev = self.window[i-1][idx]
+                if c_now is not None and c_prev is not None and c_prev != 0:
+                    vals.append(((c_now - c_prev) / c_prev) * 100)
+            return vals
+
+        # Calculate Z-Score for Momentum
+        mom_history = get_series_roc(CloseIDX, length + length)
+        if len(mom_history) < length:
+            for _ in range(9): self.AddColumn(None)
+            return self.window
+
+        # Simple EMA of ROC
+        k = 2 / (length + 1)
+        ema_mom_list = []
+        curr_ema = sum(mom_history[:length]) / length
+        for val in mom_history[length:]:
+            curr_ema = (val * k) + (curr_ema * (1 - k))
+            ema_mom_list.append(curr_ema)
+
+        # Z-Score the smoothed momentum
+        m_mean = sum(ema_mom_list) / len(ema_mom_list)
+        m_std = (sum((x - m_mean)**2 for x in ema_mom_list) / len(ema_mom_list))**0.5
+        obs_mom = (ema_mom_list[-1] - m_mean) / m_std if m_std != 0 else 0.0
+
+        # Volatility Observable (Z-Score of ATR)
+        # (Simplified ATR approach for internal calculation)
+        tr_history = []
+        for i in range(-length-length, 0):
+            h, l, c_prev = self.window[i][HighIDX], self.window[i][LowIDX], self.window[i-1][CloseIDX]
+            if None not in [h, l, c_prev]:
+                tr_history.append(max(h - l, abs(h - c_prev), abs(l - c_prev)))
+
+        if len(tr_history) < length:
+            obs_vol = 0.0
+        else:
+            vol_mean = sum(tr_history[-length:]) / length
+            vol_std = (sum((x - vol_mean)**2 for x in tr_history[-length:]) / length)**0.5
+            obs_vol = (tr_history[-1] - vol_mean) / vol_std if vol_std != 0 else 0.0
+
+        # --- STEP 2: LIKELIHOOD FUNCTION (PDF) ---
+        def f_pdf(_x, _mu, _sigma):
+            _var = _sigma ** 2
+            if _var == 0: return 0.0
+            return (1.0 / math.sqrt(2.0 * math.pi * _var)) * math.exp(-((_x - _mu)**2) / (2.0 * _var))
+
+        # Profiles defined in the logic
+        like_bull = f_pdf(obs_mom, 1.0, 1.0) * f_pdf(obs_vol, -0.5, 1.0)
+        like_bear = f_pdf(obs_mom, -1.0, 1.0) * f_pdf(obs_vol, 1.0, 1.0)
+        like_chop = f_pdf(obs_mom, 0.0, 0.5) * f_pdf(obs_vol, 1.5, 1.0)
+
+        # --- STEP 3: BAYESIAN UPDATE ---
+        # Transition Probabilities
+        t_bull_bear = (1.0 - p_stay_bull) * 0.2
+        t_bull_chop = (1.0 - p_stay_bull) * 0.8
+        t_bear_bull = (1.0 - p_stay_bear) * 0.2
+        t_bear_chop = (1.0 - p_stay_bear) * 0.8
+        t_chop_bull = (1.0 - p_stay_chop) * 0.5
+        t_chop_bear = (1.0 - p_stay_chop) * 0.5
+
+        # Get previous probabilities from the matrix
+        prev_row = self.window[-2]
+
+        # We assume the last state columns were [prob_bull, prob_bear,
+        # prob_chop, dom_state] These will be indices -4, -3, -2 relative to
+        # the previous end of calculation
+
+        h_idx = len(prev_row) - 4
+
+        if len(prev_row) > h_idx and prev_row[h_idx] is not None:
+            p_bull_prev = prev_row[h_idx]
+            p_bear_prev = prev_row[h_idx+1]
+            p_chop_prev = prev_row[h_idx+2]
+        else:
+            # Initial state: equal probability
+            p_bull_prev = p_bear_prev = p_chop_prev = 1/3.0
+
+        # Calculate Priors
+        prior_bull = (p_bull_prev * p_stay_bull) + (p_bear_prev * t_bear_bull) + (p_chop_prev * t_chop_bull)
+        prior_bear = (p_bull_prev * t_bull_bear) + (p_bear_prev * p_stay_bear) + (p_chop_prev * t_chop_bear)
+        prior_chop = (p_bull_prev * t_bull_chop) + (p_bear_prev * t_bear_chop) + (p_chop_prev * p_stay_chop)
+
+        # Posteriors
+        post_bull = prior_bull * like_bull
+        post_bear = prior_bear * like_bear
+        post_chop = prior_chop * like_chop
+
+        total_post = post_bull + post_bear + post_chop
+
+        prob_bull = post_bull / total_post if total_post > 0 else p_bull_prev
+        prob_bear = post_bear / total_post if total_post > 0 else p_bear_prev
+        prob_chop = post_chop / total_post if total_post > 0 else p_chop_prev
+
+        # --- STEP 4: DOMINANT STATE ---
+        dom_state = 0
+        if prob_bull > prob_bear and prob_bull > prob_chop:
+            dom_state = 1
+        elif prob_bear > prob_bull and prob_bear > prob_chop:
+            dom_state = -1
+        else:
+            dom_state = 0
+
+        # Append all 9 columns
+        self.AddColumn(obs_mom)
+        self.AddColumn(obs_vol)
+        self.AddColumn(like_bull)
+        self.AddColumn(like_bear)
+        self.AddColumn(like_chop)
+        self.AddColumn(prob_bull)
+        self.AddColumn(prob_bear)
+        self.AddColumn(prob_chop)
+        self.AddColumn(dom_state)
+
+        return self.window
+
     ## Future indicator additions (No particular order)
 
     # Super Trend
