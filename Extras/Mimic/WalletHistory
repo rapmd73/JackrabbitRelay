@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Chart DLM statistics
+# 2019 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitAI/Library')
+import os
+import time
+import datetime
+import math
+import json
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.subplots as ps
+
+import DecoratorFunctions as DF
+import FileFunctions as FF
+
+###
+### Main code base.
+###
+
+if len(sys.argv)<3:
+    print("You MUST specify either (I)mage or (H)tml for output type")
+    print("You MUST specify the history file to chart")
+    sys.exit(1)
+
+ih=sys.argv[1].lower()
+if ih!='i' and ih!='h':
+    print("You MUST specify either (I)mage or (H)tml for output type")
+    sys.exit(1)
+
+flogs=sys.argv[2]
+lines=FF.ReadFile(flogs).strip().split('\n')
+
+srch=None
+if len(sys.argv)>3:
+    srch=sys.argv[3].lower()
+
+asset=None
+Dates={}
+
+for line in lines:
+    data=json.loads(line)
+
+    if srch is not None and data['Asset'].lower()!=srch:
+        continue
+
+    if 'DateTime' in data:
+        dt=data['DateTime']
+
+    if 'Asset' in data:
+        asset=data['Asset']
+
+    stats={}
+
+    for k in data.keys():
+        if k=='DateTime':
+            continue
+        if not isinstance(data[k],str):
+            stats[k]=float(data[k])
+
+    Dates[dt]=stats
+
+# Make the chart
+
+if ih=='h':
+    fn=f'jsonChart.html'
+else:
+    fn=f'jsonChart.png'
+
+# Build data table
+
+# Sort dates
+dates = sorted(Dates.keys())
+
+# Collect all field names
+fields = set()
+for v in Dates.values():
+    fields.update(v.keys())
+
+# Create one trace per field
+traces = []
+for field in sorted(fields):
+    y=[Dates[dt].get(field,0) for dt in dates]
+#    y=[math.log(v+1) for v in yraw]
+    traces.append(go.Scatter(x=dates, y=y, mode='lines', name=field))
+
+# Create and save figure
+fig1 = go.Figure(traces)
+
+fig1.update_yaxes(title_text='Asset Metrics')
+fig1.update_layout(autosize=True,title={"text":f"{asset} Asset Analysis","x":0.5,"xanchor":"center","yanchor":"top"},template='plotly_white',legend_title='Metrics')
+
+if ih=='h':
+    fig1.write_html(fn)
+else:
+    fig1.write_image(fn,width=1920/2,height=1024/2)
+
+###
+### End Program
+###
