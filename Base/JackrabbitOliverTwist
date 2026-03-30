@@ -499,7 +499,9 @@ def ProcessChild(idx):
         return
 
     if idx in OrphanMemory:
-        sData=json.loads(OrphanMemory[idx].Get())
+        sData=OrphanMemory[idx].Get()
+        if isinstance(sData,str):
+            sData=json.loads(sData)
     else:
         sData={ "Status":"waiting" }
     OliverTwistLock.Unlock()
