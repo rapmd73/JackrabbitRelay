@@ -16,12 +16,19 @@ import random
 import socket
 import json
 
+# Test to see if Jackrabbit DLM is loaded.
+
 JRDLM=False
 if os.path.exists('/home/JackrabbitDLM/DLMLocker.py'):
-    sys.path.append('/home/JackrabbitDLM')
-    import DLMLocker as DLM
-    print("Using JackrabbitDLM")
-    JRDLM=True
+    try:
+        sys.path.append('/home/JackrabbitDLM')
+        import DLMLocker as DLM
+        fw1=DLM.Locker("LockerTest",Timeout=10,Retry=0)
+        if fw1.IsDLM():
+            print("Using JackrabbitDLM")
+            JRDLM=True
+    except:
+        pass
 
 # Get the starting nice value to measure and control OS load.
 
