@@ -204,7 +204,6 @@ class oanda:
         pair=symbol.replace('_','')
         timeframe=kwargs.get('timeframe')
         limit=str(kwargs.get('limit',None))
-
         if limit!=None and limit!="None":
             params={"granularity":timeframe.upper(), "count":limit }
 
