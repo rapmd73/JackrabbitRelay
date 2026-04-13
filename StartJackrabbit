@@ -19,7 +19,7 @@ if [ -z $Port ] ; then
     exit 1
 fi
 
-otProc=5
+otProc=8
 if [ "x$2" != "x" ] ; then
     otProc=$2
 fi
@@ -36,8 +36,8 @@ if [ "x$kPids" != "x" ] ; then
     kill -s 2 $kPids > /dev/null 2>&1
 fi
 
-sleep 3
-( $BaseDir/LauncherLocker & ) > /dev/null 2>&1
+#sleep 3
+#( $BaseDir/LauncherLocker & ) > /dev/null 2>&1
 sleep 3
 ( $BaseDir/LauncherOliverTwist $otProc & ) > /dev/null 2>&1
 sleep 3

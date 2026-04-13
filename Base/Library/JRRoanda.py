@@ -7,6 +7,7 @@
 
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
+sys.path.append('/home/JackrabbitDLM')
 import os
 import math
 import signal
@@ -30,6 +31,7 @@ import oandapyV20.contrib.generic as v20Generic
 import oandapyV20.contrib.factories as v20Factories
 
 import JRRsupport
+import DLMLocker as DLM
 
 class oanda:
     # Define the special variables for this object. ALL variable WITHIN
@@ -534,7 +536,7 @@ class oanda:
     # Make an orphan order
 
     def MakeOrphanOrder(self,id,Order):
-        orphanLock=JRRsupport.Locker("OliverTwist")
+        orphanLock=DLM.Locker("OliverTwist")
 
         # Strip Identity
 
@@ -557,7 +559,7 @@ class oanda:
     # Create a conditional order and deliver to OliverTwist
 
     def MakeConditionalOrder(self,id,Order):
-        orphanLock=JRRsupport.Locker("OliverTwist")
+        orphanLock=DLM.Locker("OliverTwist")
 
         resp=Order['Response']
         Order.pop('Response',None)
@@ -631,7 +633,7 @@ class oanda:
                 if 'Identity' in ledger:
                     ledger.pop('Identity',None)
 
-                ledgerLock=JRRsupport.Locker(lname)
+                ledgerLock=DLM.Locker(lname)
                 ledgerLock.Lock()
                 JRRsupport.AppendFile(lname,json.dumps(ledger)+'\n')
                 ledgerLock.Unlock()

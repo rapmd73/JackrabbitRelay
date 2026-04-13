@@ -7,6 +7,7 @@
 
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
+sys.path.append('/home/JackrabbitDLM')
 import os
 import signal
 import atexit
@@ -20,6 +21,7 @@ import JRRccxt
 import JRRoanda
 import JRRmimic
 import JRRsupport
+import DLMLocker as DLM
 #import JRRccapi
 
 # This is the logging class
@@ -677,10 +679,11 @@ class JackrabbitRelay:
         else:
             ratelimit=1000
 
+        # Only pause if we can NOT get the lock.
         while self.Limiter.Lock()!='locked':
             JRRsupport.ElasticSleep(ratelimit/1000)
-        JRRsupport.ElasticSleep(ratelimit/1000)
-        self.Limiter.Unlock()
+        # Let lock expire on its own
+        # self.Limiter.Unlock()
 
     # Function to run at exit.
 
@@ -706,8 +709,8 @@ class JackrabbitRelay:
 
         # Initialize rate limiting sub-system
         ln="RateLimiter."+self.Exchange
-        self.Limiter=JRRsupport.Locker(ln,ID=ln)
-        atexit.register(self.CleanUp)
+        self.Limiter=DLM.Locker(ln,ID=ln)
+        #atexit.register(self.CleanUp)
 
         # Market data is loaded automatically. Pull it into the Relay object as
         # well.
@@ -851,7 +854,7 @@ class JackrabbitRelay:
 
     def OliverTwistOneShot(self,CompareOrder):
         fList=[self.Directories['Data']+'/OliverTwist.Conditional.Receiver',self.Directories['Data']+'/OliverTwist.Conditional.Storehouse']
-        orphanLock=JRRsupport.Locker("OliverTwist")
+        orphanLock=DLM.Locker("OliverTwist")
 
         orphanLock.Lock()
         for fn in fList:

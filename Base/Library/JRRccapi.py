@@ -5,7 +5,7 @@
 
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
-
+sys.path.append('/home/JackrabbitDLM')
 import json
 import time
 import threading
@@ -13,6 +13,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, List, Any
 from collections import deque
 import JRRsupport
+import DLMLocker as DLM
 
 # CCAPI Python bindings
 import ccapi
@@ -991,7 +992,7 @@ class ccapiCrypto:
     
     def MakeOrphanOrder(self, id, Order):
         """Create orphan order entry (from JRRccxt)"""
-        orphanLock = JRRsupport.Locker("OliverTwist")
+        orphanLock = DLM.Locker("OliverTwist")
         Order.pop('Identity', None)
         
         Orphan = {

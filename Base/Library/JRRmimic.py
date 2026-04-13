@@ -12,6 +12,7 @@
 
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
+sys.path.append('/home/JackrabbitDLM')
 import os
 import random
 import atexit
@@ -22,6 +23,7 @@ import time
 from datetime import datetime
 
 import JRRsupport
+import DLMLocker as DLM
 import JackrabbitRelay as JRR
 
 class mimic:
@@ -89,7 +91,7 @@ class mimic:
         # This is where all trades for a given mimic account are tracked in relation to the data source
         self.history=f"{self.Storage}/{self.Active['Account']}.history"
         self.walletFile=f"{self.Storage}/{self.Active['Account']}.wallet"
-        self.walletLock=JRRsupport.Locker(self.walletFile,ID=self.walletFile)
+        self.walletLock=DLM.Locker(self.walletFile,ID=self.walletFile)
         self.Wallet=None
 
         # Lock it up and set the exit approach
@@ -516,7 +518,7 @@ class mimic:
     # Create a conditional order and deliver to OliverTwist
 
     def MakeConditionalOrder(self,id,Order):
-        orphanLock=JRRsupport.Locker("OliverTwist")
+        orphanLock=DLM.Locker("OliverTwist")
 
         resp=Order['Response']
         Order.pop('Response',None)

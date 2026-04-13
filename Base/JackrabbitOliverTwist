@@ -55,6 +55,7 @@
 
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
+sys.path.append('/home/JackrabbitDLM')
 import os
 import atexit
 import importlib
@@ -66,6 +67,7 @@ import subprocess
 
 import JRRsupport
 import JackrabbitRelay as JRR
+import DLMLocker as DLM
 
 Version="0.0.0.1.1110"
 BaseDirectory='/home/JackrabbitRelay2/Base'
@@ -99,7 +101,7 @@ OliverTwistTimeout=60   # (15*60)
 # JackrabbitOliverTwist will access this file. Collisions must not be allowed to
 # happen.
 
-OliverTwistLock=JRRsupport.Locker("OliverTwist")
+OliverTwistLock=DLM.Locker("OliverTwist")
 
 # This will be used for memory locks and data transfer between parent/child
 
@@ -475,8 +477,8 @@ def ProcessOrphan(**kwargs):
     except Exception as err:
         JRLog.Write(f"Broke {sys.exc_info()[-1].tb_lineno}: {osh['IDX']}, {err}")
 
-    otLock=JRRsupport.Locker("OliverTwist",ID=osh['lID'])
-    Memory=JRRsupport.Locker(osh['IDX'],ID=osh['mID'])
+    otLock=DLM.Locker("OliverTwist",ID=osh['lID'])
+    Memory=DLM.Locker(osh['IDX'],ID=osh['mID'])
     if otLock.Lock()=='locked':
         Memory.Put(OliverTwistTimeout,State)
         otLock.Unlock()
@@ -577,7 +579,7 @@ def main():
         for idx in StorehouseIDX:
             # Create the orphan memory and assign it to Waiting
             if idx not in OrphanMemory:
-                OrphanMemory[idx]=JRRsupport.Locker(idx)
+                OrphanMemory[idx]=DLM.Locker(idx)
                 OrphanMemory[idx].Put(OliverTwistTimeout,"Waiting")
 
             # Multiprocess functionality goes here

@@ -10,14 +10,15 @@
 # This is the framework used by OliverTwist to process conditional/orphan orders.
 
 import sys
-#sys.path.append('/home/JackrabbitRelay2/Base/Library')
-sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+sys.path.append('/home/JackrabbitDLM')
 import os
 import json
 import datetime
 import time
 
 import JRRsupport
+import DLMLocker as DLM
 import JackrabbitRelay as JRR
 
 JRLog=JRR.JackrabbitLog()
@@ -479,7 +480,7 @@ def OrderProcessor(osh):
     relay.JRLog.SetBaseName('OliverTwist')
 
     # Get the lock ID correct for Storehouse (sh)
-    shLock=JRRsupport.Locker(f"OliverTwist.{idx}",ID=f"{idx}.{osh['lID']}")
+    shLock=DLM.Locker(f"OliverTwist.{idx}",ID=f"{idx}.{osh['lID']}")
 
     # Locking is not really needed if OliverTwist is the only player in town, but we can't assume that as
     # there might be some other program that wants this storehouse, so we play it safe.

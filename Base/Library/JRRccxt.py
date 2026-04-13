@@ -7,6 +7,7 @@
 
 import sys
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
+sys.path.append('/home/JackrabbitDLM')
 import os
 import signal
 import json
@@ -15,6 +16,7 @@ from datetime import datetime
 import ccxt
 
 import JRRsupport
+import DLMLocker as DLM
 
 # Class name MUST be different then above import reference.
 
@@ -671,7 +673,7 @@ class ccxtCrypto:
     # Create an orphan order and deliver to OliverTwist
 
     def MakeOrphanOrder(self,id,Order):
-        orphanLock=JRRsupport.Locker("OliverTwist")
+        orphanLock=DLM.Locker("OliverTwist")
 
         # Strip Identity
 
@@ -694,7 +696,7 @@ class ccxtCrypto:
     # Create a conditional order and deliver to OliverTwist
 
     def MakeConditionalOrder(self,id,Order):
-        orphanLock=JRRsupport.Locker("OliverTwist")
+        orphanLock=DLM.Locker("OliverTwist")
 
         if type(Order['Response'])==dict:
             resp=json.dumps(Order['Response'])
@@ -771,7 +773,7 @@ class ccxtCrypto:
             # Strip Identity
             ledger.pop('Identity',None)
 
-            ledgerLock=JRRsupport.Locker(lname)
+            ledgerLock=DLM.Locker(lname)
             ledgerLock.Lock()
             JRRsupport.AppendFile(lname,json.dumps(ledger)+'\n')
             ledgerLock.Unlock()
