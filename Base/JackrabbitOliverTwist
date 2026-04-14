@@ -79,7 +79,7 @@ Receiver=DataDirectory+'/OliverTwist.Receiver'
 
 # Get the number of active CPUs
 
-NumberProcesses=os.cpu_count()
+NumberProcesses=os.cpu_count()/2
 
 # Set up the logging system
 
@@ -95,7 +95,7 @@ interceptor=JRRsupport.SignalInterceptor(Log=JRLog)
 # Testing has show that only a few seconds is actually requred. The extended amount
 # is just to compensate for an overloaded server.
 
-OliverTwistTimeout=60   # (15*60)
+OliverTwistTimeout=60
 
 # This lock guards the lists. Both PlaceOrder.olivertwist and
 # JackrabbitOliverTwist will access this file. Collisions must not be allowed to
@@ -571,7 +571,7 @@ def main():
     # Start the main loop
 
     while True:
-        StartTime=datetime.datetime.now()
+#        StartTime=datetime.datetime.now()
 
         # Read the list of storehouses
         ReadReceiver()
@@ -597,8 +597,8 @@ def main():
             while interceptor.GetChildren()>0:
                 JRRsupport.ElasticSleep(1)
 
-        EndTime=datetime.datetime.now()
-        Elapsed=(EndTime-StartTime)
+#        EndTime=datetime.datetime.now()
+#        Elapsed=(EndTime-StartTime)
 #        if len(idx)>(NumberProcesses*3):
 #            JRLog.Write(f"{len(StorehouseIDX)} assets scanned in "+str(Elapsed)+" seconds")
 

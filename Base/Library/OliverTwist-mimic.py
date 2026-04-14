@@ -485,7 +485,7 @@ def OrderProcessor(osh):
     # Locking is not really needed if OliverTwist is the only player in town, but we can't assume that as
     # there might be some other program that wants this storehouse, so we play it safe.
 
-#    shLock.Lock()
+    shLock.Lock()
     try:
         OrphanList=ReadStorehouse(idx=idx)
         if len(OrphanList)==0:
@@ -536,7 +536,7 @@ def OrderProcessor(osh):
 
     except Exception as err:
         relay.JRLog.Write(f"OT MIMIC Broke {sys.exc_info()[-1].tb_lineno}: {idx}, {err}")
-#    shLock.Unlock()
+    shLock.Unlock()
 
     EndTime=datetime.datetime.now()
 #    JRLog.Write(f"OP MIMIC Elapsed {idx}/{len(OrphanList)}: {EndTime-StartTime} seconds")

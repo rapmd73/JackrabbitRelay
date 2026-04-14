@@ -710,6 +710,10 @@ def OrderProcessor(osh):
                 relay.WriteLedger(Order=Orphan,Response=None)
                 OrphanList.pop(Orphan['Key'],None)
 
+                # Ease the burden of the OS.
+
+                os.sched_yield()
+
     except Exception as err:
         relay.JRLog.Write(f"OT OANDA Broke {sys.exc_info()[-1].tb_lineno}: {idx}, {err}")
 #    shLock.Unlock()

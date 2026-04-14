@@ -19,11 +19,6 @@ if [ -z $Port ] ; then
     exit 1
 fi
 
-otProc=8
-if [ "x$2" != "x" ] ; then
-    otProc=$2
-fi
-
 # Kill launchers
 kPids=`ps xaf | egrep "LauncherRelay|LauncherOliverTwist|LauncherLocker" | grep -v StartJackrabbit | cut -b-8`
 if [ "x$kPids" != "x" ] ; then
@@ -39,7 +34,7 @@ fi
 #sleep 3
 #( $BaseDir/LauncherLocker & ) > /dev/null 2>&1
 sleep 3
-( $BaseDir/LauncherOliverTwist $otProc & ) > /dev/null 2>&1
+( $BaseDir/LauncherOliverTwist & ) > /dev/null 2>&1
 sleep 3
 ( $BaseDir/LauncherRelay $Port & ) > /dev/null 2>&1
 

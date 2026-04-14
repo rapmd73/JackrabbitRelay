@@ -12,8 +12,7 @@
 # SellAction of Close sets Units to all and closes the entire position. Sell uses the CCXT ticket system.
 
 import sys
-#sys.path.append('/home/JackrabbitRelay2/Base/Library')
-sys.path.append('/home/GitHub/JackrabbitRelay/Base/Library')
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
 import json
 import datetime
@@ -552,6 +551,9 @@ def OrderProcessor(osh):
                     WriteStorehouse(idx,OrphanList,deleteKey=Orphan['Key'])
                     relay.WriteLedger(Order=Orphan,Response=None)
                     OrphanList.pop(Orphan['Key'],None)
+
+                # Easy the burden on the OS.
+                os.sched_yield()
 
     except Exception as err:
         relay.JRLog.Write(f"OT CCXT Broke {sys.exc_info()[-1].tb_lineno}: {idx}, {err}",stdOut=False)
