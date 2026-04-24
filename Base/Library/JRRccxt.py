@@ -185,6 +185,8 @@ class ccxtCrypto:
             self.Broker.headers['FTX-SUBACCOUNT']=self.Active['Account']
         elif self.Exchange=="ftxus" and self.Active['Account']!='MAIN':
             self.Broker.headers['FTXUS-SUBACCOUNT']=self.Active['Account']
+        elif self.Exchange=="apex" and 'SEED' in self.Active:
+            self.Broker.seed = self.Active['SEED']
 
         # Cycle through required login types. Each exchange could have different login
         # requireents. Try to soft through each requirement and handle it.
@@ -207,6 +209,19 @@ class ccxtCrypto:
                     else:
                         self.Log.Error("Connecting to exchange",f"{self.Exchange} requires a(n) {jf} as well")
 
+        # For ApeX exchange, required for "Vaults" section
+        if self.Exchange=="apex" and 'Seeds' in self.Active:
+            self.Broker.options['seeds']=self.Active['Seeds']
+
+        # DYDX v4, v3 was privateKey
+        if self.Exchange=="dydx" and 'Mnemonic' in self.Active:
+            self.Broker.options['mnemonic']=self.Active['Mnemonic']
+
+        # ALWAYS has to be one weirdo... who am I kidding, they're all weird.
+        if self.Exchange=="paradex" and 'StarkPrivateKey' in self.Active:
+            self.Broker.options['starkPrivateKey']=self.Active['StarkPrivateKey']
+
+        # Check market information
         if 'Market' in self.Active:
             self.Active['Market']=self.Active['Market'].lower()
 

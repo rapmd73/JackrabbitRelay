@@ -69,7 +69,7 @@ import JRRsupport
 import JackrabbitRelay as JRR
 import DLMLocker as DLM
 
-Version="0.0.0.1.1110"
+Version="0.0.0.1.1120"
 BaseDirectory='/home/JackrabbitRelay2/Base'
 DataDirectory='/home/JackrabbitRelay2/Data'
 ConfigDirectory='/home/JackrabbitRelay2/Config'
