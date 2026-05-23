@@ -294,7 +294,7 @@ class TechnicalAnalysis:
         filename=None
 
         if fn and os.path.exists(fn):
-            filenane=fn
+            filename=fn
         elif self.logname and os.path.exists(self.logname):
             filename=self.logname
 
