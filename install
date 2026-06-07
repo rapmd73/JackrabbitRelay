@@ -1,5 +1,9 @@
 #!/bin/bash
 
+cd /home/GitHub/JackrabbitRelay
+
+BaseDir="/home/JackrabbitRelay2"
+
 # Make sure virtual environment is active
 
 if [ -d "/home/RAPMD" ] ; then
@@ -19,10 +23,6 @@ if [ "x$stat" == "x" ] ; then
 fi
 
 OFS=`stat --printf="%s" install`
-
-BaseDir="/home/JackrabbitRelay2"
-
-cd /home/GitHub/JackrabbitRelay
 
 mkdir -p $BaseDir > /dev/null 2>&1
 git pull https://github.com/rapmd73/JackrabbitRelay
