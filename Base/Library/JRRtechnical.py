@@ -61,7 +61,7 @@ class TechnicalAnalysis:
 
     # Window to string
 
-    def Win2Text(self,idx):
+    def Win2Text(self,idx,showidx=False):
         if idx==-1 and len(self.window)<1:
             return
 
@@ -74,10 +74,16 @@ class TechnicalAnalysis:
         slice=self.window[idx]
         for i in range(1,len(slice)):
             if slice[i]!=None:
-                out+=f"{float(slice[i]):{self.length}.{self.precision}f} "
+                if showidx:
+                    out+=f"{i:3.0f}/{float(slice[i]):{self.length}.{self.precision}f} "
+                else:
+                    out+=f"{float(slice[i]):{self.length}.{self.precision}f} "
             else:
                 dashes='-'*80
-                out+=f"{dashes[:self.length]:{self.length}} "
+                if showidx:
+                    out+=f"{i:3.0f}/{dashes[:self.length]:{self.length}} "
+                else:
+                    out+=f"{dashes[:self.length]:{self.length}} "
         return out
 
     # Log the window
@@ -118,8 +124,8 @@ class TechnicalAnalysis:
 
     # Print the fancy numbers
 
-    def Display(self,idx):
-        print(self.Win2Text(idx))
+    def Display(self,idx,showidx=False):
+        print(self.Win2Text(idx,showidx))
 
     # Return a row from the rolling window. Can be absolute or relative
 
@@ -1796,10 +1802,13 @@ class TechnicalAnalysis:
         and append all intermediate values as new columns:
         SAR, Trend (1=up, -1=down), Extreme Point (EP), Acceleration Factor (AF)
         """
-        n = len(self.window)
 
         # Ensure enough data to compute
-        if n < 2 or self.window[-1][HighIDX] is None or self.window[-1][LowIDX] is None or self.window[-2][HighIDX] is None or self.window[-2][LowIDX] is None:
+        if len(self.window) < 2 \
+        or self.window[-2][0] is None \
+        or len(self.window[-1])>len(self.window[-2]) \
+        or self.window[-1][HighIDX] is None or self.window[-1][LowIDX] is None \
+        or self.window[-2][HighIDX] is None or self.window[-2][LowIDX] is None:
             self.AddColumn(None)  # SAR
             self.AddColumn(None)  # Trend
             self.AddColumn(None)  # EP

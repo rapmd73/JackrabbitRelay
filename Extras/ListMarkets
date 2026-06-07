@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import sys
+sys.path.append('/home/GitHub/JackrabbitDLM')
 sys.path.append('/home/JackrabbitRelay2/Base/Library')
 import os
 import json
 import time
 
+import DLMLocker as DLM
 import JRRsupport
 import JackrabbitRelay as JRR
 
@@ -39,12 +41,12 @@ def GetChildTicker(*args,**kwargs):
         id=f"{args[0]}.{args[1]}.{args[2]}"
         mid=f"{id}.memory"
 
-        mlock=JRRsupport.Locker(id,ID=id,Timeout=10)
-        mdata=JRRsupport.Locker(mid,ID=mid,Timeout=10)
+        mlock=DLM.Locker(id,ID=id,Timeout=10)
+        mdata=DLM.Locker(mid,ID=mid,Timeout=10)
 
         mlock.Lock()
-        md=json.dumps(ticker).replace('"','\\"') # MUST be string
-        mdata.Put(86400,md)
+        md=json.dumps(ticker) #.replace('"','\\"') # MUST be string
+        mdata.Put(45*60,md)   # 45 minutes
         mlock.Unlock()
     except Exception as e:
         pass
@@ -116,11 +118,11 @@ def main():
         id=f"{exchangeName}.{account}.{pair}"
         mid=f"{id}.memory"
 
-        mlock=JRRsupport.Locker(id,ID=id,Timeout=10)
-        mdata=JRRsupport.Locker(mid,ID=mid,Timeout=10)
+        mlock=DLM.Locker(id,ID=id,Timeout=10)
+        mdata=DLM.Locker(mid,ID=mid,Timeout=10)
 
         mlock.Lock()
-        data=json.loads(mdata.Get())
+        data=mdata.Get()
         mdata.Erase()
         mlock.Unlock()
 
