@@ -273,11 +273,11 @@ class TechnicalAnalysis:
         for lbl in out:
             if lbl in seen:
                 seen[lbl] += 1
-                candidate = f"{lbl}_{seen[lbl]}"
+                candidate = f"{lbl}{seen[lbl]}"
                 # avoid colliding with an existing candidate
                 while candidate in seen:
                     seen[lbl] += 1
-                    candidate = f"{lbl}_{seen[lbl]}"
+                    candidate = f"{lbl}{seen[lbl]}"
                 seen[candidate] = 0
                 unique_out.append(candidate)
             else:
@@ -3001,17 +3001,23 @@ class TechnicalAnalysis:
     # Detect a Doji candlestick pattern
     # o=h=l=c Four Price Doji
 
-    def Doji(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=0.1):
-        if len(self.window)<1:
-            self.AddColumn(None)    # body
-            self.AddColumn(None)    # range
-            self.AddColumn(None)    # ratio
-            self.AddColumn(None)    # upper wick/shadow
-            self.AddColumn(None)    # lowwer wick/shadow
-            self.AddColumn(None)    # is doji (1=yes)
+    def Doji(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=0.1,row=-1,labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,6,default=["DojiBody","DojiRange","DojiRatio","DojiUpper","DojiLower","Doji"])
+
+        if len(self.window)<abs(row):
+            self.AddColumn(None,ilab[0])    # body
+            self.AddColumn(None,ilab[1])    # range
+            self.AddColumn(None,ilab[2])    # ratio
+            self.AddColumn(None,ilab[3])    # upper wick/shadow
+            self.AddColumn(None,ilab[4])    # lowwer wick/shadow
+            self.AddColumn(None,ilab[5])    # is doji (1=yes)
             return self.window
 
-        last_row=self.LastRow()
+        if row<-1:
+            last_row=self.GetRow(row)
+        else:
+            last_row=self.LastRow()
 
         o=last_row[OpenIDX]
         h=last_row[HighIDX]
@@ -3026,65 +3032,56 @@ class TechnicalAnalysis:
         us=h-max(o,c)   # length of upper wick/shadow
         ls=max(o,c)-l   # length of lower wick/shadow
 
-        self.AddColumn(b)
-        self.AddColumn(r)
-        self.AddColumn(ratio)
-        self.AddColumn(us)
-        self.AddColumn(ls)
+        self.AddColumn(b,ilab[0])
+        self.AddColumn(r,ilab[1])
+        self.AddColumn(ratio,ilab[2])
+        self.AddColumn(us,ilab[3])
+        self.AddColumn(ls,ilab[4])
 
         if ratio<=threshold:
             isDoji=1
 
-        self.AddColumn(isDoji)
+        self.AddColumn(isDoji,ilab[5])
 
         return self.window
 
     # Tri-Star Doji (Three Dojis in a row)
 
-    def TriStarDoji(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold1=0.1,threshold2=0.1,threshold3=0.1):
-        # If not enough candles, fill with None
-        if len(self.window) < 3:
-            self.AddColumn(None)    # doji 1
-            self.AddColumn(None)    # doji 2
-            self.AddColumn(None)    # doji 3
-            self.AddColumn(None)    # is tri-star doji (1=yes)
-            return self.window
+    def TriStarDoji(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold1=0.1,threshold2=0.1,threshold3=0.1,labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["TriStarDoji"])
 
         # The current index of the list, each doji is 6 columns
-        # Get the three dojis
+        # Get the three dojis. REWRITE THIS to pull -1 thru -3
 
-        self.Doji(OpenIDX,HighIDX,LowIDX,CloseIDX,threshold1)
-        self.Doji(OpenIDX,HighIDX,LowIDX,CloseIDX,threshold2)
-        self.Doji(OpenIDX,HighIDX,LowIDX,CloseIDX,threshold3)
+        self.Doji(OpenIDX,HighIDX,LowIDX,CloseIDX,threshold1,row=-3,labels=["","","","","","TStestDoji3"])
+        self.Doji(OpenIDX,HighIDX,LowIDX,CloseIDX,threshold2,row=-2,labels=["","","","","","TStestDoji2"])
+        self.Doji(OpenIDX,HighIDX,LowIDX,CloseIDX,threshold3,row=-1,labels=["","","","","","TStestDoji1"])
 
-        lIDX=len(self.window[-1])-1
+        doji3=self.idx("TStestDoji3")
+        doji2=self.idx("TStestDoji2")
+        doji1=self.idx("TStestDoji1")
 
-        if len(self.window[-3])-12<=0:
-            self.AddColumn(None)    # is tri-star doji (1=yes)
+        if not doji1 or not doji2 or not doji3:
+            self.AddColumn(None,ilab[0])    # is tri-star doji (1=yes)
             return self.window
 
-        # Get last 3 rows
-        row1 = self.window[-1]
-        row2 = self.window[-2]
-        row3 = self.window[-3]
-
-        doji1=row1[lIDX-12]     # Candle row 1
-        doji2=row2[lIDX-6]      # Candle row 2
-        doji3=row3[lIDX]        # Candle row 3
-
         # Tri-Star requires all 3 to be Doji
-        isTriStar = 1 if (doji1==1 and doji2==1 and doji3==1) else 0
+        isTriStar=1 if (doji1==1 and doji2==1 and doji3==1) else 0
 
         # Add results to output
-        self.AddColumn(isTriStar)
+        self.AddColumn(isTriStar,ilab[0])
 
         return self.window
 
     # Hammer candlestick pattern
 
-    def Hammer(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4):
+    def Hammer(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["Hammer"])
+
         if len(self.window)<1:
-            self.AddColumn(None)    # is hammer (1=yes)
+            self.AddColumn(None,ilab[0])    # is hammer (1=yes)
             return self.window
 
         last_row=self.LastRow()
@@ -3106,15 +3103,18 @@ class TechnicalAnalysis:
         if ls>2*b and us<b:
             isHammer=1
 
-        self.AddColumn(isHammer)
+        self.AddColumn(isHammer,ilab[0])
 
         return self.window
 
     # Inverted Hammer candlestick pattern
 
-    def InvertedHammer(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4):
+    def InvertedHammer(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["InvertedHammer"])
+
         if len(self.window)<1:
-            self.AddColumn(None)    # is inverted hammer (1=yes)
+            self.AddColumn(None,ilab[0])    # is inverted hammer (1=yes)
             return self.window
 
         last_row=self.LastRow()
@@ -3136,15 +3136,18 @@ class TechnicalAnalysis:
         if us>2*b and ls<b:
             isInvHammer=1
 
-        self.AddColumn(isInvHammer)
+        self.AddColumn(isInvHammer,ilab[0])
 
         return self.window
 
     # Spinning Top candlestick pattern
 
-    def SpinningTop(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4):
+    def SpinningTop(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,label=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["SpininngTop"])
+
         if len(self.window)<1:
-            self.AddColumn(None)    # is spinning top (1=yes)
+            self.AddColumn(None,ilab[0])    # is spinning top (1=yes)
             return self.window
 
         last_row=self.LastRow()
@@ -3164,15 +3167,18 @@ class TechnicalAnalysis:
         if ls>2*b and us>2*b: # spinning top
             isSpinTop=1
 
-        self.AddColumn(isSpinTop)
+        self.AddColumn(isSpinTop,ilab[0])
 
         return self.window
 
     # Hanging Man candlestick pattern
 
-    def HangingMan(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4):
+    def HangingMan(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["HangingMan"])
+
         if len(self.window)<1:
-            self.AddColumn(None)    # is hammer (1=yes)
+            self.AddColumn(None,ilab[0])    # is hanging man (1=yes)
             return self.window
 
         last_row=self.LastRow()
@@ -3192,15 +3198,18 @@ class TechnicalAnalysis:
         if ls>2*b and us<2*b:
             isHang=1
 
-        self.AddColumn(isHang)
+        self.AddColumn(isHang,ilab[0])
 
         return self.window
 
     # Shooting Star candlestick pattern
 
-    def ShootingStar(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4):
+    def ShootingStar(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["ShootingStar"])
+
         if len(self.window)<1:
-            self.AddColumn(None)    # is hammer (1=yes)
+            self.AddColumn(None,ilab[0])    # is shooting star (1=yes)
             return self.window
 
         last_row=self.LastRow()
@@ -3220,15 +3229,18 @@ class TechnicalAnalysis:
         if ls<2*b and us>2*b: # spinning top
             isShootStar=1
 
-        self.AddColumn(isShootStar)
+        self.AddColumn(isShootStar,ilab[0])
 
         return self.window
 
     # Detect a Bullish Marubozu candlestick pattern
 
-    def BullishMarubozu(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=0.1):
+    def BullishMarubozu(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=0.1,labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BullishMarubozu"])
+
         if len(self.window)<1:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         last_row=self.LastRow()
@@ -3247,15 +3259,18 @@ class TechnicalAnalysis:
         if b>0 and us<threshold*b and ls<threshold*b:
             isBM=1
 
-        self.AddColumn(isBM)
+        self.AddColumn(isBM,ilab[0])
 
         return self.window
 
     # Detect a Bearish Marubozu candlestick pattern
 
-    def BearishMarubozu(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=0.1):
+    def BearishMarubozu(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=0.1,labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BearishMarubozu"])
+
         if len(self.window)<1:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         last_row=self.LastRow()
@@ -3274,15 +3289,18 @@ class TechnicalAnalysis:
         if b<0 and us<threshold*abs(b) and ls<threshold*abs(b):
             isBM=1
 
-        self.AddColumn(isBM)
+        self.AddColumn(isBM,ilab[0])
 
         return self.window
 
     # Highwave candlestick pattern
 
-    def HighWave(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=2):
+    def HighWave(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=2,levels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["HighWave"])
+
         if len(self.window)<1:
-            self.AddColumn(None)    # is hammer (1=yes)
+            self.AddColumn(None,ilab[0])    # is HighWave (1=yes)
             return self.window
 
         last_row=self.LastRow()
@@ -3302,15 +3320,18 @@ class TechnicalAnalysis:
         if ls>threshold*b and us>threshold*b: # spinning top
             isHW=1
 
-        self.AddColumn(isHW)
+        self.AddColumn(isHW,ilab[0])
 
         return self.window
 
     # Bullish Belt Hold
 
-    def BullishBeltHold(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=0.1):
+    def BullishBeltHold(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=0.1,labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BullishBeltHold"])
+
         if len(self.window)<1:
-            self.AddColumn(None)    # is hammer (1=yes)
+            self.AddColumn(None,ilab[0])    # is hammer (1=yes)
             return self.window
 
         last_row=self.LastRow()
@@ -3331,15 +3352,18 @@ class TechnicalAnalysis:
             if ls<=(threshold*b) and b>0 and c>o:
                 isBeltHold=1
 
-        self.AddColumn(isBeltHold)
+        self.AddColumn(isBeltHold,ilab[0])
 
         return self.window
 
     # Bearish Belt Hold
 
-    def BearishBeltHold(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=0.1):
+    def BearishBeltHold(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=0.1,labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BearishBeltHold"])
+
         if len(self.window)<1:
-            self.AddColumn(None)    # is hammer (1=yes)
+            self.AddColumn(None,ilab[0])    # is bearish belt hold (1=yes)
             return self.window
 
         last_row=self.LastRow()
@@ -3360,15 +3384,18 @@ class TechnicalAnalysis:
             if us<=(threshold*b) and b>0 and o>c:
                 isBeltHold=1
 
-        self.AddColumn(isBeltHold)
+        self.AddColumn(isBeltHold,ilab[0])
 
         return self.window
 
     # Bullish Engulfing candlestick pattern
 
-    def BullishEngulfing(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4):
+    def BullishEngulfing(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BullishEngulfing"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(None)    # is bullish engulfing (1=yes)
+            self.AddColumn(None,ilab[0])    # is bullish engulfing (1=yes)
             return self.window
 
         prev_row = self.GetRow(-2)
@@ -3394,14 +3421,17 @@ class TechnicalAnalysis:
                 if o2 <= c1 and c2 >= o1:
                     isBullEngulf = 1
 
-        self.AddColumn(isBullEngulf)
+        self.AddColumn(isBullEngulf,ilab[0])
         return self.window
 
     # Bearish Engulfing candlestick pattern
 
-    def BearishEngulfing(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4):
+    def BearishEngulfing(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BearishEngulfing"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(None)    # is bearish engulfing (1=yes)
+            self.AddColumn(None,ilab[0])    # is bearish engulfing (1=yes)
             return self.window
 
         prev_row = self.GetRow(-2)
@@ -3427,7 +3457,7 @@ class TechnicalAnalysis:
                 if o2 >= c1 and c2 <= o1:
                     isBearEngulf = 1
 
-        self.AddColumn(isBearEngulf)
+        self.AddColumn(isBearEngulf,ilab[0])
         return self.window
 
     # Tweezer Tops candlestick pattern
