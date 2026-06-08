@@ -47,8 +47,7 @@ def main():
 
         ta.Display(-1)
 
-    for i in ta.labels:
-        print(f"{i:10} {ta.idx(i)} {ta.idx(ta.idx(i))}")
+    ta.DebugLabels()
 
 if __name__=='__main__':
     main()

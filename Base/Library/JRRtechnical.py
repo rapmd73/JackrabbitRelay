@@ -128,6 +128,12 @@ class TechnicalAnalysis:
     def Display(self,idx,showidx=False):
         print(self.Win2Text(idx,showidx))
 
+    # Display the label list
+
+    def DebugLabels(self):
+        for i in self.labels:
+            print(f"{i:30} {self.idx(i):3.0f} {self.idx(self.idx(i))}")
+
     # Return a row from the rolling window. Can be absolute or relative
 
     def GetSize(self):
