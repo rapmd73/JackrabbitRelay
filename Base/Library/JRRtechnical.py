@@ -1166,7 +1166,7 @@ class TechnicalAnalysis:
     # or SMA while also reacting faster to trends, making the JMA a versatile
     # tool for trend detection and noise filtering.
 
-    def JMA(self, idx=4, period=14, phase=0, factor=0.45):
+    def JMA(self, idx=4, period=14, phase=0, factor=0.45, labels=None):
         """
         Robust Jurik Moving Average (JMA) for rolling window.
         Works with any number of existing columns in the window.
@@ -1176,14 +1176,17 @@ class TechnicalAnalysis:
             [ma1, det0, det1, jma]
         """
 
+        # Get column labels
+        ilab=self.intlab(labels,4,default=["AdaptEMA","Kalman","Final","JMA"])
+
         # Current source (default: close)
 
         source = self.window[-1][idx] if len(self.window) > 0 else None
         if source is None:
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
+            self.AddColumn(None,ilab[1])
+            self.AddColumn(None,ilab[2])
+            self.AddColumn(None,ilab[3])
             return self.window
 
         # Determine start of JMA columns in previous row
@@ -1226,22 +1229,25 @@ class TechnicalAnalysis:
         jma = last_jma + det1
 
         # Append new JMA columns to the current row
-        self.AddColumn(ma1)
-        self.AddColumn(det0)
-        self.AddColumn(det1)
-        self.AddColumn(jma)
+        self.AddColumn(ma1,ilab[0])
+        self.AddColumn(det0,ilab[1])
+        self.AddColumn(det1,ilab[2])
+        self.AddColumn(jma,ilab[3])
 
         return self.window
 
     # Calculate Relative Strength Index (RSI) for the last candle in the window.
 
-    def RSI(self, idx, period=14):
+    def RSI(self, idx, period=14, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["RSI"])
+
         # Collect the last 'period + 1' closing prices
         prices = [row[idx] for row in self.window[-(period+1):] if len(row)>idx and row[idx] is not None]
 
         if len(prices) < period + 1:
             # Not enough data to calculate RSI
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         # Calculate gains and losses
@@ -1268,13 +1274,13 @@ class TechnicalAnalysis:
             rsi = 100 - (100 / (1 + rs))
 
         # Append RSI to the last slice
-        self.AddColumn(rsi)
+        self.AddColumn(rsi,ilab[0])
 
         return self.window
 
     # ADX indicator
 
-    def ADX(self, high_idx=2, low_idx=3, close_idx=4, period=14):
+    def ADX(self, high_idx=2, low_idx=3, close_idx=4, period=14, labels=None):
         """
         Calculate standard ADX with +DI and -DI using Wilder's smoothing.
 
@@ -1288,13 +1294,16 @@ class TechnicalAnalysis:
             +DI, -DI, ADX
         """
 
+        # Get column labels
+        ilab=self.intlab(labels,3,default=["DI+","DI-","ADX"])
+
         n = len(self.window)
 
         # Not enough history
         if n < period + 1:
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
+            self.AddColumn(None,ilab[1])
+            self.AddColumn(None,ilab[2])
             return self.window
 
         # Prepare lists for TR, +DM, -DM
@@ -1310,15 +1319,15 @@ class TechnicalAnalysis:
                 prev_low = self.window[i-1][low_idx]
                 prev_close = self.window[i-1][close_idx]
             except Exception:
-                self.AddColumn(None)
-                self.AddColumn(None)
-                self.AddColumn(None)
+                self.AddColumn(None,ilab[0])
+                self.AddColumn(None,ilab[1])
+                self.AddColumn(None,ilab[2])
                 return self.window
 
             if None in [high, low, prev_high, prev_low, prev_close]:
-                self.AddColumn(None)
-                self.AddColumn(None)
-                self.AddColumn(None)
+                self.AddColumn(None,ilab[0])
+                self.AddColumn(None,ilab[1])
+                self.AddColumn(None,ilab[2])
                 return self.window
 
             tr = max(high - low, abs(high - prev_close), abs(low - prev_close))
@@ -1338,8 +1347,8 @@ class TechnicalAnalysis:
         plus_di = 100 * sm_plus_dm / sm_tr if sm_tr != 0 else 0
         minus_di = 100 * sm_minus_dm / sm_tr if sm_tr != 0 else 0
 
-        self.AddColumn(plus_di)
-        self.AddColumn(minus_di)
+        self.AddColumn(plus_di,ilab[0])
+        self.AddColumn(minus_di,ilab[1])
 
         # DX = abs(+DI - -DI) / (+DI + -DI) * 100
         dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di) if (plus_di + minus_di) != 0 else 0
@@ -1351,7 +1360,7 @@ class TechnicalAnalysis:
         else:
             adx = dx  # first ADX = first DX
 
-        self.AddColumn(adx)
+        self.AddColumn(adx,ilab[2])
 
         return self.window
 
@@ -1870,7 +1879,7 @@ class TechnicalAnalysis:
 
     # Calculate the Black Scholes volatility
 
-    def BSVolatility(self, CloseIDX=4, periods=19):
+    def BSVolatility(self, CloseIDX=4, periods=19, labels=None):
         # Get column labels
         ilab=self.intlab(labels,4,default=["BSLastReturn","BSmean","BSvariance","BSsigma"])
 
@@ -1970,7 +1979,7 @@ class TechnicalAnalysis:
 
     # Find resistance levels
 
-    def Resistance(self, high_idx=2, period=14):
+    def Resistance(self, high_idx=2, period=14, labels=None):
         """
         Calculate resistance levels for a specified column over a rolling window.
 
@@ -2818,7 +2827,7 @@ class TechnicalAnalysis:
     # Returns 9 columns:
     # [ObsMom, ObsVol, LikeBull, LikeBear, LikeChop, ProbBull, ProbBear, ProbChop, DomState]
 
-    def HiddenMarkov(self, length=20, p_stay_bull=0.80, p_stay_bear=0.80, p_stay_chop=0.60, CloseIDX=4, HighIDX=2, LowIDX=3, lavels=None):
+    def HiddenMarkov(self, length=20, p_stay_bull=0.80, p_stay_bear=0.80, p_stay_chop=0.60, CloseIDX=4, HighIDX=2, LowIDX=3, labels=None):
         """
         Calculates market regime probabilities using a Hidden Markov Model.
 
@@ -3148,7 +3157,7 @@ class TechnicalAnalysis:
 
     # Spinning Top candlestick pattern
 
-    def SpinningTop(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,label=None):
+    def SpinningTop(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,labels=None):
         # Get column labels
         ilab=self.intlab(labels,1,default=["SpininngTop"])
 
@@ -3301,7 +3310,7 @@ class TechnicalAnalysis:
 
     # Highwave candlestick pattern
 
-    def HighWave(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=2,levels=None):
+    def HighWave(self,OpenIDX=1,HighIDX=2,LowIDX=3,CloseIDX=4,threshold=2,labels=None):
         # Get column labels
         ilab=self.intlab(labels,1,default=["HighWave"])
 
@@ -3468,9 +3477,12 @@ class TechnicalAnalysis:
 
     # Tweezer Tops candlestick pattern
 
-    def TweezerTops(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+    def TweezerTops(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["TweezerTops"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(None)    # is tweezer tops (1=yes)
+            self.AddColumn(None,ilab[0])    # is tweezer tops (1=yes)
             return self.window
 
         prev_row = self.GetRow(-2)
@@ -3495,14 +3507,17 @@ class TechnicalAnalysis:
             if abs(h1 - h2) <= tol * max(h1, h2):
                 isTweezerTop = 1
 
-        self.AddColumn(isTweezerTop)
+        self.AddColumn(isTweezerTop,ilab[0])
         return self.window
 
     # Tweezer Bottoms candlestick pattern
 
-    def TweezerBottoms(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+    def TweezerBottoms(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["TweezerBottoms"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(None)    # is tweezer bottoms (1=yes)
+            self.AddColumn(None,ilab[0])    # is tweezer bottoms (1=yes)
             return self.window
 
         prev_row = self.GetRow(-2)
@@ -3527,14 +3542,17 @@ class TechnicalAnalysis:
             if abs(l1 - l2) <= tol * min(l1, l2):
                 isTweezerBottom = 1
 
-        self.AddColumn(isTweezerBottom)
+        self.AddColumn(isTweezerBottom,ilab[0])
         return self.window
 
     # Piercing Line candlestick pattern
 
-    def PiercingLine(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4):
+    def PiercingLine(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["PiercingLine"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(None)    # is piercing line (1=yes)
+            self.AddColumn(None,ilab[0])    # is piercing line (1=yes)
             return self.window
 
         prev_row = self.GetRow(-2)
@@ -3558,14 +3576,17 @@ class TechnicalAnalysis:
             if o2 < c1 and c2 > (o1 + c1) / 2:
                 isPiercing = 1
 
-        self.AddColumn(isPiercing)
+        self.AddColumn(isPiercing,ilab[0])
         return self.window
 
     # Dark Cloud Cover candlestick pattern
 
-    def DarkCloudCover(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4):
+    def DarkCloudCover(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["DarkCloudCover"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(None)    # is dark cloud cover (1=yes)
+            self.AddColumn(None,ilab[0])    # is dark cloud cover (1=yes)
             return self.window
 
         prev_row = self.GetRow(-2)
@@ -3589,14 +3610,17 @@ class TechnicalAnalysis:
             if o2 > c1 and c2 < (o1 + c1) / 2:
                 isDarkCloud = 1
 
-        self.AddColumn(isDarkCloud)
+        self.AddColumn(isDarkCloud,ilab[0])
         return self.window
 
     # Bullish Harami candlestick pattern
 
-    def BullishHarami(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4):
+    def BullishHarami(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BullishHarami"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(None)    # is bullish harami (1=yes)
+            self.AddColumn(None,ilab[0])    # is bullish harami (1=yes)
             return self.window
 
         prev_row = self.GetRow(-2)
@@ -3620,14 +3644,17 @@ class TechnicalAnalysis:
             if o2 > c1 and c2 < o1:
                 isBullHarami = 1
 
-        self.AddColumn(isBullHarami)
+        self.AddColumn(isBullHarami,ilab[0])
         return self.window
 
     # Bearish Harami candlestick pattern
 
-    def BearishHarami(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4):
+    def BearishHarami(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BearishHarami"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(None)    # is bearish harami (1=yes)
+            self.AddColumn(None,ilab[0])    # is bearish harami (1=yes)
             return self.window
 
         prev_row = self.GetRow(-2)
@@ -3651,14 +3678,17 @@ class TechnicalAnalysis:
             if o2 < c1 and c2 > o1:
                 isBearHarami = 1
 
-        self.AddColumn(isBearHarami)
+        self.AddColumn(isBearHarami,ilab[0])
         return self.window
 
     # Bullish Harami Cross candlestick pattern
 
-    def BullishHaramiCross(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+    def BullishHaramiCross(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001,labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BullishHaramiCross"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(None)    # is bullish harami cross (1=yes)
+            self.AddColumn(None,ilab[0])    # is bullish harami cross (1=yes)
             return self.window
 
         prev_row = self.GetRow(-2)
@@ -3682,14 +3712,17 @@ class TechnicalAnalysis:
             if o2 > c1 and c2 < o1:
                 isBullHaramiCross = 1
 
-        self.AddColumn(isBullHaramiCross)
+        self.AddColumn(isBullHaramiCross,ilab[0])
         return self.window
 
     # Bearish Harami Cross candlestick pattern
 
-    def BearishHaramiCross(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+    def BearishHaramiCross(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BearishHaramiCross"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(None)    # is bearish harami cross (1=yes)
+            self.AddColumn(None,ilab[0])    # is bearish harami cross (1=yes)
             return self.window
 
         prev_row = self.GetRow(-2)
@@ -3713,14 +3746,17 @@ class TechnicalAnalysis:
             if o2 < c1 and c2 > o1:
                 isBearHaramiCross = 1
 
-        self.AddColumn(isBearHaramiCross)
+        self.AddColumn(isBearHaramiCross,ilab[0])
         return self.window
 
     # Matching Low candlestick pattern
 
-    def MatchingLow(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+    def MatchingLow(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["MatchingLow"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(None)    # is matching low (1=yes)
+            self.AddColumn(None,ilab[0])    # is matching low (1=yes)
             return self.window
 
         prev_row = self.GetRow(-2)
@@ -3744,14 +3780,17 @@ class TechnicalAnalysis:
             if abs(l1 - l2) <= tol * min(l1, l2):
                 isMatchingLow = 1
 
-        self.AddColumn(isMatchingLow)
+        self.AddColumn(isMatchingLow,ilab[0])
         return self.window
 
     # Bullish Mat Hold (3) candlestick pattern (simplified, bullish)
 
-    def BullishMatHold3(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+    def BullishMatHold3(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BullishMatHold3"])
+
         if len(self.window) < 3 or self.window[-2][0] is None or self.window[-3][0] is None:
-            self.AddColumn(None)    # is Mat Hold (1=yes)
+            self.AddColumn(None,ilab[0])    # is Mat Hold (1=yes)
             return self.window
 
         first = self.GetRow(-3)
@@ -3772,14 +3811,17 @@ class TechnicalAnalysis:
                 if c3 > o3 and c3 > c1:
                     isMatHold = 1
 
-        self.AddColumn(isMatHold)
+        self.AddColumn(isMatHold,ilab[0])
         return self.window
 
     # Bearish Mat Hold candlestick pattern (simplified)
 
-    def BearishMatHold(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+    def BearishMatHold3(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BearishMatHold3"])
+
         if len(self.window) < 3 or self.window[-2][0] is None or self.window[-3][0] is None:
-            self.AddColumn(None)    # is bearish Mat Hold (1=yes)
+            self.AddColumn(None,ilab[0])    # is bearish Mat Hold (1=yes)
             return self.window
 
         first = self.GetRow(-3)
@@ -3800,16 +3842,19 @@ class TechnicalAnalysis:
                 if c3 < o3 and c3 < c1:
                     isBearMatHold = 1
 
-        self.AddColumn(isBearMatHold)
+        self.AddColumn(isBearMatHold,ilab[0])
         return self.window
 
     # 5-candle Bullish Mat Hold candlestick pattern
 
-    def BullishMatHold5(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+    def BullishMatHold5(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BullishMatHold5"])
+
         if len(self.window) < 5 \
         or self.window[-2][0] is None or self.window[-3][0] is None \
         or self.window[-4][0] is None or self.window[-5][0] is None:
-            self.AddColumn(None)    # is Mat Hold 5-candle (1=yes)
+            self.AddColumn(None,ilab[0])    # is Mat Hold 5-candle (1=yes)
             return self.window
 
         # Extract the 5 candles
@@ -3840,16 +3885,19 @@ class TechnicalAnalysis:
             if contained and c5 > o5 and c5 > c1:
                 isMatHold = 1
 
-        self.AddColumn(isMatHold)
+        self.AddColumn(isMatHold,ilab[0])
         return self.window
 
     # 5-candle Bearish Mat Hold candlestick pattern
 
-    def BearishMatHold5(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+    def BearishMatHold5(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BearishMatHold5"])
+
         if len(self.window) < 5 \
         or self.window[-2][0] is None or self.window[-3][0] is None \
         or self.window[-4][0] is None or self.window[-5][0] is None:
-            self.AddColumn(None)    # is Bearish Mat Hold 5-candle (1=yes)
+            self.AddColumn(None,ilab[0])    # is Bearish Mat Hold 5-candle (1=yes)
             return self.window
 
         # Extract the 5 candles
@@ -3880,14 +3928,17 @@ class TechnicalAnalysis:
             if contained and c5 < o5 and c5 < c1:
                 isMatHoldBearish = 1
 
-        self.AddColumn(isMatHoldBearish)
+        self.AddColumn(isMatHoldBearish,ilab[0])
         return self.window
 
     # Bullish Kicking by Length candlestick pattern
 
-    def BullishKickingByLength(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+    def BullishKickingByLength(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BullishKickingByLength"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(None)    # is Kicking by Length (1=yes)
+            self.AddColumn(None,ilab[0])    # is Kicking by Length (1=yes)
             return self.window
 
         first = self.GetRow(-2)
@@ -3903,14 +3954,17 @@ class TechnicalAnalysis:
             if c1 < o1 and c2 > o2 and o2 > c1:
                 isKicking = 1
 
-        self.AddColumn(isKicking)
+        self.AddColumn(isKicking,ilab[0])
         return self.window
 
     # Bearish Kicking by Length candlestick pattern
 
-    def BearishKickingByLength(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+    def BearishKickingByLength(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BearishKickingByLength"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(None)    # is Kicking by Length (1=yes)
+            self.AddColumn(None,ilab[0])    # is Kicking by Length (1=yes)
             return self.window
 
         first = self.GetRow(-2)
@@ -3926,14 +3980,17 @@ class TechnicalAnalysis:
             if c1 > o1 and c2 < o2 and o2 < c1:
                 isKicking = 1
 
-        self.AddColumn(isKicking)
+        self.AddColumn(isKicking,ilab[0])
         return self.window
 
     # Bullish Separating Lines candlestick pattern
 
-    def BullishSeparatingLines(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+    def BullishSeparatingLines(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BullishSeparatingLines"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(None)    # is bullish separating lines (1=yes)
+            self.AddColumn(None,ilab[0])    # is bullish separating lines (1=yes)
             return self.window
 
         prev_row = self.GetRow(-2)
@@ -3952,14 +4009,17 @@ class TechnicalAnalysis:
                 if abs(o2 - o1) <= tol:
                     isBullSep = 1
 
-        self.AddColumn(isBullSep)
+        self.AddColumn(isBullSep,ilab[0])
         return self.window
 
     # Bearish Separating Lines candlestick pattern
 
-    def BearishSeparatingLines(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001):
+    def BearishSeparatingLines(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, tol=0.001, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BearishSeparatingLines"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(None)    # is bearish separating lines (1=yes)
+            self.AddColumn(None,ilab[0])    # is bearish separating lines (1=yes)
             return self.window
 
         prev_row = self.GetRow(-2)
@@ -3978,14 +4038,17 @@ class TechnicalAnalysis:
                 if abs(o2 - o1) <= tol:
                     isBearSep = 1
 
-        self.AddColumn(isBearSep)
+        self.AddColumn(isBearSep,ilab[0])
         return self.window
 
     # Bullish Kicker candlestick pattern
 
-    def BullishKicker(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4):
+    def BullishKicker(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BullishKicker"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(None)    # is bullish kicker (1=yes)
+            self.AddColumn(None,ilab[0])    # is bullish kicker (1=yes)
             return self.window
 
         prev_row = self.GetRow(-2)
@@ -4004,14 +4067,17 @@ class TechnicalAnalysis:
                 if o2 > h1:
                     isBullKicker = 1
 
-        self.AddColumn(isBullKicker)
+        self.AddColumn(isBullKicker,ilab[0])
         return self.window
 
     # Bearish Kicker candlestick pattern
 
-    def BearishKicker(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4):
+    def BearishKicker(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BearishKicker"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(None)    # is bearish kicker (1=yes)
+            self.AddColumn(None,ilab[0])    # is bearish kicker (1=yes)
             return self.window
 
         prev_row = self.GetRow(-2)
@@ -4030,7 +4096,7 @@ class TechnicalAnalysis:
                 if o2 < l1:
                     isBearKicker = 1
 
-        self.AddColumn(isBearKicker)
+        self.AddColumn(isBearKicker,ilab[0])
         return self.window
 
     ## Triple Candlestick Patterns
