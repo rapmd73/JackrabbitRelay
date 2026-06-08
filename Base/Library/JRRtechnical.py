@@ -151,12 +151,12 @@ class TechnicalAnalysis:
         return self.GetRow(-1)
 
     # Add a column to the rolling windows
-    def AddColumn(self,value,labels=None):
+    def AddColumn(self,value,label=None):
         if self.window and len(self.window)>0:
             self.window[-1].append(value) # Update the last slice with value
 
-            nl=labels
-            if not nl:
+            nl=label
+            if not nl or nl.strip()=="":
                 nl=f"Label{len(self.window[-1])}"
             if nl not in self.labels:
                 self.labels.append(nl)
@@ -166,35 +166,125 @@ class TechnicalAnalysis:
     def idx(self,key):
         if isinstance(key, str):
             if self.labels:
-                return self.labels.index(key)
+                try:
+                    return self.labels.index(key)
+                except:
+                    return None
         elif isinstance(key, int):
-            c=0
-            for idx in self.labels:
-                if c==key:
-                    return self.labels[c]
-                c+=1
+            try:
+                return self.labels[key]
+            except:
+                return None
         return None
 
     # Get internal labels, convert to list.
 
-    def intlab(self,labels,count=0):
-        if not isinstance(count, int) or count < 0:
-            raise ValueError("count must be a non-negative integer")
+    # This is probably over engineered, but i wanted a way to be able to
+    # fill in as much as possible with the matrix labels.
 
+    # Labels are user selected, in the event the user has two of the same
+    # indicator.  The defaults are passed by the indicator function for
+    # generic references.
+
+    # labels can be string or list.  Default must be treated the same
+    # way... Lengths can be different between labels and default and this
+    # function must sort it all out.
+
+    def intlab(self, labels, count=0, default=None):
+        if not isinstance(count, int) or count < 0:
+            raise ValueError("Count must be a non-negative integer")
+
+        # Normalize incoming labels into a list
         if labels is None:
-            seq = [None]*count
+            seq = []
         elif isinstance(labels, str):
-            # single string -> single-element sequence
             seq = [labels]
         else:
             try:
                 seq = list(labels)
             except TypeError:
-                # labels is not iterable (e.g. an int) -> treat as single item
                 seq = [labels]
 
-        L = max(len(seq), count)
-        return seq + [None] * (L - len(seq))
+        # Prepare default sources: explicit list (default_seq) or string template/prefix (default_fmt)
+        default_seq = []
+        default_fmt = None  # tuple ('template', fmt) or ('prefix', pref)
+
+        if default is None:
+            default_seq = []
+        elif isinstance(default, str):
+            if '{}' in default:
+                default_fmt = ('template', default)
+            else:
+                default_fmt = ('prefix', default)
+        else:
+            # Try to treat default as an iterable of labels
+            try:
+                default_seq = list(default)
+            except TypeError:
+                default_seq = [default]
+
+        # Final length considers provided labels, requested count, and any explicit default sequence
+        L = max(len(seq), count, len(default_seq))
+        out = []
+
+        for i in range(L):
+            val = None
+
+            # 1) explicit label if present and non-empty
+            if i < len(seq):
+                v = seq[i]
+                if isinstance(v, str):
+                    v = v.strip()
+                    if v != "":
+                        val = v
+                elif v is not None:
+                    val = v
+
+            # 2) default sequence element (positional)
+            if val is None and i < len(default_seq):
+                dv = default_seq[i]
+                if isinstance(dv, str):
+                    dv = dv.strip()
+                    if dv != "":
+                        val = dv
+                elif dv is not None:
+                    val = dv
+
+            # 3) default string template/prefix (0-based)
+            if val is None and default_fmt is not None:
+                kind, payload = default_fmt
+                try:
+                    if kind == 'template':
+                        val = payload.format(i)
+                    else:  # prefix
+                        val = f"{payload}{i}"
+                except Exception:
+                    val = None
+
+            # 4) fallback placeholder (0-based)
+            if val is None:
+                val = f"Label{i}"
+
+            out.append(val)
+
+        # make labels unique by appending _1, _2, ... to duplicates
+        seen = {}
+        unique_out = []
+        for lbl in out:
+            if lbl in seen:
+                seen[lbl] += 1
+                candidate = f"{lbl}_{seen[lbl]}"
+                # avoid colliding with an existing candidate
+                while candidate in seen:
+                    seen[lbl] += 1
+                    candidate = f"{lbl}_{seen[lbl]}"
+                seen[candidate] = 0
+                unique_out.append(candidate)
+            else:
+                seen[lbl] = 0
+                unique_out.append(lbl)
+
+        return unique_out
 
     # Save an image of the chart from index.
 
@@ -581,7 +671,8 @@ class TechnicalAnalysis:
 
     def CandleCounter(self, idx, target_value, reset_count,labels=None):
         # Get column labels
-        ilab=self.intlab(labels,1)
+        ilab=self.intlab(labels,1,default=["CandleCounter"])
+
         # Require at least one row
         if len(self.window) < 1:
             self.AddColumn(None,ilab[0])
@@ -621,7 +712,7 @@ class TechnicalAnalysis:
 
     def Cross(self,idx1,idx2,labels=None):
         # Get column labels
-        ilab=self.intlab(labels,2)
+        ilab=self.intlab(labels,2,default=["Difference","Cross"])
         # Ensure there are at least two data points to compare
         if len(self.window) < 2:
             self.AddColumn(None,ilab[0])  # Not enough data to calculate difference or crossing
@@ -707,7 +798,7 @@ class TechnicalAnalysis:
 
     def Rule37(self, MA_IDX,labels=None):
         # Get column labels
-        ilab=self.intlab(labels,1)
+        ilab=self.intlab(labels,1,default=["Rule37"])
         if len(self.window)<3:
             self.AddColumn(5,ilab[0])
             return self.window
@@ -726,7 +817,7 @@ class TechnicalAnalysis:
 
     def SMA(self,idx,period=17,labels=None):
         # Get column labels
-        ilab=self.intlab(labels,1)
+        ilab=self.intlab(labels,1,default=["SMA"])
         if len(self.window)<period+1:
             self.AddColumn(None,ilab[0]) # Update the last slice with None
             return self.window  # Not enough valid closing prices to calculate SMA
@@ -750,7 +841,7 @@ class TechnicalAnalysis:
 
     def EMA(self, idx, period=17,labels=None):
         # Get column labels
-        ilab=self.intlab(labels,1)
+        ilab=self.intlab(labels,1,default=["EMA"])
         # Get the last 'period' closing prices
         idxptr = [row[idx] for row in self.window[-period:] if len(row)>idx and row[idx] is not None]
 
@@ -778,7 +869,7 @@ class TechnicalAnalysis:
 
     def WMA(self, idx, period=17,labels=None):
         # Get column labels
-        ilab=self.intlab(labels,1)
+        ilab=self.intlab(labels,1,default=["WMA"])
         # Get the last 'period' closing prices
         idxptr = [row[idx] for row in self.window[-period:] if len(row)>idx and row[idx] is not None]
 
@@ -828,7 +919,7 @@ class TechnicalAnalysis:
         """
 
         # Get column labels
-        ilab=self.intlab(labels,2)
+        ilab=self.intlab(labels,2,default=["Synthetic","SQRT"])
         # Step 0: Ensure enough historical data
         if len(self.window)<period+1:
             self.AddColumn(None,ilab[0])
@@ -866,7 +957,7 @@ class TechnicalAnalysis:
 
     def VWMA(self, idx, vol_idx=5, period=20, labels=None):
         # Get column labels
-        ilab=self.intlab(labels,1)
+        ilab=self.intlab(labels,1,default=["VWMA"])
         # Collect the last 'period' closing prices and volumes
         prices = [row[idx] for row in self.window[-period:] if len(row)>idx and row[idx] is not None and row[vol_idx] is not None]
         volumes = [row[vol_idx] for row in self.window[-period:] if len(row)>idx and row[idx] is not None and row[vol_idx] is not None]
@@ -913,7 +1004,7 @@ class TechnicalAnalysis:
         """
 
         # Get column labels
-        ilab=self.intlab(labels,2)
+        ilab=self.intlab(labels,1,default=["RMA"])
 
         if len(self.window) < 1:
             return self.window  # Nothing to calculate
@@ -960,7 +1051,7 @@ class TechnicalAnalysis:
         """
 
         # Get column labels
-        ilab=self.intlab(labels,2)
+        ilab=self.intlab(labels,1,default=["ZeroLag"])
 
         if len(self.window[-1])<idx:
             self.AddColumn(None,ilab[0])
@@ -1005,7 +1096,7 @@ class TechnicalAnalysis:
         """
 
         # Get column labels
-        ilab=self.intlab(labels,1)
+        ilab=self.intlab(labels,1,default=["SineWeight"])
 
         if len(self.window[-1])<idx:
             self.AddColumn(None,ilab[0])
@@ -1269,7 +1360,7 @@ class TechnicalAnalysis:
         """
 
         # Get column labels
-        ilab=self.intlab(labels,5)
+        ilab=self.intlab(labels,5,default=["Mean", "Variance", "StdDev", "BBUpper", "BBLower"])
 
         n = len(self.window)
 
@@ -1309,7 +1400,7 @@ class TechnicalAnalysis:
 
     # Bollinger Bands %B
 
-    def BollingerBandsB(self, CloseIDX, UpperBandIDX, LowerBandIDX):
+    def BollingerBandsB(self, CloseIDX, UpperBandIDX, LowerBandIDX, labels=None):
         """
         Calculate Bollinger Bands %B (Percent B).
         %B = (Price - Lower Band) / (Upper Band - Lower Band)
@@ -1327,9 +1418,12 @@ class TechnicalAnalysis:
             %B value
         """
 
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["BBands%B"])
+
         # Ensure there is at least one row to work with
         if not self.window:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         last_row = self.LastRow()
@@ -1337,7 +1431,7 @@ class TechnicalAnalysis:
         # Check if all required column indices are valid for the last row
         required_indices = [CloseIDX, UpperBandIDX, LowerBandIDX]
         if len(last_row) <= max(required_indices):
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         # Extract values from the last row
@@ -1347,7 +1441,7 @@ class TechnicalAnalysis:
 
         # Check if any of the necessary values are None
         if any(v is None for v in [close_price, upper_band, lower_band]):
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         # Calculate the denominator (the range between the bands)
@@ -1363,13 +1457,13 @@ class TechnicalAnalysis:
             pctb = (close_price - lower_band) / band_range
 
         # Add the calculated %B value as a new column to the last row
-        self.AddColumn(pctb)
+        self.AddColumn(pctb,ilab[0])
 
         return self.window
 
     # MACD indicator, adds 3 columns. Crossing is NOT included
 
-    def MACD(self, idxFAST, idxSLOW, period=9, signal_func=None):
+    def MACD(self, idxFAST, idxSLOW, period=9, signal_func=None, labels=None):
         """
         Calculate MACD line, Signal line, and Histogram using precomputed moving averages
         from self.window.
@@ -1387,25 +1481,28 @@ class TechnicalAnalysis:
             - If signal_func is None, defaults to EMA over MACD line.
         """
 
+        # Get column labels
+        ilab=self.intlab(labels,3,default=["MACD","Signal","Histogram"])
+
         # Ensure enough history
         if len(self.window) < 1 or len(self.window[-1]) <= max(idxFAST, idxSLOW):
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
+            self.AddColumn(None,ilab[1])
+            self.AddColumn(None,ilab[2])
             return self.window
 
         fast = self.window[-1][idxFAST]
         slow = self.window[-1][idxSLOW]
 
         if fast is None or slow is None:
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
+            self.AddColumn(None,ilab[1])
+            self.AddColumn(None,ilab[2])
             return self.window
 
         # MACD line
         macd_value = fast - slow
-        self.AddColumn(macd_value)
+        self.AddColumn(macd_value,ilab[0])
 
         # If no custom signal_func is provided, use EMA as default
         if signal_func is None:
@@ -1414,7 +1511,7 @@ class TechnicalAnalysis:
         # Prepare a synthetic column for MACD line temporarily
         temp_idx = len(self.window[-1]) - 1  # MACD column index
         # Apply the moving average function to get the signal line
-        signal_func(temp_idx, period)
+        signal_func(temp_idx, period,labels=[ilab[1]])
 
         # The signal line is appended at the last column
         signal_idx = len(self.window[-1]) - 1
@@ -1422,13 +1519,13 @@ class TechnicalAnalysis:
 
         # Histogram = MACD - Signal
         histogram = macd_value - signal_value if signal_value is not None else None
-        self.AddColumn(histogram)
+        self.AddColumn(histogram,ilab[2])
 
         return self.window
 
     # ATR indicator
 
-    def ATR(self, high_idx=1, low_idx=2, close_idx=4, period=14, malen=14, smooth_func=None):
+    def ATR(self, high_idx=1, low_idx=2, close_idx=4, period=14, malen=14, smooth_func=None,labels=None):
         """
         Calculate Average True Range (ATR) using a pluggable smoothing function.
 
@@ -1444,13 +1541,16 @@ class TechnicalAnalysis:
             self.window (list of lists): Updated rolling window with TR and ATR appended
         """
 
+        # Get column labels
+        ilab=self.intlab(labels,2,default=["TR","ATR"])
+
         if smooth_func is None:
             smooth_func = self.RMA  # default smoothing
 
         # Ensure at least one previous candle exists
         if len(self.window) < 2:
-            self.AddColumn(None)
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
+            self.AddColumn(None,ilab[1])
             return self.window
 
         row = self.window[-1]
@@ -1461,8 +1561,8 @@ class TechnicalAnalysis:
         or len(prev_row) <= close_idx or row[high_idx] is None
         or row[low_idx] is None or row[close_idx] is None
         or prev_row[close_idx] is None):
-            self.AddColumn(None)
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
+            self.AddColumn(None,ilab[1])
             return self.window
 
         # Calculate True Range (TR)
@@ -1471,7 +1571,7 @@ class TechnicalAnalysis:
         prev_close = prev_row[close_idx]
 
         tr = max(high - low, abs(high - prev_close), abs(low - prev_close))
-        self.AddColumn(tr)
+        self.AddColumn(tr,ilab[0])
         tr_idx = len(self.window[-1]) - 1  # index of TR in row
 
         # Collect TR values for initial ATR calculation
@@ -1483,16 +1583,16 @@ class TechnicalAnalysis:
         # If we have exactly 'period' TRs, set initial ATR as simple average
         if len(TRs) == period:
             initial_atr = sum(TRs) / period
-            self.AddColumn(initial_atr)
+            self.AddColumn(initial_atr,ilab[1])
         else:
             # Apply chosen smoothing function to TR
-            smooth_func(tr_idx, malen)
+            smooth_func(tr_idx, malen,labels=[ilab[1]])
 
         return self.window
 
     # Stochastic indicator
 
-    def Stochastic(self, high_idx, low_idx, close_idx, k_period=14, k_smooth=3, d_smooth=3, ma_func=None):
+    def Stochastic(self, high_idx, low_idx, close_idx, k_period=14, k_smooth=3, d_smooth=3, ma_func=None, labels=None):
         """
         Calculate the Stochastic Oscillator for the last candle in the window.
 
@@ -1509,11 +1609,14 @@ class TechnicalAnalysis:
             K line, %K, %D
         """
 
+        # Get column labels
+        ilab=self.intlab(labels,3,default=["KLine","%K","%D"])
+
         n = len(self.window)
         if n < k_period:
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
+            self.AddColumn(None,ilab[1])
+            self.AddColumn(None,ilab[2])
             return self.window
 
         # Extract last k_period highs, lows, closes
@@ -1522,9 +1625,9 @@ class TechnicalAnalysis:
         closes = [row[close_idx] for row in self.window[-k_period:] if len(row) > close_idx and row[close_idx] is not None]
 
         if len(highs) < k_period or len(lows) < k_period or len(closes) < k_period:
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
+            self.AddColumn(None,ilab[1])
+            self.AddColumn(None,ilab[2])
             return self.window
 
         high_max = max(highs)
@@ -1537,26 +1640,26 @@ class TechnicalAnalysis:
             raw_k = 100 * (close_last - low_min) / (high_max - low_min)
 
         # Append raw %K first
-        self.AddColumn(raw_k)
+        self.AddColumn(raw_k,ilab[0])
         k_idx = len(self.window[-1]) - 1
 
         # Smooth %K using moving average (k_smooth)
         if ma_func is None:
             ma_func = self.EMA
-        ma_func(k_idx, k_smooth)
+        ma_func(k_idx, k_smooth,labels=[ilab[1]])
         smoothed_k = self.window[-1][-1]  # %K smoothed
 
         # Append smoothed %K
         d_idx = len(self.window[-1]) - 1
 
         # Smooth %D using moving average (d_smooth) of smoothed %K
-        ma_func(d_idx, d_smooth)
+        ma_func(d_idx, d_smooth,labels=[ilab[2]])
 
         return self.window
 
     # Williams %R
 
-    def WilliamsR(self, high_idx, low_idx, close_idx, period=14):
+    def WilliamsR(self, high_idx, low_idx, close_idx, period=14, labels=None):
         """
         Calculate Williams %R for the last candle in the window.
 
@@ -1570,9 +1673,12 @@ class TechnicalAnalysis:
             Williams %R
         """
 
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["Williams%R"])
+
         n = len(self.window)
         if n < period:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         highs = [row[high_idx] for row in self.window[-period:] if len(row) > high_idx and row[high_idx] is not None]
@@ -1580,7 +1686,7 @@ class TechnicalAnalysis:
         closes = [row[close_idx] for row in self.window[-period:] if len(row) > close_idx and row[close_idx] is not None]
 
         if len(highs) < period or len(lows) < period or len(closes) < period:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         high_max = max(highs)
@@ -1592,15 +1698,18 @@ class TechnicalAnalysis:
         else:
             wr = -100 * (high_max - close_last) / (high_max - low_min)
 
-        self.AddColumn(wr)
+        self.AddColumn(wr,ilab[0])
         return self.window
 
     # Calculate the volatility, stand interpretation
 
-    def Volatility(self, CloseIDX=4, periods=19):
+    def Volatility(self, CloseIDX=4, periods=19, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["Volatility"])
+
         # Ensure there are enough data points
         if len(self.window) < periods:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         # Extract the last 'period' closing prices
@@ -1608,7 +1717,7 @@ class TechnicalAnalysis:
 
         # Require at least two valid prices
         if len(close_prices) < periods:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         # Calculate daily returns
@@ -1621,7 +1730,7 @@ class TechnicalAnalysis:
                 returns.append(daily_return)
 
         if len(returns) < 2:
-            self.AddColumn(None)
+            self.AddColumn(None.ilab[0])
             return self.window
 
         # Calculate the standard deviation of returns
@@ -1630,7 +1739,7 @@ class TechnicalAnalysis:
         sum_squared_diff = sum((r - mean_return) ** 2 for r in returns)
         volatility = (sum_squared_diff / (n - 1)) ** 0.5
 
-        self.AddColumn(volatility)
+        self.AddColumn(volatility,ilab[0])
 
         return self.window
 
@@ -1658,10 +1767,13 @@ class TechnicalAnalysis:
 
     # periods of 13 for Forex, 19 for crypto work best.
 
-    def RDVolatility(self, CloseIDX=4, periods=19):
+    def RDVolatility(self, CloseIDX=4, periods=19, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["RDVolatility"])
+
         # Ensure there are enough data points
         if len(self.window) < periods:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         # Extract the last 'period' closing prices
@@ -1669,7 +1781,7 @@ class TechnicalAnalysis:
 
         # Require at least two valid prices
         if len(close_prices) < periods:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         # Calculate returns
@@ -1686,20 +1798,23 @@ class TechnicalAnalysis:
         sum_squared_diff=sum((r-mean_return)**2 for r in returns)
         volatility=(sum_squared_diff/(n-1))**0.5
 
-        self.AddColumn((volatility*close_prices[-1])/periods)
+        self.AddColumn((volatility*close_prices[-1])/periods,ilab[0])
 
         return self.window
 
     # Calculate the Avellaneda Stoikov volatility based on the OHLCV data versus
     # bid/ask ticker.
 
-    def ASVolatility(self, CloseIDX=4, periods=19):
+    def ASVolatility(self, CloseIDX=4, periods=19, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,4,default=["ASLog","ASmean","ASvariance","ASsigma"])
+
         # Not enough data
         if len(self.window) < periods:
-            self.AddColumn(None)   # log return
-            self.AddColumn(None)   # mean
-            self.AddColumn(None)   # variance
-            self.AddColumn(None)   # sigma
+            self.AddColumn(None,ilab[0])   # log return
+            self.AddColumn(None,ilab[1])   # mean
+            self.AddColumn(None,ilab[2])   # variance
+            self.AddColumn(None,ilab[3])   # sigma
             return self.window
 
         # Extract last-period closes
@@ -1707,10 +1822,10 @@ class TechnicalAnalysis:
 
         # Require full period of valid closes
         if len(closes) < periods:
-            self.AddColumn(None)   # log return
-            self.AddColumn(None)   # mean
-            self.AddColumn(None)   # variance
-            self.AddColumn(None)   # sigma
+            self.AddColumn(None,ilab[0])   # log return
+            self.AddColumn(None,ilab[1])   # mean
+            self.AddColumn(None,ilab[2])   # variance
+            self.AddColumn(None,ilab[3])   # sigma
             return self.window
 
         # Compute log returns
@@ -1723,39 +1838,42 @@ class TechnicalAnalysis:
                 log_returns.append(lr)
 
         # Store last log return (intermediate)
-        self.AddColumn(log_returns[-1] if log_returns else None)
+        self.AddColumn(log_returns[-1] if log_returns else None,ilab[0])
 
         if len(log_returns) < 2:
-            self.AddColumn(None)   # mean
-            self.AddColumn(None)   # variance
-            self.AddColumn(None)   # sigma
+            self.AddColumn(None,ilab[1])   # mean
+            self.AddColumn(None,ilab[2])   # variance
+            self.AddColumn(None,ilab[3])   # sigma
             return self.window
 
         # Mean of log returns
         n = len(log_returns)
         mean_r = sum(log_returns) / n
-        self.AddColumn(mean_r)
+        self.AddColumn(mean_r,ilab[1])
 
         # Compute variance
         var_sum = sum((r - mean_r) ** 2 for r in log_returns)
         variance = var_sum / (n - 1)
-        self.AddColumn(variance)
+        self.AddColumn(variance,ilab[2])
 
         # Sigma
         sigma = variance ** 0.5
-        self.AddColumn(sigma)
+        self.AddColumn(sigma,ilab[3])
 
         return self.window
 
     # Calculate the Black Scholes volatility
 
     def BSVolatility(self, CloseIDX=4, periods=19):
+        # Get column labels
+        ilab=self.intlab(labels,4,default=["BSLastReturn","BSmean","BSvariance","BSsigma"])
+
         # Not enough rows
         if len(self.window) < periods:
-            self.AddColumn(None)   # last return
-            self.AddColumn(None)   # mean
-            self.AddColumn(None)   # variance
-            self.AddColumn(None)   # sigma
+            self.AddColumn(None,ilab[0])   # last return
+            self.AddColumn(None,ilab[1])   # mean
+            self.AddColumn(None,ilab[2])   # variance
+            self.AddColumn(None,ilab[3])   # sigma
             return self.window
 
         # Extract recent closes
@@ -1763,10 +1881,10 @@ class TechnicalAnalysis:
 
         # Require full period
         if len(closes) < periods:
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])   # last return
+            self.AddColumn(None,ilab[1])   # mean
+            self.AddColumn(None,ilab[2])   # variance
+            self.AddColumn(None,ilab[3])   # sigma
             return self.window
 
         # Compute simple returns
@@ -1779,19 +1897,19 @@ class TechnicalAnalysis:
                 returns.append(r)
 
         # Store last return
-        self.AddColumn(returns[-1] if returns else None)
+        self.AddColumn(returns[-1] if returns else None,ilab[0])
 
         # Need at least two
         if len(returns) < 2:
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[1])   # mean
+            self.AddColumn(None,ilab[2])   # variance
+            self.AddColumn(None,ilab[3])   # sigma
             return self.window
 
         # Mean return
         n = len(returns)
         mean_r = sum(returns) / n
-        self.AddColumn(mean_r)
+        self.AddColumn(mean_r,ilab[1])
 
         # Variance
         var_sum = 0.0
@@ -1800,17 +1918,17 @@ class TechnicalAnalysis:
             var_sum += diff * diff
 
         variance = var_sum / (n - 1)
-        self.AddColumn(variance)
+        self.AddColumn(variance,ilab[2])
 
         # Historical sigma
         sigma = variance ** 0.5
-        self.AddColumn(sigma)
+        self.AddColumn(sigma,ilab[3])
 
         return self.window
 
     # Find the current support level
 
-    def Support(self, low_idx=3, period=14):
+    def Support(self, low_idx=3, period=14, labels=None):
         """
         Calculate support levels for a specified column over a rolling window.
 
@@ -1822,23 +1940,26 @@ class TechnicalAnalysis:
             self.window: The rolling window updated with a support level appended
                          to the last row.
         """
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["Support"])
+
         # Ensure enough history exists
         if len(self.window) < period:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         # Extract lows from the last 'period' candles
         lows = [row[low_idx] for row in self.window[-period:] if len(row) > low_idx and row[low_idx] is not None]
 
         if len(lows)<period:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         # Support level = minimum low in the period
         support_level = min(lows)
 
         # Append to the last row of the rolling window
-        self.AddColumn(support_level)
+        self.AddColumn(support_level,ilab[0])
         return self.window
 
     # Find resistance levels
@@ -1855,33 +1976,39 @@ class TechnicalAnalysis:
             self.window: The rolling window updated with a resistance level appended
                          to the last row.
         """
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["Resistance"])
+
         # Ensure enough history exists
         if len(self.window) < period:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         # Extract highs from the last 'period' candles
         highs = [row[high_idx] for row in self.window[-period:] if len(row) > high_idx and row[high_idx] is not None]
 
         if len(highs)<period:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         # Resistance level = maximum high in the period
         resistance_level = max(highs)
 
         # Append to the last row of the rolling window
-        self.AddColumn(resistance_level)
+        self.AddColumn(resistance_level,ilab[0])
         return self.window
 
     # Parabolic SAR
 
-    def PSAR(self, HighIDX=2, LowIDX=3, startAF=0.02, stepAF=0.02, maxAF=0.2):
+    def PSAR(self, HighIDX=2, LowIDX=3, startAF=0.02, stepAF=0.02, maxAF=0.2, labels=None):
         """
         Compute Parabolic SAR for the current window, fully transparent,
         and append all intermediate values as new columns:
         SAR, Trend (1=up, -1=down), Extreme Point (EP), Acceleration Factor (AF)
         """
+
+        # Get column labels
+        ilab=self.intlab(labels,4,default=["SAR","Trend","EP","AF"])
 
         # Ensure enough data to compute
         if len(self.window) < 2 \
@@ -1889,10 +2016,10 @@ class TechnicalAnalysis:
         or len(self.window[-1])>len(self.window[-2]) \
         or self.window[-1][HighIDX] is None or self.window[-1][LowIDX] is None \
         or self.window[-2][HighIDX] is None or self.window[-2][LowIDX] is None:
-            self.AddColumn(None)  # SAR
-            self.AddColumn(None)  # Trend
-            self.AddColumn(None)  # EP
-            self.AddColumn(None)  # AF
+            self.AddColumn(None,ilab[0])  # SAR
+            self.AddColumn(None,ilab[1])  # Trend
+            self.AddColumn(None,ilab[2])  # EP
+            self.AddColumn(None,ilab[3])  # AF
             return self.window
 
         prev_row = self.window[-2]
@@ -1939,16 +2066,16 @@ class TechnicalAnalysis:
                     af = min(af + stepAF, maxAF)
 
         # Append results as new columns
-        self.AddColumn(sar)     # SAR
-        self.AddColumn(trend)   # Trend: 1=up, -1=down
-        self.AddColumn(ep)      # Extreme Point
-        self.AddColumn(af)      # Acceleration Factor
+        self.AddColumn(sar,ilab[0])     # SAR
+        self.AddColumn(trend,ilab[1])   # Trend: 1=up, -1=down
+        self.AddColumn(ep,ilab[2])      # Extreme Point
+        self.AddColumn(af,ilab[3])      # Acceleration Factor
 
         return self.window
 
     # Momentum indicator
 
-    def Momentum(self, colIDX, period=10):
+    def Momentum(self, colIDX, period=10, labels=None):
         """
         Calculate momentum for a given column index and period.
         Momentum = Current value - value N periods ago
@@ -1958,22 +2085,25 @@ class TechnicalAnalysis:
         :param period: int, number of periods to look back
         """
 
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["Momentum"])
+
         # Get the last row
         last_row = self.LastRow()
 
         # Ensure there is enough history
         if len(self.window) < period+1:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         # Calculate momentum
         if len(self.window[-(period + 1)])<colIDX+1:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         past_value = self.window[-(period + 1)][colIDX]
         if past_value is None:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         current_value = last_row[colIDX]
@@ -1984,10 +2114,10 @@ class TechnicalAnalysis:
             momentum = None
 
         # Add momentum as new column
-        self.AddColumn(momentum)
+        self.AddColumn(momentum,ilab[0])
         return self.window
 
-    def RateOfChange(self, colIDX, period=10,absolute=False):
+    def RateOfChange(self, colIDX, period=10, absolute=False, labels=None):
         """
         Calculate the Rate of Change (ROC) for a given column index over a specified period.
         ROC = ((current value - value N periods ago) / value N periods ago) * 100
@@ -1997,6 +2127,9 @@ class TechnicalAnalysis:
             colIDX (int): Column index to calculate ROC from
             period (int): Number of periods for the ROC calculation
         """
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["ROC"])
+
         last_row = self.LastRow()
 
         # Check if enough rows exist
@@ -2022,12 +2155,12 @@ class TechnicalAnalysis:
             roc = None
 
         # Add ROC as a new column
-        self.AddColumn(roc)
+        self.AddColumn(roc,ilab[0])
         return self.window
 
     # On Balance Volume
 
-    def OBV(self, closeIDX=4, volumeIDX=5):
+    def OBV(self, closeIDX=4, volumeIDX=5, labels=None):
         """
         Calculate On-Balance Volume (OBV) based on closing prices and volume.
         OBV increases by volume when the closing price rises,
@@ -2038,8 +2171,11 @@ class TechnicalAnalysis:
             closeIDX (int): Column index of the closing price
             volumeIDX (int): Column index of the volume
         """
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["OBV"])
+
         if len(self.window)<1:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         last_row = self.LastRow()
@@ -2050,7 +2186,7 @@ class TechnicalAnalysis:
         close_prev = prev_row[closeIDX]
         vol_now = last_row[volumeIDX]
         if len(prev_row)<prevIDX+1:
-            self.AddColumn(vol_now)
+            self.AddColumn(vol_now,ilab[0])
             return self.window
 
         obv_prev = prev_row[prevIDX] if prev_row[prevIDX] is not None else vol_now  # Use last column as previous OBV
@@ -2066,14 +2202,17 @@ class TechnicalAnalysis:
             obv = vol_now
 
         # Add OBV as a new column
-        self.AddColumn(obv)
+        self.AddColumn(obv,ilab[0])
         return self.window
 
     # Volume Price Trend (VPT) indicator
 
-    def VolumePriceTrend(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, VolIDX=5):
+    def VolumePriceTrend(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, VolIDX=5, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,1,default=["VolumePriceTrend"])
+
         if len(self.window) < 2 or self.window[-2][0] is None:
-            self.AddColumn(0.0)   # Initialize VPT at 0 for the first row
+            self.AddColumn(0.0,ilab[0])   # Initialize VPT at 0 for the first row
             return self.window
 
         prev_row = self.GetRow(-2)
@@ -2091,17 +2230,20 @@ class TechnicalAnalysis:
         if c1 != 0:  # avoid division by zero
             vpt = prev_vpt + v2 * ((c2 - c1) / c1)
 
-        self.AddColumn(vpt)
+        self.AddColumn(vpt,ilab[0])
         return self.window
 
     # Volume Weighted Average Price (VWAP) indicator
 
-    def VWAP(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, VolIDX=5):
+    def VWAP(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, VolIDX=5, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,3,default=["TP*V","CumVol","VWAP"])
+
         if len(self.window) < 2 or self.window[-1][0] is None:
             # Add 3 columns: TP*V cumulative, Volume cumulative, VWAP
-            self.AddColumn(None)  # cum TP*V
-            self.AddColumn(None)  # cum Vol
-            self.AddColumn(None)  # VWAP
+            self.AddColumn(None,ilab[0])  # cum TP*V
+            self.AddColumn(None,ilab[1])  # cum Vol
+            self.AddColumn(None,ilab[2])  # VWAP
             return self.window
 
         if len(self.window)==1:
@@ -2128,9 +2270,9 @@ class TechnicalAnalysis:
             vwap = cum_pv / cum_vol
 
         # Add 3 transparent columns
-        self.AddColumn(cum_pv)
-        self.AddColumn(cum_vol)
-        self.AddColumn(vwap)
+        self.AddColumn(cum_pv,ilab[0])
+        self.AddColumn(cum_vol,ilab[1])
+        self.AddColumn(vwap,ilab[2])
 
         return self.window
 
@@ -2140,7 +2282,7 @@ class TechnicalAnalysis:
     # Detects positive (VI+) and negative (VI-) trend movement using high, low,
     # close values.
 
-    def Vortex(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, period=14):
+    def Vortex(self, OpenIDX=1, HighIDX=2, LowIDX=3, CloseIDX=4, period=14, labels=None):
         """
         Calculate the Vortex Indicator (VI) over a rolling window.
 
@@ -2169,10 +2311,13 @@ class TechnicalAnalysis:
             - VI- rising above VI+ suggests bearish trend continuation.
         """
 
+        # Get column labels
+        ilab=self.intlab(labels,3,default=["VI+","VI-","TR"])
+
         if len(self.window)<period or self.window[-2][0] is None:
-            self.AddColumn(None)  # VI+
-            self.AddColumn(None)  # VI-
-            self.AddColumn(None)  # TR
+            self.AddColumn(None,ilab[0])  # VI+
+            self.AddColumn(None,ilab[1])  # VI-
+            self.AddColumn(None,ilab[2])  # TR
             return self.window
 
         prev_row = self.GetRow(-2)
@@ -2225,9 +2370,9 @@ class TechnicalAnalysis:
             vi_minus = sum_vm_minus / sum_tr if sum_tr != 0 else None
 
         # Add results as new columns
-        self.AddColumn(vi_plus)
-        self.AddColumn(vi_minus)
-        self.AddColumn(tr)
+        self.AddColumn(vi_plus,ilab[0])
+        self.AddColumn(vi_minus,ilab[1])
+        self.AddColumn(tr,ilab[2])
 
         return self.window
 
@@ -2248,10 +2393,13 @@ class TechnicalAnalysis:
     # It is also useful to monitor divergences between price and the Aroon
     # values to detect weakening momentum before a reversal occurs.
 
-    def Aroon(self, HighIDX=2, LowIDX=3, period=14):
+    def Aroon(self, HighIDX=2, LowIDX=3, period=14, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,2,default=["AROON+","AROON-"])
+
         if len(self.window) < period:
-            self.AddColumn(None)   # Aroon Up
-            self.AddColumn(None)   # Aroon Down
+            self.AddColumn(None,ilab[0])   # Aroon Up
+            self.AddColumn(None,ilab[1])   # Aroon Down
             return self.window
 
         highs = [row[HighIDX] for row in self.window[-period:]]
@@ -2263,32 +2411,35 @@ class TechnicalAnalysis:
         aroon_up = ((period - highest_idx - 1) / (period - 1)) * 100
         aroon_down = ((period - lowest_idx - 1) / (period - 1)) * 100
 
-        self.AddColumn(aroon_up)
-        self.AddColumn(aroon_down)
+        self.AddColumn(aroon_up,ilab[0])
+        self.AddColumn(aroon_down,ilab[1])
 
         return self.window
 
     # Ichimoku Cloud signal function
-    def IchimokuCloud(self, tenkan_idx, kijun_idx, senkouA_idx, senkouB_idx, chikou_idx, close_idx=4):
+    def IchimokuCloud(self, tenkan_idx, kijun_idx, senkouA_idx, senkouB_idx, chikou_idx, close_idx=4, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,4,default=["T/KxDist","T/KCross","Cloud","Chikou"])
+
         # Not enough data yet
         if len(self.window) < 2:
             # Cross already adds two columns (diff, cross)
-            self.AddColumn(None)  # Cloud signal
-            self.AddColumn(None)  # Chikou signal
+            self.AddColumn(None,ilab[0])  # Tenkan/Kijun distance cross
+            self.AddColumn(None,ilab[1])  # tenkan/Kijun cross
+            self.AddColumn(None,ilab[2])  # Cloud signal
+            self.AddColumn(None,ilab[3])  # Chikou signal
             return self.window
 
         last_row = self.LastRow()
         if any(last_row[i] is None for i in [tenkan_idx, kijun_idx, senkouA_idx, senkouB_idx, chikou_idx, close_idx]):
-            self.AddColumn(None)  # Cloud signal
-            self.AddColumn(None)  # Chikou signal
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])  # Tenkan/Kijun distance cross
+            self.AddColumn(None,ilab[1])  # tenkan/Kijun cross
+            self.AddColumn(None,ilab[2])  # Cloud signal
+            self.AddColumn(None,ilab[3])  # Chikou signal
             return self.window
 
         # 1. TK Cross using your Cross function (this appends 2 columns automatically)
-        self.Cross(tenkan_idx, kijun_idx)
+        self.Cross(tenkan_idx, kijun_idx,labels[ilab[2],ilab[3]])
 
         # 2. Cloud signal (price vs cloud)
         price = last_row[close_idx]
@@ -2305,7 +2456,7 @@ class TechnicalAnalysis:
         else:
             cloud_signal = 0   # neutral (inside the cloud)
 
-        self.AddColumn(cloud_signal)
+        self.AddColumn(cloud_signal,ilab[2])
 
         # 3. Chikou confirmation (lagging span vs price)
         chikou = last_row[chikou_idx]
@@ -2316,7 +2467,7 @@ class TechnicalAnalysis:
         else:
             chikou_signal = 0
 
-        self.AddColumn(chikou_signal)
+        self.AddColumn(chikou_signal,ilab[3])
 
         return self.window
 
@@ -2373,14 +2524,17 @@ class TechnicalAnalysis:
     # direction: 'long' (anchors to Lows, projects up) or 'short' (anchors
     #             to Highs, projects down).
 
-    def GannFan(self, HighIDX=2, LowIDX=3, lookback=50, scale=None, direction='long'):
+    def GannFan(self, HighIDX=2, LowIDX=3, lookback=50, scale=None, direction='long', labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,5,default=["Anchor","TDelta","2x1","1x1","1x2"])
+
         # Ensure enough history exists
         if len(self.window) < lookback:
-            self.AddColumn(None) # Anchor Price
-            self.AddColumn(None) # Time Delta
-            self.AddColumn(None) # 2x1
-            self.AddColumn(None) # 1x1
-            self.AddColumn(None) # 1x2
+            self.AddColumn(None,ilab[0]) # Anchor Price
+            self.AddColumn(None,ilab[1]) # Time Delta
+            self.AddColumn(None,ilab[2]) # 2x1
+            self.AddColumn(None,ilab[3]) # 1x1
+            self.AddColumn(None,ilab[4]) # 1x2
             return self.window
 
         # Extract the relevant slice for analysis
@@ -2395,7 +2549,11 @@ class TechnicalAnalysis:
             # Find Highest High
             highs = [row[HighIDX] for row in window_slice if row[HighIDX] is not None]
             if not highs:
-                for _ in range(5): self.AddColumn(None)
+                self.AddColumn(None,ilab[0]) # Anchor Price
+                self.AddColumn(None,ilab[1]) # Time Delta
+                self.AddColumn(None,ilab[2]) # 2x1
+                self.AddColumn(None,ilab[3]) # 1x1
+                self.AddColumn(None,ilab[4]) # 1x2
                 return self.window
 
             anchor_price = max(highs)
@@ -2412,7 +2570,11 @@ class TechnicalAnalysis:
             # Default 'long': Find Lowest Low
             lows = [row[LowIDX] for row in window_slice if row[LowIDX] is not None]
             if not lows:
-                for _ in range(5): self.AddColumn(None)
+                self.AddColumn(None,ilab[0]) # Anchor Price
+                self.AddColumn(None,ilab[1]) # Time Delta
+                self.AddColumn(None,ilab[2]) # 2x1
+                self.AddColumn(None,ilab[3]) # 1x1
+                self.AddColumn(None,ilab[4]) # 1x2
                 return self.window
 
             anchor_price = min(lows)
@@ -2457,24 +2619,27 @@ class TechnicalAnalysis:
         gann_1x2 = anchor_price + (factor * (calc_scale * 0.5) * time_delta)
 
         # 4. APPEND COLUMNS (Transparency)
-        self.AddColumn(anchor_price)
-        self.AddColumn(time_delta)
-        self.AddColumn(gann_2x1)
-        self.AddColumn(gann_1x1)
-        self.AddColumn(gann_1x2)
+        self.AddColumn(anchor_price,ilab[0])
+        self.AddColumn(time_delta,ilab[1])
+        self.AddColumn(gann_2x1,ilab[2])
+        self.AddColumn(gann_1x1,ilab[3])
+        self.AddColumn(gann_1x2,ilab[4])
 
         return self.window
 
     # Gann High-Low Activator (GHLA)
     # A trend-following indicator that acts as a trailing stop/reversal signal.
 
-    def GannHiLoActivator(self, HighIDX=2, LowIDX=3, CloseIDX=4, period=3):
+    def GannHiLoActivator(self, HighIDX=2, LowIDX=3, CloseIDX=4, period=3, labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,4,default=["SMAH","SMAL","HiLoTrend","Activator"])
+
         # Need enough history for the MA
         if len(self.window) < period + 1:
-            self.AddColumn(None) # SMA High
-            self.AddColumn(None) # SMA Low
-            self.AddColumn(None) # Trend
-            self.AddColumn(None) # Activator Line
+            self.AddColumn(None,ilab[0]) # SMA High
+            self.AddColumn(None,ilab[1]) # SMA Low
+            self.AddColumn(None,ilab[2]) # Trend
+            self.AddColumn(None,ilab[3]) # Activator Line
             return self.window
 
         # 1. Calculate Simple Moving Averages of Highs and Lows
@@ -2482,10 +2647,10 @@ class TechnicalAnalysis:
         lows = [row[LowIDX] for row in self.window[-period:] if row[LowIDX] is not None]
 
         if len(highs) < period or len(lows) < period:
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0]) # SMA High
+            self.AddColumn(None,ilab[1]) # SMA Low
+            self.AddColumn(None,ilab[2]) # Trend
+            self.AddColumn(None,ilab[3]) # Activator Line
             return self.window
 
         sma_high = sum(highs) / period
@@ -2528,10 +2693,10 @@ class TechnicalAnalysis:
         activator = sma_low if trend == 1 else sma_high
 
         # 5. Append Columns
-        self.AddColumn(sma_high)
-        self.AddColumn(sma_low)
-        self.AddColumn(trend)
-        self.AddColumn(activator)
+        self.AddColumn(sma_high,ilab[0])
+        self.AddColumn(sma_low,ilab[1])
+        self.AddColumn(trend,ilab[2])
+        self.AddColumn(activator,ilab[3])
 
         return self.window
 
@@ -2542,20 +2707,23 @@ class TechnicalAnalysis:
     # direction: 'long' (Anchors to Low, targets Higher) 
     #            'short' (Anchors to High, targets Lower)
 
-    def GannSquareOfNine(self, HighIDX=2, LowIDX=3, CloseIDX=4, period=100, direction='long'):
+    def GannSquareOfNine(self, HighIDX=2, LowIDX=3, CloseIDX=4, period=100, direction='long', labels=None):
+        # Get column labels
+        ilab=self.intlab(labels,4,default=["S9Anchor","S9Degrees","S9Target","S9TrailStop"])
+
         if len(self.window) < period:
-            self.AddColumn(None) # Anchor
-            self.AddColumn(None) # Degrees
-            self.AddColumn(None) # Next Level (Target)
-            self.AddColumn(None) # Major Level (Trailing Stop)
+            self.AddColumn(None,ilab[0]) # Anchor
+            self.AddColumn(None,ilab[1]) # Degrees
+            self.AddColumn(None,ilab[2]) # Next Level (Target)
+            self.AddColumn(None,ilab[3]) # Major Level (Trailing Stop)
             return self.window
 
         current_price = self.window[-1][CloseIDX]
         if current_price is None:
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0]) # Anchor
+            self.AddColumn(None,ilab[1]) # Degrees
+            self.AddColumn(None,ilab[2]) # Next Level (Target)
+            self.AddColumn(None,ilab[3]) # Major Level (Trailing Stop)
             return self.window
 
         # 1. FIND ANCHOR and DEFINE MATH
@@ -2563,10 +2731,10 @@ class TechnicalAnalysis:
             # Find Highest High
             slice_vals = [row[HighIDX] for row in self.window[-period:] if row[HighIDX] is not None]
             if not slice_vals:
-                self.AddColumn(None)
-                self.AddColumn(None)
-                self.AddColumn(None)
-                self.AddColumn(None)
+                self.AddColumn(None,ilab[0]) # Anchor
+                self.AddColumn(None,ilab[1]) # Degrees
+                self.AddColumn(None,ilab[2]) # Next Level (Target)
+                self.AddColumn(None,ilab[3]) # Major Level (Trailing Stop)
                 return self.window
 
             anchor = max(slice_vals)
@@ -2584,10 +2752,10 @@ class TechnicalAnalysis:
             # Default Long: Find Lowest Low
             slice_vals = [row[LowIDX] for row in self.window[-period:] if row[LowIDX] is not None]
             if not slice_vals:
-                self.AddColumn(None)
-                self.AddColumn(None)
-                self.AddColumn(None)
-                self.AddColumn(None)
+                self.AddColumn(None,ilab[0]) # Anchor
+                self.AddColumn(None,ilab[1]) # Degrees
+                self.AddColumn(None,ilab[2]) # Next Level (Target)
+                self.AddColumn(None,ilab[3]) # Major Level (Trailing Stop)
                 return self.window
 
             anchor = min(slice_vals)
@@ -2630,10 +2798,10 @@ class TechnicalAnalysis:
         major_level = val_support ** 2
 
         # 4. APPEND
-        self.AddColumn(anchor)
-        self.AddColumn(degrees_rotation)
-        self.AddColumn(next_target)
-        self.AddColumn(major_level)
+        self.AddColumn(anchor,ilab[0])
+        self.AddColumn(degrees_rotation,ilab[1])
+        self.AddColumn(next_target,ilab[2])
+        self.AddColumn(major_level,ilab[3])
 
         return self.window
 
@@ -2644,16 +2812,27 @@ class TechnicalAnalysis:
     # Returns 9 columns:
     # [ObsMom, ObsVol, LikeBull, LikeBear, LikeChop, ProbBull, ProbBear, ProbChop, DomState]
 
-    def HiddenMarkov(self, length=20, p_stay_bull=0.80, p_stay_bear=0.80, p_stay_chop=0.60, CloseIDX=4, HighIDX=2, LowIDX=3):
+    def HiddenMarkov(self, length=20, p_stay_bull=0.80, p_stay_bear=0.80, p_stay_chop=0.60, CloseIDX=4, HighIDX=2, LowIDX=3, lavels=None):
         """
         Calculates market regime probabilities using a Hidden Markov Model.
 
         DomState: 1 = Bullish, -1 = Bearish, 0 = Chop
         """
+        # Get column labels
+        ilab=self.intlab(labels,9,default=["ObsMom", "ObsVol", "LikeBull", "LikeBear", "LikeChop", "ProbBull", "ProbBear", "ProbChop", "DomState"])
+
         # 1. Warmup: We need enough history for ROC, EMA, and StDev of those values
         warmup = length * 2
         if len(self.window) < warmup:
-            for _ in range(9): self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
+            self.AddColumn(None,ilab[1])
+            self.AddColumn(None,ilab[2])
+            self.AddColumn(None,ilab[3])
+            self.AddColumn(None,ilab[4])
+            self.AddColumn(None,ilab[5])
+            self.AddColumn(None,ilab[6])
+            self.AddColumn(None,ilab[7])
+            self.AddColumn(None,ilab[8])
             return self.window
 
         # --- STEP 1: CALCULATE EMISSIONS (Observables) ---
@@ -2673,7 +2852,15 @@ class TechnicalAnalysis:
         # Calculate Z-Score for Momentum
         mom_history = get_series_roc(CloseIDX, length + length)
         if len(mom_history) < length:
-            for _ in range(9): self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
+            self.AddColumn(None,ilab[1])
+            self.AddColumn(None,ilab[2])
+            self.AddColumn(None,ilab[3])
+            self.AddColumn(None,ilab[4])
+            self.AddColumn(None,ilab[5])
+            self.AddColumn(None,ilab[6])
+            self.AddColumn(None,ilab[7])
+            self.AddColumn(None,ilab[8])
             return self.window
 
         # Simple EMA of ROC
@@ -2767,15 +2954,15 @@ class TechnicalAnalysis:
             dom_state = 0
 
         # Append all 9 columns
-        self.AddColumn(obs_mom)
-        self.AddColumn(obs_vol)
-        self.AddColumn(like_bull)
-        self.AddColumn(like_bear)
-        self.AddColumn(like_chop)
-        self.AddColumn(prob_bull)
-        self.AddColumn(prob_bear)
-        self.AddColumn(prob_chop)
-        self.AddColumn(dom_state)
+        self.AddColumn(obs_mom,ilab[0])
+        self.AddColumn(obs_vol,ilab[1])
+        self.AddColumn(like_bull,ilab[2])
+        self.AddColumn(like_bear,ilab[3])
+        self.AddColumn(like_chop,ilab[4])
+        self.AddColumn(prob_bull,ilab[5])
+        self.AddColumn(prob_bear,ilab[6])
+        self.AddColumn(prob_chop,ilab[7])
+        self.AddColumn(dom_state,ilab[8])
 
         return self.window
 

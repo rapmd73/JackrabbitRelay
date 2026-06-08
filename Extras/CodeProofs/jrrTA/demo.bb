@@ -35,14 +35,15 @@ def main():
 
         # Create an EMA, column 6
         emaIDX=6
-        ta.EMA(Closing,SlowLength,labels="EMA")
+        ta.EMA(Closing,SlowLength)
 
         # Create a Bollingers Band using a previous EMA, upper boundary will be
         # column 7, lower boundary will be collumn 8
 
         bbU=7
         bbL=8
-        ta.BollingerBands(emaIDX,20,7,labels=["Mean","Variance","StdDev","BBUpper","BBLower"])
+
+        ta.BollingerBands(emaIDX,20,7)
 
         ta.Display(-1)
 
