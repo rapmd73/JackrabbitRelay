@@ -47,7 +47,7 @@ class TechnicalAnalysis:
             self.tf=self.relay.Timeframes[0]
         self.fig,self.ax=plt.subplots(figsize=(19.2, 10.8), dpi=100) # 1920x1080
         self.ImageNumber=0
-        self.labels={}
+        self.labels=[]
         self.window = []
 
     # Conver timestamp to a readable date
@@ -151,27 +151,33 @@ class TechnicalAnalysis:
         return self.GetRow(-1)
 
     # Add a column to the rolling windows
-    def AddColumn(self,value,label=None):
+    def AddColumn(self,value,labels=None):
         if self.window and len(self.window)>0:
             self.window[-1].append(value) # Update the last slice with value
-        if label and len(self.labels)<len(self.window[-1]):
-            self.labels[label]=len(self.window[-1])
+
+            nl=labels
+            if not nl:
+                nl=f"Label{len(self.window[-1])}"
+            if nl not in self.labels:
+                self.labels.append(nl)
         return self.window
 
     # Get the index or column number of a label
-    def idx(key):
+    def idx(self,key):
         if isinstance(key, str):
             if self.labels:
-                return self.labels.get(label, None)
+                return self.labels.index(key)
         elif isinstance(key, int):
-            for lbl, idx in self.labels.items():
-                if idx==key:
-                    return lbl
+            c=0
+            for idx in self.labels:
+                if c==key:
+                    return self.labels[c]
+                c+=1
         return None
 
     # Get internal labels, convert to list.
 
-    def intlab(labels,count=0):
+    def intlab(self,labels,count=0):
         if not isinstance(count, int) or count < 0:
             raise ValueError("count must be a non-negative integer")
 
@@ -379,12 +385,13 @@ class TechnicalAnalysis:
                 self.Duplicate=True
 
         # Set up labels
-        self.labels['DateTime']=len(self.labels)
-        self.labels['Open']=len(self.labels)
-        self.labels['High']=len(self.labels)
-        self.labels['Low']=len(self.labels)
-        self.labels['Close']=len(self.labels)
-        self.labels['Volume']=len(self.labels)
+        if 'DateTime' not in self.labels:
+            self.labels.append('DateTime')
+            self.labels.append('Open')
+            self.labels.append('High')
+            self.labels.append('Low')
+            self.labels.append('Close')
+            self.labels.append('Volume')
 
         # Ensure the window only contains the last 'size' elements
         if len(self.window)>self.count:
@@ -572,9 +579,9 @@ class TechnicalAnalysis:
     # CandleCounter - keeps track of an event for X candles after it occurs.
     # This can be used to hold a signal for X candles, ie a crossing.
 
-    def CandleCounter(self, idx, target_value, reset_count,label=None):
+    def CandleCounter(self, idx, target_value, reset_count,labels=None):
         # Get column labels
-        ilab=intlab(label,1)
+        ilab=self.intlab(labels,1)
         # Require at least one row
         if len(self.window) < 1:
             self.AddColumn(None,ilab[0])
@@ -614,7 +621,7 @@ class TechnicalAnalysis:
 
     def Cross(self,idx1,idx2,labels=None):
         # Get column labels
-        ilab=intlab(labels,2)
+        ilab=self.intlab(labels,2)
         # Ensure there are at least two data points to compare
         if len(self.window) < 2:
             self.AddColumn(None,ilab[0])  # Not enough data to calculate difference or crossing
@@ -698,9 +705,9 @@ class TechnicalAnalysis:
     # catch the turn before the rest of the market even realizes the hill has
     # ended.
 
-    def Rule37(self, MA_IDX,label=None):
+    def Rule37(self, MA_IDX,labels=None):
         # Get column labels
-        ilab=intlab(label,1)
+        ilab=self.intlab(labels,1)
         if len(self.window)<3:
             self.AddColumn(5,ilab[0])
             return self.window
@@ -717,9 +724,9 @@ class TechnicalAnalysis:
 
     # Calculate a simple moving average
 
-    def SMA(self,idx,period=17,label=None):
+    def SMA(self,idx,period=17,labels=None):
         # Get column labels
-        ilab=intlab(label,1)
+        ilab=self.intlab(labels,1)
         if len(self.window)<period+1:
             self.AddColumn(None,ilab[0]) # Update the last slice with None
             return self.window  # Not enough valid closing prices to calculate SMA
@@ -735,16 +742,15 @@ class TechnicalAnalysis:
         # Calculate the SMA of the last `period` closing prices
         sma = sum(idxptr) / period
 
-        ilab=intlab(label,1)
         self.AddColumn(sma,ilab[0])  # Update the last slice with the SMA
 
         return self.window
 
     # Calculate an exponential moving average
 
-    def EMA(self, idx, period=17,label=None):
+    def EMA(self, idx, period=17,labels=None):
         # Get column labels
-        ilab=intlab(label,1)
+        ilab=self.intlab(labels,1)
         # Get the last 'period' closing prices
         idxptr = [row[idx] for row in self.window[-period:] if len(row)>idx and row[idx] is not None]
 
@@ -770,9 +776,9 @@ class TechnicalAnalysis:
 
     # Calculate a weighted moving average
 
-    def WMA(self, idx, period=17,label=None):
+    def WMA(self, idx, period=17,labels=None):
         # Get column labels
-        ilab=intlab(label,1)
+        ilab=self.intlab(labels,1)
         # Get the last 'period' closing prices
         idxptr = [row[idx] for row in self.window[-period:] if len(row)>idx and row[idx] is not None]
 
@@ -822,7 +828,7 @@ class TechnicalAnalysis:
         """
 
         # Get column labels
-        ilab=intlab(labels,2)
+        ilab=self.intlab(labels,2)
         # Step 0: Ensure enough historical data
         if len(self.window)<period+1:
             self.AddColumn(None,ilab[0])
@@ -858,9 +864,9 @@ class TechnicalAnalysis:
 
     # Calculate a volume weighted moving average
 
-    def VWMA(self, idx, vol_idx=5, period=20, label=None):
+    def VWMA(self, idx, vol_idx=5, period=20, labels=None):
         # Get column labels
-        ilab=intlab(label,1)
+        ilab=self.intlab(labels,1)
         # Collect the last 'period' closing prices and volumes
         prices = [row[idx] for row in self.window[-period:] if len(row)>idx and row[idx] is not None and row[vol_idx] is not None]
         volumes = [row[vol_idx] for row in self.window[-period:] if len(row)>idx and row[idx] is not None and row[vol_idx] is not None]
@@ -888,7 +894,7 @@ class TechnicalAnalysis:
     # the Relative Moving Average. Does NOT need a full window, unlike other
     # moving averages.
 
-    def RMA(self, idx, period=14,label=None):
+    def RMA(self, idx, period=14,labels=None):
         """
         Calculate a Wilder Moving Average (used in ATR, ADX, DI+, DI-) for a given column.
 
@@ -907,7 +913,7 @@ class TechnicalAnalysis:
         """
 
         # Get column labels
-        ilab=intlab(labels,2)
+        ilab=self.intlab(labels,2)
 
         if len(self.window) < 1:
             return self.window  # Nothing to calculate
@@ -935,7 +941,7 @@ class TechnicalAnalysis:
 
     # Calculate a generalized Zero-Lag value for any indicator column
 
-    def ZeroLag(self, idx, period=17,label=None):
+    def ZeroLag(self, idx, period=17,labels=None):
         """
         Compute a generalized zero-lag value for the series in column `idx`.
 
@@ -954,7 +960,7 @@ class TechnicalAnalysis:
         """
 
         # Get column labels
-        ilab=intlab(labels,2)
+        ilab=self.intlab(labels,2)
 
         if len(self.window[-1])<idx:
             self.AddColumn(None,ilab[0])
@@ -980,7 +986,7 @@ class TechnicalAnalysis:
 
     # Calculate a generalized Sine-Weighted value for any indicator column
 
-    def SineWeight(self, idx, period=17):
+    def SineWeight(self, idx, period=17, labels=None):
         """
         Compute a generalized sine-weighted value for the series in column `idx`.
 
@@ -998,8 +1004,11 @@ class TechnicalAnalysis:
             the sine-weighted value for the selected series.
         """
 
+        # Get column labels
+        ilab=self.intlab(labels,1)
+
         if len(self.window[-1])<idx:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         # Extract last 'period' values from the selected column
@@ -1007,12 +1016,12 @@ class TechnicalAnalysis:
 
         # Ensure sufficient history
         if len(series) < period:
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         # If any value is None, return None
         if any(v is None for v in series):
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])
             return self.window
 
         # Generate sine weights (0 -> pi)
@@ -1023,7 +1032,7 @@ class TechnicalAnalysis:
         sine_weighted_value = weighted_sum / sum(weights)
 
         # Append sine-weighted value to the last row
-        self.AddColumn(sine_weighted_value)
+        self.AddColumn(sine_weighted_value,ilab[0])
 
         return self.window
 
@@ -1249,7 +1258,9 @@ class TechnicalAnalysis:
 
         return self.window
 
-    def BollingerBands(self, idx, period=20, stddev_mult=2):
+    # Classic Bollinger Bands
+
+    def BollingerBands(self, idx, period=20, stddev_mult=2, labels=None):
         """
         Calculate Bollinger Bands using an existing moving average column (idx).
 
@@ -1257,24 +1268,27 @@ class TechnicalAnalysis:
             Mean, Variance, STD, Upper Band, Lower Band
         """
 
+        # Get column labels
+        ilab=self.intlab(labels,5)
+
         n = len(self.window)
 
         if n < period:
-            self.AddColumn(None)    # mean
-            self.AddColumn(None)    # variance
-            self.AddColumn(None)    # standard deviation
-            self.AddColumn(None)    # upper band
-            self.AddColumn(None)    # lower band
+            self.AddColumn(None,ilab[0])    # mean
+            self.AddColumn(None,ilab[1])    # variance
+            self.AddColumn(None,ilab[2])    # standard deviation
+            self.AddColumn(None,ilab[3])    # upper band
+            self.AddColumn(None,ilab[4])    # lower band
             return self.window
 
         series = [row[idx] for row in self.window[-period:] if len(row) > idx and row[idx] is not None]
 
         if len(series) < period:
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
-            self.AddColumn(None)
+            self.AddColumn(None,ilab[0])    # mean
+            self.AddColumn(None,ilab[1])    # variance
+            self.AddColumn(None,ilab[2])    # standard deviation
+            self.AddColumn(None,ilab[3])    # upper band
+            self.AddColumn(None,ilab[4])    # lower band
             return self.window
 
         middle_band = self.window[-1][idx]  # existing MA
@@ -1285,11 +1299,11 @@ class TechnicalAnalysis:
         upper_band = middle_band + stddev_mult * stddev
         lower_band = middle_band - stddev_mult * stddev
 
-        self.AddColumn(mean)
-        self.AddColumn(variance)
-        self.AddColumn(stddev)
-        self.AddColumn(upper_band)
-        self.AddColumn(lower_band)
+        self.AddColumn(mean,ilab[0])
+        self.AddColumn(variance,ilab[1])
+        self.AddColumn(stddev,ilab[2])
+        self.AddColumn(upper_band,ilab[3])
+        self.AddColumn(lower_band,ilab[4])
 
         return self.window
 
