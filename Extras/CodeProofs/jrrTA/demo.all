@@ -25,6 +25,8 @@ def main():
     for slice in ohlcv:
         ta.Rolling(slice)
 
+        ## Indicators
+
         ta.SMA(ta.idx('Close'))
         ta.EMA(ta.idx('Close'))
         ta.WMA(ta.idx('Close'))
@@ -74,7 +76,8 @@ def main():
         ta.AddColumn(ls,label='ChikouLag')
         ta.IchimokuCloud(ta.idx('Tenkan'),ta.idx('Kijun'),ta.idx('SekouA'),ta.idx('SekouB'),ta.idx('ChikouLag'))
 
-        """
+        ## Candle stick patterns
+
         ta.Doji()
         ta.TriStarDoji()
         ta.Hammer()
@@ -108,7 +111,6 @@ def main():
         ta.BearishSeparatingLines()
         ta.BullishKicker()
         ta.BearishKicker()
-        """
 
         ta.Display(-1,showidx=True)
 

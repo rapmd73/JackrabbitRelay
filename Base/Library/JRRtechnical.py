@@ -3063,6 +3063,15 @@ class TechnicalAnalysis:
         else:
             last_row=self.LastRow()
 
+        if None in [last_row[OpenIDX],last_row[HighIDX],last_row[LowIDX],last_row[CloseIDX]]:
+            self.AddColumn(None,ilab[0])    # body
+            self.AddColumn(None,ilab[1])    # range
+            self.AddColumn(None,ilab[2])    # ratio
+            self.AddColumn(None,ilab[3])    # upper wick/shadow
+            self.AddColumn(None,ilab[4])    # lowwer wick/shadow
+            self.AddColumn(None,ilab[5])    # is doji (1=yes)
+            return self.window
+
         o=last_row[OpenIDX]
         h=last_row[HighIDX]
         l=last_row[LowIDX]
