@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Jackrabbit Relay Technical Analysis example
+
+# 2021-2025 Copyright © Robert APM Darin
+# All rights reserved unconditionally.
+
+import sys
+sys.path.append('/home/JackrabbitRelay2/Base/Library')
+import os
+import math
+import json
+import datetime
+import time
+
+import JackrabbitRelay as JRR
+import JRRtechnical as jrTA
+
+def main():
+    ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',5000)
+    #ohlcv=ta.ReadOHLCV('ADAUSD.txt')
+    ohlcv=ta.GetOHLCV()
+
+    for slice in ohlcv:
+        ta.Rolling(slice)
+
+        ta.SMA(ta.idx('Close'))
+        ta.EMA(ta.idx('Close'))
+        ta.WMA(ta.idx('Close'))
+        ta.HMA(ta.idx('SMA'),ta.idx('EMA'))
+        ta.VWMA(ta.idx('Close'))
+        ta.RMA(ta.idx('Close'))
+        ta.Rule37(ta.idx('EMA'))
+        ta.ZeroLag(ta.idx('SMA'))
+        ta.SineWeight(ta.idx('SMA'))
+        ta.JMA(ta.idx('SMA')) # Fixed
+        ta.RSI()
+        ta.ADX()
+        ta.BollingerBands(ta.idx('SMA'))
+        ta.BollingerBandsB(ta.idx('SMA'),ta.idx('BBUpper'),ta.idx('BBLower'))
+        ta.MACD(ta.idx('RMA'),ta.idx('SMA'))
+        ta.ATR()
+        ta.Stochastic()
+        ta.WilliamsR()
+        ta.Volatility()
+        ta.RDVolatility()
+        ta.ASVolatility()
+        ta.BSVolatility()
+        ta.Support()
+        ta.Resistance()
+        ta.PSAR()
+        ta.Momentum()
+        ta.RateOfChange()
+        ta.OBV()
+        ta.VolumePriceTrend()
+        ta.VWAP()
+        ta.Vortex()
+        ta.Aroon()
+        ta.GannFan()
+        ta.GannHiLoActivator()
+        ta.GannSquareOfNine()
+        ta.HiddenMarkov()
+
+        # Ichimoku Cloud - Fixed
+        ta.EMA(ta.idx('Close'),period=9,labels=['Tenkan'])
+        ta.EMA(ta.idx('Close'),period=26,labels=['Kijun'])
+        ta.EMA(ta.idx('Close'),period=26,labels=['SekouA'])
+        ta.EMA(ta.idx('Close'),period=52,labels=['SekouB'])
+        ls=None
+        if ta.GetSize()>26:
+            row=ta.GetRow(-26) # Lagging Span, Chikou=Close[-26]
+            ls=row[ta.idx('Close')]
+        ta.AddColumn(ls,label='ChikouLag')
+        ta.IchimokuCloud(ta.idx('Tenkan'),ta.idx('Kijun'),ta.idx('SekouA'),ta.idx('SekouB'),ta.idx('ChikouLag'))
+
+        """
+        ta.Doji()
+        ta.TriStarDoji()
+        ta.Hammer()
+        ta.InvertedHammer()
+        ta.SpinningTop()
+        ta.HangingMan()
+        ta.ShootingStar()
+        ta.BullishMarubozu()
+        ta.BearishMarubozu()
+        ta.HighWave()
+        ta.BullishBeltHold()
+        ta.BearishBeltHold()
+        ta.BullishEngulfing()
+        ta.BearishEngulfing()
+        ta.TweezerTops()
+        ta.TweezerBottoms()
+        ta.PiercingLine()
+        ta.DarkCloudCover()
+        ta.BullishHarami()
+        ta.BearishHarami()
+        ta.BullishHaramiCross()
+        ta.BearishHaramiCross()
+        ta.MatchingLow()
+        ta.BullishMatHold3()
+        ta.BearishMatHold3()
+        ta.BullishMatHold5()
+        ta.BearishMatHold5()
+        ta.BullishKickingByLength()
+        ta.BearishKickingByLength()
+        ta.BullishSeparatingLines()
+        ta.BearishSeparatingLines()
+        ta.BullishKicker()
+        ta.BearishKicker()
+        """
+
+        ta.Display(-1,showidx=True)
+
+    ta.DebugLabels()
+
+if __name__=='__main__':
+    main()
+
+###
+### End demo
+###

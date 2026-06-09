@@ -1191,8 +1191,8 @@ class TechnicalAnalysis:
 
         # Determine start of JMA columns in previous row
         # If previous row exists and has >= 4 columns for JMA, use last 4 columns
-        last_row = self.window[-2] if len(self.window) > 1 else None
-        if last_row is None or last_row[0] is None:
+        last_row = self.window[-1] if len(self.window)>1 else None
+        if last_row is None or None in last_row[-4:]:
             # First call: initialize previous JMA state
             last_ma1 = source
             last_det0 = 0.0
@@ -1238,7 +1238,7 @@ class TechnicalAnalysis:
 
     # Calculate Relative Strength Index (RSI) for the last candle in the window.
 
-    def RSI(self, idx, period=14, labels=None):
+    def RSI(self, idx=4, period=14, labels=None):
         # Get column labels
         ilab=self.intlab(labels,1,default=["RSI"])
 
@@ -1366,7 +1366,7 @@ class TechnicalAnalysis:
 
     # Classic Bollinger Bands
 
-    def BollingerBands(self, idx, period=20, stddev_mult=2, labels=None):
+    def BollingerBands(self, idx=4, period=20, stddev_mult=2, labels=None):
         """
         Calculate Bollinger Bands using an existing moving average column (idx).
 
@@ -1607,7 +1607,7 @@ class TechnicalAnalysis:
 
     # Stochastic indicator
 
-    def Stochastic(self, high_idx, low_idx, close_idx, k_period=14, k_smooth=3, d_smooth=3, ma_func=None, labels=None):
+    def Stochastic(self, high_idx=2, low_idx=3, close_idx=4, k_period=14, k_smooth=3, d_smooth=3, ma_func=None, labels=None):
         """
         Calculate the Stochastic Oscillator for the last candle in the window.
 
@@ -1674,7 +1674,7 @@ class TechnicalAnalysis:
 
     # Williams %R
 
-    def WilliamsR(self, high_idx, low_idx, close_idx, period=14, labels=None):
+    def WilliamsR(self, high_idx=2, low_idx=3, close_idx=4, period=14, labels=None):
         """
         Calculate Williams %R for the last candle in the window.
 
@@ -2090,7 +2090,7 @@ class TechnicalAnalysis:
 
     # Momentum indicator
 
-    def Momentum(self, colIDX, period=10, labels=None):
+    def Momentum(self, colIDX=4, period=10, labels=None):
         """
         Calculate momentum for a given column index and period.
         Momentum = Current value - value N periods ago
@@ -2132,7 +2132,7 @@ class TechnicalAnalysis:
         self.AddColumn(momentum,ilab[0])
         return self.window
 
-    def RateOfChange(self, colIDX, period=10, absolute=False, labels=None):
+    def RateOfChange(self, colIDX=4, period=10, absolute=False, labels=None):
         """
         Calculate the Rate of Change (ROC) for a given column index over a specified period.
         ROC = ((current value - value N periods ago) / value N periods ago) * 100
@@ -2410,31 +2410,54 @@ class TechnicalAnalysis:
 
     def Aroon(self, HighIDX=2, LowIDX=3, period=14, labels=None):
         # Get column labels
-        ilab=self.intlab(labels,2,default=["AROON+","AROON-"])
+        ilab = self.intlab(labels, 2, default=["AROON+", "AROON-"])
 
+        # Need at least period rows
         if len(self.window) < period:
-            self.AddColumn(None,ilab[0])   # Aroon Up
-            self.AddColumn(None,ilab[1])   # Aroon Down
+            self.AddColumn(None, ilab[0])   # Aroon Up
+            self.AddColumn(None, ilab[1])   # Aroon Down
             return self.window
 
-        highs = [row[HighIDX] for row in self.window[-period:]]
-        lows = [row[LowIDX] for row in self.window[-period:]]
+        # Extract the last period highs and lows (oldest -> newest)
+        window_slice = self.window[-period:]
+        highs = []
+        lows = []
+        for row in window_slice:
+            # ensure the row is long enough and values are present
+            if len(row) <= max(HighIDX, LowIDX):
+                self.AddColumn(None, ilab[0])
+                self.AddColumn(None, ilab[1])
+                return self.window
+            highs.append(row[HighIDX])
+            lows.append(row[LowIDX])
 
-        highest_idx = highs.index(max(highs))
-        lowest_idx = lows.index(min(lows))
+        # If any required values are None, return None columns (consistent behavior)
+        if any(v is None for v in highs) or any(v is None for v in lows):
+            self.AddColumn(None, ilab[0])
+            self.AddColumn(None, ilab[1])
+            return self.window
 
-        aroon_up = ((period - highest_idx - 1) / (period - 1)) * 100
-        aroon_down = ((period - lowest_idx - 1) / (period - 1)) * 100
+        # Find most recent occurrence of the highest high and lowest low
+        max_high = max(highs)
+        min_low = min(lows)
 
-        self.AddColumn(aroon_up,ilab[0])
-        self.AddColumn(aroon_down,ilab[1])
+        # index from the end: 0 means most recent bar
+        periods_since_high = highs[::-1].index(max_high)
+        periods_since_low = lows[::-1].index(min_low)
+
+        # canonical Aroon formula (0-based periods-since, denominator = period)
+        aroon_up = ((period - periods_since_high) / period) * 100
+        aroon_down = ((period - periods_since_low) / period) * 100
+
+        self.AddColumn(aroon_up, ilab[0])
+        self.AddColumn(aroon_down, ilab[1])
 
         return self.window
 
     # Ichimoku Cloud signal function
     def IchimokuCloud(self, tenkan_idx, kijun_idx, senkouA_idx, senkouB_idx, chikou_idx, close_idx=4, labels=None):
         # Get column labels
-        ilab=self.intlab(labels,4,default=["T/KxDist","T/KCross","Cloud","Chikou"])
+        ilab=self.intlab(labels,4,default=["T/KxDist","T/KCross","CloudSignal","ChikouSignal"])
 
         # Not enough data yet
         if len(self.window) < 2:
@@ -2454,7 +2477,7 @@ class TechnicalAnalysis:
             return self.window
 
         # 1. TK Cross using your Cross function (this appends 2 columns automatically)
-        self.Cross(tenkan_idx, kijun_idx,labels[ilab[2],ilab[3]])
+        self.Cross(tenkan_idx, kijun_idx,labels=[ilab[0],ilab[1]])
 
         # 2. Cloud signal (price vs cloud)
         price = last_row[close_idx]
@@ -2832,6 +2855,8 @@ class TechnicalAnalysis:
         Calculates market regime probabilities using a Hidden Markov Model.
 
         DomState: 1 = Bullish, -1 = Bearish, 0 = Chop
+
+        Converted from pine script
         """
         # Get column labels
         ilab=self.intlab(labels,9,default=["ObsMom", "ObsVol", "LikeBull", "LikeBear", "LikeChop", "ProbBull", "ProbBear", "ProbChop", "DomState"])
@@ -2887,9 +2912,13 @@ class TechnicalAnalysis:
             ema_mom_list.append(curr_ema)
 
         # Z-Score the smoothed momentum
-        m_mean = sum(ema_mom_list) / len(ema_mom_list)
-        m_std = (sum((x - m_mean)**2 for x in ema_mom_list) / len(ema_mom_list))**0.5
-        obs_mom = (ema_mom_list[-1] - m_mean) / m_std if m_std != 0 else 0.0
+        m_mean=0
+        m_std=0
+        obs_mom=0
+        if len(ema_mom_list)>0:
+            m_mean = sum(ema_mom_list) / len(ema_mom_list)
+            m_std = (sum((x - m_mean)**2 for x in ema_mom_list) / len(ema_mom_list))**0.5
+            obs_mom = (ema_mom_list[-1] - m_mean) / m_std if m_std != 0 else 0.0
 
         # Volatility Observable (Z-Score of ATR)
         # (Simplified ATR approach for internal calculation)
