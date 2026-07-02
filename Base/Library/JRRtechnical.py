@@ -680,7 +680,7 @@ class TechnicalAnalysis:
         ilab=self.intlab(labels,1,default=["CandleCounter"])
 
         # Require at least one row
-        if len(self.window) < 1:
+        if len(self.window) < 2:
             self.AddColumn(None,ilab[0])
             return self.window
 
@@ -695,8 +695,8 @@ class TechnicalAnalysis:
 
         # Determine previous counter (last column of previous row)
         prev_count = 0
-        pIDX=len(last_row)   # current index in the matrix
-        if len(self.window) > 1:
+        pIDX=len(last_row)-1   # current index in the matrix
+        if len(self.window) > 2:
             prev_row = self.window[-2]
             if prev_row and len(prev_row)>=len(last_row):
                 prev_count = prev_row[pIDX]
