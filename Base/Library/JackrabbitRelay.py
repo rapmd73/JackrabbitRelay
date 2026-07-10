@@ -682,7 +682,10 @@ class JackrabbitRelay:
         # Only pause if we can NOT get the lock.
         while self.Limiter.Lock()!='locked':
             JRRsupport.ElasticSleep(ratelimit/1000)
-        # Let lock expire on its own
+
+        # Let lock expire on its own. Forces ratelimit in a way that
+        # keeps code flow direct and effecient. Only delay if ratelimit
+        # is in place.
         # self.Limiter.Unlock()
 
     # Function to run at exit.
