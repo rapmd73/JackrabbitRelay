@@ -36,7 +36,7 @@ import JRRtechnical as jrTA
 
 def main():
     ta=jrTA.TechnicalAnalysis('kraken','MAIN','ADA/USD','1m',197)
-    ohlcv=ta.ReadOHLCV('ADAUSD.txt')
+    ohlcv=ta.ReadOHLCV('/home/jrrTA/Logs/ADAUSD.txt')
 
     Period=14
 
@@ -57,7 +57,7 @@ def main():
         ta.ADX(HighIDX,LowIDX,Closing,Period)
         ta.Cross(diP,diM) # +DI>-DI bullish, +DI<-DI bearish, these as crossings
 
-        ta.Display(-1)
+        ta.Display(-1,showidx=True)
 
 if __name__=='__main__':
     main()

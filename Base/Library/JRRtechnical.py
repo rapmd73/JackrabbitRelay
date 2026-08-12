@@ -76,13 +76,14 @@ class TechnicalAnalysis:
         for i in range(1,len(slice)):
             if slice[i]!=None:
                 if showidx:
-                    out+=f"{i:3.0f}/{float(slice[i]):{self.length}.{self.precision}f} "
+#                    out+=f"{i:3.0f}/{float(slice[i]):{self.length}.{self.precision}f} "
+                    out+=f"{self.idx(i)}/{float(slice[i]):{self.length}.{self.precision}f} "
                 else:
                     out+=f"{float(slice[i]):{self.length}.{self.precision}f} "
             else:
                 dashes='-'*80
                 if showidx:
-                    out+=f"{i:3.0f}/{dashes[:self.length]:{self.length}} "
+                    out+=f"{self.idx(i)}/{dashes[:self.length]:{self.length}} "
                 else:
                     out+=f"{dashes[:self.length]:{self.length}} "
         return out
@@ -1278,22 +1279,104 @@ class TechnicalAnalysis:
 
         return self.window
 
-    # ADX indicator
+    # ADX indicator - fully transparent
 
     def ADX(self, high_idx=2, low_idx=3, close_idx=4, period=14, labels=None):
-        """
-        Calculate standard ADX with +DI and -DI using Wilder's smoothing.
+        ilab = self.intlab(labels, 10, default=["TR", "DM+", "DM-", "TR_s", "DM+_s", "DM-_s", "DI+", "DI-", "DX", "ADX"])
 
-        Parameters:
-            high_idx (int): Column index for high prices
-            low_idx (int): Column index for low prices
-            close_idx (int): Column index for close prices
-            period (int): Lookback period (default 14)
+        n = len(self.window)
+        if n < period + 1:
+            for i in range(10):
+                self.AddColumn(None,ilab[i])
+            return self.window
 
-        Appends to self.window[-1]:
-            +DI, -DI, ADX
-        """
+        cur = self.window[-2]
+        prev = self.window[-3]
 
+        high = cur[high_idx]
+        low = cur[low_idx]
+        prev_high = prev[high_idx]
+        prev_low = prev[low_idx]
+        prev_close = prev[close_idx]
+
+        if None in [high, low, prev_high, prev_low, prev_close]:
+            for i in range(10):
+                self.AddColumn(None,ilab[i])
+            return self.window
+
+        # Raw values for current bar
+        tr = max(high - low, abs(high - prev_close), abs(low - prev_close))
+        plus_dm = high - prev_high if (high - prev_high) > (prev_low - low) and (high - prev_high) > 0 else 0
+        minus_dm = prev_low - low if (prev_low - low) > (high - prev_high) and (prev_low - low) > 0 else 0
+
+        self.AddColumn(tr, ilab[0])      # TR
+        self.AddColumn(plus_dm, ilab[1])  # DM+
+        self.AddColumn(minus_dm, ilab[2]) # DM-
+
+        # Previous smoothed values (from prior row)
+        tr_s_prev = self.window[-2][-10]  # TR_s
+        dm_p_prev = self.window[-2][-9]   # DM+_s
+        dm_m_prev = self.window[-2][-8]   # DM-_s
+
+        alpha = 1.0 / period
+
+        if tr_s_prev is None or dm_p_prev is None or dm_m_prev is None:
+            # Initialization: sum first N raw values
+            tr_sum = 0.0
+            dm_p_sum = 0.0
+            dm_m_sum = 0.0
+            count = 0
+            for i in range(-period, 0):
+                row = self.window[i]
+                if row[0] is None:
+                    continue
+                h = row[high_idx]
+                l = row[low_idx]
+                ph = self.window[i-1][high_idx]
+                pl = self.window[i-1][low_idx]
+                pc = self.window[i-1][close_idx]
+                if None in [h, l, ph, pl, pc]:
+                    continue
+                tr_sum += max(h - l, abs(h - pc), abs(l - pc))
+                dm_p_sum += h - ph if (h - ph) > (pl - l) and (h - ph) > 0 else 0
+                dm_m_sum += pl - l if (pl - l) > (h - ph) and (pl - l) > 0 else 0
+                count += 1
+
+            if count < period:
+                for i in range(7):
+                    self.AddColumn(None,ilab[i+3])
+                return self.window
+
+            tr_s = tr_sum
+            dm_p_s = dm_p_sum
+            dm_m_s = dm_m_sum
+        else:
+            # Recursive Wilder smoothing
+            tr_s = tr_s_prev * (1 - alpha) + tr * alpha
+            dm_p_s = dm_p_prev * (1 - alpha) + plus_dm * alpha
+            dm_m_s = dm_m_prev * (1 - alpha) + minus_dm * alpha
+
+        self.AddColumn(tr_s, ilab[3])    # TR_s
+        self.AddColumn(dm_p_s, ilab[4])  # DM+_s
+        self.AddColumn(dm_m_s, ilab[5])  # DM-_s
+
+        di_p = min(100, max(0,100 * dm_p_s / tr_s)) if tr_s != 0 else 0
+        di_m = min(100, max(0,100 * dm_m_s / tr_s)) if tr_s != 0 else 0
+
+        self.AddColumn(di_p, ilab[6])  # DI+
+        self.AddColumn(di_m, ilab[7])  # DI-
+
+        dx = 100 * abs(di_p - di_m) / (di_p + di_m) if (di_p + di_m) != 0 else 0
+        self.AddColumn(dx, ilab[8])    # DX
+
+        adx_prev = self.window[-2][-1]  # previous ADX
+        adx = (adx_prev * (period - 1) + dx) / period if adx_prev is not None else dx
+        self.AddColumn(adx, ilab[9])    # ADX
+
+        return self.window
+
+    """ #old version
+    def ADX(self, high_idx=2, low_idx=3, close_idx=4, period=14, labels=None):
         # Get column labels
         ilab=self.intlab(labels,3,default=["DI+","DI-","ADX"])
 
@@ -1363,6 +1446,7 @@ class TechnicalAnalysis:
         self.AddColumn(adx,ilab[2])
 
         return self.window
+    """
 
     # Classic Bollinger Bands
 

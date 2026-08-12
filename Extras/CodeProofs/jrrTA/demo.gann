@@ -42,7 +42,7 @@ def main():
         # 16, target price, 17 trailing stop
         ta.GannSquareOfNine(period=197,direction='long')
 
-        ta.Log(-1)
+#        ta.Log(-1)
 
 if __name__=='__main__':
     main()
