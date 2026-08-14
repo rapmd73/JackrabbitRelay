@@ -55,7 +55,7 @@ def main():
         ta.Rolling(slice)
 
         ta.ADX(HighIDX,LowIDX,Closing,Period)
-        ta.Cross(diP,diM) # +DI>-DI bullish, +DI<-DI bearish, these as crossings
+#        ta.Cross(diP,diM) # +DI>-DI bullish, +DI<-DI bearish, these as crossings
 
         ta.Display(-1,showidx=True)
 
