@@ -16,13 +16,13 @@ import requests
 from datetime import datetime
 
 # Framework APIs
+#
+# Each framework is imported in Login(), when it is known which one the order
+# needs. Loading all of them for every order roughly doubles the start time of
+# PlaceOrder, most of it CCXT.
 
-import JRRccxt
-import JRRoanda
-import JRRmimic
 import JRRsupport
 import DLMLocker as DLM
-#import JRRccapi
 
 # This is the logging class
 #
@@ -719,12 +719,16 @@ class JackrabbitRelay:
         # well.
         if self.Framework.lower()=='ccapi':
             # CCAPI mode (execution) + Database (market data)
+            import JRRccapi
             self.Broker=JRRccapi.ccapiCrypto(self.Exchange,self.Config,self.Active,Notify=True)
         elif self.Framework=='ccxt':
+            import JRRccxt
             self.Broker=JRRccxt.ccxtCrypto(self.Exchange,self.Config,self.Active,DataDirectory=self.Directories['Data'])
         elif self.Framework=='oanda':
+            import JRRoanda
             self.Broker=JRRoanda.oanda(self.Exchange,self.Config,self.Active,DataDirectory=self.Directories['Data'])
         elif self.Framework=='mimic':
+            import JRRmimic
             self.Broker=JRRmimic.mimic(self.Exchange,self.Config,self.Active,DataDirectory=self.Directories['Data'])
 
         if self.Broker.timeframes!=None:
