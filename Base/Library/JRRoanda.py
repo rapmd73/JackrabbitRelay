@@ -129,8 +129,18 @@ class oanda:
             envTrade="practice"
         else:
             envTrade="live"
+        # Without a timeout, a stalled connection leaves the process waiting
+        # forever with nothing written to the log. "Timeout" in the account
+        # config is the number of seconds to wait for OANDA to answer.
+
+        if 'Timeout' in self.Active:
+            readTimeout=float(self.Active['Timeout'])
+        else:
+            readTimeout=15
+        reqParams={ "timeout":(5,readTimeout) }
+
         try:
-            self.Broker=oandapyV20.API(access_token=self.AccessToken,environment=envTrade)
+            self.Broker=oandapyV20.API(access_token=self.AccessToken,environment=envTrade,request_params=reqParams)
         except Exception as e:
             self.Log.Error("Login",JRRsupport.StopHTMLtags(str(e)))
 
