@@ -16,6 +16,7 @@ import time
 from datetime import datetime
 
 import oandapyV20
+import oandapyV20.exceptions
 import oandapyV20.definitions as V20Definitions
 import oandapyV20.endpoints
 import oandapyV20.contrib
@@ -98,23 +99,38 @@ class oanda:
         else:
             RetryLimit=3
 
+        # Requests that place or close a trade are never repeated. If the
+        # answer was lost, the order may already be with the broker, and
+        # sending it again could place it twice.
+
+        noRetry=['OrderCreate','PositionClose','TradeClose']
+
         done=False
         while not done:
             try:
                 self.Results=self.Broker.request(req)
             except Exception as e:
-                if retry<RetryLimit:
-                    if noError==True:
-                        # Market is closed, no orders
-                        if function=='GetOrderBook':
-                            return []
-                        else:
-                            self.Log.Error(function,JRRsupport.StopHTMLtags(str(e)))
-                    else:
-                        self.Log.Error(function,JRRsupport.StopHTMLtags(str(e)))
+                # Market is closed, no orders
+                if noError==True and function=='GetOrderBook':
+                    return []
+
+                # A 4xx answer is the broker refusing the request. Asking
+                # again gets the same answer. 429 is the rate limit.
+
+                refused=False
+                if isinstance(e,oandapyV20.exceptions.V20Error):
+                    try:
+                        code=int(e.code)
+                    except:
+                        code=0
+                    if code>=400 and code<500 and code!=429:
+                        refused=True
+
+                if noError==True or refused or function in noRetry or retry>=RetryLimit:
+                    self.Log.Error(function,JRRsupport.StopHTMLtags(str(e)))
                 else:
-                    if noError==False:
-                        self.Log.Write(function+' Retrying ('+str(retry+1)+'), '+JRRsupport.StopHTMLtags(str(e)))
+                    self.Log.Write(function+' Retrying ('+str(retry+1)+'), '+JRRsupport.StopHTMLtags(str(e)))
+                    time.sleep(0.25*(retry+1))
             else:
                 done=True
             retry+=1
