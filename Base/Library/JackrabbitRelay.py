@@ -680,7 +680,16 @@ class JackrabbitRelay:
             ratelimit=1000
 
         # Only pause if we can NOT get the lock.
-        while self.Limiter.Lock()!='locked':
+        #
+        # 'failure' means the lock manager could not be reached at all, after
+        # the locker's own retries. Waiting longer can not help, and the order
+        # would hang here silently and never be placed. Say so and stop.
+        while True:
+            lockState=self.Limiter.Lock()
+            if lockState=='locked':
+                break
+            if lockState=='failure':
+                self.JRLog.Error("RateLimiter","JackrabbitDLM lock manager not reachable")
             JRRsupport.ElasticSleep(ratelimit/1000)
 
         # Let lock expire on its own. Forces ratelimit in a way that
