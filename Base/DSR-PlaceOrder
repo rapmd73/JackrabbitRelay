@@ -56,7 +56,11 @@ def main():
     # to the PlaceOrder function, since placing the order has to be the last thing
     # done.
 
-    fn=relay.Directories['Data']+'/'+relay.GetExchangeLast()+'.'+relay.GetAccountLast()+'.'+relay.Order['Asset']+'.DSR'
+    # The asset becomes part of a file name. A slash (EUR/USD, ADA/USDT) would be
+    # read as a directory that does not exist, the write would fail silently and
+    # no duplicate would ever be caught.
+
+    fn=relay.Directories['Data']+'/'+relay.GetExchangeLast()+'.'+relay.GetAccountLast()+'.'+relay.Order['Asset'].replace('/','')+'.DSR'
     dsrList=JRRsupport.TimedList("DSR",fn,Log=relay.JRLog)
     if relay.Order['Action'].lower()=='close':
         expire=0
